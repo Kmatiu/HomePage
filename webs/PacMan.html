@@ -5,125 +5,224 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pac-Man (Comecocos)</title>
     <style>
-        /* Estilos basados en el juego clásico */
+        :root {
+            --amarillo: #ff0;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
         body {
             margin: 0;
-            padding: 0;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
             background: #000;
             color: #fff;
             font-family: 'Courier New', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* dvh tiene en cuenta la barra de direcciones del móvil */
+            height: 100vh;
+            height: 100dvh;
             flex-direction: column;
             font-size: 14px;
+            overflow: hidden;
+            overscroll-behavior: none;
         }
 
         .container {
-            border: 5px solid #ff0;
-            box-shadow: 0 0 20px #ff0;
+            border: 5px solid var(--amarillo);
+            box-shadow: 0 0 20px var(--amarillo);
             background: #000;
             padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
             border-radius: 10px;
+            /* La tarjeta ocupa la altura disponible y reparte: info arriba,
+               laberinto flexible en medio, controles abajo. */
+            height: 100%;
+            width: 100%;
+            max-width: 560px;
+            gap: 6px;
+        }
+
+        /* Zona del laberinto: el canvas conserva su buffer de 500x600 (las
+           coordenadas del juego no cambian) y se escala para caber. */
+        #stage {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
         }
 
         canvas {
             display: block;
             background: #000;
             border-radius: 5px;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
         }
 
         .game-info {
             display: flex;
             justify-content: space-between;
+            align-items: center;
+            gap: 8px;
             width: 100%;
-            padding: 5px 0;
-            font-size: 16px;
+            padding: 4px 0;
+            font-size: clamp(11px, 3vw, 16px);
+            flex: 0 0 auto;
+            flex-wrap: wrap;
         }
 
         .info-left, .info-right {
             text-align: left;
-            padding: 0 10px;
+            padding: 0 4px;
         }
 
-        .info-right {
-            text-align: right;
-        }
+        .info-right { text-align: right; }
 
         .controls {
-            margin-top: 10px;
+            margin-top: 4px;
             text-align: center;
             font-size: 12px;
             color: #aaa;
+            flex: 0 0 auto;
         }
 
+        .controls p { margin: 4px 0; }
+
         .audio-controls {
-            margin-top: 10px;
+            margin-top: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 8px;
+            flex-wrap: wrap;
+            flex: 0 0 auto;
         }
 
         .volume-slider {
             background: #000;
             color: #0f0;
             cursor: pointer;
+            max-width: 120px;
         }
 
         button {
             background: #222;
             color: #fff;
             border: 2px solid #fff;
-            padding: 5px 10px;
+            padding: 6px 10px;
             cursor: pointer;
             border-radius: 5px;
             transition: background-color 0.2s, color 0.2s;
             white-space: nowrap;
+            font-family: inherit;
+            font-size: 13px;
+            touch-action: manipulation;
         }
 
-        button:hover {
-            background: #444;
+        /* En táctil el :hover se queda pegado tras tocar */
+        @media (hover: hover) {
+            button:hover { background: #444; }
         }
 
+        button:active { background: #555; }
+
+        /* Botones de partida (pausa y reinicio), visibles siempre porque en
+           móvil no existen las teclas P ni R. */
+        .game-buttons {
+            display: flex;
+            gap: 6px;
+            flex: 0 0 auto;
+        }
+
+        .game-buttons button {
+            border-color: var(--amarillo);
+            color: var(--amarillo);
+            padding: 6px 12px;
+            font-size: 15px;
+            line-height: 1;
+        }
+
+        /* Overlays: fixed para que cubran de verdad, no el bloque contenedor */
         .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.85);
             display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             z-index: 100;
-            border-radius: 10px;
+            padding: 16px;
         }
 
         .overlay-content {
             background: #111;
-            border: 3px solid #ff0;
-            padding: 30px;
+            border: 3px solid var(--amarillo);
+            padding: 20px;
             text-align: center;
             border-radius: 10px;
-            box-shadow: 0 0 15px #ff0;
+            box-shadow: 0 0 15px var(--amarillo);
+            max-width: 100%;
+            max-height: 100%;
+            overflow-y: auto;
         }
 
+        .overlay-content h1 { font-size: clamp(1.2rem, 6vw, 2rem); margin: 0 0 10px; }
+        .overlay-content h2 { font-size: clamp(0.9rem, 4vw, 1.4rem); margin: 8px 0; }
+
         #playerName {
-            border: 2px solid #ff0;
+            border: 2px solid var(--amarillo);
             background: #000;
             color: #fff;
+            font-family: inherit;
+            /* 16px evita que iOS haga zoom al enfocar el campo */
+            font-size: 16px;
         }
 
         #highScoresTable th, #highScoresTable td {
-            padding: 8px;
+            padding: 6px;
             border-bottom: 1px dashed #444;
-            font-size: 18px;
+            font-size: clamp(13px, 3.5vw, 18px);
+        }
+
+        /* Aviso de deslizamiento, solo en táctil y solo al empezar */
+        #swipeHint {
+            position: absolute;
+            left: 50%;
+            bottom: 12%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid var(--amarillo);
+            color: var(--amarillo);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+            display: none;
+        }
+
+        body.touch-device #swipeHint.visible { display: block; }
+
+        /* El texto de teclas no sirve en móvil y roba altura */
+        body.touch-device .controls { display: none; }
+
+        @media (max-height: 700px) {
+            .container { padding: 6px; border-width: 3px; }
+            .audio-controls { gap: 6px; }
+            button { padding: 5px 8px; font-size: 12px; }
         }
     </style>
 </head>
@@ -138,15 +237,22 @@
                 Vidas: <span id="lives">3</span> | Récord Global: <span id="highScore">0</span> (<span id="highScoreName">---</span>)
             </div>
         </div>
-        <canvas id="gameCanvas" width="500" height="600"></canvas>
+        <div id="stage">
+            <canvas id="gameCanvas" width="500" height="600"></canvas>
+            <div id="swipeHint">Desliza el dedo para girar</div>
+        </div>
         <div class="controls">
             <p>Flechas: Mover | P: Pausar/Reanudar | R: Reiniciar Juego</p>
         </div>
         <div class="audio-controls">
-            <label for="volumeSlider">Volumen:</label>
+            <div class="game-buttons">
+                <button id="pauseBtn" type="button" aria-label="Pausar">⏸</button>
+                <button id="restartBtn" type="button" aria-label="Reiniciar">↺</button>
+            </div>
+            <label for="volumeSlider">Vol:</label>
             <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="0.5">
             <button id="muteBtn">Silenciar</button>
-            <button id="showLeaderboardBtn">Ver Récords (Top 10)</button>
+            <button id="showLeaderboardBtn">Récords</button>
         </div>
     </div>
 
@@ -161,7 +267,8 @@
                 <input type="text" id="playerName" maxlength="10" style="font-size: 20px; text-align: center; width: 150px; margin-bottom: 10px;">
                 <button id="saveNameBtn">Guardar y Reiniciar</button>
             </div>
-            <p style="margin-top: 20px;">Pulsa R para reiniciar (solo si no estás escribiendo tu nombre).</p>
+            <button id="playAgainBtn" type="button" style="margin-top: 20px; border-color: #ff0; color: #ff0; padding: 10px 18px; font-size: 16px;">JUGAR DE NUEVO</button>
+            <p style="margin-top: 12px; font-size: 12px; color: #aaa;">También puedes pulsar R.</p>
         </div>
     </div>
     
@@ -407,16 +514,46 @@
 
         // --- FUNCIONES DE UTILIDAD (LOCAL STORAGE) ---
         
+        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
+        // iframe con sandbox) el guardado lanzaba y cortaba la partida.
+        let scoresMemory = [];
+        const storageOK = (() => {
+            try {
+                localStorage.setItem('__t', '1');
+                localStorage.removeItem('__t');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
         function loadHighScoresList() {
-            const storedList = localStorage.getItem('pacmanHighScoresList');
-            if (storedList) {
-                try {
-                    highScoresList = JSON.parse(storedList);
-                } catch (e) {
-                    highScoresList = [];
-                }
+            if (!storageOK) {
+                highScoresList = scoresMemory.slice();
             } else {
-                 highScoresList = [];
+                let storedList = null;
+                try {
+                    storedList = localStorage.getItem('pacmanHighScoresList');
+                } catch (e) {
+                    storedList = null;
+                }
+
+                if (storedList) {
+                    try {
+                        const parsed = JSON.parse(storedList);
+                        highScoresList = Array.isArray(parsed) ? parsed : [];
+                    } catch (e) {
+                        highScoresList = [];
+                    }
+                } else {
+                     highScoresList = [];
+                }
             }
             
             highScore = highScoresList.length > 0 ? highScoresList[0].score : 0;
@@ -430,8 +567,16 @@
             
             highScoresList.sort((a, b) => b.score - a.score);
             highScoresList = highScoresList.slice(0, 10);
-            
-            localStorage.setItem('pacmanHighScoresList', JSON.stringify(highScoresList));
+
+            scoresMemory = highScoresList.slice();
+            if (storageOK) {
+                try {
+                    localStorage.setItem('pacmanHighScoresList', JSON.stringify(highScoresList));
+                } catch (e) {
+                    console.warn('No se pudo guardar el récord:', e);
+                }
+            }
+
             
             highScore = highScoresList[0].score;
             highScoreName = highScoresList[0].name;
@@ -513,6 +658,9 @@
             lives = 3;
             currentLevel = 1;
             gameState = 'READY';
+
+            const hint = document.getElementById('swipeHint');
+            if (hint) hint.classList.add('visible');
             
             stopFrightenedMusic();
             countPellets(true); 
@@ -1070,25 +1218,60 @@
         
         // --- BUCLE PRINCIPAL DEL JUEGO ---
 
-        function updateGame() {
-            requestAnimationFrame(updateGame);
+        // El juego mueve a Pac-Man 2,5 px por FRAME y cuenta los temporizadores
+        // (muerte, modo azul, salida de la casa) en frames. Atado a
+        // requestAnimationFrame eso significa que en un móvil de 120 Hz todo va
+        // literalmente al doble de velocidad. Con un acumulador de paso fijo se
+        // mantiene el ritmo de 60 pasos por segundo en cualquier pantalla y
+        // todas las constantes originales siguen valiendo.
+        const STEP_MS = 1000 / 60;
+        const MAX_FRAME_MS = 250;   // techo tras volver de segundo plano
+        const MAX_STEPS = 5;        // evita la espiral de la muerte
+        let rafId = null;
+        let lastTime = 0;
+        let accumulator = 0;
 
-            if (gameState === 'GAME_OVER') {
-                draw(); 
-                return; 
+        function gameLoop(now) {
+            rafId = requestAnimationFrame(gameLoop);
+
+            let delta = now - lastTime;
+            lastTime = now;
+            if (delta > MAX_FRAME_MS) delta = MAX_FRAME_MS;
+
+            accumulator += delta;
+
+            let steps = 0;
+            while (accumulator >= STEP_MS && steps < MAX_STEPS) {
+                stepGame();
+                accumulator -= STEP_MS;
+                steps++;
             }
-            
-            if (gameState === 'PAUSED') {
-                draw();
+
+            draw();
+        }
+
+        function startLoop() {
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            lastTime = performance.now();
+            accumulator = 0;
+            rafId = requestAnimationFrame(gameLoop);
+        }
+
+        function stepGame() {
+            if (gameState === 'GAME_OVER') {
                 return;
             }
-            
+
+            if (gameState === 'PAUSED') {
+                accumulator = 0;
+                return;
+            }
+
             if (gameState === 'LEVEL_START_MESSAGE') {
                 levelStartMessageFrames--;
                 if (levelStartMessageFrames <= 0) {
                     resetLevel();
                 }
-                draw();
                 return;
             }
 
@@ -1099,16 +1282,14 @@
                     levelStartMessageFrames = LEVEL_START_MESSAGE_WAIT;
                     playMelody(LEVEL_UP_TUNE_NOTES); // <-- SONIDO DE NUEVO NIVEL
                 }
-                draw();
                 return;
             }
-            
+
             if (gameState === 'PACMAN_DEATH') {
                 updateDeathAnimation();
-                draw();
-                return; 
+                return;
             }
-            
+
             updatePacman();
             checkPelletCollision();
 
@@ -1117,8 +1298,6 @@
                 updateFrightenedMode();
                 checkCollisions();
             }
-            
-            draw();
         }
 
 
@@ -1182,20 +1361,27 @@
                 </tr>
             `;
             
+            // Se construye la cadena y se asigna una sola vez: con `innerHTML +=`
+            // dentro del bucle el navegador reanaliza toda la tabla en cada vuelta.
+            let filas = '';
+
             if (highScoresList.length === 0) {
-                table.innerHTML += `<tr><td colspan="3" style="text-align: center; padding: 10px;">Aún no hay récords guardados. ¡Juega para establecer uno!</td></tr>`;
+                filas = `<tr><td colspan="3" style="text-align: center; padding: 10px;">Aún no hay récords guardados. ¡Juega para establecer uno!</td></tr>`;
             } else {
                 highScoresList.forEach((entry, index) => {
                     const isNewRecord = (index === 0) ? 'style="color: #0f0; font-weight: bold;"' : '';
-                    table.innerHTML += `
+                    // El nombre lo escribe el jugador y se inyecta con innerHTML
+                    filas += `
                         <tr ${isNewRecord}>
                             <td style="padding: 5px; text-align: left;">${index + 1}</td>
-                            <td style="padding: 5px; text-align: left;">${entry.name}</td>
-                            <td style="padding: 5px; text-align: right;">${entry.score}</td>
+                            <td style="padding: 5px; text-align: left;">${escapeHtml(entry.name)}</td>
+                            <td style="padding: 5px; text-align: right;">${Number(entry.score) || 0}</td>
                         </tr>
                     `;
                 });
             }
+
+            table.innerHTML += filas;
 
             document.getElementById('leaderboardOverlay').style.display = 'flex';
         }
@@ -1450,52 +1636,130 @@
 
         // --- MANEJO DE TECLADO ---
 
+        // --- ACCIONES COMPARTIDAS POR TECLADO Y BOTONES ---
+
+        function togglePause() {
+            if (gameState === 'RUNNING') {
+                gameState = 'PAUSED';
+                stopFrightenedMusic();
+                document.getElementById('pauseBtn').textContent = '▶';
+            } else if (gameState === 'PAUSED') {
+                gameState = 'RUNNING';
+                lastTime = performance.now();
+                if (ghosts.some(g => g.isFrightened)) {
+                    startFrightenedMusic();
+                }
+                document.getElementById('pauseBtn').textContent = '⏸';
+            }
+        }
+
+        function restartGame() {
+            hideGameOverOverlay();
+            hideLeaderboardOverlay();
+            resetGame();
+            document.getElementById('pauseBtn').textContent = '⏸';
+            lastTime = performance.now();
+            accumulator = 0;
+        }
+
+        function setDirection(dir) {
+            if (gameState === 'PAUSED' || gameState === 'GAME_OVER') return;
+            pacman.nextDirection = dir;
+        }
+
+        const GAME_KEYS = ['ARROWUP', 'ARROWDOWN', 'ARROWLEFT', 'ARROWRIGHT', ' '];
+
         document.addEventListener('keydown', (e) => {
             const key = e.key.toUpperCase();
-            
+
             const focusedElement = document.activeElement;
             const isInputFocused = focusedElement && focusedElement.id === 'playerName';
-            
-            if (key === 'R') {
-                if (isInputFocused) {
-                    return;
-                }
-                
-                if (gameState === 'GAME_OVER') {
-                    return;
-                }
-                
-                hideGameOverOverlay();
-                hideLeaderboardOverlay();
-                resetGame();
-                e.preventDefault(); 
-                return;
-            } else if (key === 'P') {
-                 if (isInputFocused) {
-                    return;
-                }
-                if (gameState === 'RUNNING') {
-                    gameState = 'PAUSED';
-                    stopFrightenedMusic();
-                } else if (gameState === 'PAUSED') {
-                    gameState = 'RUNNING';
-                    let stillFrightened = ghosts.some(g => g.isFrightened);
-                    if (stillFrightened) {
-                        startFrightenedMusic();
-                    }
-                }
+
+            // Sin esto las flechas hacen scroll de la página
+            if (GAME_KEYS.includes(key) && !isInputFocused) {
+                e.preventDefault();
             }
-            
+
+            if (key === 'R') {
+                if (isInputFocused) return;
+
+                // Antes había un `if (gameState === 'GAME_OVER') return;` que
+                // impedía reiniciar justo cuando el propio cartel decía "Pulsa R
+                // para reiniciar". Si además no entrabas en el Top 10 no había
+                // ningún botón, así que la única salida era recargar la página.
+                restartGame();
+                return;
+            }
+
+            if (key === 'P') {
+                if (isInputFocused) return;
+                togglePause();
+                return;
+            }
+
+            if (isInputFocused) return;
+
             if (['ARROWUP', 'W'].includes(key)) {
-                pacman.nextDirection = 'UP';
+                setDirection('UP');
             } else if (['ARROWDOWN', 'S'].includes(key)) {
-                pacman.nextDirection = 'DOWN';
+                setDirection('DOWN');
             } else if (['ARROWLEFT', 'A'].includes(key)) {
-                pacman.nextDirection = 'LEFT';
+                setDirection('LEFT');
             } else if (['ARROWRIGHT', 'D'].includes(key)) {
-                pacman.nextDirection = 'RIGHT';
-            } 
+                setDirection('RIGHT');
+            }
         });
+
+        // --- CONTROL TÁCTIL: DESLIZAMIENTO CONTINUO ---
+        // Pac-Man va encajado en la rejilla: su posición no puede seguir al dedo
+        // punto por punto, solo puede girar en las cuatro direcciones. Lo que sí
+        // sigue al dedo es la INTENCIÓN: en cuanto el dedo se separa del punto
+        // donde tocó más de un umbral, se toma esa dirección y el origen se
+        // reancla ahí mismo. Así se encadenan giros arrastrando sin levantar el
+        // dedo, en lugar de tener que completar un gesto y soltar cada vez.
+        const SWIPE_THRESHOLD = 22;   // px de pantalla
+        let dragX = null;
+        let dragY = null;
+
+        function initTouch() {
+            const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (isTouch) document.body.classList.add('touch-device');
+
+            const stage = document.getElementById('stage');
+            const hint = document.getElementById('swipeHint');
+            if (isTouch) hint.classList.add('visible');
+
+            stage.addEventListener('pointerdown', (e) => {
+                resumeAudio();
+                dragX = e.clientX;
+                dragY = e.clientY;
+                try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+            });
+
+            stage.addEventListener('pointermove', (e) => {
+                if (dragX === null) return;
+
+                const dx = e.clientX - dragX;
+                const dy = e.clientY - dragY;
+                const adx = Math.abs(dx);
+                const ady = Math.abs(dy);
+
+                if (Math.max(adx, ady) < SWIPE_THRESHOLD) return;
+
+                setDirection(adx > ady ? (dx > 0 ? 'RIGHT' : 'LEFT')
+                                       : (dy > 0 ? 'DOWN' : 'UP'));
+
+                // Reanclar: el siguiente giro se mide desde aquí, sin soltar
+                dragX = e.clientX;
+                dragY = e.clientY;
+
+                hint.classList.remove('visible');
+            });
+
+            const endDrag = () => { dragX = null; dragY = null; };
+            stage.addEventListener('pointerup', endDrag);
+            stage.addEventListener('pointercancel', endDrag);
+        }
 
         // Controles de audio y Leaderboard
         document.getElementById('volumeSlider').addEventListener('input', updateVolume);
@@ -1503,12 +1767,23 @@
         document.getElementById('showLeaderboardBtn').addEventListener('click', showLeaderboardOverlay);
         document.getElementById('closeLeaderboardBtn').addEventListener('click', hideLeaderboardOverlay);
 
-        // Activar contexto de audio
-        document.addEventListener('click', () => {
+        // Botones de partida (necesarios en móvil, donde no hay teclas P ni R)
+        document.getElementById('pauseBtn').addEventListener('click', () => { resumeAudio(); togglePause(); });
+        document.getElementById('restartBtn').addEventListener('click', () => { resumeAudio(); restartGame(); });
+        document.getElementById('playAgainBtn').addEventListener('click', () => { resumeAudio(); restartGame(); });
+
+        // Activar contexto de audio. Antes solo escuchaba 'click' una vez; en
+        // móvil conviene reintentarlo en cada gesto, porque el contexto puede
+        // volver a suspenderse al cambiar de aplicación.
+        function resumeAudio() {
+            if (!isAudioInitialized) initAudio();
             if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
+                audioContext.resume().catch(() => {});
             }
-        }, { once: true });
+        }
+
+        document.addEventListener('pointerdown', resumeAudio);
+        document.addEventListener('keydown', resumeAudio);
 
         // --- INICIALIZACIÓN ---
         function init() {
@@ -1519,8 +1794,9 @@
             initEntities();
             updateUI();
             
-            requestAnimationFrame(updateGame);
-            
+            initTouch();
+            startLoop();
+
             if (!isAudioInitialized) {
                 document.body.addEventListener('click', initAudio, { once: true });
             }
