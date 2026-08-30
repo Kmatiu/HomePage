@@ -2,915 +2,1218 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Personal de Nika & Jose</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Space Invaders</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        
+        :root {
+            --verde: #0f0;
+        }
+
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #764ba2 0%, #f7b733 100%);
-            min-height: 100vh;
-            padding: 20px;
-            /* Las partículas se desplazan 100px a la derecha desde left:90%:
-               sin esto provocan scroll horizontal en pantallas estrechas. */
-            overflow-x: hidden;
-        }
-        
-        /* sustituir esta sección */
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 25px;
-        }
-        
-        /* sustituir esta sección */
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            overflow: hidden;
-            transition: all 0.4s ease;
-        }
-        
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
-        }
-        
-        
-        
-        
-        .section-header {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 1.8rem;
-            font-weight: 600;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .section-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
+
+        html, body {
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
         }
-        
-        .section-header:hover::before {
-            left: 100%;
+
+        body {
+            margin: 0;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+            background: #000;
+            color: var(--verde);
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            /* dvh se ajusta a la barra de direcciones del móvil; vh es el respaldo */
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
         }
-        
-        .search-container {
-            padding: 30px;
-            background: linear-gradient(135deg, #74b9ff, #0984e3);
-            border-radius: 20px;
-            margin: 20px;
+
+        /* ---------- BARRA SUPERIOR ---------- */
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 6px 10px;
+            font-size: 18px;
+            flex: 0 0 auto;
         }
-        
-        .search-box {
+
+        .game-info .stats {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .game-info .top-buttons {
+            display: flex;
+            gap: 6px;
+        }
+
+        .icon-btn {
+            background: #000;
+            color: var(--verde);
+            border: 2px solid var(--verde);
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* ---------- ESCENARIO ---------- */
+        /* El canvas mantiene su buffer interno de 800x600 (las coordenadas del
+           juego no cambian) y se escala visualmente para caber en la pantalla.
+           max-width + max-height sobre un elemento reemplazado conserva la
+           proporción automáticamente. */
+        #stage {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
             display: flex;
             align-items: center;
-            background: white;
-            border-radius: 50px;
-            padding: 8px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
+            justify-content: center;
+            touch-action: none;
         }
-        
-        .search-box:hover {
-            transform: scale(1.02);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .search-box input {
-            flex: 1;
-            border: none;
-            outline: none;
-            padding: 15px 20px;
-            font-size: 16px;
-            border-radius: 50px;
-        }
-        
-        .search-btn {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            margin-left: 10px;
-        }
-        
-        .search-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
-        }
-        
-        .info-grid {
-            display: grid;
-            /* auto-fit + minmax: el navegador decide cuántas columnas caben.
-               Antes eran 3 fijas, que en móvil dejaban 5 px por tarjeta. */
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
-        
-        .info-card {
-            background: linear-gradient(135deg, #a8edea, #fed6e3);
-            padding: 20px;
-            border-radius: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transform: translateY(0px) scale(1);
-        }
-        
-        .info-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, #ff9a9e, #fecfef);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 1;
-        }
-        
-        .info-card:hover::before {
-            opacity: 1;
-        }
-        
-        .info-card > * {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .info-card:hover {
-            transform: translateY(-8px) scale(1.03);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .info-card h3 {
-            color: #2d3436;
-            font-size: 1.2rem;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        
-        .info-card a {
+
+        canvas {
             display: block;
-            color: #0984e3;
-            text-decoration: none;
-            margin: 8px 0;
-            padding: 8px 12px;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-            font-weight: 500;
+            max-width: 100%;
+            max-height: 100%;
+            border: 2px solid var(--verde);
+            background: #000;
+            touch-action: none;
         }
-        
-        .info-card a:hover {
-            background: rgba(255, 255, 255, 0.8);
-            color: #2d3436;
-            transform: scale(1.05);
+
+        /* ---------- CONTROLES TÁCTILES ---------- */
+        #touchControls {
+            position: absolute;
+            inset: 0;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 12px;
+            pointer-events: none;
+            z-index: 20;
         }
-        
-        .mail-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
-            padding: 20px;
+
+        #touchControls .pad {
+            display: flex;
+            gap: 12px;
+            pointer-events: auto;
         }
-        
-        .mail-card {
-            background: linear-gradient(135deg, #ffecd2, #fcb69f);
-            padding: 20px;
-            border-radius: 15px;
+
+        .touch-btn {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 255, 0, 0.7);
+            background: rgba(0, 40, 0, 0.55);
+            color: var(--verde);
+            font-family: inherit;
+            font-size: 22px;
+            line-height: 1;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .touch-btn.fire {
+            width: 84px;
+            height: 84px;
+            font-size: 15px;
+        }
+
+        .touch-btn:active {
+            background: rgba(0, 255, 0, 0.35);
+        }
+
+        body.touch-device #touchControls {
+            display: flex;
+        }
+
+        /* ---------- AVISO DE ORIENTACIÓN ---------- */
+        #rotateHint {
+            display: none;
+            flex: 0 0 auto;
             text-align: center;
-            transition: all 0.4s ease;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transform: scale(1) rotate(0deg);
+            font-size: 13px;
+            padding: 4px 10px;
+            color: #ff0;
         }
-        
-        .mail-card::before {
-            content: '';
+
+        @media (orientation: portrait) and (pointer: coarse) {
+            body.touch-device #rotateHint {
+                display: block;
+            }
+        }
+
+        /* ---------- PIE ---------- */
+        .controls,
+        .audio-controls {
+            text-align: center;
+            font-size: 14px;
+            flex: 0 0 auto;
+            padding: 4px 10px;
+        }
+
+        .controls p {
+            margin: 4px 0;
+        }
+
+        .audio-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding-bottom: 8px;
+        }
+
+        /* El texto de teclado no sirve de nada en un móvil y roba altura */
+        body.touch-device .controls {
+            display: none;
+        }
+
+        /* En apaisado la altura es el recurso escaso: se recorta lo accesorio
+           para que el canvas ocupe todo lo posible. */
+        @media (orientation: landscape) and (max-height: 520px) {
+            .controls {
+                display: none;
+            }
+
+            .game-info {
+                font-size: 14px;
+                padding: 2px 8px;
+            }
+
+            /* Se saca del flujo y se coloca en el hueco central de la barra
+               superior: devuelve ~36 px de altura al área de juego. */
+            .audio-controls {
+                position: absolute;
+                top: 2px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 30;
+                font-size: 12px;
+                padding: 0;
+                gap: 6px;
+            }
+
+            .audio-controls button {
+                padding: 4px 8px;
+                margin: 0;
+            }
+
+            input[type="range"] {
+                max-width: 110px;
+            }
+
+            .touch-btn {
+                width: 54px;
+                height: 54px;
+                font-size: 18px;
+            }
+
+            .touch-btn.fire {
+                width: 68px;
+                height: 68px;
+                font-size: 13px;
+            }
+        }
+
+        /* ---------- OVERLAYS ---------- */
+        /* Antes eran position:absolute sin contenedor posicionado, así que se
+           colocaban respecto al documento y no respecto al juego. */
+        .overlay {
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 0;
-            height: 0;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
-            transition: all 0.4s ease;
-            border-radius: 50%;
             transform: translate(-50%, -50%);
-        }
-        
-        .mail-card:hover::before {
-            width: 200%;
-            height: 200%;
-        }
-        
-        .mail-card:hover {
-            transform: scale(1.08) rotate(2deg);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-        }
-        
-        .mail-card img {
-            max-width: 80px;
-            height: auto;
-            transition: all 0.3s ease;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .resources-section {
+            max-width: 92%;
+            max-height: 92%;
+            overflow-y: auto;
+            font-size: 22px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.92);
             padding: 20px;
+            border: 2px solid var(--verde);
+            z-index: 100;
         }
-        
-        .ai-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
+
+        .overlay h2 {
+            margin: 0 0 10px;
         }
-        
-        .ai-card {
-            color: #000000;
-            padding: 15px;
-            border-radius: 15px;
-            text-align: center;
+
+        .pause-overlay {
+            font-size: 30px;
+        }
+
+        .ranking {
+            margin-top: 16px;
+            font-size: 15px;
+        }
+
+        .ranking h3 {
+            margin-bottom: 8px;
+            color: #ff0;
+        }
+
+        .ranking-list {
+            text-align: left;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .ranking-entry {
+            margin: 4px 0;
+            padding: 2px;
+        }
+
+        .ranking-entry.highlight {
+            background: rgba(0, 255, 0, 0.2);
+            font-weight: bold;
+        }
+
+        input {
+            background: #000;
+            color: var(--verde);
+            border: 1px solid var(--verde);
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;   /* por debajo de 16px iOS hace zoom al enfocar */
+            margin: 8px 0;
+            max-width: 100%;
+        }
+
+        button {
+            background: #000;
+            color: var(--verde);
+            border: 2px solid var(--verde);
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
-            overflow: hidden;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            transform: scale(1) translateY(0px);
+            margin: 5px;
+            touch-action: manipulation;
         }
-        
-        /* Colores específicos para cada IA */
-        .ai-card.chatgpt {
-            background-color: #15A280;
-        }
-        
-        .ai-card.claude {
-            background-color: #FFFFFF;
-        }
-        
-        .ai-card.gemini {
-            background-color: #FFFFFF;
-        }
-        
-        .ai-card.perplexity {
-            background-color: #091717;
-        }
-        
-        .ai-card.airbnb {
-            background-color: #FF5A60;
-        }
-        
-        .ai-card.bing {
-            background-color: #efefef;
-        }
-        
-        .ai-card.grok {
-            background-color: #FFFFFF;
-        }
-        .ai-card.notion {
-            background-color: #FFFFFF;
-        }
-        .ai-card.gestor {
-            background-color: #FFFFFF;
-        }
-        
-        .ai-card.booking {
-            background-color: #003B95;
-        }
-        
-        .ai-card.skyscanner {
-            background-color: #0770E3;
-        }
-        
-        .ai-card.pixabay {
-            background-color: #56AE58;
-        }
-        
-        .ai-card.canva {
-            background-color: #00C4CC;
-        }
-        
-        .ai-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s;
-        }
-        
-        .ai-card:hover::after {
-            left: 100%;
-        }
-        
-        .ai-card:hover {
-            transform: scale(1.1) translateY(-10px);
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
-            border-color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .ai-card img {
-            width: 100%;
-            max-width: 120px;
-            height: 60px;
-            object-fit: contain;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .ai-card.gestor {
-            padding: 0 !important;
-        }
-        
-        .ai-card.gestor img {
-            width: 100% !important;
-            height: 100% !important;
-            max-width: none !important;
-            object-fit: cover !important;
-            border-radius: 15px !important;
-        }
-        
-        .web-section {
-            background: linear-gradient(135deg, #fa709a, #fee140);
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 20px;
-        }
-        
-        .web-item {
-            background: rgba(255, 255, 255, 0.9);
-            color: #2d3436;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px 0;
-            transform: translateX(0px) scale(1);
-        }
-        
-        .web-item:hover {
-            background: white;
-            transform: translateX(10px) scale(1.05);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .subsection-header {
-            background: linear-gradient(135deg, #4facfe, #00f2fe);
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-weight: 600;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        /* Efectos de partículas para el fondo */
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            animation: particles 20s infinite linear;
-        }
-        
-        @keyframes particles {
-            0% {
-                transform: translateY(100vh) translateX(0px);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100vh) translateX(100px);
-                opacity: 0;
+
+        /* En pantalla táctil el :hover se queda pegado tras tocar */
+        @media (hover: hover) {
+            button:hover {
+                background: var(--verde);
+                color: #000;
             }
         }
-        
-        /* Reseteo de transforms para evitar acumulación */
-        .info-card {
-            animation: none;
-        }
-        
-        .mail-card {
-            animation: none;
-        }
-        
-        .ai-card {
-            animation: none;
-        }
-        
-        /* ==========================================================
-           RESPONSIVE
-           El archivo no tenía ninguna media query: la rejilla de dos
-           columnas se aplicaba igual en un móvil, dejando la columna
-           de Recursos con ~108 px y su contenido a 0 px de ancho.
-           ========================================================== */
-        
-        /* Tablet y ventanas estrechas: una sola columna */
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        @media (max-width: 600px) {
-            body {
-                padding: 10px;
-            }
-            
-            .container {
-                gap: 15px;
-            }
-            
-            .section-header {
-                font-size: 1.35rem;
-                padding: 15px;
-            }
-            
-            .search-container {
-                padding: 15px;
-                margin: 15px;
-            }
-            
-            /* El input y los dos botones no caben en una fila de 360 px */
-            .search-box {
-                flex-wrap: wrap;
-                border-radius: 20px;
-                gap: 8px;
-            }
-            
-            .search-box input {
-                flex: 1 1 100%;
-                padding: 12px 15px;
-            }
-            
-            .search-btn {
-                flex: 1 1 0;
-                margin-left: 0;
-                padding: 12px 10px;
-                font-size: 0.9rem;
-            }
-            
-            .info-grid,
-            .mail-grid {
-                padding: 15px;
-                gap: 12px;
-            }
-            
-            .resources-section {
-                padding: 15px;
-            }
-            
-            .web-section {
-                padding: 15px;
-            }
-            
-            .info-card,
-            .mail-card {
-                padding: 15px;
-            }
-            
-            .subsection-header {
-                font-size: 0.95rem;
-                padding: 12px;
-            }
-        }
-        
-        /* Pantallas muy estrechas: una sola columna también dentro de las tarjetas */
-        @media (max-width: 380px) {
-            .ai-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* ==========================================================
-           DISPOSITIVOS TÁCTILES
-           En una pantalla táctil el :hover se queda "pegado" tras
-           tocar: la tarjeta se queda ampliada y desplazada hasta que
-           tocas otra cosa. Se desactivan las transformaciones y se
-           sustituyen por una respuesta al toque (:active).
-           ========================================================== */
-        @media (hover: none) {
-            .card:hover,
-            .search-box:hover,
-            .search-btn:hover,
-            .info-card:hover,
-            .info-card a:hover,
-            .mail-card:hover,
-            .ai-card:hover,
-            .web-item:hover {
-                transform: none;
-            }
-            
-            .info-card:hover::before {
-                opacity: 0;
-            }
-            
-            .mail-card:hover::before {
-                width: 0;
-                height: 0;
-            }
-            
-            .ai-card:active,
-            .mail-card:active,
-            .info-card:active,
-            .web-item:active {
-                filter: brightness(0.92);
-            }
-            
-            /* Objetivos táctiles con altura suficiente para el dedo */
-            .web-item,
-            .info-card a {
-                padding: 14px;
-            }
-            
-            .ai-card {
-                min-height: 72px;
-            }
-        }
-        
-        /* Respeta la preferencia del sistema de reducir animaciones */
-        @media (prefers-reduced-motion: reduce) {
-            .particle {
-                display: none;
-            }
-            
-            * {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
+
+        input[type="range"] {
+            background: #000;
+            accent-color: var(--verde);
+            max-width: 160px;
         }
     </style>
-    
 </head>
-
 <body>
-    <!-- Partículas de fondo -->
-    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
-    <div class="particle" style="left: 20%; animation-delay: 2s;"></div>
-    <div class="particle" style="left: 30%; animation-delay: 4s;"></div>
-    <div class="particle" style="left: 40%; animation-delay: 6s;"></div>
-    <div class="particle" style="left: 50%; animation-delay: 8s;"></div>
-    <div class="particle" style="left: 60%; animation-delay: 10s;"></div>
-    <div class="particle" style="left: 70%; animation-delay: 12s;"></div>
-    <div class="particle" style="left: 80%; animation-delay: 14s;"></div>
-    <div class="particle" style="left: 90%; animation-delay: 16s;"></div>
-    
-    <div class="container">
-        <!-- COLUMNA IZQUIERDA -->
-        <div>
-            <!-- BUSCADOR -->
-            <div class="card">
-                <div class="section-header">
-                    <i class="fas fa-search"></i> Buscador
-                </div>
-                <div class="search-container">
-                    <form method="GET" action="https://www.google.com/search">
-                        <div class="search-box">
-                            <input type="text" name="q" placeholder="¿Qué quieres buscar hoy?" maxlength="255" autofocus>
-                            <button type="submit" class="search-btn">
-                                <i class="fas fa-search"></i> Buscar
-                            </button>
-                            <button type="reset" class="search-btn" style="background: linear-gradient(135deg, #74b9ff, #0984e3);">
-                                <i class="fas fa-eraser"></i> Limpiar
-                            </button>
-                        </div>
-                    </form>
-                </div>
+    <div class="game-info">
+        <div class="stats">
+            <div>PUNTOS: <span id="score">0</span></div>
+            <div>VIDAS: <span id="lives">3</span></div>
+            <div>NIVEL: <span id="level">1</span></div>
+        </div>
+        <div class="top-buttons">
+            <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pausar">⏸</button>
+            <button id="fullscreenBtn" class="icon-btn" type="button" aria-label="Pantalla completa">⛶</button>
+        </div>
+    </div>
+
+    <div id="rotateHint">↻ Gira el móvil a horizontal para ver el juego más grande</div>
+
+    <div id="stage">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div id="touchControls">
+            <div class="pad">
+                <button class="touch-btn" type="button" data-touch="left" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-touch="right" aria-label="Derecha">▶</button>
             </div>
-            
-            <!-- CORREO -->
-            <div class="card" style="margin-top: 25px;">
-                <div class="section-header">
-                    <i class="fas fa-envelope"></i> Correo & Servicios
-                </div>
-                <div class="mail-grid">
-                    <div class="mail-card" onclick="window.open('http://mail.google.com/mail/', '_blank')">
-                        <img src="images/gmail.png" alt="Gmail">
-                        <h4>Gmail</h4>
-                    </div>
-                    <div class="mail-card" onclick="window.open('http://www.hotmail.com/', '_blank')">
-                        <img src="images/hotmail.png" alt="Hotmail">
-                        <h4>Hotmail</h4>
-                    </div>
-                    <div class="mail-card" onclick="window.open('https://drive.google.com/', '_blank')">
-                        <img src="images/drive.png" alt="Drive">
-                        <h4>Google Drive</h4>
-                    </div>
-                    <div class="mail-card" onclick="window.open('https://remotedesktop.google.com/', '_blank')">
-                        <img src="images/remotedesktop.png" alt="Remote Desktop">
-                        <h4>Remote Desktop</h4>
-                    </div>
-                </div>
-            </div>
-            
-            
-            
-            <!-- INFORMACIÓN -->
-            <div class="card" style="margin-top: 25px;">
-                <div class="section-header">
-                    <i class="fas fa-info-circle"></i> Información
-                </div>
-                <div class="info-grid">
-                    <div class="info-card">
-                        <h3><i class="fa-solid fa-school"></i> Trabajo Nika</h3>
-                        <a href="https://www.educarm.es/home" target="_blank">Educarm</a>
-                        <a href="https://www.tokappschool.com/" target="_blank">TokApp</a>
-                        <a href="https://teleformacion.murciaeduca.es/" target="_blank">Teleformación</a>
-                        <a href="https://grupoanayaid.es/Identity/CIAM_Login?startURL=%2FIdentity%2Fsetup%2Fsecur%2FRemoteAccessAuthorizationPage.apexp%3Fsource%3DCAAAAZjmXB7CMDAwMDAwMDAwMDAwMDAwAAABAJMq7U-f_67y5yPi-wI6Gs_5Hvbnaz9CYzstICbecVJVAXv4V_69FDTCkfuouD2qA8q9NbzcxMnPrWoZB7oHIzWnrvKjBKPDVNr9L1DGf0LsRoG4I4Ica-Mp6NtPQsNyGZyG8VgrXxRSOhuqkYlhPsol-cgIbNKvrNGiwNJOilZ98_dO_PI2sg2QZh5SfPpHmBbHjolkBezX4AcN6CAPQSnE5CZxuMnuZjTbppSzWUiIiI9_B7dD28iiIyac1NlhBtkjupcCcMHsxOnZ0tS_HGBXLQTxP2GjMkhoy7I-KH3VaLNfx7InE9rSkyIk_OujXuRxYMorg-xfUSbtd4OKr2fi6dzeEQ52LML9jFXoPGhfzmt3psxAPj16H4s89ZjXAWIYPcyzcsqkCUX9wmij0FDJsHgA9H2aAKU8z2Z4HBdJ3g8X4MQgCblJ572S8a50sVWDr3S4p1PsXAN-WKzz21g91Auu1mV5yeTmyobb0aTP4fUqDaaXV-qjTIBhJzB_8GWZUFwEyJwi3pm1EibS0CDNrSP4wFbsdsgxCb47TZEus-ucROm-twq3E_2jIKP9Z7hlzVsMuZUIWAsDPzbjQDoJAPvrXlZrWj4KpiLTQ9gY8BROOU7yVlnMf4J7GLQW4pH4Si_dSByE3BBOMMV-jJeak14NZGP6VnpFngcpBFxb&sdtd=1" target="_blank">Grupo Anaya</a>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fas fa-hospital"></i> CARM - SS</h3>
-                        <a href="http://www.carm.es" target="_blank">CARM</a>
-                        <a href="https://sms.carm.es/cmap/iniciarReserva.do" target="_blank">Servicio Murciano Salud</a>
-                        <a href="https://sede.carm.es/sms/portaldelpaciente/home.xhtml" target="_blank">Portal del paciente</a>
-                        <a href="https://sede.seg-social.gob.es/wps/portal/sede/sede/Ciudadanos/informes y certificados/" target="_blank">INSS</a>
-                        <a href="https://clientes.prevemur.es/web/tr/inicio.aspx" target="_blank">Prevemur</a>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fas fa-newspaper"></i> Diarios</h3>
-                        <a href="http://www.elmundo.es/index.html" target="_blank">El Mundo</a>
-                        <a href="http://www.laverdad.es/" target="_blank">La Verdad</a>
-                        <a href="https://www.libertaddigital.com/" target="_blank">Libertad Digital</a>
-                        <a href="http://www.larazon.es/" target="_blank">La Razón</a>
-                        <a href="https://www.abc.es/" target="_blank">ABC</a>
-                        <a href="https://www.elpais.com/" target="_blank">El País</a>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fas fa-route"></i> Movilidad</h3>
-                        <a href="http://maps.google.es/" target="_blank">Google Maps</a>
-                        <a href="http://callejero.paginasamarillas.es/home.asp" target="_blank">Páginas Amarillas</a>
-                        <a href="http://www.renfe.es" target="_blank">Renfe</a>
-                        <a href="https://www.ouigo.com/es/" target="_blank">Ouigo</a>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fa-solid fa-sitemap"></i> Webs recursos IA</h3>
-                        <a href="https://www.bananaprompts.xyz/explore" target="_blank">Banana Prompts</a>
-                    </div>
-                    
-                    <div class="info-card">
-                        <h3><i class="fas fa-university"></i> Bancos</h3>
-                        <a href="http://portal.lacaixa.es/home/particulares_es.html" target="_blank">CaixaBank</a>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- TIEMPO -->
-            <div class="card" style="margin-top: 25px;">
-                <div class="section-header">
-                    <i class="fas fa-cloud-sun"></i> Tiempo
-                </div>
-                <div style="padding: 20px;">
-                    <iframe src="https://www.meteoblue.com/es/tiempo/widget/daily/lorca_espa%c3%b1a_2514891?geoloc=fixed&days=5&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&precipunit=MILLIMETER&coloured=coloured&pictoicon=1&maxtemperature=1&mintemperature=1&windspeed=1&uvindex=1&legacylink=0" frameborder="0" scrolling="no" allowtransparency="true" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" style="width: 100%; height: 540px; border-radius: 15px; overflow: hidden;"></iframe>
-                </div>
+            <div class="pad">
+                <button class="touch-btn fire" type="button" data-touch="fire" aria-label="Disparar">FUEGO</button>
             </div>
         </div>
-        
-        <!-- COLUMNA DERECHA -->
-        
-        <div class="card">
-            
-            <div class="card">
-                
-                <div class="card">
-                    
-                    
-                    <div class="section-header">
-                        <i class="fas fa-star"></i> Recursos
-                    </div>
-                    <div class="resources-section">
-                        <div class="subsection-header">
-                            <i class="fas fa-robot"></i> Inteligencias Artificiales
-                        </div>
-                        <div class="ai-grid">
-                            <button class="ai-card chatgpt" onclick="window.open('https://chatgpt.com/', '_blank');">
-                                <img src="images/chatgpt.jpg" alt="ChatGPT">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://claude.ai/', '_blank');">
-                                <img src="images/claude.png" alt="Claude">
-                            </button>
-                            <button class="ai-card gemini" onclick="window.open('https://gemini.google.com/app?hl=es-ES', '_blank');">
-                                <img src="images/gemini.png" alt="Gemini">
-                            </button>
-                            <button class="ai-card perplexity" onclick="window.open('https://www.perplexity.ai/', '_blank');">
-                                <img src="images/perplexity.png" alt="Perplexity">
-                            </button>
-                            <button class="ai-card notebookLM" onclick="window.open('https://notebooklm.google.com/', '_blank');">
-                                <img src="images/notebookLM.png" alt="NotebookLM">
-                            </button>
-                            <button class="ai-card bing" onclick="window.open('https://www.bing.com/images?FORM=Z9LH', '_blank');">
-                                <img src="images/bing.png" alt="Bing">
-                            </button>
-                            <button class="ai-card grok" onclick="window.open('https://grok.com/', '_blank');">
-                                <img src="images/GROK.png" alt="Grok">
-                            </button>
-                            <button class="ai-card notion" onclick="window.open('https://notion.com/', '_blank');">
-                                <img src="images/notion.png" alt="Notion">
-                            </button>
-                            <button class="ai-card gestor" onclick="window.open('webs/Gestor%20de%20prompts.html', '_blank');">
-                                <img src="images/gestor.png" alt="Gestor%20de%20prompts">
-                            </button>
-                        </div>
-                        
-                        <div class="subsection-header">
-                            <i class="fa-solid fa-suitcase-rolling"></i> Planificación de viajes
-                        </div>
-                        <div class="ai-grid">
-                            <button class="ai-card claude" onclick="window.open('http://maps.google.es/', '_blank');">
-                                <img src="images/google_maps.jpg" alt="Google maps">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://www.google.com/maps/d/u/0/', '_blank');">
-                                <img src="images/my_maps.jpg" alt="My Maps">
-                            </button>
-                            <button class="ai-card airbnb" onclick="window.open('https://www.airbnb.es/', '_blank');">
-                                <img src="images/airbnb.jpg" alt="AirBnb">
-                            </button>
-                            <button class="ai-card booking" onclick="window.open('https://www.booking.com/', '_blank');">
-                                <img src="images/booking.png" alt=">Booking">
-                            </button>
-                            <button class="ai-card skyscanner" onclick="window.open('https://www.skyscanner.es/', '_blank');">
-                                <img src="images/skyscanner.png" alt="Skyscanner">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://www.google.com/travel/flights?gl=ES&hl=es', '_blank');">
-                                <img src="images/google_flights.jpg" alt="Googel Flights">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://www.github.com/', '_blank');">
-                                <img src="images/github.png" alt="Github">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://kmatiu.github.io/guias-viaje/', '_blank');">
-                                <img src="images/viajes.png" alt="Guías de viajes">
-                            </button>
-                        </div>
-                        
-                        
-                        <div class="subsection-header">
-                            <i class="fa-solid fa-pen-to-square"></i> Edición
-                        </div>
-                        <div class="ai-grid">
-                            <button class="ai-card claude" onclick="window.open('http://youtube.com/', '_blank');">
-                                <img src="images/youtube.jpg" alt="Youtube">
-                            </button>
-                            <button class="ai-card canva" onclick="window.open('https://www.canva.com/', '_blank');">
-                                <img src="images/canva.png" alt="Canva">
-                            </button>
-                            <button class="ai-card pixabay" onclick="window.open('https://pixabay.com/', '_blank');">
-                                <img src="images/pixabay.jpg" alt="Pixabay">
-                            </button>
-                            <button class="ai-card claude" onclick="window.open('https://freesound.org/', '_blank');">
-                                <img src="images/freesound.png" alt=">Freesound">
-                            </button>
-                        </div>
-                        
-                        
-                        <div class="web-section">
-                            <div class="subsection-header">
-                                <i class="fas fa-globe"></i> Webs Favoritas
-                            </div>
-                            <div class="web-item" onclick="window.open('https://www.formacion.cc/index.php?c=ADAMSGENERACIOND', '_blank');">
-                                <i class="fa-solid fa-graduation-cap"></i> Adams Formación
-                            </div>
-                            <div class="web-item" onclick="window.open('https://podcasts.apple.com/es/new', '_blank');">
-                                <i class="fa-solid fa-podcast"></i> Podcasts
-                            </div>
-                            <div class="web-item" onclick="window.open('https://www.fintonic.com/private/login', '_blank');">
-                                <i class="fa-solid fa-coins"></i> Fintonic
-                            </div>
-                            <div class="web-item" onclick="window.open('https://www.amazon.es', '_blank');">
-                                <i class="fa-brands fa-amazon"></i> Amazon
-                            </div>
-                        </div>
-                        
-                        <div class="web-section">
-                            <div class="subsection-header">
-                                <i class="fa-solid fa-gamepad"></i> Videojuegos
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/SpaceInvaders.html', '_blank');">
-                                <i class="fa-solid fa-shuttle-space"></i> Space Invaders
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/tetris.html', '_blank');">
-                                <i class="fa-solid fa-cube"></i> Tetris
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/PacMan.html', '_blank');">
-                                <i class="fa-solid fa-ghost"></i> PacMan
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/quiz.html', '_blank');">
-                                <i class="fa-solid fa-comments"></i> Quiz
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/super-pang.html', '_blank');">
-                                <i class="fa-solid fa-person-rifle"></i> Súper Pang 
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/arkanoid.html', '_blank');">
-                                <i class="fa-solid fa-bars-staggered"></i> Arkanoid 
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/tanques.html', '_blank');">
-                                <i class="fa-solid fa-bomb"></i> Tanques 
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/carreraCoches.html', '_blank');">
-                                <i class="fa-solid fa-car"></i> Ruta 66 (en desarrollo)
-                            </div>
-                            <div class="web-item" onclick="window.open('webs/penaltis.html', '_blank');">
-                                <i class="fa-solid fa-futbol"></i> Penaltis (en desarrollo)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                
+
+        <div id="pauseOverlay" class="overlay pause-overlay" style="display: none;">
+            <h2>JUEGO PAUSADO</h2>
+            <p style="font-size:16px;">Pulsa P o el botón ⏸ para continuar</p>
+        </div>
+
+        <div id="gameOver" class="overlay" style="display: none;">
+            <h2>GAME OVER</h2>
+            <p>Puntuación Final: <span id="finalScore">0</span></p>
+            <div id="nameInput" style="display: none;">
+                <p style="font-size:16px;">¡Nuevo récord! Escribe tu nombre:</p>
+                <input type="text" id="playerName" maxlength="15" placeholder="Tu nombre">
+                <br>
+                <button id="saveScoreBtn" type="button">Guardar</button>
             </div>
-            
-            <script>
-                // Función para crear más partículas dinámicamente
-                function createParticles() {
-                    for(let i = 0; i < 20; i++) {
-                        const particle = document.createElement('div');
-                        particle.className = 'particle';
-                        particle.style.left = Math.random() * 100 + '%';
-                        particle.style.animationDelay = Math.random() * 20 + 's';
-                        particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
-                        document.body.appendChild(particle);
-                        
-                        // Eliminar partícula después de la animación
-                        setTimeout(() => {
-                            particle.remove();
-                        }, 20000);
+            <div class="ranking">
+                <h3>TOP 10 PUNTUACIONES</h3>
+                <div id="rankingList" class="ranking-list"></div>
+            </div>
+            <button id="restartBtn" type="button">JUGAR DE NUEVO (R)</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <p>CONTROLES: ← → para mover | ESPACIO para disparar | P para pausar | R para reiniciar</p>
+    </div>
+
+    <div class="audio-controls">
+        <label for="volumeSlider">🔊 Volumen:</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volume-slider">
+        <button id="muteBtn" type="button">🔇 Silenciar</button>
+    </div>
+
+    <script>
+        'use strict';
+
+        // ==========================================
+        // AUDIO
+        // ==========================================
+        let audioContext;
+        let masterGain;
+        let isMuted = false;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+                masterGain.gain.value = 0.5;
+            } catch (e) {
+                console.warn('Web Audio API no soportado:', e);
+                audioContext = null;
+            }
+        }
+
+        function resumeAudio() {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
+        }
+
+        // Los nodos se desconectan al terminar, en lugar de quedar colgando de
+        // masterGain a la espera del recolector de basura.
+        function autoRelease(node, gain) {
+            node.onended = () => {
+                try { node.disconnect(); gain.disconnect(); } catch (e) {}
+            };
+        }
+
+        function playSound(frequency, duration, type = 'square', fadeOut = true) {
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+            autoRelease(oscillator, gainNode);
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            if (fadeOut) {
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            } else {
+                gainNode.gain.setValueAtTime(0.01, audioContext.currentTime + duration);
+            }
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playLaserSound() {
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+            autoRelease(oscillator, gainNode);
+
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playExplosionSound() {
+            if (!audioContext || isMuted) return;
+
+            const bufferSize = Math.floor(audioContext.sampleRate * 0.3);
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const source = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+
+            source.buffer = buffer;
+            source.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGain);
+            source.onended = () => {
+                try { source.disconnect(); filter.disconnect(); gainNode.disconnect(); } catch (e) {}
+            };
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2000, audioContext.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            source.start(audioContext.currentTime);
+            source.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playPowerUpSound() {
+            const frequencies = [200, 300, 400, 500, 600];
+            frequencies.forEach((freq, index) => {
+                setTimeout(() => {
+                    playSound(freq, 0.1, 'sine', false);
+                }, index * 50);
+            });
+        }
+
+        function playGameOverSound() {
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+            autoRelease(oscillator, gainNode);
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 2);
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 2);
+        }
+
+        function playHitSound() {
+            playSound(150, 0.3, 'triangle');
+        }
+
+        function playInvaderMoveSound() {
+            playSound(100, 0.05, 'square', false);
+        }
+
+        function updateVolume() {
+            if (masterGain) {
+                const volume = document.getElementById('volumeSlider').value / 100;
+                masterGain.gain.value = isMuted ? 0 : volume;
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('muteBtn').textContent = isMuted ? '🔊 Activar' : '🔇 Silenciar';
+            updateVolume();
+        }
+
+        // ==========================================
+        // CONFIGURACIÓN
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const stage = document.getElementById('stage');
+
+        const STEP_MS = 1000 / 60;   // paso fijo: conserva las constantes originales
+        const MAX_FRAME_MS = 250;    // techo tras volver de segundo plano
+        const MAX_STEPS = 5;         // evita la espiral de la muerte
+
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+        let gamePaused = false;
+        let keys = {};
+        let invaderMoveCounter = 0;
+
+        let rafId = null;
+        let lastTime = 0;
+        let accumulator = 0;
+
+        // Posición objetivo cuando se arrastra el dedo sobre el área de juego
+        let dragTargetX = null;
+
+        // ==========================================
+        // ENTIDADES
+        // ==========================================
+        class Player {
+            constructor() {
+                this.width = 40;
+                this.height = 20;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - 40;
+                this.speed = 5;
+                this.bullets = [];
+                this.lastShot = 0;
+                this.shootDelay = 200;
+            }
+
+            update() {
+                // El arrastre táctil tiene prioridad sobre las teclas
+                if (dragTargetX !== null) {
+                    this.x = Math.max(0, Math.min(canvas.width - this.width, dragTargetX - this.width / 2));
+                } else {
+                    if (keys['ArrowLeft'] && this.x > 0) {
+                        this.x -= this.speed;
+                    }
+                    if (keys['ArrowRight'] && this.x < canvas.width - this.width) {
+                        this.x += this.speed;
                     }
                 }
-                
-                // Crear partículas cada 5 segundos
-                setInterval(createParticles, 5000);
-                
-                // Función para alertas obsoletas
-                function unused(){
-                    alert("Este link ya no se usa!!!");
+
+                if (keys[' '] && Date.now() - this.lastShot > this.shootDelay) {
+                    this.bullets.push(new Bullet(this.x + this.width / 2 - 2, this.y, -8, '#0f0'));
+                    this.lastShot = Date.now();
+                    playLaserSound();
                 }
-                
-                function noCambios(){
-                    alert("Por favor NO guarde cambios al salir del Excel");
-                }
-                
-                // Prevenir acumulación de transforms
-                document.addEventListener('DOMContentLoaded', function() {
-                    const resetTransform = function(element) {
-                        element.addEventListener('mouseleave', function() {
-                            // Pequeño delay para suavizar la transición de vuelta
-                            setTimeout(() => {
-                                this.style.transform = '';
-                            }, 300);
-                        });
-                    };
-                    
-                    // Aplicar a todas las tarjetas que pueden tener problemas de acumulación
-                    document.querySelectorAll('.info-card, .mail-card, .ai-card, .web-item').forEach(resetTransform);
+
+                this.bullets = this.bullets.filter(bullet => {
+                    bullet.update();
+                    return bullet.y > -10;
                 });
-            </script>
-        </body>
-        </html>
+            }
+
+            draw() {
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillRect(this.x + this.width / 2 - 2, this.y - 10, 4, 10);
+                ctx.fillRect(this.x + 5, this.y + this.height, 5, 5);
+                ctx.fillRect(this.x + this.width - 10, this.y + this.height, 5, 5);
+
+                this.bullets.forEach(bullet => bullet.draw());
+            }
+        }
+
+        class Invader {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 20;
+                this.type = type;
+                this.points = type === 0 ? 30 : type === 1 ? 20 : 10;
+                this.animFrame = 0;
+            }
+
+            update() {
+                this.animFrame++;
+            }
+
+            draw() {
+                ctx.fillStyle = this.type === 0 ? '#f00' : this.type === 1 ? '#ff0' : '#0f0';
+
+                const offset = Math.floor(this.animFrame / 30) % 2;
+
+                if (this.type === 0) {
+                    ctx.fillRect(this.x + offset, this.y, this.width - offset * 2, this.height);
+                    ctx.fillRect(this.x + 5, this.y - 5, 20, 5);
+                } else if (this.type === 1) {
+                    ctx.fillRect(this.x + offset * 2, this.y, this.width - offset * 4, this.height);
+                    ctx.fillRect(this.x + 8, this.y - 3, 14, 3);
+                } else {
+                    ctx.fillRect(this.x + offset, this.y, this.width - offset * 2, this.height);
+                }
+
+                ctx.fillRect(this.x + 10 + offset, this.y + 5, 10, 10);
+            }
+        }
+
+        class Bullet {
+            constructor(x, y, speed, color) {
+                this.x = x;
+                this.y = y;
+                this.width = 4;
+                this.height = 10;
+                this.speed = speed;
+                this.color = color;
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        let player = new Player();
+        let invaders = [];
+        let invaderBullets = [];
+        let invaderDirection = 1;
+        let invaderSpeed = 1;
+        let invaderDropDistance = 20;
+        let lastInvaderShot = 0;
+
+        function createInvaders() {
+            invaders = [];
+            const rows = 5;
+            const cols = 10;
+            const startX = 50;
+            const startY = 50;
+            const spacingX = 60;
+            const spacingY = 50;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const type = row < 1 ? 0 : row < 3 ? 1 : 2;
+                    invaders.push(new Invader(startX + col * spacingX, startY + row * spacingY, type));
+                }
+            }
+        }
+
+        // ==========================================
+        // COLISIONES
+        // ==========================================
+        function overlaps(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function checkCollisions() {
+            // Bucles hacia atrás: el código original hacía splice() dentro de un
+            // forEach, así que al eliminar un elemento se saltaba el siguiente y
+            // los índices del bucle exterior dejaban de ser válidos. Una misma
+            // bala podía destruir varios invasores o borrar la bala equivocada.
+            for (let b = player.bullets.length - 1; b >= 0; b--) {
+                const bullet = player.bullets[b];
+
+                for (let i = invaders.length - 1; i >= 0; i--) {
+                    if (overlaps(bullet, invaders[i])) {
+                        score += invaders[i].points;
+                        invaders.splice(i, 1);
+                        player.bullets.splice(b, 1);
+                        playExplosionSound();
+                        break;   // una bala destruye un solo invasor
+                    }
+                }
+            }
+
+            for (let b = invaderBullets.length - 1; b >= 0; b--) {
+                if (overlaps(invaderBullets[b], player)) {
+                    invaderBullets.splice(b, 1);
+                    lives--;
+                    playHitSound();
+
+                    if (lives <= 0) {
+                        lives = 0;
+                        endGame();
+                        return;
+                    }
+                }
+            }
+
+            // Antes esto iba dentro de un forEach que llamaba a endGame() una vez
+            // por cada invasor que llegaba abajo: diez sonidos de game over a la vez.
+            if (invaders.some(inv => inv.y + inv.height >= player.y)) {
+                lives = 0;
+                endGame();
+            }
+        }
+
+        function updateInvaders() {
+            let moveDown = false;
+
+            invaders.forEach(invader => {
+                if ((invader.x <= 0 && invaderDirection === -1) ||
+                    (invader.x >= canvas.width - invader.width && invaderDirection === 1)) {
+                    moveDown = true;
+                }
+            });
+
+            if (moveDown) {
+                invaderDirection *= -1;
+                invaders.forEach(invader => {
+                    invader.y += invaderDropDistance;
+                });
+            }
+
+            invaders.forEach(invader => {
+                invader.x += invaderSpeed * invaderDirection;
+                invader.update();
+            });
+
+            invaderMoveCounter++;
+            if (invaderMoveCounter % 60 === 0 && invaders.length > 0) {
+                playInvaderMoveSound();
+            }
+
+            if (Date.now() - lastInvaderShot > 1000 + Math.random() * 2000) {
+                if (invaders.length > 0) {
+                    const shooter = invaders[Math.floor(Math.random() * invaders.length)];
+                    invaderBullets.push(new Bullet(
+                        shooter.x + shooter.width / 2 - 2,
+                        shooter.y + shooter.height,
+                        3,
+                        '#f00'
+                    ));
+                    lastInvaderShot = Date.now();
+                    playSound(200, 0.1, 'sawtooth');
+                }
+            }
+
+            invaderBullets = invaderBullets.filter(bullet => {
+                bullet.update();
+                return bullet.y < canvas.height + 10;
+            });
+        }
+
+        // ==========================================
+        // BUCLE - paso fijo sobre requestAnimationFrame
+        // ==========================================
+        // setInterval(updateGame, 16) no está sincronizado con el refresco de
+        // pantalla, acumula deriva y el navegador lo estrangula cuando la pestaña
+        // pasa a segundo plano, algo habitual en móvil al llegar una notificación.
+        // El acumulador mantiene el mismo paso de 1/60 s, así que todas las
+        // constantes originales del juego siguen siendo válidas.
+        function stepGame() {
+            player.update();
+            updateInvaders();
+            checkCollisions();
+
+            if (!gameRunning) return;
+
+            if (invaders.length === 0) {
+                level++;
+                invaderSpeed += 0.5;
+                invaderDirection = 1;
+                createInvaders();
+                player.bullets = [];
+                invaderBullets = [];
+                playPowerUpSound();
+            }
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            player.draw();
+            invaders.forEach(invader => invader.draw());
+            invaderBullets.forEach(bullet => bullet.draw());
+        }
+
+        let hudCache = { score: -1, lives: -1, level: -1 };
+
+        function updateHUD() {
+            // Escribir en el DOM 60 veces por segundo fuerza recálculos de
+            // maquetación inútiles; solo se toca cuando el valor cambia.
+            if (hudCache.score !== score) {
+                document.getElementById('score').textContent = score;
+                hudCache.score = score;
+            }
+            if (hudCache.lives !== lives) {
+                document.getElementById('lives').textContent = lives;
+                hudCache.lives = lives;
+            }
+            if (hudCache.level !== level) {
+                document.getElementById('level').textContent = level;
+                hudCache.level = level;
+            }
+        }
+
+        function loop(now) {
+            rafId = requestAnimationFrame(loop);
+
+            let delta = now - lastTime;
+            lastTime = now;
+            if (delta > MAX_FRAME_MS) delta = MAX_FRAME_MS;
+
+            if (!gameRunning || gamePaused) {
+                accumulator = 0;
+                return;
+            }
+
+            accumulator += delta;
+
+            let steps = 0;
+            while (accumulator >= STEP_MS && steps < MAX_STEPS) {
+                stepGame();
+                accumulator -= STEP_MS;
+                steps++;
+
+                if (!gameRunning || gamePaused) {
+                    accumulator = 0;
+                    break;
+                }
+            }
+
+            if (steps > 0) {
+                drawGame();
+                updateHUD();
+            }
+        }
+
+        function startLoop() {
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            lastTime = performance.now();
+            accumulator = 0;
+            rafId = requestAnimationFrame(loop);
+        }
+
+        // ==========================================
+        // ESTADO DEL JUEGO
+        // ==========================================
+        function togglePause() {
+            if (!gameRunning) return;
+            gamePaused = !gamePaused;
+            document.getElementById('pauseOverlay').style.display = gamePaused ? 'block' : 'none';
+            document.getElementById('pauseBtn').textContent = gamePaused ? '▶' : '⏸';
+            if (gamePaused) { keys = {}; dragTargetX = null; }
+            lastTime = performance.now();
+        }
+
+        function endGame() {
+            // Guarda de idempotencia: antes se podía llamar diez veces seguidas.
+            if (!gameRunning) return;
+
+            gameRunning = false;
+            keys = {};
+            dragTargetX = null;
+            document.getElementById('finalScore').textContent = score;
+            playGameOverSound();
+
+            if (isTopScore(score)) {
+                document.getElementById('nameInput').style.display = 'block';
+                setTimeout(() => document.getElementById('playerName').focus(), 50);
+            }
+
+            displayRanking();
+            document.getElementById('gameOver').style.display = 'block';
+            updateHUD();
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            gamePaused = false;
+            invaderSpeed = 1;
+            invaderMoveCounter = 0;
+            invaderDirection = 1;   // no se reiniciaba: la nueva oleada podía arrancar hacia la izquierda
+            lastInvaderShot = Date.now();
+            keys = {};
+            dragTargetX = null;
+
+            player = new Player();
+            invaderBullets = [];
+            createInvaders();
+
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('pauseOverlay').style.display = 'none';
+            document.getElementById('nameInput').style.display = 'none';
+            document.getElementById('playerName').value = '';
+            document.getElementById('pauseBtn').textContent = '⏸';
+
+            hudCache = { score: -1, lives: -1, level: -1 };
+            updateHUD();
+            startLoop();
+        }
+
+        // ==========================================
+        // RANKING
+        // ==========================================
+        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
+        // iframe con sandbox) el original lanzaba una excepción y rompía la
+        // pantalla de game over.
+        let scoresMemory = [];
+        const storageOK = (() => {
+            try {
+                localStorage.setItem('__t', '1');
+                localStorage.removeItem('__t');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function getHighScores() {
+            if (!storageOK) return scoresMemory.slice();
+            try {
+                const scores = localStorage.getItem('spaceInvadersHighScores');
+                const parsed = scores ? JSON.parse(scores) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function saveHighScores(scores) {
+            scoresMemory = scores.slice();
+            if (!storageOK) return;
+            try {
+                localStorage.setItem('spaceInvadersHighScores', JSON.stringify(scores));
+            } catch (e) {
+                console.warn('No se pudo guardar el ranking:', e);
+            }
+        }
+
+        function isTopScore(newScore) {
+            if (newScore <= 0) return false;   // no pedir nombre por una puntuación de 0
+            const highScores = getHighScores();
+            return highScores.length < 10 || newScore > highScores[highScores.length - 1].score;
+        }
+
+        function saveScore() {
+            const nameField = document.getElementById('playerName');
+            const playerName = nameField.value.trim();
+
+            if (!playerName) {
+                const nameInputDiv = document.getElementById('nameInput');
+                const existingWarning = nameInputDiv.querySelector('.warning-message');
+                if (existingWarning) existingWarning.remove();
+
+                const warning = document.createElement('p');
+                warning.className = 'warning-message';
+                warning.style.color = '#f00';
+                warning.style.fontSize = '16px';
+                warning.textContent = 'Por favor, escribe tu nombre.';
+                nameInputDiv.prepend(warning);
+
+                setTimeout(() => {
+                    const w = nameInputDiv.querySelector('.warning-message');
+                    if (w) w.remove();
+                }, 2000);
+                nameField.focus();
+                return;
+            }
+
+            const highScores = getHighScores();
+            highScores.push({ name: playerName, score: score });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores.splice(10);
+
+            saveHighScores(highScores);
+            document.getElementById('nameInput').style.display = 'none';
+            displayRanking(playerName);
+        }
+
+        function displayRanking(justSavedName) {
+            const highScores = getHighScores();
+            const rankingList = document.getElementById('rankingList');
+
+            if (highScores.length === 0) {
+                rankingList.textContent = 'No hay puntuaciones guardadas';
+                return;
+            }
+
+            let html = '';
+            highScores.forEach((entry, index) => {
+                const isCurrent = justSavedName && entry.name === justSavedName && entry.score === score;
+                const className = isCurrent ? 'ranking-entry highlight' : 'ranking-entry';
+                // El nombre viene de un input y se inyecta con innerHTML: hay que escaparlo.
+                html += `<div class="${className}">${index + 1}. ${escapeHtml(entry.name)} - ${Number(entry.score) || 0}</div>`;
+            });
+
+            rankingList.innerHTML = html;
+        }
+
+        // ==========================================
+        // ENTRADA - teclado
+        // ==========================================
+        const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '];
+
+        function isTypingName() {
+            return document.getElementById('nameInput').style.display === 'block';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            // Sin esto, las flechas y el espacio hacen scroll de la página
+            if (GAME_KEYS.includes(e.key) && !isTypingName()) {
+                e.preventDefault();
+            }
+
+            if (isTypingName()) {
+                // Mientras se escribe el nombre ninguna tecla es un atajo:
+                // así la R y la P se escriben en el campo con normalidad.
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveScore();
+                }
+                return;
+            }
+
+            if (e.key === 'p' || e.key === 'P') {
+                togglePause();
+                return;
+            }
+
+            if (e.key === 'r' || e.key === 'R') {
+                if (!gameRunning) resetGame();
+                return;
+            }
+
+            if (!gamePaused) {
+                keys[e.key] = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Si se cambia de pestaña con una tecla pulsada, el keyup se pierde y la
+        // nave se queda moviéndose sola al volver.
+        window.addEventListener('blur', () => { keys = {}; dragTargetX = null; });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { keys = {}; dragTargetX = null; }
+            lastTime = performance.now();
+        });
+
+        // ==========================================
+        // ENTRADA - táctil
+        // ==========================================
+        const TOUCH_KEYS = { left: 'ArrowLeft', right: 'ArrowRight', fire: ' ' };
+
+        function initTouch() {
+            const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (isTouch) document.body.classList.add('touch-device');
+
+            document.querySelectorAll('#touchControls [data-touch]').forEach(btn => {
+                const key = TOUCH_KEYS[btn.dataset.touch];
+
+                const press = (e) => {
+                    e.preventDefault();
+                    resumeAudio();
+                    if (gameRunning && !gamePaused) keys[key] = true;
+                };
+                const release = (e) => {
+                    e.preventDefault();
+                    keys[key] = false;
+                };
+
+                btn.addEventListener('pointerdown', press);
+                btn.addEventListener('pointerup', release);
+                btn.addEventListener('pointercancel', release);
+                btn.addEventListener('pointerleave', release);
+            });
+
+            // Arrastrar sobre el área de juego mueve la nave directamente.
+            // clientX se convierte a coordenadas internas del canvas, que sigue
+            // midiendo 800x600 aunque en pantalla se vea más pequeño.
+            function toCanvasX(clientX) {
+                const rect = canvas.getBoundingClientRect();
+                if (rect.width === 0) return null;
+                return (clientX - rect.left) / rect.width * canvas.width;
+            }
+
+            stage.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('#touchControls') || e.target.closest('.overlay')) return;
+                resumeAudio();
+                if (!gameRunning || gamePaused) return;
+                dragTargetX = toCanvasX(e.clientX);
+                try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+            });
+
+            stage.addEventListener('pointermove', (e) => {
+                if (dragTargetX === null) return;
+                dragTargetX = toCanvasX(e.clientX);
+            });
+
+            const endDrag = () => { dragTargetX = null; };
+            stage.addEventListener('pointerup', endDrag);
+            stage.addEventListener('pointercancel', endDrag);
+        }
+
+        // ==========================================
+        // PANTALLA COMPLETA / ORIENTACIÓN
+        // ==========================================
+        async function toggleFullscreen() {
+            const el = document.documentElement;
+
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                try {
+                    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: 'hide' });
+                    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+                } catch (e) { /* iOS Safari no permite pantalla completa fuera de <video> */ }
+
+                try {
+                    if (screen.orientation && screen.orientation.lock) {
+                        await screen.orientation.lock('landscape');
+                    }
+                } catch (e) { /* no soportado o denegado: el diseño se adapta igual */ }
+            } else {
+                try {
+                    if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
+                } catch (e) {}
+
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        }
+
+        // ==========================================
+        // LISTENERS DE UI
+        // ==========================================
+        document.getElementById('volumeSlider').addEventListener('input', updateVolume);
+        document.getElementById('muteBtn').addEventListener('click', () => { resumeAudio(); toggleMute(); });
+        document.getElementById('pauseBtn').addEventListener('click', () => { resumeAudio(); togglePause(); });
+        document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+        document.getElementById('saveScoreBtn').addEventListener('click', saveScore);
+        document.getElementById('restartBtn').addEventListener('click', () => { resumeAudio(); resetGame(); });
+
+        document.addEventListener('pointerdown', resumeAudio, { once: true });
+        document.addEventListener('keydown', resumeAudio, { once: true });
+
+        // ==========================================
+        // ARRANQUE
+        // ==========================================
+        initAudio();
+        initTouch();
+        createInvaders();
+        lastInvaderShot = Date.now();
+        updateHUD();
+        startLoop();
+    </script>
+</body>
+</html>
