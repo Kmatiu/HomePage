@@ -382,6 +382,67 @@
             color: var(--color-neon-blue);
         }
         
+        /* Botón de pausa dentro de la partida.
+           Necesario en móvil, donde no existe la tecla P. */
+        #pause-button {
+            width: auto;
+            max-width: none;
+            margin: 0;
+            padding: 6px 14px;
+            font-size: clamp(0.7rem, 2.2vw, 1rem);
+            border-color: var(--color-neon-pink);
+            color: var(--color-neon-pink);
+            background-color: #1a001a;
+            box-shadow: 0 3px 0 var(--color-neon-pink);
+            flex: 0 0 auto;
+        }
+
+        #pause-overlay {
+            cursor: pointer;
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #pause-hint {
+            font-size: clamp(0.5rem, 2vw, 0.8rem);
+            color: var(--color-neon-green);
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+
+        /* En pantalla táctil el :hover se queda pegado tras tocar, y hacía que
+           la última opción pulsada siguiera resaltada en la pregunta siguiente. */
+        @media (hover: none) {
+            .button:hover, button:hover,
+            .answer-option:hover,
+            .menu-option-group button:hover,
+            #volume-controls button:hover {
+                background-color: inherit;
+                color: inherit;
+                border-color: inherit;
+                box-shadow: inherit;
+            }
+
+            .answer-option:hover {
+                background-color: #1a1a1a;
+                border-color: var(--color-neutral);
+                color: var(--color-neon-blue);
+                box-shadow: 0 4px 0 var(--color-neutral);
+            }
+
+            .answer-option:active {
+                background-color: #003300;
+                border-color: var(--color-neon-green);
+            }
+
+            /* Objetivos táctiles algo más altos */
+            .answer-option {
+                padding: 16px 18px;
+            }
+        }
+
         /* Media Queries para responsividad */
         @media (max-width: 768px) { 
              .controls {
@@ -434,7 +495,7 @@
                     <label for="players-select">PARTICIPANTES</label>
                     <div id="players-options" class="menu-option-group">
                         <button class="menu-option-btn selected-option" data-value="1">1 JUGADOR (20 Preguntas)</button>
-                        <button class="menu-option-btn" data-value="2">2 JUGADORES (40 Preguntas)</button>
+                        <button class="menu-option-btn" data-value="2">2 JUGADORES (30 Preguntas)</button>
                     </div>
                     <input type="hidden" id="players-select" value="1">
 
@@ -476,8 +537,11 @@
         </section>
 
         <section id="game-screen" class="screen hide">
-            <div id="pause-overlay" class="hide">
-                 <div id="pause-message">PAUSA</div>
+            <div id="pause-overlay" class="hide" role="button" tabindex="0" aria-label="Reanudar partida">
+                 <div id="pause-message">
+                     PAUSA
+                     <div id="pause-hint">Toca aquí o pulsa P para continuar</div>
+                 </div>
             </div>
             
             <div class="game-info">
@@ -487,6 +551,7 @@
                 <div class="game-info-line-2">
                     <span>TIEMPO: <span id="time-display">0.0</span>s</span>
                     <span>PROGRESO: <span id="progress-display">0/0</span></span>
+                    <button id="pause-button" type="button" aria-label="Pausar partida">⏸</button>
                 </div>
             </div>
 
@@ -548,7 +613,10 @@
         // CONFIGURACIÓN Y ESTADO GLOBAL
         // =========================================================================
 
-        const MAX_QUESTIONS_PER_PLAYER = 20;
+        // Preguntas por partida según el número de jugadores.
+        // En dobles no son 20 por jugador (40 en total) porque se hacía largo:
+        // 30 en total, 15 por jugador.
+        const QUESTIONS_BY_PLAYERS = { 1: 20, 2: 30 };
         let retroMelody;
 
         // Variables de Estado del Juego
@@ -565,6 +633,9 @@
             isGameActive: false,
             selectedOptionIndex: -1, 
             isPaused: false,
+            keyboardCursorVisible: false,  // el cursor de teclado no se pinta hasta usarlo
+            advanceTimeout: null,          // id del salto a la siguiente pregunta
+            advancePending: false,         // había un salto pendiente al pausar
             scoreToSave: 0, // Puntuación a guardar (máxima individual en 2P, total en 1P)
             startTime: 0, // Nuevo: para cálculo preciso del tiempo
             timerInterval: null // Nuevo: para gestionar el intervalo
@@ -817,7 +888,6 @@
 { question: "¿En qué deporte se usa una raqueta y una pelota pequeña y amarilla?", options: ["Bádminton", "Tenis", "Squash", "Ping Pong"], answer: "Tenis", theme: "Deportes" },
 { question: "¿Qué país es la cuna del euro?", options: ["España", "Alemania", "Francia", "Países Bajos"], answer: "Alemania", theme: "Economía" },
 { question: "¿Cuál es el continente más frío?", options: ["Antártida", "África", "Asia", "Europa"], answer: "Antártida", theme: "Geografía" },
-{ question: "¿Quién fue Napoleón Bonaparte?", options: ["Rey de Francia", "General y emperador francés", "Presidente de Francia", "Papa"], answer: "General y emperador francés", theme: "Historia" },
 { question: "¿Quién escribió 'Moby Dick'?", options: ["Herman Melville", "Mark Twain", "Jules Verne", "Edgar Allan Poe"], answer: "Herman Melville", theme: "Literatura" },
 { question: "¿Cuál es la fórmula para el perímetro de un rectángulo?", options: ["2(a+b)", "a*b", "a² + b²", "2a + b"], answer: "2(a+b)", theme: "Matemáticas" },
 { question: "¿Qué banda británica es famosa por el álbum 'Abbey Road'?", options: ["The Rolling Stones", "The Beatles", "Queen", "Pink Floyd"], answer: "The Beatles", theme: "Música" },
@@ -848,7 +918,6 @@
 { question: "¿Qué animal usa la ecolocación para orientarse?", options: ["Delfín", "Tiburón", "Ballena", "Murciélago"], answer: "Murciélago", theme: "Curiosidades" },
 { question: "¿Qué deporte es conocido como 'el deporte rey'?", options: ["Baloncesto", "Fútbol", "Tenis", "Golf"], answer: "Fútbol", theme: "Deportes" },
 { question: "¿Cuál es la unidad básica de la moneda en Estados Unidos?", options: ["Euro", "Dólar", "Libra", "Peso"], answer: "Dólar", theme: "Economía" },
-{ question: "¿Cuál es la capital de Australia?", options: ["Sídney", "Melbourne", "Canberra", "Brisbane"], answer: "Canberra", theme: "Geografía" },
 { question: "¿Quién fue Cleopatra?", options: ["Reina egipcia", "General romano", "Filósofa griega", "Sacerdotisa maya"], answer: "Reina egipcia", theme: "Historia" },
 { question: "¿Quién escribió 'El gran Gatsby'?", options: ["F. Scott Fitzgerald", "Ernest Hemingway", "William Faulkner", "John Steinbeck"], answer: "F. Scott Fitzgerald", theme: "Literatura" },
 { question: "¿Cuál es el resultado de resolver la integral de una función constante?", options: ["Función lineal", "Cero", "Resultado infinito", "Número constante"], answer: "Función lineal", theme: "Matemáticas" },
@@ -881,7 +950,6 @@
 { question: "¿Qué país fue el primero en adoptar el euro como moneda?", options: ["Alemania", "Francia", "Luxemburgo", "Finlandia"], answer: "Luxemburgo", theme: "Economía" },
 { question: "¿Cuál es el segundo país más grande del mundo?", options: ["Estados Unidos", "Canadá", "Brasil", "China"], answer: "Canadá", theme: "Geografía" },
 { question: "¿En qué año se firmó la Declaración de Independencia de Estados Unidos?", options: ["1776", "1783", "1804", "1812"], answer: "1776", theme: "Historia" },
-{ question: "¿Quién escribió ‘Crimen y castigo’?", options: ["Dostoyevski", "Tolstói", "Pushkin", "Gógol"], answer: "Dostoyevski", theme: "Literatura" },
 { question: "¿Cuál es el área de un círculo de radio r?", options: ["πr", "2πr", "πr²", "πr³"], answer: "πr²", theme: "Matemáticas" },
 { question: "¿Qué compositor creó la ‘Obertura 1812’?", options: ["Tchaikovsky", "Beethoven", "Mozart", "Chopin"], answer: "Tchaikovsky", theme: "Música" },
 { question: "¿Cuál es el mamífero volador más pequeño?", options: ["Musaraña", "Murciélago nariz de cerdo", "Colibrí abeja", "Murciélago hada"], answer: "Murciélago hada", theme: "Naturaleza" },
@@ -947,13 +1015,11 @@
 { question: "¿Cuál es la película con mayor recaudación mundial hasta 2024?", options: ["Avatar", "Avengers: Endgame", "Titanic", "Star Wars VII"], answer: "Avatar", theme: "Cine y televisión" },
 { question: "¿Cuál es el país de origen del volcán Krakatoa?", options: ["Indonesia", "Filipinas", "Japón", "Malasia"], answer: "Indonesia", theme: "Geografía" },
 { question: "¿Quién fue el primer presidente de Sudáfrica post-apartheid?", options: ["Nelson Mandela", "Thabo Mbeki", "Jacob Zuma", "F.W. de Klerk"], answer: "Nelson Mandela", theme: "Historia" },
-{ question: "¿Quién escribió ‘El amor en los tiempos del cólera’?", options: ["Gabriel García Márquez", "Isabel Allende", "Mario Vargas Llosa", "Jorge Luis Borges"], answer: "Gabriel García Márquez", theme: "Literatura" },
 { question: "¿Cuál es el resultado de 7 elevado a la 3?", options: ["343", "217", "512", "256"], answer: "343", theme: "Matemáticas" },
 { question: "¿Qué cantante tuvo un álbum titulado ‘Thriller’?", options: ["Michael Jackson", "Prince", "Stevie Wonder", "David Bowie"], answer: "Michael Jackson", theme: "Música" },
 { question: "¿Qué animal es conocido por tener la mejor vista?", options: ["Águila", "Halcon", "León", "Tigre"], answer: "Águila", theme: "Naturaleza" },
 { question: "¿Qué empresa creó el sistema operativo Windows?", options: ["Apple", "Microsoft", "IBM", "Google"], answer: "Microsoft", theme: "Tecnología" },
 { question: "¿Qué consola lanzó Nintendo en 1985?", options: ["Super Nintendo", "Nintendo Entertainment System (NES)", "Nintendo 64", "GameCube"], answer: "Nintendo Entertainment System (NES)", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘La persistencia de la memoria’?", options: ["Salvador Dalí", "Pablo Picasso", "Joan Miró", "Frida Kahlo"], answer: "Salvador Dalí", theme: "Arte" },
 { question: "¿Cuál es la fórmula química del dióxido de carbono?", options: ["CO", "CO2", "CH4", "H2O"], answer: "CO2", theme: "Ciencia" },
 { question: "¿Quién dirigió la película ‘El Padrino’?", options: ["Francis Ford Coppola", "Martin Scorsese", "Steven Spielberg", "Brian De Palma"], answer: "Francis Ford Coppola", theme: "Cine y televisión" },
 { question: "¿Cuál es el ingrediente principal del hummus?", options: ["Garbanzos", "Lentejas", "Frijoles", "Soja"], answer: "Garbanzos", theme: "Comida" },
@@ -990,7 +1056,6 @@
 { question: "¿Qué actriz protagonizó ‘La La Land’?", options: ["Emma Stone", "Jennifer Lawrence", "Anne Hathaway", "Meryl Streep"], answer: "Emma Stone", theme: "Cine y televisión" },
 { question: "¿Cuál es el ingrediente base del guacamole?", options: ["Aguacate", "Tomate", "Cebolla", "Limón"], answer: "Aguacate", theme: "Comida" },
 { question: "¿Cuál es la fiesta tradicional mexicana con máscaras y disfraces?", options: ["Día de los Muertos", "Carnaval", "Halloween", "Fiesta de los Faroles"], answer: "Día de los Muertos", theme: "Cultura" },
-{ question: "¿Qué reptil puede cambiar de color para camuflarse?", options: ["Camaleón", "Iguana", "Serpiente", "Tortuga"], answer: "Camaleón", theme: "Curiosidades" },
 { question: "¿Cuántos puntos vale un touchdown en fútbol americano?", options: ["6", "3", "7", "1"], answer: "6", theme: "Deportes" },
 { question: "¿Qué país es la sede del Banco Mundial?", options: ["Suiza", "Estados Unidos", "Reino Unido", "Francia"], answer: "Estados Unidos", theme: "Economía" },
 { question: "¿Qué continente tiene el mayor número de países?", options: ["África", "Asia", "Europa", "América"], answer: "África", theme: "Geografía" },
@@ -1011,7 +1076,6 @@
 { question: "¿Cuál es la divisa oficial de Reino Unido?", options: ["Euro", "Libra esterlina", "Dólar", "Franco suizo"], answer: "Libra esterlina", theme: "Economía" },
 { question: "¿Cuál es el desierto más grande del mundo?", options: ["Sahara", "Gobi", "Kalahari", "Antártida"], answer: "Antártida", theme: "Geografía" },
 { question: "¿Quién fue el líder de la Revolución Rusa?", options: ["Lenin", "Trotsky", "Stalin", "Kerensky"], answer: "Lenin", theme: "Historia" },
-{ question: "¿Quién escribió ‘La metamorfosis’?", options: ["Franz Kafka", "Albert Camus", "Gustave Flaubert", "Hermann Hesse"], answer: "Franz Kafka", theme: "Literatura" },
 { question: "¿Qué número es el resultado de la suma de 12 y 15?", options: ["27", "25", "30", "22"], answer: "27", theme: "Matemáticas" },
 { question: "¿Quién es el compositor de ‘El cascanueces’?", options: ["Tchaikovsky", "Mozart", "Beethoven", "Brahms"], answer: "Tchaikovsky", theme: "Música" },
 { question: "¿Cuál es el animal mamífero que más grandes vivió en la historia?", options: ["Mamut", "Ballena azul", "Elefante", "Rinoceronte lanudo"], answer: "Ballena azul", theme: "Naturaleza" },
@@ -1042,13 +1106,11 @@
 { question: "¿Cuál es la principal fuente de ingresos de Suiza?", options: ["Turismo", "Sector bancario", "Agricultura", "Industria automotriz"], answer: "Sector bancario", theme: "Economía" },
 { question: "¿Cuál es el río más largo de Asia?", options: ["Mekong", "Yangtsé", "Ganges", "Amur"], answer: "Yangtsé", theme: "Geografía" },
 { question: "¿Quién fue la emperatriz de Rusia conocida como Catalina la Grande?", options: ["Catarina II", "María Teresa", "Isabel I", "Ana Bolena"], answer: "Catarina II", theme: "Historia" },
-{ question: "¿Quién escribió ‘El retrato de Dorian Gray’?", options: ["Oscar Wilde", "Charles Dickens", "Arthur Conan Doyle", "Edgar Allan Poe"], answer: "Oscar Wilde", theme: "Literatura" },
 { question: "¿Cuál es el resultado de elevar 3 al cubo?", options: ["9", "27", "81", "12"], answer: "27", theme: "Matemáticas" },
 { question: "¿Qué instrumento musical tiene teclas y es usado comúnmente en música clásica?", options: ["Piano", "Guitarra", "Saxofón", "Violín"], answer: "Piano", theme: "Música" },
 { question: "¿Qué animal tiene el récord de mayor velocidad en el aire?", options: ["Águila real", "Halcón peregrino", "Cóndor", "Albatros"], answer: "Halcón peregrino", theme: "Naturaleza" },
 { question: "¿Qué es un ‘cookie’ en informática?", options: ["Archivo de texto", "Virus", "Software malicioso", "Imagen"], answer: "Archivo de texto", theme: "Tecnología" },
 { question: "¿Cuál es el género del videojuego ‘The Witcher’?", options: ["Rol", "Aventura", "Disparos", "Estrategia"], answer: "Rol", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘El grito’?", options: ["Edvard Munch", "Vincent van Gogh", "Pablo Picasso", "Salvador Dalí"], answer: "Edvard Munch", theme: "Arte" },
 { question: "¿Cuál es el planeta más cercano al Sol?", options: ["Mercurio", "Venus", "Tierra", "Marte"], answer: "Mercurio", theme: "Ciencia" },
 { question: "¿Qué actor protagonizó la saga ‘Piratas del Caribe’ como Jack Sparrow?", options: ["Johnny Depp", "Orlando Bloom", "Geoffrey Rush", "Keira Knightley"], answer: "Johnny Depp", theme: "Cine y televisión" },
 { question: "¿Qué es el queso Roquefort?", options: ["Un queso azul", "Un queso fresco", "Un queso de cabra", "Un queso cremoso"], answer: "Un queso azul", theme: "Comida" },
@@ -1062,7 +1124,6 @@
 { question: "¿Qué instrumento tiene teclas blancas y negras?", options: ["Piano", "Violín", "Flauta", "Guitarra"], answer: "Piano", theme: "Música" },
 { question: "¿Cuál es el mamífero más rápido?", options: ["Guepardo", "León", "Tigre", "Águila"], answer: "Guepardo", theme: "Naturaleza" },
 { question: "¿Qué significa la sigla ‘Wi-Fi’?", options: ["Wireless Fidelity", "Wide Fidelity", "Wireless Finder", "Wide Finder"], answer: "Wireless Fidelity", theme: "Tecnología" },
-{ question: "¿Cuál es el personaje principal de ‘The Legend of Zelda’?", options: ["Link", "Zelda", "Ganondorf", "Tingle"], answer: "Link", theme: "Videojuegos" },
 { question: "¿Quién pintó ‘La noche estrellada’?", options: ["Vincent van Gogh", "Claude Monet", "Paul Cézanne", "Edgar Degas"], answer: "Vincent van Gogh", theme: "Arte" },
 { question: "¿Qué partícula tiene carga negativa?", options: ["Electrón", "Protón", "Neutrón", "Quark"], answer: "Electrón", theme: "Ciencia" },
 { question: "¿Quién es el creador de la saga ‘Harry Potter’?", options: ["J.K. Rowling", "Stephanie Meyer", "Suzanne Collins", "Rick Riordan"], answer: "J.K. Rowling", theme: "Literatura" },
@@ -1077,7 +1138,6 @@
 { question: "¿Quién fue Cicerón?", options: ["Orador romano", "Emperador romano", "Filósofo griego", "Poeta latino"], answer: "Orador romano", theme: "Historia" },
 { question: "¿Quién escribió ‘Don Quijote de la Mancha’?", options: ["Miguel de Cervantes", "Lope de Vega", "Francisco de Quevedo", "Luis de Góngora"], answer: "Miguel de Cervantes", theme: "Literatura" },
 { question: "¿Qué compositor creó la ópera ‘La Traviata’?", options: ["Giuseppe Verdi", "Wolfgang Amadeus Mozart", "Ludwig van Beethoven", "Johann Strauss"], answer: "Giuseppe Verdi", theme: "Música" },
-{ question: "¿Cuál es el animal terrestre más grande?", options: ["Elefante africano", "Jirafa", "Hipopótamo", "Rinoceronte"], answer: "Elefante africano", theme: "Naturaleza" },
 { question: "¿Qué significa ‘HTTP’?", options: ["Hypertext Transfer Protocol", "Hyper Transfer Text Protocol", "High Transfer Protocol", "Hyperlink Transfer Protocol"], answer: "Hypertext Transfer Protocol", theme: "Tecnología" },
 { question: "¿Cuál es el videojuego que popularizó los ‘Battle Royale’?", options: ["Fortnite", "PUBG", "Call of Duty", "Apex Legends"], answer: "Fortnite", theme: "Videojuegos" },
 { question: "¿Quién pintó la Capilla Sixtina?", options: ["Miguel Ángel", "Leonardo da Vinci", "Rafael", "Donatello"], answer: "Miguel Ángel", theme: "Arte" },
@@ -1088,24 +1148,20 @@
 { question: "¿Qué insecto produce miel?", options: ["Abeja", "Mariposa", "Polilla", "Avispa"], answer: "Abeja", theme: "Curiosidades" },
 { question: "¿Quién ha ganado más medallas olímpicas?", options: ["Michael Phelps", "Usain Bolt", "Simone Biles", "Carl Lewis"], answer: "Michael Phelps", theme: "Deportes" },
 { question: "¿Qué término define la caída generalizada de precios?", options: ["Inflación", "Deflación", "Recesión", "Depresión"], answer: "Deflación", theme: "Economía" },
-{ question: "¿Cuál es la capital de Australia?", options: ["Sidney", "Melbourne", "Canberra", "Brisbane"], answer: "Canberra", theme: "Geografía" },
 { question: "¿Quién fue Alejandro Magno?", options: ["Rey de Macedonia", "Rey de España", "Emperador romano", "Faraón egipcio"], answer: "Rey de Macedonia", theme: "Historia" },
 { question: "¿Quién escribió ‘La Odisea’?", options: ["Homero", "Hesíodo", "Virgilio", "Sófocles"], answer: "Homero", theme: "Literatura" },
 { question: "¿Qué cantante es conocido por ‘Like a Virgin’?", options: ["Madonna", "Whitney Houston", "Mariah Carey", "Janet Jackson"], answer: "Madonna", theme: "Música" },
 { question: "¿Cuál es el animal más venenoso del mundo?", options: ["Avispa de mar", "Escorpión emperador", "Serpiente mamba negra", "Araña reclusa"], answer: "Avispa de mar", theme: "Naturaleza" },
 { question: "¿Quién inventó el primer teléfono?", options: ["Alexander Graham Bell", "Thomas Edison", "Nikola Tesla", "Guglielmo Marconi"], answer: "Alexander Graham Bell", theme: "Tecnología" },
-{ question: "¿Cuál es el videojuego más vendido de todos los tiempos?", options: ["Minecraft", "Tetris", "GTA V", "Wii Sports"], answer: "Minecraft", theme: "Videojuegos" },
 { question: "¿Quién fue el pintor español que creó el cubismo junto a Georges Braque?", options: ["Pablo Picasso", "Salvador Dalí", "Joan Miró", "Francisco Goya"], answer: "Pablo Picasso", theme: "Arte" },
 { question: "¿Qué principio plantea que la energía no se crea ni se destruye, solo se transforma?", options: ["Primera ley de Newton", "Ley de conservación de la energía", "Segunda ley de Newton", "Ley de la gravedad"], answer: "Ley de conservación de la energía", theme: "Ciencia" },
 { question: "¿Cuál es el nombre de la serie en la que un grupo de niños conoce un mundo alternativo llamado ‘Upside Down’?", options: ["Stranger Things", "The X-Files", "Dark", "Black Mirror"], answer: "Stranger Things", theme: "Cine y televisión" },
 { question: "¿Qué país es famoso por su chocolate suizo?", options: ["Suiza", "Bélgica", "Francia", "Alemania"], answer: "Suiza", theme: "Comida" },
 { question: "¿Cuál es el idioma que se habla en Quebec?", options: ["Francés", "Inglés", "Español", "Alemán"], answer: "Francés", theme: "Cultura" },
-{ question: "¿Qué ave es símbolo de la paz?", options: ["Paloma", "Águila", "Cuervo", "Golondrina"], answer: "Paloma", theme: "Curiosidades" },
 { question: "¿En qué deporte se utiliza una pelota ovalada?", options: ["Fútbol americano", "Balonmano", "Fútbol", "Béisbol"], answer: "Fútbol americano", theme: "Deportes" },
 { question: "¿Cuál es la capital económica de Japón?", options: ["Tokio", "Osaka", "Kioto", "Nagoya"], answer: "Tokio", theme: "Economía" },
 { question: "¿Dónde se encuentra la cordillera de los Andes?", options: ["América del Norte", "América del Sur", "África", "Asia"], answer: "América del Sur", theme: "Geografía" },
 { question: "¿Quién fue el fundador del Imperio Astur?", options: ["Pelayo", "Fernando I", "Alfonso III", "Ramiro I"], answer: "Pelayo", theme: "Historia" },
-{ question: "¿Quién escribió ‘La Divina Comedia’?", options: ["Dante Alighieri", "Giovanni Boccaccio", "Petrarca", "Francesco Guicciardini"], answer: "Dante Alighieri", theme: "Literatura" },
 { question: "¿Qué músico es conocido como el ‘Rey del Pop’?", options: ["Michael Jackson", "Prince", "James Brown", "Freddie Mercury"], answer: "Michael Jackson", theme: "Música" },
 { question: "¿Cuál es el animal más grande del mundo?", options: ["Elefante africano", "Ballena azul", "Tiburón blanco", "Orca"], answer: "Ballena azul", theme: "Naturaleza" },
 { question: "¿Qué empresa desarrolló el sistema operativo Windows?", options: ["Microsoft", "Apple", "IBM", "Google"], answer: "Microsoft", theme: "Tecnología" },
@@ -1118,7 +1174,6 @@
 { question: "¿Qué animal tiene la lengua más larga en proporción a su cuerpo?", options: ["Camaleón", "Mantis religiosa", "Pico de loro", "Colibrí"], answer: "Camaleón", theme: "Curiosidades" },
 { question: "¿En qué país se originaron los Juegos Olímpicos?", options: ["Grecia", "Italia", "Egipto", "México"], answer: "Grecia", theme: "Deportes" },
 { question: "¿Qué es una hiperinflación?", options: ["Aumento brusco y acelerado de precios", "Baja rápida de precios", "Estabilidad económica", "Devaluación lenta"], answer: "Aumento brusco y acelerado de precios", theme: "Economía" },
-{ question: "¿Cuál es la capital de Egipto?", options: ["El Cairo", "Alejandría", "Luxor", "Giza"], answer: "El Cairo", theme: "Geografía" },
 { question: "¿Quién fue el último emperador romano occidental?", options: ["Rómulo Augústulo", "Constantino XI", "Julio César", "Nerón"], answer: "Rómulo Augústulo", theme: "Historia" },
 { question: "¿Quién escribió ‘Los tres mosqueteros’?", options: ["Alexandre Dumas", "Victor Hugo", "Herman Melville", "Honoré de Balzac"], answer: "Alexandre Dumas", theme: "Literatura" },
 { question: "¿Qué compositor compuso la ‘Misa en si menor’?", options: ["Johann Sebastian Bach", "Antonio Vivaldi", "Wolfgang Amadeus Mozart", "Ludwig van Beethoven"], answer: "Johann Sebastian Bach", theme: "Música" },
@@ -1141,16 +1196,13 @@
 { question: "¿Cuál es el mayor mamífero marino?", options: ["Ballena azul", "Orca", "Delfín nariz de botella", "Narval"], answer: "Ballena azul", theme: "Naturaleza" },
 { question: "¿Qué es un bloque en blockchain?", options: ["Un conjunto de transacciones", "Una computadora", "Un hardware", "Un smartphone"], answer: "Un conjunto de transacciones", theme: "Tecnología" },
 { question: "¿Cuál fue el primer juego de la saga ‘Final Fantasy’?", options: ["Final Fantasy I", "Final Fantasy II", "Final Fantasy III", "Final Fantasy IV"], answer: "Final Fantasy I", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘El jardín de las delicias’?", options: ["Hieronymus Bosch", "Pieter Bruegel", "El Greco", "Velázquez"], answer: "Hieronymus Bosch", theme: "Arte" },
 { question: "¿Cuál es el componente principal de la energía nuclear?", options: ["Electrones", "Protones", "Neutrones", "Quarks"], answer: "Neutrones", theme: "Ciencia" },
 { question: "¿Cuál es la serie que presenta un mundo donde los niños luchan contra criaturas de otro mundo?", options: ["Stranger Things", "Dark", "The Umbrella Academy", "Shadowhunters"], answer: "Stranger Things", theme: "Cine y televisión" },
 { question: "¿Qué plato es típico en Francia y se hace con carne, verduras y vino?", options: ["Coq au vin", "Bouillabaisse", "Ratatouille", "Cassoulet"], answer: "Coq au vin", theme: "Comida" },
 { question: "¿Cuál es el idioma más hablado en Europa?", options: ["Inglés", "Francés", "Alemán", "Español"], answer: "Alemán", theme: "Cultura" },
 { question: "¿Qué animal es capaz de imitar sonidos humanos?", options: ["Loro", "Cuervo", "Delfín", "Elefante"], answer: "Loro", theme: "Curiosidades" },
 { question: "¿En qué deporte se compite en torneos como Roland Garros?", options: ["Tenis", "Golf", "Bádminton", "Squash"], answer: "Tenis", theme: "Deportes" },
-{ question: "¿Cuál es la moneda oficial de Suiza?", options: ["Franco suizo", "Euro", "Dólar", "Libra"], answer: "Franco suizo", theme: "Economía" },
 { question: "¿Cuál es el país más grande del continente africano?", options: ["Argelia", "Sudán", "Egipto", "Libia"], answer: "Argelia", theme: "Geografía" },
-{ question: "¿Quién fue el primer presidente de Estados Unidos?", options: ["George Washington", "Thomas Jefferson", "Abraham Lincoln", "John Adams"], answer: "George Washington", theme: "Historia" },
 { question: "¿Quién escribió ‘Las flores del mal’?", options: ["Charles Baudelaire", "Victor Hugo", "Paul Verlaine", "Arthur Rimbaud"], answer: "Charles Baudelaire", theme: "Literatura" },
 { question: "¿Qué es un número primo?", options: ["Un número divisible solo por 1 y él mismo", "Número par", "Número impar", "Número decimal"], answer: "Un número divisible solo por 1 y él mismo", theme: "Matemáticas" },
 { question: "¿Qué compositor creó el ‘Canon en Re mayor’?", options: ["Johann Pachelbel", "Antonio Vivaldi", "Johann Sebastian Bach", "Wolfgang Amadeus Mozart"], answer: "Johann Pachelbel", theme: "Música" },
@@ -1161,11 +1213,9 @@
 { question: "¿Qué molécula es conocida como la ‘molécula de la vida’?", options: ["Agua", "ADN", "Proteína", "Glucosa"], answer: "ADN", theme: "Ciencia" },
 { question: "¿Cuál es la serie que sigue la vida de un abogado defensor en Albuquerque?", options: ["Better Call Saul", "Breaking Bad", "Suits", "The Good Wife"], answer: "Better Call Saul", theme: "Cine y televisión" },
 { question: "¿Qué fruta es la base del gazpacho?", options: ["Tomate", "Pepino", "Pimiento", "Cebolla"], answer: "Tomate", theme: "Comida" },
-{ question: "¿Cuál es la lengua más hablada en Brasil?", options: ["Portugués", "Español", "Francés", "Inglés"], answer: "Portugués", theme: "Cultura" },
 { question: "¿Qué tiene la capacidad de autot regenerarse?", options: ["Estrella de mar", "Pez payaso", "Pulpo", "Medusa"], answer: "Estrella de mar", theme: "Curiosidades" },
 { question: "¿Dónde se juega la NBA?", options: ["Estados Unidos", "Canadá", "México", "Brasil"], answer: "Estados Unidos", theme: "Deportes" },
 { question: "¿Qué es un déficit fiscal?", options: ["Cuando los gastos superan a los ingresos", "Cuando hay superávit", "Cuando se reducen impuestos", "Cuando hay inflación"], answer: "Cuando los gastos superan a los ingresos", theme: "Economía" },
-{ question: "¿Cuál es la capital de Australia?", options: ["Canberra", "Sídney", "Melbourne", "Brisbane"], answer: "Canberra", theme: "Geografía" },
 { question: "¿Quién fue Marco Polo?", options: ["Explorador veneciano", "General romano", "Rey francés", "Poeta alemán"], answer: "Explorador veneciano", theme: "Historia" },
 { question: "¿Quién escribió ‘El conde de Montecristo’?", options: ["Alexandre Dumas", "Victor Hugo", "Jules Verne", "Emile Zola"], answer: "Alexandre Dumas", theme: "Literatura" },
 { question: "¿Cuál es el área de un cuadrado de lado 5?", options: ["10", "20", "25", "30"], answer: "25", theme: "Matemáticas" },
@@ -1182,8 +1232,6 @@
 { question: "¿Qué deporte se juega con una raqueta y una pelota amarilla?", options: ["Tenis", "Badminton", "Squash", "Ping pong"], answer: "Tenis", theme: "Deportes" },
 { question: "¿Cuál es la moneda oficial de Reino Unido?", options: ["Euro", "Libra esterlina", "Dólar", "Franco"], answer: "Libra esterlina", theme: "Economía" },
 { question: "¿Cuál es el océano que baña las costas de África?", options: ["Atlántico", "Índico", "Pacífico", "Ártico"], answer: "Atlántico", theme: "Geografía" },
-{ question: "¿Quién fue Juana de Arco?", options: ["Heroína francesa", "Reina inglesa", "Sacerdotisa egipcia", "Escritora española"], answer: "Heroína francesa", theme: "Historia" },
-{ question: "¿Quién escribió ‘Don Quijote de la Mancha’?", options: ["Miguel de Cervantes", "Lope de Vega", "Gustavo Adolfo Bécquer", "Francisco de Quevedo"], answer: "Miguel de Cervantes", theme: "Literatura" },
 { question: "¿Cuánto es 7×7?", options: ["42", "49", "56", "64"], answer: "49", theme: "Matemáticas" },
 { question: "¿Quién compuso ‘La Novena Sinfonía’?", options: ["Beethoven", "Mozart", "Chopin", "Bach"], answer: "Beethoven", theme: "Música" },
 { question: "¿Cuál es el ave no voladora más grande?", options: ["Avestruz", "Emú", "Ñandú", "Gallina"], answer: "Avestruz", theme: "Naturaleza" },
@@ -1197,9 +1245,6 @@
 { question: "¿Qué animal es conocido por su capacidad para cambiar de color rápidamente?", options: ["Camaleón", "Pulpo", "Cangrejo", "Lagarto"], answer: "Pulpo", theme: "Curiosidades" },
 { question: "¿En qué deporte se disputa la Copa Mundial de la FIFA?", options: ["Fútbol", "Baloncesto", "Béisbol", "Hockey"], answer: "Fútbol", theme: "Deportes" },
 { question: "¿Qué país tiene el mayor PIB del mundo?", options: ["Estados Unidos", "China", "Japón", "Alemania"], answer: "Estados Unidos", theme: "Economía" },
-{ question: "¿Cuál es la capital de Argentina?", options: ["Buenos Aires", "Córdoba", "Rosario", "La Plata"], answer: "Buenos Aires", theme: "Geografía" },
-{ question: "¿Quién fue el primer emperador romano?", options: ["Augusto", "Julio César", "Nerón", "Trajano"], answer: "Augusto", theme: "Historia" },
-{ question: "¿Quién escribió ‘La casa de Bernarda Alba’?", options: ["Federico García Lorca", "Miguel de Unamuno", "Pío Baroja", "Azorín"], answer: "Federico García Lorca", theme: "Literatura" },
 { question: "¿Cuál es el resultado de 8 potencia de 2?", options: ["64", "72", "58", "80"], answer: "64", theme: "Matemáticas" },
 { question: "¿Qué cantante creó la canción ‘Like a Virgin’?", options: ["Madonna", "Cyndi Lauper", "Janet Jackson", "Whitney Houston"], answer: "Madonna", theme: "Música" },
 { question: "¿Cuál es el mamífero terrestre más grande?", options: ["Elefante africano", "Rinoceronte blanco", "Hipopótamo", "Jirafa"], answer: "Elefante africano", theme: "Naturaleza" },
@@ -1215,7 +1260,6 @@
 { question: "¿Cuál es la moneda oficial de México?", options: ["Peso", "Dólar", "Euro", "Real"], answer: "Peso", theme: "Economía" },
 { question: "¿Cuál es el desierto más seco del mundo?", options: ["Sahara", "Atacama", "Gobi", "Kalahari"], answer: "Atacama", theme: "Geografía" },
 { question: "¿Quién fue Winston Churchill?", options: ["Primer ministro británico en la II Guerra Mundial", "Presidente de Estados Unidos", "Emperador romano", "Rey de Inglaterra"], answer: "Primer ministro británico en la II Guerra Mundial", theme: "Historia" },
-{ question: "¿Quién escribió ‘El Principito’?", options: ["Antoine de Saint-Exupéry", "Jules Verne", "Victor Hugo", "Charles Baudelaire"], answer: "Antoine de Saint-Exupéry", theme: "Literatura" },
 { question: "¿Qué número es considerado el número áureo?", options: ["1.618", "3.1416", "2.718", "1.414"], answer: "1.618", theme: "Matemáticas" },
 { question: "¿Quién compuso el ‘Réquiem’?", options: ["Mozart", "Beethoven", "Brahms", "Verdi"], answer: "Mozart", theme: "Música" },
 { question: "¿Cuál es el mamífero más pequeño?", options: ["Musaraña", "Murciélago abejorro", "Ratón", "Sapo"], answer: "Murciélago abejorro", theme: "Naturaleza" },
@@ -1253,7 +1297,6 @@
 { question: "¿Cuál es el animal terrestre más pesado?", options: ["Elefante africano", "Hipopótamo", "Rinoceronte", "Búfalo"], answer: "Elefante africano", theme: "Naturaleza" },
 { question: "¿Qué es la ‘nube’ en informática?", options: ["Almacenamiento remoto de datos", "Un virus", "Un programa", "Un protocolo"], answer: "Almacenamiento remoto de datos", theme: "Tecnología" },
 { question: "¿Quién es el protagonista de ‘Final Fantasy VII’?", options: ["Cloud Strife", "Sephiroth", "Barret Wallace", "Tifa Lockhart"], answer: "Cloud Strife", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘La Libertad guiando al pueblo’?", options: ["Eugène Delacroix", "Jean-François Millet", "Gustave Courbet", "Édouard Manet"], answer: "Eugène Delacroix", theme: "Arte" },
 { question: "¿Cuál es el elemento químico con símbolo ‘He’?", options: ["Hidrógeno", "Helio", "Herbio", "Holmio"], answer: "Helio", theme: "Ciencia" },
 { question: "¿Qué personaje es conocido como ‘The Doctor’ en la serie británica del mismo nombre?", options: ["El Doctor", "El Comandante", "El Guerrero", "El Científico"], answer: "El Doctor", theme: "Cine y televisión" },
 { question: "¿Qué tipo de pasta italiana tiene forma de tubos cortos?", options: ["Penne", "Spaghetti", "Fusilli", "Farfalle"], answer: "Penne", theme: "Comida" },
@@ -1290,44 +1333,30 @@
 { question: "¿Cuál es la serie sobre abogados que es un spin-off de ‘Breaking Bad’?", options: ["Better Call Saul", "The Good Wife", "Suits", "This Is Us"], answer: "Better Call Saul", theme: "Cine y televisión" },
 { question: "¿Qué fruta se utiliza para hacer mermelada de fresa?", options: ["Fresa", "Frambuesa", "Mora", "Arándano"], answer: "Fresa", theme: "Comida" },
 { question: "¿Cuál es el idioma oficial de Sudáfrica?", options: ["11 idiomas oficiales", "Inglés", "Afrikáans", "Zulú"], answer: "11 idiomas oficiales", theme: "Cultura" },
-{ question: "¿Cuál es el animal más venenoso del mundo?", options: ["Avispa de mar", "Serpiente Taipán", "Araña del rincón", "Escorpión"], answer: "Avispa de mar", theme: "Curiosidades" },
 { question: "¿Cuántos jugadores hay en un equipo de voleibol?", options: ["6", "5", "7", "8"], answer: "6", theme: "Deportes" },
 { question: "¿Qué es la tasa de desempleo?", options: ["Porcentaje de personas sin trabajo", "Porcentaje de personas empleadas", "Porcentaje de trabajadores por cuenta propia", "Número de empleos creados"], answer: "Porcentaje de personas sin trabajo", theme: "Economía" },
 { question: "¿Cuál es la capital de Italia?", options: ["Roma", "Milán", "Venecia", "Florencia"], answer: "Roma", theme: "Geografía" },
-{ question: "¿Quién fue Napoleón Bonaparte?", options: ["Emperador francés", "Rey de España", "General británico", "Presidente de Estados Unidos"], answer: "Emperador francés", theme: "Historia" },
 { question: "¿Quién escribió ‘El libro de la selva’?", options: ["Rudyard Kipling", "Jules Verne", "Mark Twain", "Jack London"], answer: "Rudyard Kipling", theme: "Literatura" },
 { question: "¿Cuánto es 6×7?", options: ["42", "48", "36", "49"], answer: "42", theme: "Matemáticas" },
 { question: "¿Quién es conocido como el 'Rey del Rock'?", options: ["Elvis Presley", "Chuck Berry", "Buddy Holly", "Little Richard"], answer: "Elvis Presley", theme: "Música" },
 { question: "¿Cuál es el ave más grande de América?", options: ["Cóndor", "Águila", "Albatros", "Pelícano"], answer: "Cóndor", theme: "Naturaleza" },
 { question: "¿Qué significa 'HTML' en desarrollo web?", options: ["HyperText Markup Language", "Hyperlink and Text Markup Language", "Home Tool Markup Language", "Hyper Transfer Markup Language"], answer: "HyperText Markup Language", theme: "Tecnología" },
 { question: "¿Cuál es el videojuego protagonizado por Master Chief?", options: ["Halo", "Destiny", "Call of Duty", "Gears of War"], answer: "Halo", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘El nacimiento de Venus’?", options: ["Sandro Botticelli", "Leonardo da Vinci", "Miguel Ángel", "Rafael"], answer: "Sandro Botticelli", theme: "Arte" },
 { question: "¿Cuál es el planeta más alejado del Sol en nuestro sistema solar?", options: ["Plutón", "Neptuno", "Urano", "Saturno"], answer: "Neptuno", theme: "Ciencia" },
 { question: "¿Qué serie de televisión está ambientada en el hospital Grey Sloan Memorial?", options: ["Anatomía de Grey", "ER", "House", "Chicago Med"], answer: "Anatomía de Grey", theme: "Cine y televisión" },
 { question: "¿De qué país es originaria la tortilla española?", options: ["España", "México", "Argentina", "Chile"], answer: "España", theme: "Comida" },
-{ question: "¿Cuál es el idioma oficial de Suiza?", options: ["Francés, Alemán, Italiano y Romanche", "Francés", "Alemán", "Italiano"], answer: "Francés, Alemán, Italiano y Romanche", theme: "Cultura" },
 { question: "¿Qué animal es famoso por construir presas en los ríos?", options: ["Castor", "Nutria", "Cangrejo", "Cisne"], answer: "Castor", theme: "Curiosidades" },
 { question: "¿En qué deporte se usan varas y bolas para derribar pinos?", options: ["Bolos", "Críquet", "Bowling", "Petanca"], answer: "Bolos", theme: "Deportes" },
 { question: "¿Cuál es la divisa oficial de Japón?", options: ["Yen", "Won", "Dólar", "Euro"], answer: "Yen", theme: "Economía" },
-{ question: "¿Cuál es el continente con más países?", options: ["África", "Asia", "Europa", "América"], answer: "África", theme: "Geografía" },
-{ question: "¿Quién fue Napoleón Bonaparte?", options: ["Emperador francés", "Rey inglés", "Presidente español", "General ruso"], answer: "Emperador francés", theme: "Historia" },
-{ question: "¿Quién escribió ‘Orgullo y prejuicio’?", options: ["Jane Austen", "Charlotte Brontë", "Emily Dickinson", "Mary Shelley"], answer: "Jane Austen", theme: "Literatura" },
 { question: "¿Qué número es conocido como el número áureo?", options: ["1.618", "3.14", "2.718", "1.414"], answer: "1.618", theme: "Matemáticas" },
-{ question: "¿Quién compuso la ‘Sinfonía número 5’?", options: ["Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Franz Schubert"], answer: "Ludwig van Beethoven", theme: "Música" },
-{ question: "¿Cuál es el ave más grande del mundo?", options: ["Avestruz", "Cóndor", "Albatros", "Pavo real"], answer: "Avestruz", theme: "Naturaleza" },
 { question: "¿Qué es un software de código abierto?", options: ["Software con código accesible y modificable", "Software pagado", "Virus informático", "Sistema operativo"], answer: "Software con código accesible y modificable", theme: "Tecnología" },
 { question: "¿Cuál es el videojuego de disparos en primera persona desarrollado por Valve y lanzado en 1998?", options: ["Half-Life", "Quake", "Doom", "Counter-Strike"], answer: "Half-Life", theme: "Videojuegos" },
-{ question: "¿Quién pintó ‘Las meninas’?", options: ["Diego Velázquez", "Francisco de Goya", "El Greco", "José de Ribera"], answer: "Diego Velázquez", theme: "Arte" },
 { question: "¿Qué partícula subatómica tiene carga positiva?", options: ["Protón", "Electrón", "Neutrón", "Quark"], answer: "Protón", theme: "Ciencia" },
-{ question: "¿Quién protagonizó la película ‘Forrest Gump’?", options: ["Tom Hanks", "Leonardo DiCaprio", "Brad Pitt", "Johnny Depp"], answer: "Tom Hanks", theme: "Cine y televisión" },
 { question: "¿Qué ingrediente es principal en la paella valenciana?", options: ["Arroz", "Pasta", "Patata", "Maíz"], answer: "Arroz", theme: "Comida" },
 { question: "¿Cuál es la lengua hablada en Brasil?", options: ["Portugués", "Español", "Francés", "Inglés"], answer: "Portugués", theme: "Cultura" },
 { question: "¿Qué animal es conocido por su camuflaje en la naturaleza?", options: ["Camaleón", "Tiburón", "Oso", "Lobo"], answer: "Camaleón", theme: "Curiosidades" },
 { question: "¿Cuántos jugadores hay en un equipo de fútbol?", options: ["11", "10", "9", "12"], answer: "11", theme: "Deportes" },
-{ question: "¿Qué es la inflación?", options: ["Aumento generalizado de precios", "Disminución de precios", "Devaluación de moneda", "Aumento del empleo"], answer: "Aumento generalizado de precios", theme: "Economía" },
 { question: "¿Cuál es la capital de Alemania?", options: ["Berlín", "Múnich", "Hamburgo", "Frankfurt"], answer: "Berlín", theme: "Geografía" },
-{ question: "¿Quién fue el primer presidente de Estados Unidos?", options: ["George Washington", "Thomas Jefferson", "Abraham Lincoln", "John Adams"], answer: "George Washington", theme: "Historia" },
-{ question: "¿Quién escribió ‘Don Quijote de la Mancha’?", options: ["Miguel de Cervantes", "Félix Lope de Vega", "Francisco de Quevedo", "Luis de Góngora"], answer: "Miguel de Cervantes", theme: "Literatura" },
 { question: "¿Cuál es el resultado de la multiplicación 9×9?", options: ["81", "72", "90", "99"], answer: "81", theme: "Matemáticas" },
 { question: "¿Quién fue ‘El Rey del Rock and Roll’?", options: ["Elvis Presley", "Chuck Berry", "Little Richard", "Buddy Holly"], answer: "Elvis Presley", theme: "Música" },
 { question: "¿Cuál es el animal más grande del planeta?", options: ["Ballena azul", "Elefante africano", "Tiburón blanco", "Orca"], answer: "Ballena azul", theme: "Naturaleza" },
@@ -1343,23 +1372,17 @@
 { question: "¿Qué país tiene el PIB más alto?", options: ["Estados Unidos", "China", "Japón", "Alemania"], answer: "Estados Unidos", theme: "Economía" },
 { question: "¿Cuál es el océano más pequeño?", options: ["Ártico", "Atlántico", "Índico", "Pacífico"], answer: "Ártico", theme: "Geografía" },
 { question: "¿Quién fue el primer ministro británico durante la Segunda Guerra Mundial?", options: ["Winston Churchill", "Neville Chamberlain", "Clement Attlee", "Margaret Thatcher"], answer: "Winston Churchill", theme: "Historia" },
-{ question: "¿Quién escribió ‘Don Juan Tenorio’?", options: ["José Zorrilla", "Federico García Lorca", "Benito Pérez Galdós", "Gustavo Adolfo Bécquer"], answer: "José Zorrilla", theme: "Literatura" },
 { question: "¿Cuál es el resultado de raíz de 64?", options: ["6", "7", "8", "9"], answer: "8", theme: "Matemáticas" },
 { question: "¿Qué compositor creó ‘El lago de los cisnes’?", options: ["Tchaikovsky", "Beethoven", "Mozart", "Vivaldi"], answer: "Tchaikovsky", theme: "Música" },
 { question: "¿Cuál es el marsupial más grande?", options: ["Canguro rojo", "Wombat", "Koala", "Dunnart"], answer: "Canguro rojo", theme: "Naturaleza" },
-{ question: "¿Qué es un sistema operativo?", options: ["Software que gestiona recursos del computador", "Un hardware", "Un lenguaje de programación", "Un archivo"], answer: "Software que gestiona recursos del computador", theme: "Tecnología" },
 { question: "¿Cuál es el personaje principal de ‘God of War’?", options: ["Kratos", "Atreus", "Zeus", "Ares"], answer: "Kratos", theme: "Videojuegos" },
 { question: "¿Quién pintó ‘La rendición de Breda’?", options: ["Diego Velázquez", "Francisco de Goya", "El Greco", "Juan Sánchez Cotán"], answer: "Diego Velázquez", theme: "Arte" },
 { question: "¿Cuál es la partícula más pequeña que compone la materia?", options: ["Átomo", "Molécula", "Electrón", "Quark"], answer: "Quark", theme: "Ciencia" },
 { question: "¿Cuál es el nombre de la serie en la que un detective busca resolver misterios en un hotel?", options: ["The Haunting of Hill House", "Bates Motel", "Sherlock", "True Detective"], answer: "Bates Motel", theme: "Cine y televisión" },
-{ question: "¿Qué fruta es la base del gazpacho?", options: ["Tomate", "Pepino", "Pimiento", "Ajo"], answer: "Tomate", theme: "Comida" },
 { question: "¿Cuál es la lengua oficial de Madagascar?", options: ["Malgache", "Francés", "Inglés", "Todas"], answer: "Todas", theme: "Cultura" },
 { question: "¿Qué mamífero puede sostener la respiración más tiempo bajo el agua?", options: ["Ballena franca", "Delfín", "Elefante marino", "Foca"], answer: "Elefante marino", theme: "Curiosidades" },
-{ question: "¿En qué país se originó el fútbol?", options: ["Inglaterra", "Escocia", "España", "Italia"], answer: "Inglaterra", theme: "Deportes" },
 { question: "¿Qué es el PIB?", options: ["Producto Interno Bruto", "Producto Industrial Bruto", "Producto Internacional Bruto", "Producto Ingresos Brutos"], answer: "Producto Interno Bruto", theme: "Economía" },
-{ question: "¿Cuál es la capital de Nueva Zelanda?", options: ["Auckland", "Wellington", "Christchurch", "Hamilton"], answer: "Wellington", theme: "Geografía" },
 { question: "¿Quién fue Isabel la Católica?", options: ["Reina de Castilla", "Reina de Aragón", "Reina de Portugal", "Emperatriz de Austria"], answer: "Reina de Castilla", theme: "Historia" },
-{ question: "¿Quién escribió ‘Cumbres Borrascosas’?", options: ["Emily Brontë", "Charlotte Brontë", "Jane Austen", "Mary Shelley"], answer: "Emily Brontë", theme: "Literatura" },
 { question: "¿Cuál es el resultado de 11×11?", options: ["121", "111", "122", "131"], answer: "121", theme: "Matemáticas" },
 { question: "¿Qué cantante estadounidense es conocido por ‘Like a Prayer’?", options: ["Madonna", "Whitney Houston", "Cher", "Diana Ross"], answer: "Madonna", theme: "Música" },
 { question: "¿Cuál es el ave náutica más grande?", options: ["Albatros", "Pelícano", "Cormorán", "Gaviota"], answer: "Albatros", theme: "Naturaleza" },
@@ -1371,10 +1394,8 @@
 { question: "¿Qué plato es típico en la gastronomía griega?", options: ["Moussaka", "Paella", "Pizza", "Sushi"], answer: "Moussaka", theme: "Comida" },
 { question: "¿Cuál es la lengua oficial de Sudáfrica?", options: ["Ocho idiomas oficiales", "Inglés", "Zulu", "Xhosa"], answer: "Ocho idiomas oficiales", theme: "Cultura" },
 { question: "¿Qué animal puede girar su cabeza casi 360 grados?", options: ["Búho", "Águila", "Lechuza", "Halcones"], answer: "Búho", theme: "Curiosidades" },
-{ question: "¿En qué país se originaron los Juegos Olímpicos?", options: ["Grecia", "Roma", "Egipto", "China"], answer: "Grecia", theme: "Deportes" },
 { question: "¿Cuál es la moneda de India?", options: ["Rupia", "Dólar", "Rial", "Peso"], answer: "Rupia", theme: "Economía" },
 { question: "¿Cuál es el país con mayor extensión territorial?", options: ["Rusia", "Canadá", "China", "Estados Unidos"], answer: "Rusia", theme: "Geografía" },
-{ question: "¿Quién fue Cleopatra?", options: ["Última reina de Egipto", "Reina de Grecia", "Sacerdotisa maya", "Emperatriz romana"], answer: "Última reina de Egipto", theme: "Historia" },
 { question: "¿Quién escribió ‘El Quijote’?", options: ["Miguel de Cervantes", "Lope de Vega", "Quevedo", "Góngora"], answer: "Miguel de Cervantes", theme: "Literatura" },
 { question: "¿Cuál es el resultado de 8×8?", options: ["64", "56", "72", "82"], answer: "64", theme: "Matemáticas" },
 { question: "¿Quién compuso ‘La Quinta Sinfonía’?", options: ["Beethoven", "Mozart", "Haydn", "Chopin"], answer: "Beethoven", theme: "Música" },
@@ -1389,18 +1410,15 @@
 { question: "¿En qué deporte se usa un mazo y bolas?", options: ["Croquet", "Golf", "Béisbol", "Billar"], answer: "Croquet", theme: "Deportes" },
 { question: "¿Qué país tiene la mayor producción mundial de vino?", options: ["Italia", "Francia", "España", "Chile"], answer: "Italia", theme: "Economía" },
 { question: "¿Cuál es el río más largo de América del Norte?", options: ["Misisipi", "Yukón", "Colorado", "Missouri"], answer: "Misisipi", theme: "Geografía" },
-{ question: "¿Quién fue Juana de Arco?", options: ["Heroína francesa", "Reina inglesa", "Sacerdotisa", "Poetisa"], answer: "Heroína francesa", theme: "Historia" },
 { question: "¿Quién escribió ‘Las aventuras de Tom Sawyer’?", options: ["Mark Twain", "Charles Dickens", "Herman Melville", "Jules Verne"], answer: "Mark Twain", theme: "Literatura" },
 { question: "¿Cuál es el resultado de 6×6?", options: ["36", "30", "42", "66"], answer: "36", theme: "Matemáticas" },
 { question: "¿Quién es conocido como el Rey del Pop?", options: ["Michael Jackson", "Elvis Presley", "Prince", "Freddie Mercury"], answer: "Michael Jackson", theme: "Música" },
-{ question: "¿Cuál es el animal terrestre más grande?", options: ["Elefante africano", "Rinoceronte", "Hipopótamo", "Jirafa"], answer: "Elefante africano", theme: "Naturaleza" },
 { question: "¿Qué es el ‘cloud computing’?", options: ["Uso de servidores remotos para almacenar datos", "Un tipo de software", "Un dispositivo físico", "Un antivirus"], answer: "Uso de servidores remotos para almacenar datos", theme: "Tecnología" },
 { question: "¿Quién es el protagonista de ‘The Witcher’ en los videojuegos?", options: ["Geralt de Rivia", "Dandelion", "Yennefer", "Ciri"], answer: "Geralt de Rivia", theme: "Videojuegos" },
 { question: "¿Cuál es el resultado de 15÷3?", options: ["5", "3", "6", "4"], answer: "5", theme: "Matemáticas" },
 { question: "¿Cuántos grados tiene un ángulo recto?", options: ["45", "60", "90", "120"], answer: "90", theme: "Matemáticas" },
 { question: "¿Cuál es el plato tradicional japonés hecho con arroz y pescado crudo?", options: ["Sushi", "Ramen", "Tempura", "Udon"], answer: "Sushi", theme: "Comida" },
 { question: "¿Qué fruta es base en la producción de vino?", options: ["Uva", "Manzana", "Pera", "Cereza"], answer: "Uva", theme: "Comida" },
-{ question: "¿Cuál es el ingrediente principal del hummus?", options: ["Garbanzos", "Lentejas", "Frijoles", "Soja"], answer: "Garbanzos", theme: "Comida" },
 { question: "¿De qué país es originario el queso feta?", options: ["Grecia", "Italia", "Francia", "España"], answer: "Grecia", theme: "Comida" },
 { question: "¿Qué tipo de carne se usa en un tradicional asado argentino?", options: ["Res", "Cerdo", "Pollo", "Cordero"], answer: "Res", theme: "Comida" },
 { question: "¿Cuál es el ingrediente principal en el guacamole?", options: ["Aguacate", "Tomate", "Cebolla", "Chiles"], answer: "Aguacate", theme: "Comida" },
@@ -1423,24 +1441,17 @@
 { question: "¿Qué es la bolsa de valores?", options: ["Lugar para comprar y vender acciones", "Banco central", "Ministerio de economía", "Casa de cambio"], answer: "Lugar para comprar y vender acciones", theme: "Economía" },
 { question: "¿Qué hace un banco central?", options: ["Controla la política monetaria", "Otorga créditos personales", "Emite acciones", "Gestiona impuestos"], answer: "Controla la política monetaria", theme: "Economía" },
 { question: "¿Cuál es el principal indicador económico del desempleo?", options: ["Tasa de desempleo", "PIB", "Inflación", "Déficit público"], answer: "Tasa de desempleo", theme: "Economía" },
-{ question: "¿Qué es la inflación?", options: ["Aumento generalizado de precios", "Disminución de precios", "Estancamiento económico", "Déficit fiscal"], answer: "Aumento generalizado de precios", theme: "Economía" },
 { question: "¿Qué país maneja el Banco Central Europeo?", options: ["Los países de la Eurozona", "Los países de la UE sin euro", "Estados Unidos", "Asia"], answer: "Los países de la Eurozona", theme: "Economía" },
-{ question: "¿Qué significa PIB?", options: ["Producto Interno Bruto", "Precio Interior Bruto", "Producto Internacional Bruto", "Producto Institucional Bruto"], answer: "Producto Interno Bruto", theme: "Economía" },
 { question: "¿Qué es un mercado financiero?", options: ["Lugar donde se compran y venden activos financieros", "Banco", "Fábrica", "Mercado común"], answer: "Lugar donde se compran y venden activos financieros", theme: "Economía" },
-{ question: "¿Cuál es el animal terrestre más rápido?", options: ["Guepardo", "León", "Tigre", "Antílope"], answer: "Guepardo", theme: "Naturaleza" },
 { question: "¿Qué ecosistema tiene mayor biodiversidad?", options: ["Selva tropical", "Desierto", "Pradera", "Tundra"], answer: "Selva tropical", theme: "Naturaleza" },
 { question: "¿Qué tipo de animal es la orca?", options: ["Mamífero", "Pez", "Reptil", "Ave"], answer: "Mamífero", theme: "Naturaleza" },
-{ question: "¿Qué es la fotosíntesis?", options: ["Proceso por el que las plantas producen energía", "Respiración animal", "Digestión en plantas", "Transpiración"], answer: "Proceso por el que las plantas producen energía", theme: "Naturaleza" },
 { question: "¿Cuál es el volcán más activo del mundo?", options: ["Kilauea", "Monte Etna", "Vesubio", "Popocatépetl"], answer: "Kilauea", theme: "Naturaleza" },
 { question: "¿Qué animal es conocido como el ‘lobo marino’?", options: ["Otaria", "Foca común", "Delfín", "Ballena"], answer: "Otaria", theme: "Naturaleza" },
 { question: "¿Qué es la biomasa?", options: ["Materia orgánica usada como energía", "Mineral", "Energía solar", "Residuos plásticos"], answer: "Materia orgánica usada como energía", theme: "Naturaleza" },
 { question: "¿Cuál es el ecosistema donde predominan los cactus?", options: ["Desierto", "Selva", "Sabana", "Tundra"], answer: "Desierto", theme: "Naturaleza" },
 { question: "¿Qué animal tiene el récord de mayor altura?", options: ["Jirafa", "Elefante", "Hipopótamo", "Rinoceronte"], answer: "Jirafa", theme: "Naturaleza" },
 { question: "¿Qué significa ‘GPU’?", options: ["Unidad de procesamiento gráfico", "Unidad de proceso general", "Unidad de programación global", "Unidad de energía"], answer: "Unidad de procesamiento gráfico", theme: "Tecnología" },
-{ question: "¿Qué es un sistema operativo?", options: ["Software base que gestiona el hardware", "Un tipo de aplicación", "Un juego", "Un navegador"], answer: "Software base que gestiona el hardware", theme: "Tecnología" },
 { question: "¿Cuál de estos es un lenguaje de programación?", options: ["Python", "HTML", "CSS", "Todos"], answer: "Todos", theme: "Tecnología" },
-{ question: "¿Qué empresa desarrolló el sistema operativo Windows?", options: ["Microsoft", "Apple", "Google", "IBM"], answer: "Microsoft", theme: "Tecnología" },
-{ question: "¿Qué es la inteligencia artificial?", options: ["Simulación de inteligencia humana en máquinas", "Un tipo de robot", "Hardware especial", "Un virus informático"], answer: "Simulación de inteligencia humana en máquinas", theme: "Tecnología" },
 { question: "¿Qué significa ‘RAM’?", options: ["Memoria de acceso aleatorio", "Memoria de almacenamiento", "Procesador", "Disco duro"], answer: "Memoria de acceso aleatorio", theme: "Tecnología" },
 { question: "¿Cuál es el navegador web más usado del mundo?", options: ["Google Chrome", "Mozilla Firefox", "Internet Explorer", "Safari"], answer: "Google Chrome", theme: "Tecnología" },
 { question: "¿Qué tecnología permite crear criptomonedas?", options: ["Blockchain", "Wi-Fi", "NFC", "Bluetooth"], answer: "Blockchain", theme: "Tecnología" },
@@ -1516,7 +1527,6 @@
 { question: "¿Cuál es el animal más alto del mundo?", options: ["Jirafa", "Elefante", "Avestruz", "Camello"], answer: "Jirafa", theme: "Naturaleza" },
 { question: "¿Qué es un 'router'?", options: ["Dispositivo que dirige el tráfico en redes", "Programa de edición de vídeo", "Unidad de disco", "Torre de refrigeración"], answer: "Dispositivo que dirige el tráfico en redes", theme: "Tecnología" },
 { question: "¿Qué franquicia de videojuegos tiene como protagonistas unos monstruos que evolucionan y combaten?", options: ["Pokémon", "Digimon", "Bakugan", "Yu-Gi-Oh!"], answer: "Pokémon", theme: "Videojuegos" },
-{ question: "¿Quién pintó 'La persistencia de la memoria'?", options: ["Salvador Dalí", "Pablo Picasso", "Joan Miró", "Marc Chagall"], answer: "Salvador Dalí", theme: "Arte" },
 { question: "¿Cuál es el radio medio de la Tierra?", options: ["6,371 km", "12,742 km", "8,200 km", "3,200 km"], answer: "6,371 km", theme: "Ciencia" },
 { question: "¿Qué actor da vida a Michael Scott en la serie 'The Office'?", options: ["Steve Carell", "Rainn Wilson", "Ed Helms", "John Krasinski"], answer: "Steve Carell", theme: "Cine y televisión" },
 { question: "¿Qué alimento básico es utilizado en la cocina asiática para hacer fideos?", options: ["Arroz", "Trigo", "Sorgo", "Maíz"], answer: "Arroz", theme: "Comida" },
@@ -1526,15 +1536,11 @@
 { question: "¿Qué país concentra la mayor producción mundial de café?", options: ["Brasil", "Colombia", "Etiopía", "Vietnam"], answer: "Brasil", theme: "Economía" },
 { question: "¿Cuál es el río que atraviesa París?", options: ["Sena", "Loira", "Ródano", "Danubio"], answer: "Sena", theme: "Geografía" },
 { question: "¿Quién lideró la reforma protestante del siglo XVI?", options: ["Martín Lutero", "Calvino", "Enrique VIII", "Tomás Moro"], answer: "Martín Lutero", theme: "Historia" },
-{ question: "¿Quién escribió 'La Odisea'?", options: ["Homero", "Virgilio", "Sófocles", "Platón"], answer: "Homero", theme: "Literatura" },
 { question: "¿Cuál es el resultado de la suma 16+18?", options: ["34", "32", "36", "28"], answer: "34", theme: "Matemáticas" },
 { question: "¿Quién es el compositor de la ópera 'Carmen'?", options: ["Georges Bizet", "Mozart", "Beethoven", "Puccini"], answer: "Georges Bizet", theme: "Música" },
 { question: "¿Cuál es el mamífero que pasa más tiempo dormido?", options: ["Koala", "Perezoso", "Gato", "Murciélago"], answer: "Koala", theme: "Naturaleza" },
 { question: "¿Qué tipo de cable se usa para conectar la mayoría de monitores modernos?", options: ["HDMI", "VGA", "Thunderbolt", "SCSI"], answer: "HDMI", theme: "Tecnología" },
 { question: "¿En qué videojuego aparece el personaje Geralt de Rivia?", options: ["The Witcher", "Skyrim", "Dragon Age", "Assassin's Creed"], answer: "The Witcher", theme: "Videojuegos" },
-{ question: "¿Quién pintó 'La escuela de Atenas'?", options: ["Rafael", "Leonardo da Vinci", "Miguel Ángel", "Donatello"], answer: "Rafael", theme: "Arte" },
-{ question: "¿Qué partícula subatómica tiene carga negativa?", options: ["Electrón", "Protón", "Neutrón", "Bosón"], answer: "Electrón", theme: "Ciencia" },
-{ question: "¿En qué ciudad se desarrolla la serie ‘Friends’?", options: ["Nueva York", "Los Ángeles", "Chicago", "Filadelfia"], answer: "Nueva York", theme: "Cine y televisión" },
 { question: "¿Qué comida es típica en Francia y se hace con caracoles?", options: ["Escargots", "Bouillabaisse", "Ratatouille", "Coq au vin"], answer: "Escargots", theme: "Comida" },
 { question: "¿Cuál es la lengua oficial de Suiza?", options: ["Alemán, francés, italiano y romanche", "Francés", "Alemán", "Italiano"], answer: "Alemán, francés, italiano y romanche", theme: "Cultura" },
 { question: "¿Qué animal tiene la capacidad de imitar sonidos humanos?", options: ["Loro", "Cuervo", "Delfín", "Elefante"], answer: "Loro", theme: "Curiosidades" },
@@ -1543,8 +1549,6 @@
 { question: "¿Quién escribió ‘Cien años de soledad’?", options: ["Gabriel García Márquez", "Mario Vargas Llosa", "Pablo Neruda", "Julio Cortázar"], answer: "Gabriel García Márquez", theme: "Literatura" },
 { question: "¿Cuál es el valor de e en matemáticas?", options: ["2.718", "3.141", "1.618", "1.414"], answer: "2.718", theme: "Matemáticas" },
 { question: "¿Quién compuso la ‘Novena sinfonía’?", options: ["Ludwig van Beethoven", "Wolfgang Amadeus Mozart", "Johann Sebastian Bach", "Franz Schubert"], answer: "Ludwig van Beethoven", theme: "Música" },
-{ question: "¿Cuál es el reptil más grande del mundo?", options: ["Cocodrilo marino", "Dragon de Komodo", "Anaconda", "Gecko gigante"], answer: "Cocodrilo marino", theme: "Naturaleza" },
-{ question: "¿Qué es un ‘firewall’ en informática?", options: ["Un dispositivo que protege redes", "Un virus", "Un router", "Un sistema operativo"], answer: "Un dispositivo que protege redes", theme: "Tecnología" },
 { question: "¿Cuál es el videojuego donde se construye un mundo con bloques?", options: ["Minecraft", "Roblox", "Terraria", "Fortnite"], answer: "Minecraft", theme: "Videojuegos" },
 { question: "¿Cuál es el proceso por el cual el agua se convierte en vapor?", options: ["Condensación", "Evaporación", "Fusión", "Solidificación"], answer: "Evaporación", theme: "Ciencia" },
 { question: "¿Qué tipo de energía se obtiene del viento?", options: ["Solar", "Hidráulica", "Geotérmmica", "Eólica"], answer: "Eólica", theme: "Ciencia" },
@@ -1670,9 +1674,7 @@
 { question: "¿Qué institución actúa como banco central para la eurozona?", options: ["Reserva Federal", "Fondo Monetario Internacional", "Banco Central Europeo", "Banco Mundial"], answer: "Banco Central Europeo", theme: "Economía" },
 { question: "¿Qué es una 'criptomoneda'?", options: ["Una acción de empresa tecnológica", "Un bono del estado", "Una moneda digital o virtual", "Un tipo de fondo de inversión"], answer: "Una moneda digital o virtual", theme: "Economía" },
 { question: "¿Cómo se llama el proceso por el cual las plantas fabrican su propio alimento?", options: ["Respiración", "Transpiración", "Fotosíntesis", "Polinización"], answer: "Fotosíntesis", theme: "Naturaleza" },
-{ question: "¿Cuál es la flor nacional de Japón?", options: ["Loto", "Crisantemo", "Cerezo", "Orquídea"], answer: "Cerezo", theme: "Naturaleza" },
 { question: "¿Qué tipo de animal es una ballena?", options: ["Pez", "Anfibio", "Mamífero", "Reptil"], answer: "Mamífero", theme: "Naturaleza" },
-{ question: "¿Cuál es el árbol más alto del mundo?", options: ["Baobab", "Roble", "Pino", "La secuoya"], answer: "La secuoya", theme: "Naturaleza" },
 { question: "¿Cuál es la capa de gas que protege a la Tierra de la radiación solar?", options: ["La capa de ozono", "La ionosfera", "La troposfera", "La exosfera"], answer: "La capa de ozono", theme: "Naturaleza" },
 { question: "¿Qué es un 'ecosistema'?", options: ["Una especie animal concreta", "Un tipo de bioma", "Una comunidad de seres vivos y su entorno físico", "Una cadena alimentaria"], answer: "Una comunidad de seres vivos y su entorno físico", theme: "Naturaleza" },
 { question: "¿Qué animal construye presas en los ríos?", options: ["La nutria", "El castor", "El oso", "El cocodrilo"], answer: "El castor", theme: "Naturaleza" },
@@ -1689,7 +1691,6 @@
 { question: "¿Qué es el 'HTML'?", options: ["Un lenguaje de programación", "Un sistema operativo", "Un lenguaje de marcado para crear páginas web", "Una base de datos"], answer: "Un lenguaje de marcado para crear páginas web", theme: "Tecnología" },
 { question: "¿En qué videojuego aparece el personaje 'Lara Croft'?", options: ["Uncharted", "Tomb Raider", "Resident Evil", "Silent Hill"], answer: "Tomb Raider", theme: "Videojuegos" },
 { question: "¿Quién es el archienemigo de Mario en los videojuegos de Nintendo?", options: ["Wario", "Donkey Kong", "Bowser", "Waluigi"], answer: "Bowser", theme: "Videojuegos" },
-{ question: "¿Cuál es el videojuego más vendido de todos los tiempos?", options: ["Tetris", "Grand Theft Auto V", "Minecraft", "Super Mario Bros."], answer: "Minecraft", theme: "Videojuegos" },
 { question: "¿En qué juego de lucha aparecen personajes como Ryu y Chun-Li?", options: ["Mortal Kombat", "Tekken", "Street Fighter", "Super Smash Bros."], answer: "Street Fighter", theme: "Videojuegos" },
 { question: "¿Cómo se llama el fontanero verde, hermano de Mario?", options: ["Toad", "Yoshi", "Wario", "Luigi"], answer: "Luigi", theme: "Videojuegos" },
 { question: "¿Qué compañía desarrolló la consola PlayStation?", options: ["Nintendo", "Microsoft", "Sega", "Sony"], answer: "Sony", theme: "Videojuegos" },
@@ -1770,7 +1771,6 @@
 { question: "¿Cuál es el idioma más hablado en Sudamérica?", options: ["Portugués", "Español", "Inglés", "Quechua"], answer: "Español", theme: "Cultura" },
 { question: "¿Qué es un 'sombrero vueltiao'?", options: ["Un sombrero típico de México", "Un sombrero típico de Colombia", "Un sombrero típico de Argentina", "Un sombrero típico de Panamá"], answer: "Un sombrero típico de Colombia", theme: "Cultura" },
 { question: "¿Qué es la 'capoeira'?", options: ["Una comida brasileña", "Una danza-lucha afro-brasileña", "Un instrumento musical brasileño", "Un festival brasileño"], answer: "Una danza-lucha afro-brasileña", theme: "Cultura" },
-{ question: "¿Quién escribió 'El principito'?", options: ["Julio Verne", "Antoine de Saint-Exupéry", "Victor Hugo", "Albert Camus"], answer: "Antoine de Saint-Exupéry", theme: "Literatura" },
 { question: "¿Cuál de estas obras fue escrita por George Orwell?", options: ["Un mundo feliz", "Fahrenheit 451", "1984", "El señor de las moscas"], answer: "1984", theme: "Literatura" },
 { question: "¿Quién es el autor de la saga de libros 'Harry Potter'?", options: ["J. R. R. Tolkien", "C. S. Lewis", "J. K. Rowling", "Suzanne Collins"], answer: "J. K. Rowling", theme: "Literatura" },
 { question: "¿Qué poeta español escribió 'Platero y yo'?", options: ["Federico García Lorca", "Antonio Machado", "Juan Ramón Jiménez", "Rafael Alberti"], answer: "Juan Ramón Jiménez", theme: "Literatura" },
@@ -1854,9 +1854,7 @@
 { question: "¿Qué red social se centra en la publicación de fotos y vídeos cortos?", options: ["Facebook", "Twitter", "Instagram", "LinkedIn"], answer: "Instagram", theme: "Tecnología" },
 { question: "¿Qué es un 'píxel'?", options: ["La unidad más pequeña de una imagen digital", "Un tipo de cable de conexión", "La velocidad del procesador", "Una medida de memoria"], answer: "La unidad más pequeña de una imagen digital", theme: "Tecnología" },
 { question: "¿Quién es el CEO de Tesla y SpaceX?", options: ["Jeff Bezos", "Bill Gates", "Elon Musk", "Mark Zuckerberg"], answer: "Elon Musk", theme: "Tecnología" },
-{ question: "¿Qué es la 'nube' en informática?", options: ["Un sistema de refrigeración para ordenadores", "Una red de servidores remotos para almacenar y procesar datos", "Un virus informático", "La pantalla de inicio de un sistema operativo"], answer: "Una red de servidores remotos para almacenar y procesar datos", theme: "Tecnología" },
 { question: "¿Qué es un 'bug' en el contexto del software?", options: ["Una característica oculta", "Una actualización de seguridad", "Un error o fallo en un programa", "Una versión de prueba"], answer: "Un error o fallo en un programa", theme: "Tecnología" },
-{ question: "¿Cuál de estos es un lenguaje de programación?", options: ["HTML", "JPEG", "Python", "MP3"], answer: "Python", theme: "Tecnología" },
 { question: "¿Qué es la 'realidad virtual' (VR)?", options: ["Una videoconferencia de alta calidad", "Un entorno generado por ordenador que simula la realidad", "Una mejora de la realidad con elementos digitales", "Una red social para avatares"], answer: "Un entorno generado por ordenador que simula la realidad", theme: "Tecnología" },
 { question: "¿Qué es una 'cookie' en un navegador web?", options: ["Un archivo que almacena información sobre la navegación del usuario", "Un tipo de anuncio emergente", "Un programa antivirus", "Un marcador de página favorita"], answer: "Un archivo que almacena información sobre la navegación del usuario", theme: "Tecnología" },
 { question: "¿En qué videojuego de Nintendo se usan karts para competir en carreras?", options: ["Super Smash Bros.", "The Legend of Zelda", "Mario Kart", "Animal Crossing"], answer: "Mario Kart", theme: "Videojuegos" },
@@ -1871,7 +1869,7 @@
 { question: "¿Cómo se llama el mundo principal en el juego 'Minecraft'?", options: ["El Fin", "El Nether", "El Overworld", "Aether"], answer: "El Overworld", theme: "Videojuegos" },
 { question: "¿Qué civilización antigua es famosa por sus conocimientos en astronomía y sus pirámides en la península de Yucatán?", options: ["Incas", "Aztecas", "Mayas", "Olmecas"], answer: "Mayas", theme: "Historia" },
 { question: "¿Cuál de las siguientes no es una de las Siete Maravillas del Mundo Antiguo?", options: ["Gran Pirámide de Giza", "Jardines Colgantes de Babilonia", "Coliseo de Roma", "Faro de Alejandría"], answer: "Coliseo de Roma", theme: "Historia" },
-{ question: "¿Qué es la 'Pangea'?", options: ["Un antiguo océano", "El primer continente", "Un supercontinente que existió hace millones de años", "Una era glacial"], answer: "Geografía", theme: "Geografía" },
+{ question: "¿Qué es la 'Pangea'?", options: ["Un antiguo océano", "El primer continente", "Un supercontinente que existió hace millones de años", "Una era glacial"], answer: "Un supercontinente que existió hace millones de años", theme: "Geografía" },
 { question: "¿Cómo se llama el proceso de convertir un sólido directamente en gas, sin pasar por el estado líquido?", options: ["Fusión", "Evaporación", "Sublimación", "Condensación"], answer: "Sublimación", theme: "Ciencia" },
 { question: "¿Qué artista es famoso por haber pintado la bóveda de la Capilla Sixtina?", options: ["Leonardo da Vinci", "Rafael", "Miguel Ángel", "Tiziano"], answer: "Miguel Ángel", theme: "Arte" },
 { question: "¿Cuál es la raíz cuadrada de 81?", options: ["7", "8", "9", "10"], answer: "9", theme: "Matemáticas" },
@@ -1905,7 +1903,6 @@
 { question: "¿Qué planeta es conocido por su sistema de anillos?", options: ["Júpiter", "Saturno", "Urano", "Neptuno"], answer: "Saturno", theme: "Ciencia" },
 { question: "¿Qué es el 'cubismo'?", options: ["Un movimiento artístico que usa formas geométricas", "Un estilo de pintura muy realista", "Un movimiento que se centra en los sueños", "Un estilo que captura la luz y el momento"], answer: "Un movimiento artístico que usa formas geométricas", theme: "Arte" },
 { question: "¿Qué eran los 'gladiadores' en la Antigua Roma?", options: ["Filósofos", "Senadores", "Combatientes en espectáculos públicos", "Arquitectos"], answer: "Combatientes en espectáculos públicos", theme: "Historia" },
-{ question: "¿Cuál es el país más poblado de África?", options: ["Egipto", "Sudáfrica", "Nigeria", "Etiopía"], answer: "Nigeria", theme: "Geografía" },
 { question: "¿Qué es el 'número pi (π)'?", options: ["La relación entre la longitud de una circunferencia y su radio", "La relación entre la longitud de una circunferencia y su diámetro", "El área de un círculo", "El volumen de una esfera"], answer: "La relación entre la longitud de una circunferencia y su diámetro", theme: "Matemáticas" },
 { question: "¿Qué es el 'Carnaval de Venecia'?", options: ["Un festival de música electrónica", "Un famoso festival de máscaras en Italia", "Una carrera de góndolas", "Una festividad religiosa"], answer: "Un famoso festival de máscaras en Italia", theme: "Cultura" },
 { question: "¿Quién es el autor de 'El Señor de los Anillos'?", options: ["J.K. Rowling", "George R.R. Martin", "C.S. Lewis", "J.R.R. Tolkien"], answer: "J.R.R. Tolkien", theme: "Literatura" },
@@ -1919,7 +1916,6 @@
 { question: "¿Qué es un 'firewall' (cortafuegos)?", options: ["Un virus informático", "Un sistema de seguridad que controla el tráfico de red", "Un programa para acelerar internet", "Un componente físico del ordenador"], answer: "Un sistema de seguridad que controla el tráfico de red", theme: "Tecnología" },
 { question: "En la saga 'Final Fantasy', ¿cómo se llaman las criaturas que los jugadores pueden invocar?", options: ["Eones", "Guardianes de la Fuerza", "Espers", "Todas las anteriores"], answer: "Todas las anteriores", theme: "Videojuegos" },
 { question: "¿Cuál es la partícula subatómica con carga neutra?", options: ["Protón", "Electrón", "Neutrón", "Fotón"], answer: "Neutrón", theme: "Ciencia" },
-{ question: "¿Quién pintó 'La joven de la perla'?", options: ["Rembrandt", "Johannes Vermeer", "Frans Hals", "Jan Steen"], answer: "Johannes Vermeer", theme: "Arte" },
 { question: "¿Qué fue la 'Guerra Fría'?", options: ["Una guerra librada en la Antártida", "Un conflicto militar directo entre EE.UU. y la URSS", "Un período de tensión política e ideológica entre EE.UU. y la URSS", "Una guerra por el control de los recursos árticos"], answer: "Un período de tensión política e ideológica entre EE.UU. y la URSS", theme: "Historia" },
 { question: "¿Cuál de estos mares es en realidad un lago salado?", options: ["Mar Negro", "Mar Mediterráneo", "Mar Caspio", "Mar Rojo"], answer: "Mar Caspio", theme: "Geografía" },
 { question: "¿Qué es un 'lustro'?", options: ["Un período de 5 años", "Un período de 10 años", "Un período de 50 años", "Un período de 100 años"], answer: "Un período de 5 años", theme: "Matemáticas" },
@@ -1927,7 +1923,6 @@
 { question: "¿Quién escribió la obra teatral 'La casa de Bernarda Alba'?", options: ["Miguel de Unamuno", "Federico García Lorca", "Ramón del Valle-Inclán", "Jacinto Benavente"], answer: "Federico García Lorca", theme: "Literatura" },
 { question: "¿En qué deporte compitió la leyenda Muhammad Ali?", options: ["Lucha libre", "Boxeo", "Artes marciales mixtas", "Judo"], answer: "Boxeo", theme: "Deportes" },
 { question: "¿Cómo se llama el androide interpretado por Arnold Schwarzenegger en 'Terminator'?", options: ["T-800", "T-1000", "HAL 9000", "R2-D2"], answer: "T-800", theme: "Cine y televisión" },
-{ question: "¿Qué cantante es conocido como 'The Boss'?", options: ["Bob Dylan", "Bruce Springsteen", "Neil Young", "Tom Petty"], answer: "Bruce Springsteen", theme: "Música" },
 { question: "¿Qué es el 'balsámico'?", options: ["Un tipo de aceite de oliva", "Un tipo de vinagre", "Una especia", "Un queso"], answer: "Un tipo de vinagre", theme: "Comida" },
 { question: "¿Qué animal es el único mamífero que pone huevos?", options: ["El ornitorrinco", "El perezoso", "El armadillo", "El koala"], answer: "El ornitorrinco", theme: "Curiosidades" },
 { question: "¿Qué es el 'Bitcoin'?", options: ["Una empresa de tecnología", "Una bolsa de valores digital", "La primera y más conocida criptomoneda", "Un sistema de pago online"], answer: "La primera y más conocida criptomoneda", theme: "Economía" },
@@ -1957,12 +1952,10 @@
 { question: "¿Cuál es el único país que es también un continente?", options: ["Groenlandia", "Australia", "India", "Brasil"], answer: "Australia", theme: "Geografía" },
 { question: "¿Qué es un 'quebrado' o 'fracción'?", options: ["Un número entero", "La expresión de una cantidad dividida entre otra", "Un número irracional", "Un número primo"], answer: "La expresión de una cantidad dividida entre otra", theme: "Matemáticas" },
 { question: "¿Qué es el 'yin y el yang'?", options: ["Un concepto del taoísmo que representa la dualidad", "Dos dioses de la mitología japonesa", "Un plato de comida china", "Un estilo de caligrafía"], answer: "Un concepto del taoísmo que representa la dualidad", theme: "Cultura" },
-{ question: "¿Quién escribió 'Cien años de soledad'?", options: ["Mario Vargas Llosa", "Julio Cortázar", "Gabriel García Márquez", "Jorge Luis Borges"], answer: "Gabriel García Márquez", theme: "Literatura" },
 { question: "¿Qué significa 'jaque mate' en ajedrez?", options: ["El rey está amenazado", "El rey no puede evitar ser capturado", "Es un empate", "Se ha capturado a la reina"], answer: "El rey no puede evitar ser capturado", theme: "Deportes" },
 { question: "En la película 'Forrest Gump', ¿qué dice Forrest que es la vida?", options: ["Como una caja de bombones", "Como un viaje en tren", "Como un partido de ping-pong", "Como una pluma en el viento"], answer: "Como una caja de bombones", theme: "Cine y televisión" },
 { question: "¿Quién fue el vocalista de la banda 'Queen'?", options: ["Roger Taylor", "Brian May", "Freddie Mercury", "John Deacon"], answer: "Freddie Mercury", theme: "Música" },
 { question: "¿Qué es la 'tortilla de patatas'?", options: ["Un postre español", "Una bebida española", "Un plato español a base de huevos y patatas", "Un tipo de pan español"], answer: "Un plato español a base de huevos y patatas", theme: "Comida" },
-{ question: "¿Cuál es el planeta más grande del sistema solar?", options: ["Saturno", "Neptuno", "Júpiter", "Tierra"], answer: "Júpiter", theme: "Curiosidades" },
 { question: "¿Qué es la 'inflación galopante'?", options: ["Una inflación muy baja y estable", "Una inflación extremadamente alta y fuera de control", "Cuando los precios bajan rápidamente", "Una política del banco central"], answer: "Una inflación extremadamente alta y fuera de control", theme: "Economía" },
 { question: "¿Qué es un 'terremoto'?", options: ["Una fuerte tormenta de viento", "Una vibración de la superficie terrestre", "Una inundación masiva", "Una erupción volcánica"], answer: "Una vibración de la superficie terrestre", theme: "Naturaleza" },
 { question: "¿Qué es la 'inteligencia artificial' (IA)?", options: ["La inteligencia de los animales", "La simulación de procesos de inteligencia humana por máquinas", "Un tipo de memoria de ordenador", "Un sistema operativo avanzado"], answer: "La simulación de procesos de inteligencia humana por máquinas", theme: "Tecnología" },
@@ -2008,7 +2001,6 @@
 { question: "¿Qué es la 'tectónica de placas'?", options: ["La teoría sobre el movimiento de las placas de la litosfera terrestre", "El estudio de los terremotos", "La formación de las nubes", "El ciclo del agua"], answer: "La teoría sobre el movimiento de las placas de la litosfera terrestre", theme: "Ciencia" },
 { question: "¿Qué es la 'materia oscura'?", options: ["El material del que están hechos los agujeros negros", "Una forma de materia que no emite luz y cuya existencia se infiere por sus efectos gravitatorios", "Polvo interestelar que bloquea la luz", "Un tipo de energía negativa"], answer: "Una forma de materia que no emite luz y cuya existencia se infiere por sus efectos gravitatorios", theme: "Ciencia" },
 { question: "¿Qué es el 'Renacimiento'?", options: ["Un movimiento cultural y artístico que marcó el paso de la Edad Media a la Modernidad", "Un estilo arquitectónico gótico", "Un periodo de guerra en Europa", "El descubrimiento de América"], answer: "Un movimiento cultural y artístico que marcó el paso de la Edad Media a la Modernidad", theme: "Arte" },
-{ question: "¿Quién pintó 'El jardín de las delicias'?", options: ["El Bosco", "Pieter Brueghel el Viejo", "Alberto Durero", "Jan van Eyck"], answer: "El Bosco", theme: "Arte" },
 { question: "¿Qué es una 'gárgola'?", options: ["Un tipo de columna griega", "Una parte de un arco gótico", "Un ser imaginario tallado en piedra que sirve como desagüe", "Un rosetón en una catedral"], answer: "Un ser imaginario tallado en piedra que sirve como desagüe", theme: "Arte" },
 { question: "¿Qué caracteriza al arte 'Barroco'?", options: ["La simplicidad y el minimalismo", "El equilibrio y la armonía clásicos", "El dramatismo, la emoción y la ornamentación exuberante", "El uso de formas geométricas puras"], answer: "El dramatismo, la emoción y la ornamentación exuberante", theme: "Arte" },
 { question: "¿Quién fue el principal representante del 'impresionismo'?", options: ["Claude Monet", "Paul Cézanne", "Vincent van Gogh", "Édouard Manet"], answer: "Claude Monet", theme: "Arte" },
@@ -2018,7 +2010,6 @@
 { question: "¿Qué es un 'autorretrato'?", options: ["Un retrato de una persona famosa", "Un retrato hecho por un artista de sí mismo", "Un paisaje pintado al aire libre", "Una pintura de animales"], answer: "Un retrato hecho por un artista de sí mismo", theme: "Arte" },
 { question: "¿Quién diseñó la cúpula de la Catedral de Florencia?", options: ["Miguel Ángel", "Donato Bramante", "Filippo Brunelleschi", "León Battista Alberti"], answer: "Filippo Brunelleschi", theme: "Arte" },
 { question: "¿Qué es la 'Revolución Francesa'?", options: ["Un conflicto que comenzó en 1789 y transformó la política de Francia y Europa", "Una guerra entre Francia e Inglaterra", "La unificación de Francia como país", "Una revuelta campesina en el siglo XIV"], answer: "Un conflicto que comenzó en 1789 y transformó la política de Francia y Europa", theme: "Historia" },
-{ question: "¿Quién fue Juana de Arco?", options: ["Una reina de Francia", "Una heroína militar francesa y santa católica", "Una escritora medieval", "Una espía inglesa"], answer: "Una heroína militar francesa y santa católica", theme: "Historia" },
 { question: "¿Qué fue la 'Peste Negra'?", options: ["Una devastadora pandemia que asoló Europa en el siglo XIV", "Una guerra religiosa", "Una crisis económica en el Imperio Romano", "Una hambruna en China"], answer: "Una devastadora pandemia que asoló Europa en el siglo XIV", theme: "Historia" },
 { question: "¿Quién fue el primer presidente de los Estados Unidos?", options: ["Thomas Jefferson", "Abraham Lincoln", "George Washington", "John Adams"], answer: "George Washington", theme: "Historia" },
 { question: "¿Qué fue la 'Reforma Protestante'?", options: ["Un movimiento religioso iniciado por Martín Lutero en el siglo XVI", "La construcción de nuevas catedrales en Europa", "Un concilio de la Iglesia Católica", "Una cruzada militar a Tierra Santa"], answer: "Un movimiento religioso iniciado por Martín Lutero en el siglo XVI", theme: "Historia" },
@@ -2058,12 +2049,10 @@
 { question: "¿Qué es un 'tatuaje'?", options: ["Una forma de modificación corporal permanente mediante la inserción de tinta en la piel", "Un tipo de joya", "Un peinado tradicional", "Una prenda de vestir"], answer: "Una forma de modificación corporal permanente mediante la inserción de tinta en la piel", theme: "Cultura" },
 { question: "¿Qué es el 'flamenco'?", options: ["Un estilo de música y danza originario de Andalucía, España", "Un ave de color rosa", "Un tipo de postre francés", "Un instrumento de viento"], answer: "Un estilo de música y danza originario de Andalucía, España", theme: "Cultura" },
 { question: "¿Qué es el 'género epistolar'?", options: ["Un género literario escrito en forma de cartas", "Un género literario sobre héroes épicos", "Un género de poesía lírica", "Un género de teatro cómico"], answer: "Un género literario escrito en forma de cartas", theme: "Literatura" },
-{ question: "¿Quién escribió 'La Divina Comedia'?", options: ["Petrarca", "Boccaccio", "Dante Alighieri", "Maquiavelo"], answer: "Dante Alighieri", theme: "Literatura" },
 { question: "¿Qué es una 'metáfora'?", options: ["Una figura retórica que establece una comparación directa entre dos cosas", "Una exageración intencionada", "La repetición de un sonido", "Dar cualidades humanas a un objeto inanimado"], answer: "Una figura retórica que establece una comparación directa entre dos cosas", theme: "Literatura" },
 { question: "¿Quién es el autor de 'El cuervo' y otros relatos de misterio?", options: ["H.P. Lovecraft", "Edgar Allan Poe", "Stephen King", "Bram Stoker"], answer: "Edgar Allan Poe", theme: "Literatura" },
 { question: "¿Qué es un 'haiku'?", options: ["Un tipo de poema breve japonés", "Una novela histórica larga", "Un ensayo filosófico", "Un cuento de hadas"], answer: "Un tipo de poema breve japonés", theme: "Literatura" },
 { question: "¿Qué es 'Macondo'?", options: ["El pueblo ficticio donde transcurre 'Cien años de soledad'", "Un personaje de 'Don Quijote'", "Una isla en 'La Odisea'", "Un reino en 'El Señor de los Anillos'"], answer: "El pueblo ficticio donde transcurre 'Cien años de soledad'", theme: "Literatura" },
-{ question: "¿Quién escribió 'Orgullo y prejuicio'?", options: ["Charlotte Brontë", "Jane Austen", "Emily Brontë", "Virginia Woolf"], answer: "Jane Austen", theme: "Literatura" },
 { question: "¿Qué es una 'distopía' en literatura?", options: ["Una sociedad ficticia ideal y perfecta", "Una sociedad ficticia indeseable en sí misma", "Una historia ambientada en el pasado", "Una biografía de un personaje histórico"], answer: "Una sociedad ficticia indeseable en sí misma", theme: "Literatura" },
 { question: "¿Qué personaje literario vive en el 221B de Baker Street?", options: ["Hércules Poirot", "Sherlock Holmes", "Miss Marple", "Philip Marlowe"], answer: "Sherlock Holmes", theme: "Literatura" },
 { question: "¿Qué escritor francés es famoso por 'El extranjero' y 'La peste'?", options: ["Jean-Paul Sartre", "Victor Hugo", "Albert Camus", "Marcel Proust"], answer: "Albert Camus", theme: "Literatura" },
@@ -2154,7 +2143,7 @@
 { question: "¿Cuál de estos juegos es un 'battle royale'?", options: ["Minecraft", "The Legend of Zelda", "Fortnite", "Super Mario Odyssey"], answer: "Fortnite", theme: "Videojuegos" },
 { question: "¿Qué es 'Twitch'?", options: ["Una plataforma para ver retransmisiones de videojuegos en directo", "Una tienda de videojuegos", "Un foro de discusión sobre videojuegos", "Una herramienta para desarrollar videojuegos"], answer: "Una plataforma para ver retransmisiones de videojuegos en directo", theme: "Videojuegos" },
 { question: "¿Qué es 'pixel art'?", options: ["Un estilo de arte digital donde las imágenes se crean a nivel de píxel", "Arte generado por inteligencia artificial", "Modelado 3D de personajes", "Pintura al óleo de escenas de videojuegos"], answer: "Un estilo de arte digital donde las imágenes se crean a nivel de píxel", theme: "Videojuegos" },
-{ question: "¿Qué es una 'skin' o 'aspecto' en un videojuego?", options: ["Una habilidad especial del personaje", "Un objeto que modifica la apariencia de un personaje o arma", "Un mapa adicional para el juego", "Un aumento de nivel"], answer: "Un objeto que modifica la la apariencia de un personaje o arma", theme: "Videojuegos" },
+{ question: "¿Qué es una 'skin' o 'aspecto' en un videojuego?", options: ["Una habilidad especial del personaje", "Un objeto que modifica la apariencia de un personaje o arma", "Un mapa adicional para el juego", "Un aumento de nivel"], answer: "Un objeto que modifica la apariencia de un personaje o arma", theme: "Videojuegos" },
 { question: "¿Qué es 'E3' (Electronic Entertainment Expo)?", options: ["Una de las ferias comerciales de videojuegos más importantes del mundo", "Un campeonato mundial de eSports", "Un premio al mejor videojuego del año", "Una revista especializada en videojuegos"], answer: "Una de las ferias comerciales de videojuegos más importantes del mundo", theme: "Videojuegos" },
 { question: "¿Qué es la 'fusión nuclear'?", options: ["La división de un núcleo atómico", "La unión de dos o más núcleos atómicos ligeros para formar uno más pesado", "La desintegración radiactiva", "La emisión de rayos gamma"], answer: "La unión de dos o más núcleos atómicos ligeros para formar uno más pesado", theme: "Ciencia" },
 { question: "¿Qué es la 'ósmosis'?", options: ["El paso de un disolvente a través de una membrana semipermeable", "La mezcla de dos líquidos", "La evaporación de un líquido", "La solidificación de un gas"], answer: "El paso de un disolvente a través de una membrana semipermeable", theme: "Ciencia" },
@@ -2188,7 +2177,6 @@
 { question: "¿Qué es la 'dieta mediterránea'?", options: ["Un patrón alimenticio basado en la cocina de los países ribereños del mar Mediterráneo", "Una dieta basada únicamente en frutas", "Un ayuno intermitente", "Una dieta rica en carnes rojas"], answer: "Un patrón alimenticio basado en la cocina de los países ribereños del mar Mediterráneo", theme: "Cultura" },
 { question: "¿Quién es el autor de 'Veinte mil leguas de viaje submarino'?", options: ["H.G. Wells", "Julio Verne", "Alexandre Dumas", "Victor Hugo"], answer: "Julio Verne", theme: "Literatura" },
 { question: "¿Qué es la 'poesía épica'?", options: ["Poesía que expresa sentimientos personales", "Un poema narrativo extenso que celebra las hazañas de un héroe", "Un poema breve con una moraleja", "Poesía escrita para ser cantada"], answer: "Un poema narrativo extenso que celebra las hazañas de un héroe", theme: "Literatura" },
-{ question: "¿Cuál es el nombre del mago en 'El Señor de los Anillos'?", options: ["Dumbledore", "Merlín", "Gandalf", "Saruman"], answer: "Gandalf", theme: "Literatura" },
 { question: "¿Qué es un 'best-seller'?", options: ["Un libro que ha alcanzado un gran éxito de ventas", "Un libro premiado por la crítica", "Un libro escrito por un autor famoso", "Un libro de texto académico"], answer: "Un libro que ha alcanzado un gran éxito de ventas", theme: "Literatura" },
 { question: "¿Quién escribió la obra 'La vida es sueño'?", options: ["Lope de Vega", "Tirso de Molina", "Pedro Calderón de la Barca", "Miguel de Cervantes"], answer: "Pedro Calderón de la Barca", theme: "Literatura" },
 { question: "¿En qué deporte es famoso Tiger Woods?", options: ["Tenis", "Golf", "Baloncesto", "Fútbol americano"], answer: "Golf", theme: "Deportes" },
@@ -2231,7 +2219,7 @@
 { question: "¿Qué es un 'meme' de internet?", options: ["Un virus informático", "Un elemento cultural o de comportamiento que se transmite online, a menudo con humor", "Un tipo de emoticono", "Un perfil falso en redes sociales"], answer: "Un elemento cultural o de comportamiento que se transmite online, a menudo con humor", theme: "Tecnología" },
 { question: "¿Qué es la 'autenticación de dos factores'?", options: ["Un método de seguridad que requiere dos formas de identificación", "Usar dos contraseñas diferentes", "Una contraseña muy larga", "Un sistema de reconocimiento facial"], answer: "Un método de seguridad que requiere dos formas de identificación", theme: "Tecnología" },
 { question: "¿Qué es 'YouTube'?", options: ["Un servicio de correo electrónico", "Un sitio web para compartir vídeos", "Una tienda online", "Un programa de edición de texto"], answer: "Un sitio web para compartir vídeos", theme: "Tecnología" },
-{ question: "¿Qué es 'cosplay'?", options: ["Una afición en la que las personas se disfrazan de personajes de ficción", "Un tipo de videojuego de rol", "Un campeonato de eSports", "El arte de diseñar videojuegos"], answer: "Un hobby en el que las personas se disfrazan de personajes de ficción", theme: "Videojuegos" },
+{ question: "¿Qué es 'cosplay'?", options: ["Una afición en la que las personas se disfrazan de personajes de ficción", "Un tipo de videojuego de rol", "Un campeonato de eSports", "El arte de diseñar videojuegos"], answer: "Una afición en la que las personas se disfrazan de personajes de ficción", theme: "Videojuegos" },
 { question: "¿Qué es un 'glitch'?", options: ["Un error en un videojuego que causa un comportamiento inesperado", "Un objeto secreto en un juego", "Un personaje no jugable", "Un truco para ganar"], answer: "Un error en un videojuego que causa un comportamiento inesperado", theme: "Videojuegos" },
 { question: "¿Qué es 'Pokémon GO'?", options: ["Un juego de cartas coleccionables", "Un juego de realidad aumentada para móviles", "Una película de animación", "Una serie de televisión"], answer: "Un juego de realidad aumentada para móviles", theme: "Videojuegos" },
 { question: "¿Qué es un 'joystick'?", options: ["Una palanca de control utilizada para jugar videojuegos", "El monitor de un ordenador", "Un tipo de teclado", "Un ratón para gaming"], answer: "Una palanca de control utilizada para jugar videojuegos", theme: "Videojuegos" },
@@ -2539,7 +2527,7 @@
             }
             
             // Limitar la cantidad total
-            const totalQuestions = gameState.numPlayers * MAX_QUESTIONS_PER_PLAYER;
+            const totalQuestions = QUESTIONS_BY_PLAYERS[gameState.numPlayers] || QUESTIONS_BY_PLAYERS[1];
             gameState.currentQuestions = availableQuestions.slice(0, totalQuestions);
 
             if (gameState.currentQuestions.length < totalQuestions) {
@@ -2642,44 +2630,84 @@
                 optionsContainer.appendChild(button);
             });
             
-            // Reiniciar estado de selección de teclado
+            // Reiniciar estado de selección de teclado.
+            // El cursor arranca en 0 pero NO se pinta: antes se añadía siempre
+            // la clase 'selected' a la primera opción, lo que en móvil (donde no
+            // hay teclado) se veía como si la respuesta A quedase premarcada de
+            // la pregunta anterior. Ahora solo se muestra tras usar el teclado.
             gameState.selectedOptionIndex = 0;
-            document.querySelectorAll('.answer-option')[0].classList.add('selected');
+            hideKeyboardCursor();
             
             updatePlayerTurnDisplay();
             startTimer();
         }
 
-        function stopTimer() {
-            clearInterval(gameState.timerInterval);
-            // Detener la animación CSS reseteando la propiedad transition
-            const timerFill = document.getElementById('timer-fill');
-            timerFill.style.transition = 'none'; 
-            // Calcular el ancho final basado en el tiempo restante
-            const percentRemaining = (gameState.timeRemaining / gameState.difficulty.timeLimit) * 100;
-            timerFill.style.width = `${Math.max(0, percentRemaining)}%`; // Asegurar que no sea negativo
+        // ---- Cursor de teclado ----
+        // Solo se dibuja cuando el jugador usa realmente el teclado.
+        function showKeyboardCursor(index) {
+            gameState.keyboardCursorVisible = true;
+            const options = document.querySelectorAll('.answer-option');
+            options.forEach(btn => btn.classList.remove('selected'));
+            if (options[index]) options[index].classList.add('selected');
         }
 
-        function startTimer() {
+        function hideKeyboardCursor() {
+            gameState.keyboardCursorVisible = false;
+            document.querySelectorAll('.answer-option').forEach(btn => btn.classList.remove('selected'));
+        }
+
+        function stopTimer() {
+            // Antes timeRemaining solo se refrescaba cada 100 ms, así que el
+            // bonus por rapidez venía cuantizado en saltos de una décima.
+            // Aquí se calcula el valor exacto en el momento de parar.
+            if (gameState.timerInterval) {
+                clearInterval(gameState.timerInterval);
+                gameState.timerInterval = null;
+
+                const limit = gameState.difficulty && gameState.difficulty.timeLimit;
+                if (limit) {
+                    gameState.timeRemaining = Math.max(0, limit - (Date.now() - gameState.startTime));
+                }
+            }
+
+            const timerFill = document.getElementById('timer-fill');
+            timerFill.style.transition = 'none';
+
+            const limit = gameState.difficulty && gameState.difficulty.timeLimit;
+            const percentRemaining = limit ? (gameState.timeRemaining / limit) * 100 : 100;
+            timerFill.style.width = `${Math.max(0, percentRemaining)}%`;
+        }
+
+        // resumeMs: si se indica, el temporizador arranca con ese tiempo restante
+        // en lugar de reiniciarse. Antes la pausa devolvía el tiempo completo,
+        // lo que con un botón de pausa en pantalla sería trivial de explotar.
+        function startTimer(resumeMs) {
             stopTimer(); // Asegura que cualquier temporizador anterior se detenga
 
             const timeLimit = gameState.difficulty.timeLimit;
-            gameState.timeRemaining = timeLimit;
-            gameState.startTime = Date.now(); // Marca de tiempo de inicio
-            
+            const duration = (typeof resumeMs === 'number' && resumeMs > 0)
+                ? Math.min(resumeMs, timeLimit)
+                : timeLimit;
+
+            gameState.timeRemaining = duration;
+            // Se desplaza el origen para que el intervalo siga calculando
+            // timeRemaining = timeLimit - transcurrido sin casos especiales.
+            gameState.startTime = Date.now() - (timeLimit - duration);
+
             const timerFill = document.getElementById('timer-fill');
             const timeDisplay = document.getElementById('time-display');
+            const startPercent = (duration / timeLimit) * 100;
 
             // 1. Resetear visualmente la barra
-            timerFill.style.transition = 'none'; 
-            timerFill.style.width = '100%';
+            timerFill.style.transition = 'none';
+            timerFill.style.width = `${startPercent}%`;
             timerFill.style.backgroundColor = 'var(--color-neon-green)';
-            timeDisplay.textContent = (timeLimit / 1000).toFixed(1);
+            timeDisplay.textContent = (duration / 1000).toFixed(1);
 
             // 2. Usar requestAnimationFrame para forzar el repintado antes de iniciar la transición
             requestAnimationFrame(() => {
-                requestAnimationFrame(() => { 
-                    timerFill.style.transition = `width ${timeLimit / 1000}s linear`;
+                requestAnimationFrame(() => {
+                    timerFill.style.transition = `width ${duration / 1000}s linear`;
                     timerFill.style.width = '0%';
                 });
             });
@@ -2710,26 +2738,53 @@
         }
         
         function togglePause() {
+             if (!gameState.isGameActive) return;
+
              gameState.isPaused = !gameState.isPaused;
              const overlay = document.getElementById('pause-overlay');
-             
+             const pauseButton = document.getElementById('pause-button');
+
              if (gameState.isPaused) {
-                 stopTimer(); // Usar la nueva función de detener
+                 // El salto a la siguiente pregunta también tiene que congelarse:
+                 // antes seguía corriendo bajo la capa de pausa y cargaba la
+                 // pregunta nueva con su temporizador en marcha.
+                 if (gameState.advanceTimeout) {
+                     clearTimeout(gameState.advanceTimeout);
+                     gameState.advanceTimeout = null;
+                     gameState.advancePending = true;
+                 }
+
+                 stopTimer();
                  overlay.classList.remove('hide');
-                 stopMusic(); 
+                 stopMusic();
+                 if (pauseButton) pauseButton.textContent = '▶';
              } else {
                  overlay.classList.add('hide');
-                 startMusic(currentMelodyId); 
-                 // Al reanudar, reiniciamos el temporizador desde el principio para simplificar la lógica
-                 startTimer(); 
+                 startMusic(currentMelodyId);
+                 if (pauseButton) pauseButton.textContent = '⏸';
+
+                 if (gameState.advancePending) {
+                     gameState.advancePending = false;
+                     gameState.advanceTimeout = setTimeout(() => {
+                         gameState.advanceTimeout = null;
+                         nextPlayerOrQuestion();
+                     }, 800);
+                 } else {
+                     // Se reanuda con el tiempo que quedaba, no desde cero
+                     startTimer(gameState.timeRemaining);
+                 }
              }
         }
 
         function selectAnswer(selectedIndex) {
+             // Con la capa de pausa levantada no debe poder responderse
+             if (gameState.isPaused || !gameState.isGameActive) return;
+
              // DETENER EL TEMPORIZADOR INMEDIATAMENTE ANTES DE CUALQUIER OTRA ACCIÓN
-             stopTimer(); 
-             
+             stopTimer();
+
              const options = document.querySelectorAll('.answer-option');
+             if (!options[selectedIndex]) return;
              // selectedIndex es el índice 0-3 del botón en el DOM
              const selectedOptionText = options[selectedIndex].textContent; 
              
@@ -2781,8 +2836,11 @@
             
             updateScoreDisplay();
 
-            // Siguiente turno/pregunta
-            setTimeout(nextPlayerOrQuestion, 2000); 
+            // Siguiente turno/pregunta (id guardado para poder congelarlo al pausar)
+            gameState.advanceTimeout = setTimeout(() => {
+                gameState.advanceTimeout = null;
+                nextPlayerOrQuestion();
+            }, 2000);
         }
 
         // Lógica de avance: Avanza una pregunta por turno.
@@ -2869,12 +2927,27 @@
 
         function resetGame() {
             stopTimer(); // Asegurar parada al resetear
+
+            // Sin esto, un salto pendiente de la partida anterior podía avanzar
+            // la pregunta de la partida nueva a los dos segundos de empezar.
+            if (gameState.advanceTimeout) {
+                clearTimeout(gameState.advanceTimeout);
+                gameState.advanceTimeout = null;
+            }
+            gameState.advancePending = false;
+
             gameState.currentQuestionIndex = 0;
             gameState.playerScores = [0, 0];
             gameState.currentPlayerIndex = 0;
             gameState.isGameActive = false;
             gameState.selectedOptionIndex = -1;
             gameState.isPaused = false;
+            gameState.keyboardCursorVisible = false;
+
+            document.getElementById('pause-overlay').classList.add('hide');
+            const pauseButton = document.getElementById('pause-button');
+            if (pauseButton) pauseButton.textContent = '⏸';
+
             updateScoreDisplay();
         }
 
@@ -2960,17 +3033,27 @@
 
             // LÓGICA DE SELECCIÓN (Común)
             if (keyUsedForSelection && gameState.selectedOptionIndex !== -1) {
-                // LLAMAR A SELECT ANSWER QUE A SU VEZ LLAMA A stopTimer()
-                selectAnswer(gameState.selectedOptionIndex);
+                if (!gameState.keyboardCursorVisible) {
+                    // Primer uso del teclado en esta pregunta: se muestra el
+                    // cursor en lugar de responder a ciegas, para no contestar
+                    // sin querer la opción que no se está viendo resaltada.
+                    showKeyboardCursor(gameState.selectedOptionIndex);
+                    playSelectSound();
+                } else {
+                    selectAnswer(gameState.selectedOptionIndex);
+                }
                 actionTaken = true;
             }
-            
+
             // APLICAR MOVIMIENTO (Solo si la acción fue un movimiento y no una selección)
             if (actionTaken && !keyUsedForSelection) {
-                if (newIndex !== gameState.selectedOptionIndex) {
-                    options[gameState.selectedOptionIndex]?.classList.remove('selected');
+                if (!gameState.keyboardCursorVisible) {
+                    // El cursor aparece donde estaba, sin saltar de sitio
+                    showKeyboardCursor(gameState.selectedOptionIndex);
+                    playSelectSound();
+                } else if (newIndex !== gameState.selectedOptionIndex) {
                     gameState.selectedOptionIndex = newIndex;
-                    options[gameState.selectedOptionIndex].classList.add('selected');
+                    showKeyboardCursor(newIndex);
                     playSelectSound();
                 }
             }
@@ -3006,6 +3089,16 @@
             });
             
             
+            // 2b. Botón de pausa y capa de pausa (imprescindibles sin teclado)
+            document.getElementById('pause-button').addEventListener('click', () => {
+                if (Tone.context.state === 'suspended') Tone.start();
+                togglePause();
+            });
+
+            document.getElementById('pause-overlay').addEventListener('click', () => {
+                if (gameState.isPaused) togglePause();
+            });
+
             // 2. Adjuntar los listeners de clic a todos los grupos de botones de menú
             document.querySelectorAll('.menu-option-group').forEach(group => {
                 group.addEventListener('click', (e) => {
