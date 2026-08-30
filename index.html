@@ -19,6 +19,9 @@
             background: linear-gradient(135deg, #764ba2 0%, #f7b733 100%);
             min-height: 100vh;
             padding: 20px;
+            /* Las partículas se desplazan 100px a la derecha desde left:90%:
+               sin esto provocan scroll horizontal en pantallas estrechas. */
+            overflow-x: hidden;
         }
         
         /* sustituir esta sección */
@@ -127,7 +130,9 @@
         
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            /* auto-fit + minmax: el navegador decide cuántas columnas caben.
+               Antes eran 3 fijas, que en móvil dejaban 5 px por tarjeta. */
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
             gap: 20px;
             padding: 20px;
         }
@@ -197,7 +202,7 @@
         
         .mail-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 15px;
             padding: 20px;
         }
@@ -251,7 +256,7 @@
         
         .ai-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -438,6 +443,148 @@
         .ai-card {
             animation: none;
         }
+        
+        /* ==========================================================
+           RESPONSIVE
+           El archivo no tenía ninguna media query: la rejilla de dos
+           columnas se aplicaba igual en un móvil, dejando la columna
+           de Recursos con ~108 px y su contenido a 0 px de ancho.
+           ========================================================== */
+        
+        /* Tablet y ventanas estrechas: una sola columna */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                gap: 15px;
+            }
+            
+            .section-header {
+                font-size: 1.35rem;
+                padding: 15px;
+            }
+            
+            .search-container {
+                padding: 15px;
+                margin: 15px;
+            }
+            
+            /* El input y los dos botones no caben en una fila de 360 px */
+            .search-box {
+                flex-wrap: wrap;
+                border-radius: 20px;
+                gap: 8px;
+            }
+            
+            .search-box input {
+                flex: 1 1 100%;
+                padding: 12px 15px;
+            }
+            
+            .search-btn {
+                flex: 1 1 0;
+                margin-left: 0;
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+            
+            .info-grid,
+            .mail-grid {
+                padding: 15px;
+                gap: 12px;
+            }
+            
+            .resources-section {
+                padding: 15px;
+            }
+            
+            .web-section {
+                padding: 15px;
+            }
+            
+            .info-card,
+            .mail-card {
+                padding: 15px;
+            }
+            
+            .subsection-header {
+                font-size: 0.95rem;
+                padding: 12px;
+            }
+        }
+        
+        /* Pantallas muy estrechas: una sola columna también dentro de las tarjetas */
+        @media (max-width: 380px) {
+            .ai-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* ==========================================================
+           DISPOSITIVOS TÁCTILES
+           En una pantalla táctil el :hover se queda "pegado" tras
+           tocar: la tarjeta se queda ampliada y desplazada hasta que
+           tocas otra cosa. Se desactivan las transformaciones y se
+           sustituyen por una respuesta al toque (:active).
+           ========================================================== */
+        @media (hover: none) {
+            .card:hover,
+            .search-box:hover,
+            .search-btn:hover,
+            .info-card:hover,
+            .info-card a:hover,
+            .mail-card:hover,
+            .ai-card:hover,
+            .web-item:hover {
+                transform: none;
+            }
+            
+            .info-card:hover::before {
+                opacity: 0;
+            }
+            
+            .mail-card:hover::before {
+                width: 0;
+                height: 0;
+            }
+            
+            .ai-card:active,
+            .mail-card:active,
+            .info-card:active,
+            .web-item:active {
+                filter: brightness(0.92);
+            }
+            
+            /* Objetivos táctiles con altura suficiente para el dedo */
+            .web-item,
+            .info-card a {
+                padding: 14px;
+            }
+            
+            .ai-card {
+                min-height: 72px;
+            }
+        }
+        
+        /* Respeta la preferencia del sistema de reducir animaciones */
+        @media (prefers-reduced-motion: reduce) {
+            .particle {
+                display: none;
+            }
+            
+            * {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
     
 </head>
@@ -463,7 +610,7 @@
                     <i class="fas fa-search"></i> Buscador
                 </div>
                 <div class="search-container">
-                    <form method="GET" action="http://www.google.com/search">
+                    <form method="GET" action="https://www.google.com/search">
                         <div class="search-box">
                             <input type="text" name="q" placeholder="¿Qué quieres buscar hoy?" maxlength="255" autofocus>
                             <button type="submit" class="search-btn">
