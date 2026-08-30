@@ -3,784 +3,914 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Space Invaders</title>
+    <title>Portal Personal de Nika & Jose</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body {
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * {
             margin: 0;
             padding: 0;
-            background: #000;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #764ba2 0%, #f7b733 100%);
             min-height: 100vh;
-            flex-direction: column;
+            padding: 20px;
+            /* Las partículas se desplazan 100px a la derecha desde left:90%:
+               sin esto provocan scroll horizontal en pantallas estrechas. */
+            overflow-x: hidden;
         }
-
-        canvas {
-            border: 2px solid #0f0;
-            background: #000;
+        
+        /* sustituir esta sección */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
         }
-
-        .game-info {
+        
+        /* sustituir esta sección */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        }
+        
+        
+        
+        
+        .section-header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .section-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .section-header:hover::before {
+            left: 100%;
+        }
+        
+        .search-container {
+            padding: 30px;
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            border-radius: 20px;
+            margin: 20px;
+        }
+        
+        .search-box {
             display: flex;
-            justify-content: space-between;
-            width: 800px;
-            margin-bottom: 10px;
-            font-size: 18px;
+            align-items: center;
+            background: white;
+            border-radius: 50px;
+            padding: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
-
-        .controls {
-            margin-top: 10px;
+        
+        .search-box:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 15px 20px;
+            font-size: 16px;
+            border-radius: 50px;
+        }
+        
+        .search-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+        
+        .search-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(255, 107, 107, 0.3);
+        }
+        
+        .info-grid {
+            display: grid;
+            /* auto-fit + minmax: el navegador decide cuántas columnas caben.
+               Antes eran 3 fijas, que en móvil dejaban 5 px por tarjeta. */
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .info-card {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            padding: 20px;
+            border-radius: 15px;
             text-align: center;
-            font-size: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform: translateY(0px) scale(1);
         }
-
-        .audio-controls {
-            margin-top: 10px;
+        
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        
+        .info-card:hover::before {
+            opacity: 1;
+        }
+        
+        .info-card > * {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-8px) scale(1.03);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .info-card h3 {
+            color: #2d3436;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .info-card a {
+            display: block;
+            color: #0984e3;
+            text-decoration: none;
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .info-card a:hover {
+            background: rgba(255, 255, 255, 0.8);
+            color: #2d3436;
+            transform: scale(1.05);
+        }
+        
+        .mail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            padding: 20px;
+        }
+        
+        .mail-card {
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            padding: 20px;
+            border-radius: 15px;
             text-align: center;
-            font-size: 14px;
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transform: scale(1) rotate(0deg);
         }
-
-        .volume-slider {
-            background: #000;
-            color: #0f0;
-            margin: 0 10px;
-        }
-
-        .overlay {
+        
+        .mail-card::before {
+            content: '';
             position: absolute;
             top: 50%;
             left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.8), transparent);
+            transition: all 0.4s ease;
+            border-radius: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.9);
+        }
+        
+        .mail-card:hover::before {
+            width: 200%;
+            height: 200%;
+        }
+        
+        .mail-card:hover {
+            transform: scale(1.08) rotate(2deg);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mail-card img {
+            max-width: 80px;
+            height: auto;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .resources-section {
             padding: 20px;
-            border: 2px solid #0f0;
-            z-index: 100;
         }
-
-        .pause-overlay {
-            font-size: 36px;
+        
+        .ai-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
         }
-
-        .ranking {
-            margin-top: 20px;
-            font-size: 16px;
-        }
-
-        .ranking h3 {
-            margin-bottom: 10px;
-            color: #ff0;
-        }
-
-        .ranking-list {
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .ranking-entry {
-            margin: 5px 0;
-            padding: 2px;
-        }
-
-        .ranking-entry.highlight {
-            background: rgba(0, 255, 0, 0.2);
-            font-weight: bold;
-        }
-
-        input {
-            background: #000;
-            color: #0f0;
-            border: 1px solid #0f0;
-            padding: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 16px;
-            margin: 10px 0;
-        }
-
-        button {
-            background: #000;
-            color: #0f0;
-            border: 2px solid #0f0;
-            padding: 8px 16px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
+        
+        .ai-card {
+            color: #000000;
+            padding: 15px;
+            border-radius: 15px;
+            text-align: center;
             cursor: pointer;
-            margin: 5px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transform: scale(1) translateY(0px);
         }
-
-        button:hover {
-            background: #0f0;
-            color: #000;
+        
+        /* Colores específicos para cada IA */
+        .ai-card.chatgpt {
+            background-color: #15A280;
         }
-
-        input[type="range"] {
-            background: #000;
-            accent-color: #0f0;
+        
+        .ai-card.claude {
+            background-color: #FFFFFF;
+        }
+        
+        .ai-card.gemini {
+            background-color: #FFFFFF;
+        }
+        
+        .ai-card.perplexity {
+            background-color: #091717;
+        }
+        
+        .ai-card.airbnb {
+            background-color: #FF5A60;
+        }
+        
+        .ai-card.bing {
+            background-color: #efefef;
+        }
+        
+        .ai-card.grok {
+            background-color: #FFFFFF;
+        }
+        .ai-card.notion {
+            background-color: #FFFFFF;
+        }
+        .ai-card.gestor {
+            background-color: #FFFFFF;
+        }
+        
+        .ai-card.booking {
+            background-color: #003B95;
+        }
+        
+        .ai-card.skyscanner {
+            background-color: #0770E3;
+        }
+        
+        .ai-card.pixabay {
+            background-color: #56AE58;
+        }
+        
+        .ai-card.canva {
+            background-color: #00C4CC;
+        }
+        
+        .ai-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .ai-card:hover::after {
+            left: 100%;
+        }
+        
+        .ai-card:hover {
+            transform: scale(1.1) translateY(-10px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .ai-card img {
+            width: 100%;
+            max-width: 120px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-card.gestor {
+            padding: 0 !important;
+        }
+        
+        .ai-card.gestor img {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            object-fit: cover !important;
+            border-radius: 15px !important;
+        }
+        
+        .web-section {
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .web-item {
+            background: rgba(255, 255, 255, 0.9);
+            color: #2d3436;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 0;
+            transform: translateX(0px) scale(1);
+        }
+        
+        .web-item:hover {
+            background: white;
+            transform: translateX(10px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .subsection-header {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Efectos de partículas para el fondo */
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: particles 20s infinite linear;
+        }
+        
+        @keyframes particles {
+            0% {
+                transform: translateY(100vh) translateX(0px);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-100vh) translateX(100px);
+                opacity: 0;
+            }
+        }
+        
+        /* Reseteo de transforms para evitar acumulación */
+        .info-card {
+            animation: none;
+        }
+        
+        .mail-card {
+            animation: none;
+        }
+        
+        .ai-card {
+            animation: none;
+        }
+        
+        /* ==========================================================
+           RESPONSIVE
+           El archivo no tenía ninguna media query: la rejilla de dos
+           columnas se aplicaba igual en un móvil, dejando la columna
+           de Recursos con ~108 px y su contenido a 0 px de ancho.
+           ========================================================== */
+        
+        /* Tablet y ventanas estrechas: una sola columna */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                gap: 15px;
+            }
+            
+            .section-header {
+                font-size: 1.35rem;
+                padding: 15px;
+            }
+            
+            .search-container {
+                padding: 15px;
+                margin: 15px;
+            }
+            
+            /* El input y los dos botones no caben en una fila de 360 px */
+            .search-box {
+                flex-wrap: wrap;
+                border-radius: 20px;
+                gap: 8px;
+            }
+            
+            .search-box input {
+                flex: 1 1 100%;
+                padding: 12px 15px;
+            }
+            
+            .search-btn {
+                flex: 1 1 0;
+                margin-left: 0;
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+            
+            .info-grid,
+            .mail-grid {
+                padding: 15px;
+                gap: 12px;
+            }
+            
+            .resources-section {
+                padding: 15px;
+            }
+            
+            .web-section {
+                padding: 15px;
+            }
+            
+            .info-card,
+            .mail-card {
+                padding: 15px;
+            }
+            
+            .subsection-header {
+                font-size: 0.95rem;
+                padding: 12px;
+            }
+        }
+        
+        /* Pantallas muy estrechas: una sola columna también dentro de las tarjetas */
+        @media (max-width: 380px) {
+            .ai-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* ==========================================================
+           DISPOSITIVOS TÁCTILES
+           En una pantalla táctil el :hover se queda "pegado" tras
+           tocar: la tarjeta se queda ampliada y desplazada hasta que
+           tocas otra cosa. Se desactivan las transformaciones y se
+           sustituyen por una respuesta al toque (:active).
+           ========================================================== */
+        @media (hover: none) {
+            .card:hover,
+            .search-box:hover,
+            .search-btn:hover,
+            .info-card:hover,
+            .info-card a:hover,
+            .mail-card:hover,
+            .ai-card:hover,
+            .web-item:hover {
+                transform: none;
+            }
+            
+            .info-card:hover::before {
+                opacity: 0;
+            }
+            
+            .mail-card:hover::before {
+                width: 0;
+                height: 0;
+            }
+            
+            .ai-card:active,
+            .mail-card:active,
+            .info-card:active,
+            .web-item:active {
+                filter: brightness(0.92);
+            }
+            
+            /* Objetivos táctiles con altura suficiente para el dedo */
+            .web-item,
+            .info-card a {
+                padding: 14px;
+            }
+            
+            .ai-card {
+                min-height: 72px;
+            }
+        }
+        
+        /* Respeta la preferencia del sistema de reducir animaciones */
+        @media (prefers-reduced-motion: reduce) {
+            .particle {
+                display: none;
+            }
+            
+            * {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
+    
 </head>
+
 <body>
-    <div class="game-info">
-        <div>PUNTUACIÓN: <span id="score">0</span></div>
-        <div>VIDAS: <span id="lives">3</span></div>
-        <div>NIVEL: <span id="level">1</span></div>
-    </div>
-
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-    <div class="controls">
-        <p>CONTROLES: ← → para mover | ESPACIO para disparar | P para pausar | R para reiniciar</p>
-    </div>
-
-    <div class="audio-controls">
-        <label for="volumeSlider">🔊 Volumen:</label>
-        <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volume-slider">
-        <button id="muteBtn">🔇 Silenciar</button>
-    </div>
-
-    <div id="pauseOverlay" class="overlay pause-overlay" style="display: none;">
-        <h2>JUEGO PAUSADO</h2>
-        <p>Presiona P para continuar</p>
-    </div>
-
-    <div id="gameOver" class="overlay" style="display: none;">
-        <h2>GAME OVER</h2>
-        <p>Puntuación Final: <span id="finalScore">0</span></p>
-        <div id="nameInput" style="display: none;">
-            <p>¡Nuevo récord! Ingresa tu nombre:</p>
-            <input type="text" id="playerName" maxlength="15" placeholder="Tu nombre">
-            <br>
-            <button onclick="saveScore()">Guardar</button>
+    <!-- Partículas de fondo -->
+    <div class="particle" style="left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="left: 20%; animation-delay: 2s;"></div>
+    <div class="particle" style="left: 30%; animation-delay: 4s;"></div>
+    <div class="particle" style="left: 40%; animation-delay: 6s;"></div>
+    <div class="particle" style="left: 50%; animation-delay: 8s;"></div>
+    <div class="particle" style="left: 60%; animation-delay: 10s;"></div>
+    <div class="particle" style="left: 70%; animation-delay: 12s;"></div>
+    <div class="particle" style="left: 80%; animation-delay: 14s;"></div>
+    <div class="particle" style="left: 90%; animation-delay: 16s;"></div>
+    
+    <div class="container">
+        <!-- COLUMNA IZQUIERDA -->
+        <div>
+            <!-- BUSCADOR -->
+            <div class="card">
+                <div class="section-header">
+                    <i class="fas fa-search"></i> Buscador
+                </div>
+                <div class="search-container">
+                    <form method="GET" action="https://www.google.com/search">
+                        <div class="search-box">
+                            <input type="text" name="q" placeholder="¿Qué quieres buscar hoy?" maxlength="255" autofocus>
+                            <button type="submit" class="search-btn">
+                                <i class="fas fa-search"></i> Buscar
+                            </button>
+                            <button type="reset" class="search-btn" style="background: linear-gradient(135deg, #74b9ff, #0984e3);">
+                                <i class="fas fa-eraser"></i> Limpiar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- CORREO -->
+            <div class="card" style="margin-top: 25px;">
+                <div class="section-header">
+                    <i class="fas fa-envelope"></i> Correo & Servicios
+                </div>
+                <div class="mail-grid">
+                    <div class="mail-card" onclick="window.open('http://mail.google.com/mail/', '_blank')">
+                        <img src="images/gmail.png" alt="Gmail">
+                        <h4>Gmail</h4>
+                    </div>
+                    <div class="mail-card" onclick="window.open('http://www.hotmail.com/', '_blank')">
+                        <img src="images/hotmail.png" alt="Hotmail">
+                        <h4>Hotmail</h4>
+                    </div>
+                    <div class="mail-card" onclick="window.open('https://drive.google.com/', '_blank')">
+                        <img src="images/drive.png" alt="Drive">
+                        <h4>Google Drive</h4>
+                    </div>
+                    <div class="mail-card" onclick="window.open('https://remotedesktop.google.com/', '_blank')">
+                        <img src="images/remotedesktop.png" alt="Remote Desktop">
+                        <h4>Remote Desktop</h4>
+                    </div>
+                </div>
+            </div>
+            
+            
+            
+            <!-- INFORMACIÓN -->
+            <div class="card" style="margin-top: 25px;">
+                <div class="section-header">
+                    <i class="fas fa-info-circle"></i> Información
+                </div>
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3><i class="fa-solid fa-school"></i> Trabajo Nika</h3>
+                        <a href="https://www.educarm.es/home" target="_blank">Educarm</a>
+                        <a href="https://www.tokappschool.com/" target="_blank">TokApp</a>
+                        <a href="https://teleformacion.murciaeduca.es/" target="_blank">Teleformación</a>
+                        <a href="https://grupoanayaid.es/Identity/CIAM_Login?startURL=%2FIdentity%2Fsetup%2Fsecur%2FRemoteAccessAuthorizationPage.apexp%3Fsource%3DCAAAAZjmXB7CMDAwMDAwMDAwMDAwMDAwAAABAJMq7U-f_67y5yPi-wI6Gs_5Hvbnaz9CYzstICbecVJVAXv4V_69FDTCkfuouD2qA8q9NbzcxMnPrWoZB7oHIzWnrvKjBKPDVNr9L1DGf0LsRoG4I4Ica-Mp6NtPQsNyGZyG8VgrXxRSOhuqkYlhPsol-cgIbNKvrNGiwNJOilZ98_dO_PI2sg2QZh5SfPpHmBbHjolkBezX4AcN6CAPQSnE5CZxuMnuZjTbppSzWUiIiI9_B7dD28iiIyac1NlhBtkjupcCcMHsxOnZ0tS_HGBXLQTxP2GjMkhoy7I-KH3VaLNfx7InE9rSkyIk_OujXuRxYMorg-xfUSbtd4OKr2fi6dzeEQ52LML9jFXoPGhfzmt3psxAPj16H4s89ZjXAWIYPcyzcsqkCUX9wmij0FDJsHgA9H2aAKU8z2Z4HBdJ3g8X4MQgCblJ572S8a50sVWDr3S4p1PsXAN-WKzz21g91Auu1mV5yeTmyobb0aTP4fUqDaaXV-qjTIBhJzB_8GWZUFwEyJwi3pm1EibS0CDNrSP4wFbsdsgxCb47TZEus-ucROm-twq3E_2jIKP9Z7hlzVsMuZUIWAsDPzbjQDoJAPvrXlZrWj4KpiLTQ9gY8BROOU7yVlnMf4J7GLQW4pH4Si_dSByE3BBOMMV-jJeak14NZGP6VnpFngcpBFxb&sdtd=1" target="_blank">Grupo Anaya</a>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3><i class="fas fa-hospital"></i> CARM - SS</h3>
+                        <a href="http://www.carm.es" target="_blank">CARM</a>
+                        <a href="https://sms.carm.es/cmap/iniciarReserva.do" target="_blank">Servicio Murciano Salud</a>
+                        <a href="https://sede.carm.es/sms/portaldelpaciente/home.xhtml" target="_blank">Portal del paciente</a>
+                        <a href="https://sede.seg-social.gob.es/wps/portal/sede/sede/Ciudadanos/informes y certificados/" target="_blank">INSS</a>
+                        <a href="https://clientes.prevemur.es/web/tr/inicio.aspx" target="_blank">Prevemur</a>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3><i class="fas fa-newspaper"></i> Diarios</h3>
+                        <a href="http://www.elmundo.es/index.html" target="_blank">El Mundo</a>
+                        <a href="http://www.laverdad.es/" target="_blank">La Verdad</a>
+                        <a href="https://www.libertaddigital.com/" target="_blank">Libertad Digital</a>
+                        <a href="http://www.larazon.es/" target="_blank">La Razón</a>
+                        <a href="https://www.abc.es/" target="_blank">ABC</a>
+                        <a href="https://www.elpais.com/" target="_blank">El País</a>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3><i class="fas fa-route"></i> Movilidad</h3>
+                        <a href="http://maps.google.es/" target="_blank">Google Maps</a>
+                        <a href="http://callejero.paginasamarillas.es/home.asp" target="_blank">Páginas Amarillas</a>
+                        <a href="http://www.renfe.es" target="_blank">Renfe</a>
+                        <a href="https://www.ouigo.com/es/" target="_blank">Ouigo</a>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3><i class="fa-solid fa-sitemap"></i> Webs recursos IA</h3>
+                        <a href="https://www.bananaprompts.xyz/explore" target="_blank">Banana Prompts</a>
+                    </div>
+                    
+                    <div class="info-card">
+                        <h3><i class="fas fa-university"></i> Bancos</h3>
+                        <a href="http://portal.lacaixa.es/home/particulares_es.html" target="_blank">CaixaBank</a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- TIEMPO -->
+            <div class="card" style="margin-top: 25px;">
+                <div class="section-header">
+                    <i class="fas fa-cloud-sun"></i> Tiempo
+                </div>
+                <div style="padding: 20px;">
+                    <iframe src="https://www.meteoblue.com/es/tiempo/widget/daily/lorca_espa%c3%b1a_2514891?geoloc=fixed&days=5&tempunit=CELSIUS&windunit=KILOMETER_PER_HOUR&precipunit=MILLIMETER&coloured=coloured&pictoicon=1&maxtemperature=1&mintemperature=1&windspeed=1&uvindex=1&legacylink=0" frameborder="0" scrolling="no" allowtransparency="true" sandbox="allow-same-origin allow-scripts allow-popups allow-popups-to-escape-sandbox" style="width: 100%; height: 540px; border-radius: 15px; overflow: hidden;"></iframe>
+                </div>
+            </div>
         </div>
-        <div class="ranking">
-            <h3>TOP 10 PUNTUACIONES</h3>
-            <div id="rankingList" class="ranking-list"></div>
-        </div>
-        <p>Presiona R para jugar de nuevo</p>
-    </div>
-
-    <script>
-        // Configuración del audio
-        let audioContext;
-        let masterGain;
-        let isMuted = false;
-
-        function initAudio() {
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                masterGain = audioContext.createGain();
-                masterGain.connect(audioContext.destination);
-                masterGain.gain.value = 0.5;
-            } catch (e) {
-                console.warn('Web Audio API no soportado:', e);
-                audioContext = null;
-            }
-        }
-
-        // Funciones para generar sonidos sintéticos
-        function playSound(frequency, duration, type = 'square', fadeOut = true) {
-            if (!audioContext || isMuted) return;
-
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(masterGain);
-
-            oscillator.type = type;
-            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-
-            if (fadeOut) {
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-            } else {
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.setValueAtTime(0.01, audioContext.currentTime + duration);
-            }
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + duration);
-        }
-
-        function playLaserSound() {
-            // Sonido láser característico: frecuencia alta que baja rápidamente
-            if (!audioContext || isMuted) return;
-
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(masterGain);
-
-            oscillator.type = 'sawtooth';
-            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.1);
-        }
-
-        function playExplosionSound() {
-            // Sonido de explosión: ruido blanco con envolvente
-            if (!audioContext || isMuted) return;
-
-            const bufferSize = audioContext.sampleRate * 0.3;
-            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const output = buffer.getChannelData(0);
-
-            // Generar ruido blanco
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
-
-            const source = audioContext.createBufferSource();
-            const gainNode = audioContext.createGain();
-            const filter = audioContext.createBiquadFilter();
-
-            source.buffer = buffer;
-            source.connect(filter);
-            filter.connect(gainNode);
-            gainNode.connect(masterGain);
-
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(2000, audioContext.currentTime);
-            filter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
-
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-
-            source.start(audioContext.currentTime);
-            source.stop(audioContext.currentTime + 0.3);
-        }
-
-        function playPowerUpSound() {
-            // Sonido de subida de nivel
-            const frequencies = [200, 300, 400, 500, 600];
-            frequencies.forEach((freq, index) => {
-                setTimeout(() => {
-                    playSound(freq, 0.1, 'sine', false);
-                }, index * 50);
-            });
-        }
-
-        function playGameOverSound() {
-            // Sonido descendente para game over
-            if (!audioContext || isMuted) return;
-
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(masterGain);
-
-            oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 2);
-
-            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 2);
-        }
-
-        function playHitSound() {
-            // Sonido cuando el jugador es golpeado
-            playSound(150, 0.3, 'triangle');
-        }
-
-        function playInvaderMoveSound() {
-            // Sonido sutil cuando los invasores se mueven
-            playSound(100, 0.05, 'square', false);
-        }
-
-        // Control de volumen
-        function updateVolume() {
-            if (masterGain) {
-                const volume = document.getElementById('volumeSlider').value / 100;
-                masterGain.gain.value = isMuted ? 0 : volume;
-            }
-        }
-
-        function toggleMute() {
-            isMuted = !isMuted;
-            const muteBtn = document.getElementById('muteBtn');
-            muteBtn.textContent = isMuted ? '🔊 Activar' : '🔇 Silenciar';
-            updateVolume();
-        }
-
-        // Configuración del juego
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        // Variables del juego
-        let score = 0;
-        let lives = 3;
-        let level = 1;
-        let gameRunning = true;
-        let gamePaused = false;
-        let keys = {};
-        let invaderMoveCounter = 0;
-
-        // Clase Jugador
-        class Player {
-            constructor() {
-                this.width = 40;
-                this.height = 20;
-                this.x = canvas.width / 2 - this.width / 2;
-                this.y = canvas.height - 40;
-                this.speed = 5;
-                this.bullets = [];
-                this.lastShot = 0;
-                this.shootDelay = 200;
-            }
-
-            update() {
-                // Movimiento
-                if (keys['ArrowLeft'] && this.x > 0) {
-                    this.x -= this.speed;
+        
+        <!-- COLUMNA DERECHA -->
+        
+        <div class="card">
+            
+            <div class="card">
+                
+                <div class="card">
+                    
+                    
+                    <div class="section-header">
+                        <i class="fas fa-star"></i> Recursos
+                    </div>
+                    <div class="resources-section">
+                        <div class="subsection-header">
+                            <i class="fas fa-robot"></i> Inteligencias Artificiales
+                        </div>
+                        <div class="ai-grid">
+                            <button class="ai-card chatgpt" onclick="window.open('https://chatgpt.com/', '_blank');">
+                                <img src="images/chatgpt.jpg" alt="ChatGPT">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://claude.ai/', '_blank');">
+                                <img src="images/claude.png" alt="Claude">
+                            </button>
+                            <button class="ai-card gemini" onclick="window.open('https://gemini.google.com/app?hl=es-ES', '_blank');">
+                                <img src="images/gemini.png" alt="Gemini">
+                            </button>
+                            <button class="ai-card perplexity" onclick="window.open('https://www.perplexity.ai/', '_blank');">
+                                <img src="images/perplexity.png" alt="Perplexity">
+                            </button>
+                            <button class="ai-card notebookLM" onclick="window.open('https://notebooklm.google.com/', '_blank');">
+                                <img src="images/notebookLM.png" alt="NotebookLM">
+                            </button>
+                            <button class="ai-card bing" onclick="window.open('https://www.bing.com/images?FORM=Z9LH', '_blank');">
+                                <img src="images/bing.png" alt="Bing">
+                            </button>
+                            <button class="ai-card grok" onclick="window.open('https://grok.com/', '_blank');">
+                                <img src="images/GROK.png" alt="Grok">
+                            </button>
+                            <button class="ai-card notion" onclick="window.open('https://notion.com/', '_blank');">
+                                <img src="images/notion.png" alt="Notion">
+                            </button>
+                            <button class="ai-card gestor" onclick="window.open('webs/Gestor%20de%20prompts.html', '_blank');">
+                                <img src="images/gestor.png" alt="Gestor%20de%20prompts">
+                            </button>
+                        </div>
+                        
+                        <div class="subsection-header">
+                            <i class="fa-solid fa-suitcase-rolling"></i> Planificación de viajes
+                        </div>
+                        <div class="ai-grid">
+                            <button class="ai-card claude" onclick="window.open('http://maps.google.es/', '_blank');">
+                                <img src="images/google_maps.jpg" alt="Google maps">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://www.google.com/maps/d/u/0/', '_blank');">
+                                <img src="images/my_maps.jpg" alt="My Maps">
+                            </button>
+                            <button class="ai-card airbnb" onclick="window.open('https://www.airbnb.es/', '_blank');">
+                                <img src="images/airbnb.jpg" alt="AirBnb">
+                            </button>
+                            <button class="ai-card booking" onclick="window.open('https://www.booking.com/', '_blank');">
+                                <img src="images/booking.png" alt=">Booking">
+                            </button>
+                            <button class="ai-card skyscanner" onclick="window.open('https://www.skyscanner.es/', '_blank');">
+                                <img src="images/skyscanner.png" alt="Skyscanner">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://www.google.com/travel/flights?gl=ES&hl=es', '_blank');">
+                                <img src="images/google_flights.jpg" alt="Googel Flights">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://www.github.com/', '_blank');">
+                                <img src="images/github.png" alt="Github">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://kmatiu.github.io/guias-viaje/', '_blank');">
+                                <img src="images/viajes.png" alt="Guías de viajes">
+                            </button>
+                        </div>
+                        
+                        
+                        <div class="subsection-header">
+                            <i class="fa-solid fa-pen-to-square"></i> Edición
+                        </div>
+                        <div class="ai-grid">
+                            <button class="ai-card claude" onclick="window.open('http://youtube.com/', '_blank');">
+                                <img src="images/youtube.jpg" alt="Youtube">
+                            </button>
+                            <button class="ai-card canva" onclick="window.open('https://www.canva.com/', '_blank');">
+                                <img src="images/canva.png" alt="Canva">
+                            </button>
+                            <button class="ai-card pixabay" onclick="window.open('https://pixabay.com/', '_blank');">
+                                <img src="images/pixabay.jpg" alt="Pixabay">
+                            </button>
+                            <button class="ai-card claude" onclick="window.open('https://freesound.org/', '_blank');">
+                                <img src="images/freesound.png" alt=">Freesound">
+                            </button>
+                        </div>
+                        
+                        
+                        <div class="web-section">
+                            <div class="subsection-header">
+                                <i class="fas fa-globe"></i> Webs Favoritas
+                            </div>
+                            <div class="web-item" onclick="window.open('https://www.formacion.cc/index.php?c=ADAMSGENERACIOND', '_blank');">
+                                <i class="fa-solid fa-graduation-cap"></i> Adams Formación
+                            </div>
+                            <div class="web-item" onclick="window.open('https://podcasts.apple.com/es/new', '_blank');">
+                                <i class="fa-solid fa-podcast"></i> Podcasts
+                            </div>
+                            <div class="web-item" onclick="window.open('https://www.fintonic.com/private/login', '_blank');">
+                                <i class="fa-solid fa-coins"></i> Fintonic
+                            </div>
+                            <div class="web-item" onclick="window.open('https://www.amazon.es', '_blank');">
+                                <i class="fa-brands fa-amazon"></i> Amazon
+                            </div>
+                        </div>
+                        
+                        <div class="web-section">
+                            <div class="subsection-header">
+                                <i class="fa-solid fa-gamepad"></i> Videojuegos
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/SpaceInvaders.html', '_blank');">
+                                <i class="fa-solid fa-shuttle-space"></i> Space Invaders
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/tetris.html', '_blank');">
+                                <i class="fa-solid fa-cube"></i> Tetris
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/PacMan.html', '_blank');">
+                                <i class="fa-solid fa-ghost"></i> PacMan
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/quiz.html', '_blank');">
+                                <i class="fa-solid fa-comments"></i> Quiz
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/super-pang.html', '_blank');">
+                                <i class="fa-solid fa-person-rifle"></i> Súper Pang 
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/arkanoid.html', '_blank');">
+                                <i class="fa-solid fa-bars-staggered"></i> Arkanoid 
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/tanques.html', '_blank');">
+                                <i class="fa-solid fa-bomb"></i> Tanques 
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/carreraCoches.html', '_blank');">
+                                <i class="fa-solid fa-car"></i> Ruta 66 (en desarrollo)
+                            </div>
+                            <div class="web-item" onclick="window.open('webs/penaltis.html', '_blank');">
+                                <i class="fa-solid fa-futbol"></i> Penaltis (en desarrollo)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+            
+            <script>
+                // Función para crear más partículas dinámicamente
+                function createParticles() {
+                    for(let i = 0; i < 20; i++) {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        particle.style.left = Math.random() * 100 + '%';
+                        particle.style.animationDelay = Math.random() * 20 + 's';
+                        particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                        document.body.appendChild(particle);
+                        
+                        // Eliminar partícula después de la animación
+                        setTimeout(() => {
+                            particle.remove();
+                        }, 20000);
+                    }
                 }
-                if (keys['ArrowRight'] && this.x < canvas.width - this.width) {
-                    this.x += this.speed;
+                
+                // Crear partículas cada 5 segundos
+                setInterval(createParticles, 5000);
+                
+                // Función para alertas obsoletas
+                function unused(){
+                    alert("Este link ya no se usa!!!");
                 }
-
-                // Disparar
-                if (keys[' '] && Date.now() - this.lastShot > this.shootDelay) {
-                    this.bullets.push(new Bullet(this.x + this.width/2 - 2, this.y, -8, '#0f0'));
-                    this.lastShot = Date.now();
-                    playLaserSound();
+                
+                function noCambios(){
+                    alert("Por favor NO guarde cambios al salir del Excel");
                 }
-
-                // Actualizar balas
-                this.bullets = this.bullets.filter(bullet => {
-                    bullet.update();
-                    return bullet.y > -10;
+                
+                // Prevenir acumulación de transforms
+                document.addEventListener('DOMContentLoaded', function() {
+                    const resetTransform = function(element) {
+                        element.addEventListener('mouseleave', function() {
+                            // Pequeño delay para suavizar la transición de vuelta
+                            setTimeout(() => {
+                                this.style.transform = '';
+                            }, 300);
+                        });
+                    };
+                    
+                    // Aplicar a todas las tarjetas que pueden tener problemas de acumulación
+                    document.querySelectorAll('.info-card, .mail-card, .ai-card, .web-item').forEach(resetTransform);
                 });
-            }
-
-            draw() {
-                // Dibujar nave del jugador
-                ctx.fillStyle = '#0f0';
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-
-                // Detalles de la nave
-                ctx.fillRect(this.x + this.width/2 - 2, this.y - 10, 4, 10);
-                ctx.fillRect(this.x + 5, this.y + this.height, 5, 5);
-                ctx.fillRect(this.x + this.width - 10, this.y + this.height, 5, 5);
-
-                // Dibujar balas
-                this.bullets.forEach(bullet => bullet.draw());
-            }
-        }
-
-        // Clase Invasor
-        class Invader {
-            constructor(x, y, type) {
-                this.x = x;
-                this.y = y;
-                this.width = 30;
-                this.height = 20;
-                this.type = type;
-                this.points = type === 0 ? 30 : type === 1 ? 20 : 10;
-                this.animFrame = 0;
-            }
-
-            update() {
-                this.animFrame++;
-            }
-
-            draw() {
-                ctx.fillStyle = this.type === 0 ? '#f00' : this.type === 1 ? '#ff0' : '#0f0';
-
-                // Animación simple de los invasores
-                const offset = Math.floor(this.animFrame / 30) % 2;
-
-                if (this.type === 0) {
-                    // Invasor tipo 1 (más peligroso)
-                    ctx.fillRect(this.x + offset, this.y, this.width - offset*2, this.height);
-                    ctx.fillRect(this.x + 5, this.y - 5, 20, 5);
-                } else if (this.type === 1) {
-                    // Invasor tipo 2 (medio)
-                    ctx.fillRect(this.x + offset*2, this.y, this.width - offset*4, this.height);
-                    ctx.fillRect(this.x + 8, this.y - 3, 14, 3);
-                } else {
-                    // Invasor tipo 3 (básico)
-                    ctx.fillRect(this.x + offset, this.y, this.width - offset*2, this.height);
-                }
-
-                // Detalles
-                ctx.fillRect(this.x + 10 + offset, this.y + 5, 10, 10);
-            }
-        }
-
-        // Clase Bala
-        class Bullet {
-            constructor(x, y, speed, color) {
-                this.x = x;
-                this.y = y;
-                this.width = 4;
-                this.height = 10;
-                this.speed = speed;
-                this.color = color;
-            }
-
-            update() {
-                this.y += this.speed;
-            }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, this.width, this.height);
-            }
-        }
-
-        // Inicialización del juego
-        let player = new Player();
-        let invaders = [];
-        let invaderBullets = [];
-        let invaderDirection = 1;
-        let invaderSpeed = 1;
-        let invaderDropDistance = 20;
-        let lastInvaderShot = 0;
-
-        function createInvaders() {
-            invaders = [];
-            const rows = 5;
-            const cols = 10;
-            const startX = 50;
-            const startY = 50;
-            const spacingX = 60;
-            const spacingY = 50;
-
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const type = row < 1 ? 0 : row < 3 ? 1 : 2;
-                    invaders.push(new Invader(
-                        startX + col * spacingX,
-                        startY + row * spacingY,
-                        type
-                    ));
-                }
-            }
-        }
-
-        function checkCollisions() {
-            // Balas del jugador vs invasores
-            player.bullets.forEach((bullet, bulletIndex) => {
-                invaders.forEach((invader, invaderIndex) => {
-                    if (bullet.x < invader.x + invader.width &&
-                        bullet.x + bullet.width > invader.x &&
-                        bullet.y < invader.y + invader.height &&
-                        bullet.y + bullet.height > invader.y) {
-
-                        score += invader.points;
-                        invaders.splice(invaderIndex, 1);
-                        player.bullets.splice(bulletIndex, 1);
-                        playExplosionSound();
-                    }
-                });
-            });
-
-            // Balas de invasores vs jugador
-            invaderBullets.forEach((bullet, bulletIndex) => {
-                if (bullet.x < player.x + player.width &&
-                    bullet.x + bullet.width > player.x &&
-                    bullet.y < player.y + player.height &&
-                    bullet.y + bullet.height > player.y) {
-
-                    lives--;
-                    invaderBullets.splice(bulletIndex, 1);
-                    playHitSound();
-
-                    if (lives <= 0) {
-                        endGame();
-                    }
-                }
-            });
-
-            // Invasores que llegan abajo
-            invaders.forEach(invader => {
-                if (invader.y + invader.height >= player.y) {
-                    lives = 0;
-                    endGame();
-                }
-            });
-        }
-
-        function updateInvaders() {
-            let moveDown = false;
-
-            // Verificar si algún invasor toca el borde
-            invaders.forEach(invader => {
-                if ((invader.x <= 0 && invaderDirection === -1) ||
-                    (invader.x >= canvas.width - invader.width && invaderDirection === 1)) {
-                    moveDown = true;
-                }
-            });
-
-            if (moveDown) {
-                invaderDirection *= -1;
-                invaders.forEach(invader => {
-                    invader.y += invaderDropDistance;
-                });
-            }
-
-            // Mover invasores
-            invaders.forEach(invader => {
-                invader.x += invaderSpeed * invaderDirection;
-                invader.update();
-            });
-
-            // Sonido de movimiento de invasores (ocasionalmente)
-            invaderMoveCounter++;
-            if (invaderMoveCounter % 60 === 0 && invaders.length > 0) {
-                playInvaderMoveSound();
-            }
-
-            // Disparos de invasores
-            if (Date.now() - lastInvaderShot > 1000 + Math.random() * 2000) {
-                if (invaders.length > 0) {
-                    const shooter = invaders[Math.floor(Math.random() * invaders.length)];
-                    invaderBullets.push(new Bullet(
-                        shooter.x + shooter.width/2 - 2,
-                        shooter.y + shooter.height,
-                        3,
-                        '#f00'
-                    ));
-                    lastInvaderShot = Date.now();
-                    playSound(200, 0.1, 'sawtooth');
-                }
-            }
-
-            // Actualizar balas de invasores
-            invaderBullets = invaderBullets.filter(bullet => {
-                bullet.update();
-                return bullet.y < canvas.height + 10;
-            });
-        }
-
-        function updateGame() {
-            if (!gameRunning || gamePaused) return;
-
-            // Limpiar canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Actualizar y dibujar jugador
-            player.update();
-            player.draw();
-
-            // Actualizar y dibujar invasores
-            updateInvaders();
-            invaders.forEach(invader => invader.draw());
-
-            // Dibujar balas de invasores
-            invaderBullets.forEach(bullet => bullet.draw());
-
-            // Verificar colisiones
-            checkCollisions();
-
-            // Verificar si se completó el nivel
-            if (invaders.length === 0) {
-                level++;
-                invaderSpeed += 0.5;
-                createInvaders();
-                player.bullets = [];
-                invaderBullets = [];
-                playPowerUpSound();
-            }
-
-            // Actualizar UI
-            document.getElementById('score').textContent = score;
-            document.getElementById('lives').textContent = lives;
-            document.getElementById('level').textContent = level;
-        }
-
-        function togglePause() {
-            gamePaused = !gamePaused;
-            document.getElementById('pauseOverlay').style.display = gamePaused ? 'block' : 'none';
-        }
-
-        function endGame() {
-            gameRunning = false;
-            document.getElementById('finalScore').textContent = score;
-            playGameOverSound();
-
-            // Verificar si la puntuación merece estar en el ranking
-            if (isTopScore(score)) {
-                document.getElementById('nameInput').style.display = 'block';
-                // Para que la "R" se escriba en el input, debemos enfocarlo.
-                document.getElementById('playerName').focus();
-            }
-
-            displayRanking();
-            document.getElementById('gameOver').style.display = 'block';
-        }
-
-        function getHighScores() {
-            const scores = localStorage.getItem('spaceInvadersHighScores');
-            return scores ? JSON.parse(scores) : [];
-        }
-
-        function saveHighScores(scores) {
-            localStorage.setItem('spaceInvadersHighScores', JSON.stringify(scores));
-        }
-
-        function isTopScore(newScore) {
-            const highScores = getHighScores();
-            return highScores.length < 10 || newScore > highScores[highScores.length - 1].score;
-        }
-
-        function saveScore() {
-            const playerName = document.getElementById('playerName').value.trim();
-            // Utilizar un div custom en lugar de alert()
-            if (!playerName) {
-                const nameInputDiv = document.getElementById('nameInput');
-                // Puedes mostrar un mensaje temporal en el div o usar un elemento temporal
-                const existingWarning = nameInputDiv.querySelector('.warning-message');
-                if (existingWarning) existingWarning.remove();
-
-                const warning = document.createElement('p');
-                warning.className = 'warning-message';
-                warning.style.color = '#f00';
-                warning.textContent = 'Por favor, ingresa tu nombre.';
-                nameInputDiv.prepend(warning);
-
-                // Ocultar después de 2 segundos
-                setTimeout(() => {
-                    if (nameInputDiv.querySelector('.warning-message')) {
-                        nameInputDiv.querySelector('.warning-message').remove();
-                    }
-                }, 2000);
-                document.getElementById('playerName').focus();
-                return;
-            }
-
-            const highScores = getHighScores();
-            highScores.push({ name: playerName, score: score });
-            highScores.sort((a, b) => b.score - a.score);
-            highScores.splice(10); // Mantener solo top 10
-
-            saveHighScores(highScores);
-            document.getElementById('nameInput').style.display = 'none';
-            displayRanking();
-        }
-
-        function displayRanking() {
-            const highScores = getHighScores();
-            const rankingList = document.getElementById('rankingList');
-
-            if (highScores.length === 0) {
-                rankingList.innerHTML = '<p>No hay puntuaciones guardadas</p>';
-                return;
-            }
-
-            let html = '';
-            // Obtenemos el nombre del jugador actual, si lo ha guardado
-            const currentName = document.getElementById('playerName').value.trim();
-
-            highScores.forEach((entry, index) => {
-                // He modificado la lógica de resaltado para ser más robusta, aunque tu código original no lo usaba, es una buena práctica.
-                // Lo mantendremos simple: solo resaltamos si la puntuación final coincide.
-                const isCurrentScore = entry.score === score && index < 10 && currentName === entry.name;
-                const className = isCurrentScore ? 'ranking-entry highlight' : 'ranking-entry';
-                html += `<div class="${className}">${index + 1}. ${entry.name} - ${entry.score}</div>`;
-            });
-
-            rankingList.innerHTML = html;
-        }
-
-        function resetGame() {
-            score = 0;
-            lives = 3;
-            level = 1;
-            gameRunning = true;
-            gamePaused = false;
-            invaderSpeed = 1;
-            invaderMoveCounter = 0;
-
-            player = new Player();
-            invaderBullets = [];
-            createInvaders();
-
-            document.getElementById('gameOver').style.display = 'none';
-            document.getElementById('pauseOverlay').style.display = 'none';
-            document.getElementById('nameInput').style.display = 'none';
-            document.getElementById('playerName').value = '';
-        }
-
-        // Event listeners
-        document.addEventListener('keydown', (e) => {
-            const isNameInputVisible = document.getElementById('nameInput').style.display !== 'none';
-
-            // 1. Manejar pausa (P)
-            if (e.key === 'p' || e.key === 'P') {
-                if (gameRunning && !isNameInputVisible) { // No pausar si se está ingresando el nombre
-                    togglePause();
-                }
-                return;
-            }
-
-            // 2. Manejar reinicio (R)
-            // ************ MODIFICACIÓN CLAVE AQUÍ ************
-            if (e.key === 'r' || e.key === 'R') {
-                if (document.getElementById('gameOver').style.display === 'block') {
-                    // Si la pantalla de Game Over está visible...
-                    if (!isNameInputVisible) {
-                        // ... y NO se está pidiendo el nombre, entonces se reinicia.
-                        resetGame();
-                    } else {
-                        // ... y SÍ se está pidiendo el nombre, la tecla R debe escribir en el input.
-                        // Prevenimos el comportamiento por defecto (que podría ser, por ejemplo, refrescar la página en ciertos contextos),
-                        // pero permitimos que el evento se propague al input.
-                        // Como el campo está enfocado (focus), la tecla se registrará ahí.
-                        e.stopPropagation(); // Prevenimos que otros listeners lo capturen si hubieran
-                        return;
-                    }
-                }
-                // Si el juego está corriendo o en pausa, la R no tiene efecto (salvo si queremos reiniciar)
-                // Pero como el usuario solo quiere que funcione en Game Over, lo dejamos así.
-            }
-            // *************************************************
-
-            // 3. Manejar guardar puntuación (Enter)
-            if (e.key === 'Enter' && isNameInputVisible) {
-                saveScore();
-                return;
-            }
-
-            // 4. Manejar movimiento y disparo (si no está pausado y no estamos escribiendo un nombre)
-            if (!gamePaused && !isNameInputVisible) {
-                keys[e.key] = true;
-            }
-        });
-
-        document.addEventListener('keyup', (e) => {
-            keys[e.key] = false;
-        });
-
-        // Controles de audio
-        document.getElementById('volumeSlider').addEventListener('input', updateVolume);
-        document.getElementById('muteBtn').addEventListener('click', toggleMute);
-
-        // Manejar la activación del contexto de audio (requerido por algunos navegadores)
-        document.addEventListener('click', () => {
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-        });
-
-        // Inicializar juego
-        initAudio();
-        createInvaders();
-        setInterval(updateGame, 16); // ~60 FPS
-    </script>
-</body>
-</html>
+            </script>
+        </body>
+        </html>
