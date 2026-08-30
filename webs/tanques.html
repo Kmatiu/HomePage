@@ -1,0 +1,2624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanks! - Juego de estrategia de tanques</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            display: flex;
+            flex-direction: column; /* MODIFICADO - Para colocar el HUD arriba */
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* MODIFICADO - Nuevo contenedor para el HUD */
+        #hudContainer {
+            width: 810px; /* Ancho del canvas + bordes */
+            background: #111;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px 10px 0 0;
+            border: 5px solid #444;
+            border-bottom: none;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+        }
+        
+        .hud-section {
+            text-align: center;
+        }
+        
+        #levelName {
+            font-size: 24px;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+        
+        #playerInfo, #enemyInfo {
+            font-size: 18px;
+        }
+        
+        #playerLives {
+            font-size: 22px;
+            color: #ff6b6b;
+            letter-spacing: 3px;
+        }
+        
+        #gameContainer {
+            background: #c2b280; /* MODIFICADO - Color de fondo de arena */
+            border: 5px solid #444;
+            border-radius: 0 0 10px 10px; /* MODIFICADO */
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            position: relative;
+            width: 810px; /* Ancho fijo para contener los canvas */
+            height: 610px;
+            display: none;
+        }
+        
+        
+        /* MODIFICADO - Lienzos superpuestos */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: block;
+        }
+        
+        #gameCanvas {
+            background: transparent; /* El lienzo principal es transparente */
+            z-index: 2;
+        }
+        
+        #tracksCanvas {
+            background: transparent; /* El lienzo de rastros también */
+            z-index: 1;
+        }
+        
+        
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            pointer-events: all;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 10;
+            display: block;
+            
+        }
+        
+        #menu h1 {
+            font-size: 48px;
+            color: #ffd700;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,1);
+        }
+        
+        .menu-button {
+            display: block;
+            width: 250px;
+            padding: 15px;
+            margin: 15px auto;
+            font-size: 20px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            pointer-events: all;
+        }
+        
+        .menu-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102,126,234,0.6);
+        }
+        
+        .ranking-button {
+            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+            color: #000;
+        }
+        
+        #instructions, #ranking, #settings {
+            display: none;
+        }
+        
+        #mainMenu {
+            display: block;
+        }
+        
+        
+        /* Estilos de las secciones del menú (sin cambios) */
+        #instructions { max-width: 700px; text-align: left; font-size: 15px; line-height: 1.8; color: #fff; }
+        #instructions h2 { color: #ffd700; margin: 20px 0 10px 0; font-size: 22px; border-bottom: 2px solid #ffd700; padding-bottom: 5px; }
+        #instructions p, #instructions ul { margin-bottom: 15px; }
+        #instructions ul { margin-left: 20px; }
+        #instructions li { margin-bottom: 8px; }
+        /*#ranking h2, #settings h2 { color: #ffd700; margin-bottom: 20px; text-align: center; font-size: 32px; }
+        #rankingList { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; }*/
+        #ranking { 
+            max-width: 650px; 
+            width: 95%; 
+            text-align: left; 
+        }
+        
+        .ranking-item { 
+            display: grid;             
+            grid-template-columns: 60px 1fr 120px 120px;
+            gap: 10px; 
+            align-items: center;
+            padding: 15px 20px; 
+            margin: 10px 0; 
+            background: rgba(0,0,0,0.5); 
+            border-radius: 10px; 
+            font-size: 18px;
+            border: 2px solid transparent;
+        }
+        
+        .ranking-item.top3 {
+            background: linear-gradient(135deg, rgba(255,215,0,0.25) 0%, rgba(255,165,0,0.25) 100%);
+            border: 2px solid #ffd700;
+            padding: 18px 25px;
+        }
+        
+        
+        .rank-position {
+            color: #ffd700;
+            font-weight: bold;
+            font-size: 28px;
+            text-align: center;
+        }
+        
+        .rank-name {
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            display: block;
+            min-width: 150px;
+        }
+        
+        
+        .rank-score {
+            color: #4af;
+            font-weight: bold;
+            font-size: 24px;
+            text-align: right;
+        }
+        
+        #settings { max-width: 500px; text-align: left; }
+        .setting-item { margin: 25px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .setting-label { color: #fff; font-size: 18px; margin-bottom: 10px; display: block; }
+        .volume-control { width: 100%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.2); outline: none; -webkit-appearance: none; }
+        .volume-control::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #ffd700; cursor: pointer; }
+        .volume-control::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #ffd700; cursor: pointer; border: none; }
+        .volume-value { color: #4af; font-size: 20px; font-weight: bold; text-align: center; margin-top: 5px; }
+        .back-button { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        
+        #pauseOverlay {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            pointer-events: all;
+        }
+        #pauseMenu {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95);
+            padding: 40px; border-radius: 15px; text-align: center;
+        }
+        #pauseMenu h2 { color: #ffd700; font-size: 36px; margin-bottom: 30px; }
+        #nameModal {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 15px; text-align: center;
+            pointer-events: all; z-index: 200;
+        }
+        #nameModal h2 { color: #ffd700; font-size: 32px; margin-bottom: 20px; }
+        #nameModal input {
+            width: 300px; padding: 15px; font-size: 20px; border: 2px solid #ffd700; border-radius: 8px;
+            background: rgba(255,255,255,0.1); color: #fff; text-align: center; margin: 20px 0;
+        }
+        #nameModal input::placeholder { color: rgba(255,255,255,0.5); }
+        
+        
+        #difficultySelect {
+            width: 280px; 
+            padding: 15px; 
+            font-size: 18px; 
+            cursor: pointer;
+            background: rgba(70, 70, 200, 0.9);
+            color: white;
+            border: 2px solid #5555ff;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        
+        #difficultySelect:hover {
+            background: rgba(90, 90, 220, 1);
+            transform: scale(1.05);
+        }
+        
+        #difficultySelect option {
+            background: rgba(30, 30, 80, 0.95);
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+        }
+        
+        #difficultySelect option:hover {
+            background: rgba(70, 70, 200, 1);
+        }
+        
+        #difficultySelect option:checked {
+            background: rgba(70, 70, 200, 1);
+            color: #ffd700;
+        }
+        
+    </style>
+</head>
+<body>
+    <div id="hudContainer">
+        <div class="hud-section" id="playerInfo">
+            <div>JUGADOR 1</div>
+            <div id="playerLives">❤️❤️❤️</div>
+        </div>
+        <div class="hud-section" id="levelInfo">
+            <div id="levelName">NIVEL 1: BAUTISMO DE FUEGO</div>
+            <div id="difficultyDisplay" style="font-size: 14px; color: #ffd700; margin-top: 3px;">🎖️ RECLUTA</div>
+            <div id="totalScore">PUNTOS: 0</div>
+            <div style="font-size: 16px; color: #4af; margin-top: 5px;">
+                ⏱️ <span id="levelTime">0:00</span>
+            </div>
+        </div>
+        
+        <div class="hud-section" id="enemyInfo">
+            <div>PRÓXIMA VIDA</div>
+            <div id="lifeCounter">0/10</div>
+        </div>
+        
+    </div>
+    
+    <div id="gameContainer">
+        <canvas id="tracksCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div id="pauseOverlay">
+            <div id="pauseMenu">
+                <h2>⏸️ PAUSA</h2>
+                
+                <div class="setting-item" style="margin: 20px 0;">
+                    <label class="setting-label">🔊 Efectos</label>
+                    <input type="range" class="volume-control" id="pauseVolumeSlider" min="0" max="100" value="50">
+                    <div class="volume-value"><span id="pauseVolumeDisplay">50</span>%</div>
+                </div>
+                
+                <div class="setting-item" style="margin: 20px 0;">
+                    <label class="setting-label">🎵 Música</label>
+                    <input type="range" class="volume-control" id="pauseMusicSlider" min="0" max="100" value="30">
+                    <div class="volume-value"><span id="pauseMusicDisplay">30</span>%</div>
+                </div>
+                
+                <button class="menu-button" onclick="resumeGame()">CONTINUAR</button>
+                <button class="menu-button back-button" onclick="quitToMenu()">SALIR AL MENÚ</button>
+            </div>
+        </div>
+        
+        
+        <div id="nameModal">
+            <h2>🏆 ¡NUEVO RÉCORD!</h2>
+            <p style="color: #fff; font-size: 18px; margin-bottom: 10px;">Has entrado en el TOP 10</p>
+            <p style="color: #4af; font-size: 24px; font-weight: bold; margin-bottom: 20px;">Puntuación: <span id="finalScoreDisplay">0</span></p>
+            <input type="text" id="playerNameInput" maxlength="15" placeholder="Introduce tu nombre">
+            <button class="menu-button" onclick="saveScore()">GUARDAR</button>
+        </div>
+        
+        
+    </div>
+    <div id="menu">
+        <div id="mainMenu">
+            <h1>🎮 TANKS! 🎮</h1>
+            <div style="margin: 30px 0;">
+                <h3 style="color: #ffd700; margin-bottom: 15px;">DIFICULTAD</h3>
+                <select id="difficultySelect" class="menu-button" style="width: 280px; padding: 15px; font-size: 18px; cursor: pointer;">
+                    <option value="recluta">🎖️ RECLUTA (Fácil)</option>
+                    <option value="oficial">⭐ OFICIAL (Medio)</option>
+                    <option value="coronel">🏅 CORONEL GENERAL (Difícil)</option>
+                </select>
+            </div>
+            
+            <button class="menu-button" onclick="startGame(1)">1 JUGADOR</button>
+            <button class="menu-button" onclick="startGame(2)">2 JUGADORES</button>
+            <button class="menu-button" onclick="showInstructions()">INSTRUCCIONES</button>
+            <button class="menu-button ranking-button" onclick="showRanking()">🏆 RANKING TOP 10</button>
+            <button class="menu-button" onclick="showSettings()">⚙️ AJUSTES</button>
+        </div>
+        <div id="instructions">
+            <h1>📋 INSTRUCCIONES</h1>
+            <h2>🎯 Objetivo del Juego</h2>
+            <p>Destruye todos los tanques enemigos en cada nivel para avanzar. Gana vidas extra y sobrevive a todos los niveles para conseguir la máxima puntuación.</p>
+            <h2>🕹️ Controles</h2>
+            <p><strong style="color: #4a90e2;">JUGADOR 1 (Azul):</strong></p>
+            <ul style="margin-left: 20px;">
+                <li><strong>Modo Individual:</strong> W/A/S/D para mover, Ratón para apuntar, Clic Izquierdo para disparar.</li>
+                <li><strong>Modo Dobles:</strong> Flechas para mover, Ratón para apuntar, Clic Izquierdo para disparar.</li>
+            </ul>
+            <p><strong style="color: #e74c3c;">JUGADOR 2 (Rojo) - Solo en Modo Dobles:</strong></p>
+            <ul style="margin-left: 20px;">
+                <li>W/A/S/D para mover</li>
+                <li>G para rotar cañón a la izquierda (antihorario)</li>
+                <li>H para rotar cañón a la derecha (horario)</li>
+                <li>Espacio para disparar</li>
+            </ul>
+            
+            <p><strong>GENERAL:</strong> Tecla P para pausar.</p>
+            <h2>💫 Mecánicas de Juego</h2>
+            <ul>
+                <li><strong>Vidas y Salud:</strong> Empiezas con 3 vidas. Cada vida tiene 3 puntos de salud (HP). Perder toda la salud te cuesta una vida. El juego termina si pierdes todas tus vidas.</li>
+                <li><strong>Invencibilidad:</strong> Al empezar un nivel o reaparecer, eres invencible y no puedes disparar durante 5 segundos.</li>
+                <li><strong>Bonus de Vida Extra:</strong> Cada 10 enemigos destruidos, aparecerá un corazón ❤️. ¡Recógelo para ganar una vida!</li>
+                <li><strong>Rebotes de Balas:</strong> Las balas rebotan en las paredes y en los muros indestructibles (grises).</li>
+            </ul>
+            <h2>📊 Sistema de Puntuación</h2>
+            <ul>
+                <li><strong>Destruir enemigos:</strong> 100 puntos base</li>
+                <li><strong>Multiplicador de dificultad:</strong>
+                    <ul style="margin-left: 20px;">
+                        <li>🎖️ Recluta: x1 (puntuación normal)</li>
+                        <li>⭐ Oficial: x1.5 (50% más puntos)</li>
+                        <li>🏅 Coronel General: x2 (doble puntuación)</li>
+                    </ul>
+                </li>
+                <li><strong>⏱️ BONUS POR TIEMPO:</strong>
+                    <ul style="margin-left: 20px;">
+                        <li>Menos de 30 segundos: 500 puntos de bonus en Recluta, 750 en Oficial y 1000 puntos en Coronel General</li>
+                        <li>Entre 30-60 segundos: bonus decreciente</li>
+                        <li>Más de 1 minutos: sin bonus</li>
+                        <li>El tiempo pausado NO cuenta</li>
+                    </ul>
+                </li>
+                <li><strong>💰 Estrategia:</strong> Completa los niveles rápido para maximizar tu puntuación</li>
+            </ul>
+            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
+        </div>
+        <div id="ranking">
+            <h2>🏆 RANKING TOP 10</h2>
+            <div id="rankingList"></div>
+            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
+        </div>
+        <div id="settings">
+            <h2>⚙️ AJUSTES</h2>
+            
+            <div class="setting-item">
+                <label class="setting-label">🔊 Volumen de Efectos de Sonido</label>
+                <input type="range" class="volume-control" id="volumeSlider" min="0" max="100" value="50">
+                <div class="volume-value"><span id="volumeDisplay">50</span>%</div>
+            </div>
+            
+            <div class="setting-item">
+                <label class="setting-label">🎵 Volumen de Música</label>
+                <input type="range" class="volume-control" id="musicSlider" min="0" max="100" value="30">
+                <div class="volume-value"><span id="musicDisplay">30</span>%</div>
+            </div>
+            
+            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
+        </div>
+        
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        // NUEVO - Contexto para el canvas de rastros
+        const tracksCanvas = document.getElementById('tracksCanvas');
+        const tracksCtx = tracksCanvas.getContext('2d');
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;
+        
+        const GAME_STATES = { MENU: 'menu', PLAYING: 'playing', PAUSED: 'paused', GAME_OVER: 'gameOver' };
+        let gameState = GAME_STATES.MENU;
+        let numPlayers = 1;
+        let currentLevel = 1;
+        let gameDifficulty = 'recluta'; // 'recluta', 'oficial', 'coronel'
+        let maxLives = 5; // Máximo de vidas
+        let levelCompleting = false;
+        let levelComplete = false;
+        let totalScore = 0;
+        let backgroundMusicPlaying = false;
+        let musicGain = null;
+        let musicTimeoutId = null;
+        let musicInstanceId = 0;
+        let activeOscillators = [];
+        let levelStartTime = 0;
+        let totalPausedTime = 0;
+        let pauseStartTime = 0;
+        
+        let masterVolume = 0.5;
+        let musicVolume = 0.3;
+        
+        
+        // NUEVO - Lógica de vidas y bonus
+        let playerLives = 3;
+        let killCounter = 0;
+        const KILLS_FOR_LIFE = 10;
+        let powerUps = [];
+        
+        // NUEVO - Mensaje en pantalla
+        let onscreenMessage = '';
+        let messageTimer = 0;
+        
+        // Configuración
+        const BULLET_SPEED = 300;
+        const MAX_BULLETS_PER_TANK = 5;
+        const MAX_BULLETS_PER_ENEMY = 3;
+        const RESPAWN_TIME = 3000;
+        const TANK_SIZE = 30;
+        const BULLET_RADIUS = 4;
+        const INVINCIBILITY_DURATION = 5000;
+        
+        const TANK_TYPES = { PLAYER: 'player', STATIC: 'static', PATROL: 'patrol', CHASER: 'chaser', ARTILLERY: 'artillery', ELITE: 'elite' };
+        
+        // ============================================
+        // CLASES (Vector2 sin cambios)
+        // ============================================
+        class Vector2 { constructor(x=0,y=0){this.x=x;this.y=y;} add(v){return new Vector2(this.x+v.x,this.y+v.y);} subtract(v){return new Vector2(this.x-v.x,this.y-v.y);} multiply(s){return new Vector2(this.x*s,this.y*s);} magnitude(){return Math.sqrt(this.x*this.x+this.y*this.y);} normalize(){const m=this.magnitude();return m>0?new Vector2(this.x/m,this.y/m):new Vector2(0,0);} distance(v){return Math.sqrt((this.x-v.x)**2+(this.y-v.y)**2);} angle(){return Math.atan2(this.y,this.x);}}
+        
+        class Bullet {
+            constructor(x, y, angle, owner, isSuperBullet = false) {
+                this.pos = new Vector2(x, y);
+                this.lastPos = new Vector2(x, y); // NUEVO - Para la lógica de rebote
+                this.vel = new Vector2(Math.cos(angle) * BULLET_SPEED, Math.sin(angle) * BULLET_SPEED);
+                this.owner = owner;
+                this.radius = isSuperBullet ? BULLET_RADIUS * 1.5 : BULLET_RADIUS;
+                this.bounces = 0;
+                this.maxBounces = 3;
+                this.dead = false;
+                this.isSuperBullet = isSuperBullet;
+                this.trail = [];
+                
+            }
+            
+            update(deltaTime) {
+                this.lastPos.x = this.pos.x; this.lastPos.y = this.pos.y;
+                this.trail.push({x: this.pos.x, y: this.pos.y});
+                if (this.trail.length > 8) this.trail.shift();
+                this.pos = this.pos.add(this.vel.multiply(deltaTime));
+                
+                // Colisión con paredes del canvas
+                if (this.pos.x <= this.radius || this.pos.x >= WIDTH - this.radius) this.handleBounce('vertical');
+                if (this.pos.y <= this.radius || this.pos.y >= HEIGHT - this.radius) this.handleBounce('horizontal');
+                
+                // Colisión con obstáculos
+                for (let obstacle of obstacles) {
+                    if (this.collidesWithRect(obstacle)) {
+                        if (obstacle.destructible) {
+                            obstacle.hp--;
+                            if (obstacle.hp <= 0) obstacles.splice(obstacles.indexOf(obstacle), 1);
+                            this.dead = true;
+                        } else {
+                            // MODIFICADO - Lógica de rebote en muros indestructibles
+                            const wasOutsideX = this.lastPos.x + this.radius <= obstacle.x || this.lastPos.x - this.radius >= obstacle.x + obstacle.width;
+                            const wasOutsideY = this.lastPos.y + this.radius <= obstacle.y || this.lastPos.y - this.radius >= obstacle.y + obstacle.height;
+                            
+                            if (wasOutsideX) this.handleBounce('vertical');
+                            else if (wasOutsideY) this.handleBounce('horizontal');
+                            else this.handleBounce('both'); // Corner case
+                        }
+                        createExplosion(this.pos.x, this.pos.y, 15);
+                        if(this.dead) break;
+                    }
+                }
+            }
+            
+            // NUEVO - Método para manejar rebotes
+            handleBounce(axis) {
+                if (this.bounces < this.maxBounces) {
+                    if(axis === 'vertical' || axis === 'both') this.vel.x *= -1;
+                    if(axis === 'horizontal' || axis === 'both') this.vel.y *= -1;
+                    this.pos.x = Math.max(this.radius, Math.min(WIDTH - this.radius, this.pos.x));
+                    this.pos.y = Math.max(this.radius, Math.min(HEIGHT - this.radius, this.pos.y));
+                    this.bounces++;
+                    playSound('bounce');
+                } else {
+                    this.dead = true;
+                }
+            }
+            
+            collidesWithRect(rect) { const cX=Math.max(rect.x,Math.min(this.pos.x,rect.x+rect.width)),cY=Math.max(rect.y,Math.min(this.pos.y,rect.y+rect.height)); return ((this.pos.x-cX)**2+(this.pos.y-cY)**2)<(this.radius**2); }
+            draw() {
+                // Color de trail según dueño
+                ctx.strokeStyle = this.owner.color + '88';
+                ctx.lineWidth = this.isSuperBullet ? 3 : 2;
+                ctx.beginPath();
+                for (let i = 0; i < this.trail.length; i++) {
+                    const t = this.trail[i];
+                    if (i === 0) ctx.moveTo(t.x, t.y);
+                    else ctx.lineTo(t.x, t.y);
+                }
+                ctx.stroke();
+                
+                // Bala del color del dueño
+                ctx.fillStyle = this.owner.color;
+                ctx.beginPath();
+                ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Borde más visible para súper disparo
+                if (this.isSuperBullet) {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Efecto de brillo
+                    ctx.strokeStyle = this.owner.color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(this.pos.x, this.pos.y, this.radius + 2, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        class Tank {
+            constructor(x, y, type, color) {
+                this.pos = new Vector2(x, y);
+                this.angle = 0;
+                this.turretAngle = 0;
+                this.type = type;
+                this.color = color;
+                this.size = TANK_SIZE;
+                this.maxHP = (type === TANK_TYPES.ELITE) ? 2 : (type === TANK_TYPES.PLAYER ? 5 : 1);
+                this.hp = this.maxHP;
+                this.speed = 100;
+                this.bullets = [];
+                this.dead = false;
+                this.respawnTimer = 0;
+                this.canShoot = true;
+                this.shootCooldown = 0;
+                this.hasSuperBullet = false;
+                
+                if(type === TANK_TYPES.STATIC){this.speed=0;} else if(type===TANK_TYPES.PATROL){this.speed=60;} else if(type===TANK_TYPES.CHASER){this.speed=80;} else if(type===TANK_TYPES.ARTILLERY){this.speed=0;this.hasSuperBullet=true;} else if(type===TANK_TYPES.ELITE){this.speed=40;this.hasSuperBullet=true;}
+            }
+            
+            update(deltaTime) {
+                if (this.dead) {
+                    if (this.respawnTimer > 0) {
+                        this.respawnTimer -= deltaTime * 1000;
+                        if (this.respawnTimer <= 0) this.respawn();
+                    }
+                    return;
+                }
+                if (this.shootCooldown > 0) {
+                    this.shootCooldown -= deltaTime * 1000;
+                    if (this.shootCooldown <= 0) this.canShoot = true;
+                }
+                for (let i = this.bullets.length - 1; i >= 0; i--) {
+                    this.bullets[i].update(deltaTime);
+                    if (this.bullets[i].dead) this.bullets.splice(i, 1);
+                }
+            }
+            
+            move(direction, deltaTime) {
+                if (this.dead || this.speed === 0) return;
+                const moveVector = direction.multiply(this.speed * deltaTime);
+                const newPos = this.pos.add(moveVector);
+                
+                if(newPos.x<this.size/2||newPos.x>WIDTH-this.size/2||newPos.y<this.size/2||newPos.y>HEIGHT-this.size/2)return;
+                for(let o of obstacles) if(this.wouldCollideWithRect(newPos,o))return;
+                for(let t of allTanks) if(t!==this&&!t.dead&&newPos.distance(t.pos)<this.size)return;
+                
+                this.pos = newPos;
+                if (moveVector.magnitude() > 0) {
+                    this.angle = moveVector.angle();
+                    // NUEVO - Crear rastro de ruedas
+                    createTrack(this.pos, this.angle, this.size);
+                }
+            }
+            
+            wouldCollideWithRect(p, r) { return p.x-this.size/2<r.x+r.width&&p.x+this.size/2>r.x&&p.y-this.size/2<r.y+r.height&&p.y+this.size/2>r.y; }
+            
+            shoot() {
+                if (this.dead || !this.canShoot) return false;
+                const maxBullets = (this.type === TANK_TYPES.PLAYER) ? MAX_BULLETS_PER_TANK : MAX_BULLETS_PER_ENEMY;
+                if (this.bullets.length >= maxBullets) { this.bullets[0].dead = true; this.bullets.shift(); }
+                
+                const bullet = new Bullet( this.pos.x+Math.cos(this.turretAngle)*this.size/2, this.pos.y+Math.sin(this.turretAngle)*this.size/2, this.turretAngle, this, this.hasSuperBullet);
+                this.bullets.push(bullet);
+                this.canShoot = false;
+                this.shootCooldown = this.hasSuperBullet ? 1500 : 300;
+                playSound('shoot');
+                return true;
+            }
+            
+            takeDamage(amount) {
+                if (this.dead) return false;
+                this.hp -= amount;
+                if (this.hp <= 0) { this.die(); return true; }
+                return false;
+            }
+            
+            die() {
+                this.dead = true;
+                createExplosion(this.pos.x, this.pos.y, 40);
+                playSound('explosion');
+                if (this.type === TANK_TYPES.PLAYER) {
+                    // MODIFICADO - Lógica de pérdida de vida
+                    playerLives--;
+                    updateUI();
+                    if (playerLives > 0) {
+                        this.respawnTimer = RESPAWN_TIME;
+                    } else {
+                        gameState = GAME_STATES.GAME_OVER;
+                    }
+                }
+            }
+            
+            respawn() {
+                this.dead = false;
+                this.hp = this.maxHP;
+                this.bullets = [];
+                this.pos = getValidSpawnPosition(this.pos.x, this.pos.y, allTanks); // Reaparecer en lugar seguro
+            }
+            
+            draw() {
+                if (this.dead) {
+                    if (this.respawnTimer > 0) {
+                        // Mostrar temporizador de respawn
+                        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                        ctx.font = '16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(Math.ceil(this.respawnTimer / 1000), this.pos.x, this.pos.y);
+                    }
+                    return;
+                }
+                
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+                
+                // Cuerpo del tanque
+                ctx.rotate(this.angle);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                // Detalles del cuerpo (rayas verticales)
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(-this.size/3, -this.size/2, this.size/6, this.size);
+                ctx.fillRect(this.size/6, -this.size/2, this.size/6, this.size);
+                
+                ctx.restore();
+                ctx.save();
+                ctx.translate(this.pos.x, this.pos.y);
+                
+                // Torreta
+                ctx.rotate(this.turretAngle);
+                ctx.fillStyle = this.color;
+                ctx.fillRect(0, -this.size/4, this.size/1.5, this.size/2);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(0, -this.size/4, this.size/1.5, this.size/2);
+                
+                // Centro de la torreta (círculo)
+                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size/4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.restore();
+                
+                // Barra de vida para tanques con más de 1 HP
+                if (this.maxHP > 1) {
+                    const barWidth = this.size;
+                    const barHeight = 4;
+                    const healthPercent = this.hp / this.maxHP;
+                    
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(this.pos.x - barWidth/2, this.pos.y - this.size/2 - 10, barWidth, barHeight);
+                    ctx.fillStyle = '#4caf50';
+                    ctx.fillRect(this.pos.x - barWidth/2, this.pos.y - this.size/2 - 10, barWidth * healthPercent, barHeight);
+                }
+                
+                // Dibujar balas
+                for (let bullet of this.bullets) {
+                    bullet.draw();
+                }
+            }
+            
+        }
+        
+        class PlayerTank extends Tank {
+            constructor(x, y, playerNum, color) {
+                super(x, y, TANK_TYPES.PLAYER, color);
+                this.playerNum = playerNum;
+                this.controls = { up: false, down: false, left: false, right: false, shoot: false };
+                this.mousePos = new Vector2(0, 0);
+                this.mousePos = new Vector2(0, 0);
+                this.rotateTurretLeft = false;
+                this.rotateTurretRight = false;
+                this.turretRotationSpeed = 3;
+                this.isInvincible = false;
+                this.invincibilityTimer = 0;
+                this.lastCountdown = 0;
+                
+            }
+            
+            // NUEVO - Activar protección al aparecer
+            activateSpawnProtection() {
+                this.isInvincible = true;
+                this.invincibilityTimer = INVINCIBILITY_DURATION;
+                this.lastCountdown = 0;
+                
+                this.hp = this.maxHP; // Rellenar salud al reaparecer
+            }
+            
+            update(deltaTime) {
+                // NUEVO - Manejar invencibilidad
+                // NUEVO - Manejar invencibilidad con cuenta regresiva
+                if (this.isInvincible) {
+                    this.invincibilityTimer -= deltaTime * 1000;
+                    
+                    // Calcular qué número mostrar (3, 2, 1)
+                    const currentCount = Math.ceil(this.invincibilityTimer / 1000);
+                    
+                    // Mostrar número y reproducir pitido cuando cambia
+                    if (currentCount > 0 && currentCount !== this.lastCountdown) {
+                        showOnscreenMessage(currentCount.toString(), 1000);
+                        playSound('beep');
+                        this.lastCountdown = currentCount;
+                    }
+                    
+                    // NUEVO - Manejar invencibilidad con cuenta regresiva
+                    if (this.isInvincible) {
+                        this.invincibilityTimer -= deltaTime * 1000;
+                        
+                        // Calcular qué número mostrar (3, 2, 1)
+                        const currentCount = Math.ceil(this.invincibilityTimer / 1000);
+                        
+                        // Mostrar número y reproducir pitido cuando cambia
+                        if (currentCount > 0 && currentCount !== this.lastCountdown) {
+                            showOnscreenMessage(currentCount.toString(), 1000);
+                            playSound('beep');
+                            this.lastCountdown = currentCount;
+                        }
+                        
+                        if (this.invincibilityTimer <= 0) {
+                            this.isInvincible = false;
+                            showOnscreenMessage("FIGHT!", 1000);
+                            playSound('beep'); // Pitido final para FIGHT
+                        }
+                    }
+                    
+                }
+                
+                
+                super.update(deltaTime);
+                if (this.dead) return;
+                
+                const moveDir = new Vector2(0, 0);
+                if (this.controls.up) moveDir.y -= 1; if (this.controls.down) moveDir.y += 1;
+                if (this.controls.left) moveDir.x -= 1; if (this.controls.right) moveDir.x += 1;
+                if (moveDir.magnitude() > 0) this.move(moveDir.normalize(), deltaTime);
+                
+                if (this.playerNum === 1) {
+                    this.turretAngle = Math.atan2(this.mousePos.y - this.pos.y, this.mousePos.x - this.pos.x);
+                } else if (this.playerNum === 2 && numPlayers === 2) {
+                    if (this.rotateTurretLeft) {
+                        this.turretAngle -= this.turretRotationSpeed * deltaTime;
+                    }
+                    if (this.rotateTurretRight) {
+                        this.turretAngle += this.turretRotationSpeed * deltaTime;
+                    }
+                }
+                
+                
+                if (this.controls.shoot) {
+                    // MODIFICADO - No disparar si es invencible
+                    if (!this.isInvincible) this.shoot();
+                    this.controls.shoot = false;
+                }
+            }
+            
+            // MODIFICADO - No recibir daño si es invencible
+            takeDamage(amount) {
+                if (this.isInvincible) return false;
+                return super.takeDamage(amount);
+            }
+            
+            // MODIFICADO - Parpadeo durante invencibilidad
+            draw() {
+                if (this.isInvincible && Math.floor(Date.now() / 150) % 2 === 0) return;
+                super.draw();
+            }
+            
+            respawn() {
+                super.respawn();
+                this.activateSpawnProtection();
+            }
+        }
+        
+        class EnemyTank extends Tank {
+            constructor(x, y, type) {
+                let color;
+                if(type===TANK_TYPES.STATIC)color='#4caf50';else if(type===TANK_TYPES.PATROL)color='#888';else if(type===TANK_TYPES.CHASER)color='#ffeb3b';else if(type===TANK_TYPES.ARTILLERY)color='#ff6b6b';else if(type===TANK_TYPES.ELITE)color='#333';
+                super(x, y, type, color);
+                this.detectionRange=400;this.patrolTimer=0;this.patrolDirection=new Vector2(Math.random()-.5,Math.random()-.5).normalize();
+                // NUEVO - Lógica de ráfaga para tanque amarillo
+                if (this.type === TANK_TYPES.CHASER) { this.burstCount = 0; this.burstCooldown = 0; }
+                if (this.type === TANK_TYPES.STATIC) { this.canShootAgain = true; }
+            }
+            update(deltaTime) {
+                super.update(deltaTime);
+                if (this.dead) return;
+                if (this.type === TANK_TYPES.CHASER && this.burstCooldown > 0) { this.burstCooldown -= deltaTime * 1000; }
+                const nearestPlayer = this.findNearestPlayer();
+                if (nearestPlayer && !nearestPlayer.dead) {
+                    if (this.pos.distance(nearestPlayer.pos) < this.detectionRange) {
+                        this.turretAngle = Math.atan2(nearestPlayer.pos.y - this.pos.y, nearestPlayer.pos.x - this.pos.x);
+                        if(this.type===TANK_TYPES.CHASER||this.type===TANK_TYPES.ELITE) this.move(nearestPlayer.pos.subtract(this.pos).normalize(),deltaTime);
+                        
+                        // MODIFICADO - Lógica de disparo para Chaser
+                        // MODIFICADO - Lógica de disparo diferenciada por tipo
+                        if (this.canShoot) {
+                            if (this.type === TANK_TYPES.CHASER) {
+                                // Ráfaga de 3 disparos para Chaser
+                                if (this.burstCooldown <= 0 && this.shoot()) {
+                                    this.burstCount++;
+                                    if (this.burstCount >= 3) {
+                                        this.burstCount = 0;
+                                        this.burstCooldown = 3000; // 3 segundos de espera
+                                    }
+                                }
+                            } else if (this.type === TANK_TYPES.STATIC) {
+                                // Esperar a que la primera bala muera para disparar de nuevo
+                                if (this.canShootAgain) {
+                                    if (this.shoot()) {
+                                        this.canShootAgain = false;
+                                        // Monitorear la primera bala
+                                        if (this.bullets.length > 0) {
+                                            const firstBullet = this.bullets[0];
+                                            const checkBullet = setInterval(() => {
+                                                if (firstBullet.dead || !this.bullets.includes(firstBullet)) {
+                                                    this.canShootAgain = true;
+                                                    clearInterval(checkBullet);
+                                                }
+                                            }, 100); // Revisar cada 100ms
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Comportamiento normal para otros tipos
+                                this.shoot();
+                            }
+                        }
+                        
+                    }
+                } else if(this.speed>0){this.patrolTimer+=deltaTime;if(this.patrolTimer>2){this.patrolDirection=new Vector2(Math.random()-.5,Math.random()-.5).normalize();this.patrolTimer=0;}this.move(this.patrolDirection,deltaTime);}
+            }
+            findNearestPlayer(){let n=null,m=Infinity;for(let p of players){if(!p.dead){const d=this.pos.distance(p.pos);if(d<m){m=d;n=p;}}}return n;}
+        }
+        
+        class Obstacle { constructor(x,y,w,h,d=false){this.x=x;this.y=y;this.width=w;this.height=h;this.destructible=d;this.maxHp=d?3:Infinity;this.hp=this.maxHp;} 
+        draw() {
+            // MODIFICADO - Diseño mejorado para obstáculos indestructibles
+            if (!this.destructible) {
+                // Fondo base gris oscuro
+                ctx.fillStyle = '#3a3a3a';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Efecto 3D - Sombra inferior y derecha
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(this.x + 2, this.y + this.height - 4, this.width - 2, 4);
+                ctx.fillRect(this.x + this.width - 4, this.y + 2, 4, this.height - 2);
+                
+                // Efecto 3D - Luz superior e izquierda
+                ctx.fillStyle = '#6a6a6a';
+                ctx.fillRect(this.x, this.y, this.width - 2, 4);
+                ctx.fillRect(this.x, this.y, 4, this.height - 2);
+                
+                // Patrón de rejilla metálica
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                const gridSize = 15;
+                for (let i = gridSize; i < this.width; i += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + i, this.y);
+                    ctx.lineTo(this.x + i, this.y + this.height);
+                    ctx.stroke();
+                }
+                for (let i = gridSize; i < this.height; i += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y + i);
+                    ctx.lineTo(this.x + this.width, this.y + i);
+                    ctx.stroke();
+                }
+                
+                // Detalles metálicos (tornillos en las esquinas)
+                ctx.fillStyle = '#222';
+                const screwSize = 4;
+                ctx.beginPath();
+                ctx.arc(this.x + 8, this.y + 8, screwSize, 0, Math.PI * 2);
+                ctx.arc(this.x + this.width - 8, this.y + 8, screwSize, 0, Math.PI * 2);
+                ctx.arc(this.x + 8, this.y + this.height - 8, screwSize, 0, Math.PI * 2);
+                ctx.arc(this.x + this.width - 8, this.y + this.height - 8, screwSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Borde final
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+            } else {
+                // MODIFICADO - Diseño mejorado para obstáculos destructibles con daño progresivo
+                const healthPercent = this.hp / this.maxHp;
+                
+                // Color base que oscurece con el daño
+                let baseColor = `rgb(${139 + (1-healthPercent)*50}, ${69 + (1-healthPercent)*30}, 19)`;
+                ctx.fillStyle = baseColor;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                // Efecto 3D para madera
+                ctx.fillStyle = 'rgba(101, 67, 33, 0.4)';
+                ctx.fillRect(this.x + 2, this.y + this.height - 4, this.width - 2, 4);
+                ctx.fillRect(this.x + this.width - 4, this.y + 2, 4, this.height - 2);
+                
+                ctx.fillStyle = 'rgba(160, 100, 50, 0.4)';
+                ctx.fillRect(this.x, this.y, this.width - 2, 3);
+                ctx.fillRect(this.x, this.y, 3, this.height - 2);
+                
+                // Textura de madera (vetas verticales)
+                ctx.strokeStyle = 'rgba(101, 67, 33, 0.6)';
+                ctx.lineWidth = 2;
+                for (let i = 5; i < this.width; i += 12) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + i, this.y);
+                    ctx.lineTo(this.x + i + 2, this.y + this.height);
+                    ctx.stroke();
+                }
+                
+                // MODIFICADO - Grietas según el daño recibido
+                if (healthPercent < 1) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    
+                    // Primera grieta (aparece al recibir primer daño)
+                    if (this.hp <= 2) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + this.width * 0.3, this.y);
+                        ctx.lineTo(this.x + this.width * 0.4, this.y + this.height * 0.4);
+                        ctx.lineTo(this.x + this.width * 0.5, this.y + this.height * 0.6);
+                        ctx.lineTo(this.x + this.width * 0.6, this.y + this.height);
+                        ctx.stroke();
+                    }
+                    
+                    // Segunda grieta (aparece con más daño)
+                    if (this.hp <= 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + this.width * 0.7, this.y);
+                        ctx.lineTo(this.x + this.width * 0.6, this.y + this.height * 0.3);
+                        ctx.lineTo(this.x + this.width * 0.5, this.y + this.height * 0.5);
+                        ctx.lineTo(this.x + this.width * 0.4, this.y + this.height * 0.7);
+                        ctx.lineTo(this.x + this.width * 0.3, this.y + this.height);
+                        ctx.stroke();
+                        
+                        // Grieta horizontal adicional
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y + this.height * 0.5);
+                        ctx.lineTo(this.x + this.width * 0.3, this.y + this.height * 0.55);
+                        ctx.lineTo(this.x + this.width * 0.7, this.y + this.height * 0.45);
+                        ctx.lineTo(this.x + this.width, this.y + this.height * 0.5);
+                        ctx.stroke();
+                        
+                        // Pequeñas grietas adicionales
+                        ctx.lineWidth = 1;
+                        for (let i = 0; i < 3; i++) {
+                            const startX = this.x + Math.random() * this.width;
+                            const startY = this.y + Math.random() * this.height;
+                            ctx.beginPath();
+                            ctx.moveTo(startX, startY);
+                            ctx.lineTo(startX + (Math.random() - 0.5) * 20, startY + (Math.random() - 0.5) * 20);
+                            ctx.stroke();
+                        }
+                    }
+                }
+                
+                // Borde final
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+            }
+        }
+        
+    }
+    
+    class Particle { constructor(x,y,c){this.p=new Vector2(x,y);this.v=new Vector2((Math.random()-.5)*200,(Math.random()-.5)*200);this.c=c;this.l=1;this.d=Math.random()*2+1;this.s=Math.random()*4+2;} update(dt){this.p=this.p.add(this.v.multiply(dt));this.v=this.v.multiply(.95);this.l-=this.d*dt;return this.l<=0;} draw(){ctx.globalAlpha=this.l;ctx.fillStyle=this.c;ctx.beginPath();ctx.arc(this.p.x,this.p.y,this.s,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;} }
+    
+    // NUEVO - Clase para Power-ups
+    class PowerUp {
+        constructor(x, y, type) {
+            this.pos = new Vector2(x, y);
+            this.type = type;
+            this.size = 20;
+            this.life = 10000; // 10 segundos de vida
+        }
+        update(deltaTime) {
+            this.life -= deltaTime * 1000;
+            return this.life <= 0;
+        }
+        draw() {
+            if(this.type === 'extraLife') {
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('❤️', this.pos.x, this.pos.y);
+            }
+        }
+    }
+    
+    let players=[],enemies=[],allTanks=[],obstacles=[],particles=[],lastTime=0;
+    
+    const audioContext=new(window.AudioContext||window.webkitAudioContext)();
+    function playSound(t){
+        const o=audioContext.createOscillator(),g=audioContext.createGain();
+        o.connect(g);
+        g.connect(audioContext.destination);
+        if(t==='shoot'){
+            o.frequency.value=200;
+            g.gain.setValueAtTime(.1*masterVolume,audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(.01*masterVolume,audioContext.currentTime+.1);
+        }else if(t==='explosion')
+        {
+            o.type='sawtooth';o.frequency.value=100;
+            g.gain.setValueAtTime(.3*masterVolume,audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(.01*masterVolume,audioContext.currentTime+.3);
+        }else if(t==='bounce'){
+            o.frequency.value=400;g.gain.setValueAtTime(.05*masterVolume,audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(.01*masterVolume,audioContext.currentTime+.05);
+        }else if(t==='powerup'){
+            o.frequency.value=600;g.gain.setValueAtTime(.2*masterVolume,audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(.01*masterVolume,audioContext.currentTime+.2);
+        }else if(t==='beep'){
+            o.frequency.value=800;g.gain.setValueAtTime(.15*masterVolume,audioContext.currentTime);
+            g.gain.exponentialRampToValueAtTime(.01*masterVolume,audioContext.currentTime+.15);
+        }
+        o.start(audioContext.currentTime);
+        o.stop(audioContext.currentTime+(t==='shoot'?.1:.3));
+    }
+    function playBackgroundMusic() {
+        musicInstanceId++;
+        const currentInstanceId = musicInstanceId;
+        
+        console.log('🎵 PLAY: Intentando iniciar música. ID instancia:', currentInstanceId);
+        console.log('🎵 PLAY: backgroundMusicPlaying antes:', backgroundMusicPlaying);
+        console.log('🎵 PLAY: musicGain existe:', !!musicGain);
+        console.log('🎵 PLAY: musicTimeoutId:', musicTimeoutId);
+        
+        // Protección reforzada: si ya está sonando, no hacer nada
+        if (backgroundMusicPlaying) {
+            console.log('🎵 PLAY: ABORTADO - Música ya está reproduciéndose');
+            return;
+        }
+        
+        // Si existe un musicGain anterior, desconectarlo primero
+        if (musicGain) {
+            console.log('🎵 PLAY: Limpiando musicGain anterior');
+            try {
+                musicGain.disconnect();
+            } catch(e) {}
+            musicGain = null;
+        }
+        
+        backgroundMusicPlaying = true;
+        console.log('🎵 PLAY: backgroundMusicPlaying activado');
+        
+        // Crear ganancia para control de volumen
+        musicGain = audioContext.createGain();
+        musicGain.gain.value = masterVolume * 0.15;
+        musicGain.connect(audioContext.destination);
+        console.log('🎵 PLAY: musicGain creado y conectado');
+        
+        // Melodía principal (estilo marcha militar)
+        const melody = [
+        {note: 110, duration: 0.3},  // A2
+        {note: 110, duration: 0.3},  // A2
+        {note: 147, duration: 0.3},  // D3
+        {note: 131, duration: 0.6},  // C3
+        {note: 110, duration: 0.3},  // A2
+        {note: 110, duration: 0.3},  // A2
+        {note: 147, duration: 0.6},  // D3
+        {note: 165, duration: 0.3},  // E3
+        {note: 147, duration: 0.3},  // D3
+        {note: 131, duration: 0.3},  // C3
+        {note: 110, duration: 0.9}   // A2 (más larga)
+        ];
+        
+        let totalDuration = melody.reduce((sum, n) => sum + n.duration, 0);
+        
+        function playMelody() {
+            console.log('🎶 MELODY: Ejecutando playMelody. ID instancia:', currentInstanceId);
+            console.log('🎶 MELODY: backgroundMusicPlaying:', backgroundMusicPlaying);
+            
+            if (!backgroundMusicPlaying) {
+                console.log('🎶 MELODY: ABORTADO - backgroundMusicPlaying es false');
+                return;
+            }
+            
+            let currentTime = audioContext.currentTime;
+            console.log('🎶 MELODY: Creando osciladores de melodía y bajo');
+            
+            melody.forEach(({note, duration}, index) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.value = note;
+                
+                gain.gain.setValueAtTime(0.3, currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(musicGain);
+                
+                osc.start(currentTime);
+                osc.stop(currentTime + duration);
+                
+                currentTime += duration;
+            });
+            
+            // Bajo rítmico (bombo militar)
+            for (let i = 0; i < totalDuration; i += 0.6) {
+                const bass = audioContext.createOscillator();
+                const bassGain = audioContext.createGain();
+                
+                bass.type = 'triangle';
+                bass.frequency.value = 55;
+                
+                bassGain.gain.setValueAtTime(0.4, audioContext.currentTime + i);
+                bassGain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + i + 0.2);
+                
+                bass.connect(bassGain);
+                bassGain.connect(musicGain);
+                
+                bass.start(audioContext.currentTime + i);
+                bass.stop(audioContext.currentTime + i + 0.2);
+            }
+            
+            // Repetir la melodía
+            console.log('🎶 MELODY: Programando siguiente repetición en', totalDuration * 1000, 'ms');
+            musicTimeoutId = setTimeout(playMelody, totalDuration * 1000);
+            console.log('🎶 MELODY: Timeout ID guardado:', musicTimeoutId);
+        }
+        
+        console.log('🎵 PLAY: Iniciando primera ejecución de playMelody');
+        playMelody();
+    }
+    
+    
+    
+    
+    
+    function stopBackgroundMusic() {
+        console.log('🛑 STOP: Deteniendo música. ID instancia:', musicInstanceId);
+        console.log('🛑 STOP: backgroundMusicPlaying antes:', backgroundMusicPlaying);
+        console.log('🛑 STOP: musicTimeoutId:', musicTimeoutId);
+        
+        backgroundMusicPlaying = false;
+        
+        // Cancelar el timeout de repetición
+        if (musicTimeoutId !== null) {
+            console.log('🛑 STOP: Cancelando timeout ID:', musicTimeoutId);
+            clearTimeout(musicTimeoutId);
+            musicTimeoutId = null;
+        }
+        
+        if (musicGain) {
+            console.log('🛑 STOP: Desconectando musicGain');
+            try {
+                musicGain.disconnect();
+            } catch(e) {
+                console.error('🛑 STOP: Error al desconectar:', e);
+            }
+            musicGain = null;
+        }
+        
+        console.log('🛑 STOP: Música detenida completamente');
+    }
+    
+    
+    function updateMusicVolume() {
+        if (musicGain) {
+            musicGain.gain.value = musicVolume * 0.5; // Usa musicVolume en lugar de masterVolume
+        }
+    }
+    
+    
+    function createExplosion(x,y,c){
+        const C=['#ff6b6b','#feca57','#ff9ff3','#fff'];
+        for(let i=0;i<c;i++)
+        particles.push(new Particle(x,y,C[Math.floor(Math.random()*C.length)]));
+    }
+    
+    // NUEVO - Nombres para los niveles
+    const levelNames = [
+"Bautismo de Fuego", "La Encrucijada", "El Fuerte", "El Corredor", "Laberinto Dividido",
+"Arena Circular", "Corredor Letal", "Fortaleza Élite", "La Emboscada", "Fuego Cruzado",
+"Laberinto de Espejos", "Nido de Patrullas", "Caza Mayor", "Doble Amenaza", "La Horda",
+"El Guantelete", "Arena de Campeones"
+    ];
+    
+    // NUEVO - Función para crear rastros de ruedas
+    function createTrack(pos, angle, size) {
+        tracksCtx.save();
+        tracksCtx.translate(pos.x, pos.y);
+        tracksCtx.rotate(angle);
+        tracksCtx.fillStyle = "rgba(0, 0, 0, 0.05)"; // Color oscuro y semi-transparente
+        const trackWidth = size * 0.2;
+        const trackOffset = size * 0.4;
+        tracksCtx.fillRect(-size/2, -trackOffset - trackWidth/2, size, trackWidth);
+        tracksCtx.fillRect(-size/2, trackOffset - trackWidth/2, size, trackWidth);
+        tracksCtx.restore();
+    }
+    
+    function getValidSpawnPosition(initialX, initialY, existingTanks) {
+        const tempEntity = { // Usamos un objeto temporal para las comprobaciones de colisión
+            pos: new Vector2(initialX, initialY),
+            size: TANK_SIZE,
+            wouldCollideWithRect: Tank.prototype.wouldCollideWithRect // Usamos el método de la clase Tank
+        };
+        
+        let isSafe = true;
+        // 1. Comprobar la posición inicial contra los obstáculos
+        for (const obstacle of obstacles) {
+            if (tempEntity.wouldCollideWithRect(tempEntity.pos, obstacle)) {
+                isSafe = false;
+                break;
+            }
+        }
+        
+        // Si la posición inicial es segura, la devolvemos
+        if (isSafe) {
+            return tempEntity.pos;
+        }
+        
+        // 2. Si no es segura, buscamos una nueva posición aleatoria
+        let attempts = 0;
+        while (attempts < 100) {
+            const newX = Math.random() * (WIDTH - TANK_SIZE * 2) + TANK_SIZE;
+            const newY = Math.random() * (HEIGHT - TANK_SIZE * 2) + TANK_SIZE;
+            tempEntity.pos = new Vector2(newX, newY);
+            
+            let collisionFound = false;
+            
+            // Comprobar contra obstáculos
+            for (const obstacle of obstacles) {
+                if (tempEntity.wouldCollideWithRect(tempEntity.pos, obstacle)) {
+                    collisionFound = true;
+                    break;
+                }
+            }
+            
+            // Comprobar contra otros tanques ya posicionados para evitar solapamientos
+            if (!collisionFound) {
+                for (const tank of existingTanks) {
+                    if (tank && !tank.dead && tempEntity.pos.distance(tank.pos) < TANK_SIZE * 2) {
+                        collisionFound = true;
+                        break;
+                    }
+                }
+            }
+            
+            if (!collisionFound) {
+                return tempEntity.pos; // Se encontró una posición segura
+            }
+            attempts++;
+        }
+        
+        console.warn("No se pudo encontrar una posición segura. Usando la posición inicial por defecto.");
+        return new Vector2(initialX, initialY); // Como último recurso, devolvemos la original
+    }
+    
+    // ============================================
+    // 🎮 NUEVO SISTEMA DE CONFIGURACIÓN DE NIVELES
+    // ============================================
+    
+    const LEVEL_DATA = {
+        1: {
+            name: "Bautismo de Fuego",
+            obstacles: (W, H) => [
+            new Obstacle(W/2 - 60, 100, 120, 20, false),
+            new Obstacle(W/2 - 60, H - 120, 120, 20, false),
+            new Obstacle(200, H/2 - 60, 20, 120, false),
+            new Obstacle(W - 220, H/2 - 60, 20, 120, false),
+            new Obstacle(W/2 - 30, H/2 - 30, 60, 60, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                if (gameDifficulty === 'recluta') {
+                    for (let i = 0; i < 3; i++) {
+                        const p = getValidSpawnPosition(WIDTH - 100 - i * 80, 100 + i * 150, allTanks);
+                        list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                    }
+                } else if (gameDifficulty === 'oficial') {
+                    for (let i = 0; i < 4; i++) {
+                        const p = getValidSpawnPosition(WIDTH - 100 - i * 70, 100 + i * 120, allTanks);
+                        const type = i % 2 === 0 ? TANK_TYPES.STATIC : TANK_TYPES.PATROL;
+                        list.push(new EnemyTank(p.x, p.y, type));
+                    }
+                } else {
+                    for (let i = 0; i < 5; i++) {
+                        const p = getValidSpawnPosition(WIDTH - 100 - i * 60, 100 + i * 100, allTanks);
+                        const types = [TANK_TYPES.STATIC, TANK_TYPES.PATROL, TANK_TYPES.CHASER];
+                        list.push(new EnemyTank(p.x, p.y, types[i % types.length]));
+                    }
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        2: {
+            name: "La Encrucijada",
+            obstacles: (W, H) => [
+            new Obstacle(W/3 - 30, 0, 60, H/3, false),
+            new Obstacle(W*2/3 - 30, 0, 60, H/3, false),
+            new Obstacle(W/3 - 30, H*2/3, 60, H/3, false),
+            new Obstacle(W*2/3 - 30, H*2/3, 60, H/3, false),
+            new Obstacle(W/2 - 100, H/2 - 20, 80, 40, true),
+            new Obstacle(W/2 + 20, H/2 - 20, 80, 40, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const count = gameDifficulty === 'recluta' ? 2 : (gameDifficulty === 'oficial' ? 3 : 4);
+                for (let i = 0; i < count; i++) {
+                    let p = getValidSpawnPosition(WIDTH - 100, 100 + i * 150, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                    
+                    p = getValidSpawnPosition(WIDTH/2 + 150, 150 + i * 150, allTanks);
+                    const type = gameDifficulty === 'coronel' ? TANK_TYPES.CHASER : TANK_TYPES.PATROL;
+                    list.push(new EnemyTank(p.x, p.y, type));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        3: {
+            name: "El Fuerte",
+            obstacles: (W, H) => [
+            new Obstacle(150, 80, 20, H - 160, false),
+            new Obstacle(W - 170, 80, 20, H - 160, false),
+            new Obstacle(150, 80, W - 300, 20, false),
+            new Obstacle(W/2 - 60, H/2 - 60, 120, 120, true),
+            new Obstacle(W/2 - 20, H - 150, 40, 40, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const staticCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < staticCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH - 100, 80 + i * 200, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                }
+                
+                const chaserCount = gameDifficulty === 'recluta' ? 1 : (gameDifficulty === 'oficial' ? 2 : 3);
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2 + i * 100, 100 + i * 150, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        4: {
+            name: "El Corredor",
+            obstacles: (W, H) => [
+            new Obstacle(220, 100, 20, H - 200, false),
+            new Obstacle(220, H - 120, W - 440, 20, false),
+            new Obstacle(W - 220, 100, 20, H - 220, false),
+            new Obstacle(W/2 - 80, 200, 60, 60, true),
+            new Obstacle(W/2 + 20, 200, 60, 60, true),
+            new Obstacle(W/2 - 30, H/2, 60, 60, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const p = getValidSpawnPosition(WIDTH/2, HEIGHT/2, allTanks);
+                list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                
+                const patrolCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < patrolCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH - 120, 100 + i * 150, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.PATROL));
+                }
+                
+                const chaserCount = gameDifficulty === 'recluta' ? 1 : 2;
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(300 + i * 150, HEIGHT - 100, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        5: {
+            name: "Laberinto Dividido",
+            obstacles: (W, H) => [
+            new Obstacle(W/3, 80, 20, H/3, false),
+            new Obstacle(W*2/3, 80, 20, H/3, false),
+            new Obstacle(W/3, H*2/3, 20, H/3 - 80, false),
+            new Obstacle(W*2/3, H*2/3, 20, H/3 - 80, false),
+            new Obstacle(W/3 + 20, H/2 - 40, W/3 - 40, 20, false),
+            new Obstacle(W*2/3 + 20, H/2 - 40, W/3 - 40, 20, false),
+            new Obstacle(W/2 - 40, H/3 + 20, 80, 80, true),
+            new Obstacle(W/2 - 40, H*2/3 - 100, 80, 80, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const patrolCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < patrolCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH - 150, 120 + i * 200, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.PATROL));
+                }
+                
+                const chaserCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2 - 100 + i * 150, HEIGHT - 120, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                
+                if (gameDifficulty !== 'recluta') {
+                    const p = getValidSpawnPosition(WIDTH - 100, HEIGHT/2, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ARTILLERY));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        6: {
+            name: "Arena Circular",
+            obstacles: (W, H) => {
+                const arr = [];
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const x = W/2 + Math.cos(angle) * 180 - 10;
+                    const y = H/2 + Math.sin(angle) * 140 - 10;
+                    arr.push(new Obstacle(x, y, 20, 60, i % 2 === 0));
+                }
+                arr.push(new Obstacle(W/2 - 50, H/2 - 50, 100, 100, false));
+                return arr;
+            },
+            enemies: (allTanks) => {
+                const list = [];
+                const count = gameDifficulty === 'recluta' ? 4 : (gameDifficulty === 'oficial' ? 5 : 6);
+                for (let i = 0; i < count; i++) {
+                    const angle = (Math.PI * 2 / count) * i;
+                    const radius = 180;
+                    const p = getValidSpawnPosition(
+                    WIDTH/2 + Math.cos(angle) * radius,
+                    HEIGHT/2 + Math.sin(angle) * radius,
+                    allTanks
+                    );
+                    const type = gameDifficulty === 'coronel' && i % 2 === 0 ? TANK_TYPES.CHASER : TANK_TYPES.PATROL;
+                    list.push(new EnemyTank(p.x, p.y, type));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        7: {
+            name: "Corredor Letal",
+            obstacles: (W, H) => {
+                const arr = [];
+                arr.push(new Obstacle(0, H/2 - 100, W/3, 20, false));
+                arr.push(new Obstacle(0, H/2 + 80, W/3, 20, false));
+                arr.push(new Obstacle(W * 2/3, H/2 - 100, W/3, 20, false));
+                arr.push(new Obstacle(W * 2/3, H/2 + 80, W/3, 20, false));
+                for(let i=0; i<4; i++) arr.push(new Obstacle(W/2 - 15, 50 + i * 130, 30, 50, true));
+                return arr;
+            },
+            enemies: (allTanks) => {
+                const list = [];
+                const chaserCount = gameDifficulty === 'recluta' ? 3 : (gameDifficulty === 'oficial' ? 4 : 5);
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2 + (i - chaserCount/2) * 120, HEIGHT - 100, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                
+                const staticCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < staticCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH - 100, 100 + i * 200, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        8: {
+            name: "Fortaleza Élite",
+            obstacles: (W, H) => [
+            new Obstacle(W/2 - 120, H/2 - 120, 240, 20, false),
+            new Obstacle(W/2 - 120, H/2 + 100, 90, 20, false),
+            new Obstacle(W/2 + 30, H/2 + 100, 90, 20, false),
+            new Obstacle(W/2 - 30, H/2 + 100, 60, 20, true),
+            new Obstacle(W/2 - 120, H/2 - 100, 20, 200, false),
+            new Obstacle(W/2 + 100, H/2 - 100, 20, 200, false),
+            new Obstacle(W/2 - 50, H/2 - 50, 100, 100, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                
+                // Definir los límites de la fortaleza
+                const fortressLeft = WIDTH/2 - 100;
+                const fortressRight = WIDTH/2 + 100;
+                const fortressTop = HEIGHT/2 - 100;
+                const fortressBottom = HEIGHT/2 + 100;
+                
+                // Tanques ARTILLERY dentro de la fortaleza
+                const artilleryCount = gameDifficulty === 'recluta' ? 1 : 2;
+                for (let i = 0; i < artilleryCount; i++) {
+                    // Posiciones en las esquinas interiores de la fortaleza
+                    const xOffset = (i % 2) === 0 ? -70 : 70;
+                    const yOffset = Math.floor(i / 2) === 0 ? -70 : 70;
+                    const p = getValidSpawnPosition(
+                    WIDTH/2 + xOffset, 
+                    HEIGHT/2 + yOffset, 
+                    allTanks
+                    );
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ARTILLERY));
+                }
+                
+                // Tanques ELITE dentro de la fortaleza
+                const eliteCount = gameDifficulty === 'recluta' ? 0 : (gameDifficulty === 'oficial' ? 1 : 2);
+                for (let i = 0; i < eliteCount; i++) {
+                    // Posiciones alternadas dentro de la fortaleza
+                    const angle = (Math.PI / 2) * i;
+                    const radius = 60;
+                    const p = getValidSpawnPosition(
+                    WIDTH/2 + Math.cos(angle) * radius, 
+                    HEIGHT/2 + Math.sin(angle) * radius, 
+                    allTanks
+                    );
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ELITE));
+                }
+                
+                allTanks.push(...list);
+                return list;
+            }
+            
+        },
+        
+        9: {
+            name: "La Emboscada",
+            obstacles: (W, H) => {
+                const arr = [];
+                arr.push(new Obstacle(150, 0, 20, H - 150, false));
+                arr.push(new Obstacle(W - 170, 150, 20, H - 150, false));
+                arr.push(new Obstacle(300, 150, 20, H - 150, false));
+                arr.push(new Obstacle(W - 320, 0, 20, H - 150, false));
+                for(let i=0; i<3; i++) arr.push(new Obstacle(200 + i*150, 80, 80, 20, true));
+                return arr;
+            },
+            enemies: (allTanks) => {
+                const list = [];
+                const count = gameDifficulty === 'recluta' ? 4 : (gameDifficulty === 'oficial' ? 5 : 6);
+                for (let i = 0; i < count; i++) {
+                    const p = getValidSpawnPosition(200 + i * 100, 100 + (i % 2) * 400, allTanks);
+                    const types = [TANK_TYPES.CHASER, TANK_TYPES.PATROL];
+                    list.push(new EnemyTank(p.x, p.y, types[i % types.length]));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        10: {
+            name: "Fuego Cruzado",
+            obstacles: (W, H) => [
+            new Obstacle(W/2 - 20, 150, 40, H - 300, false),
+            new Obstacle(150, H/2 - 20, W - 300, 40, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const staticCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < staticCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2, 100 + i * 150, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.STATIC));
+                }
+                
+                const chaserCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(200 + i * 200, HEIGHT - 100, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        11: {
+            name: "Laberinto de Espejos",
+            obstacles: (W, H) => [
+            new Obstacle(100, 100, 20, 400, false),
+            new Obstacle(W - 120, 100, 20, 400, false),
+            new Obstacle(100, 100, 250, 20, false),
+            new Obstacle(W - 350, 100, 250, 20, false),
+            new Obstacle(250, 250, 300, 20, true),
+            new Obstacle(250, 350, 300, 20, false)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const eliteCount = gameDifficulty === 'recluta' ? 2 : (gameDifficulty === 'oficial' ? 3 : 4);
+                for (let i = 0; i < eliteCount; i++) {
+                    const p = getValidSpawnPosition(180 + (i % 2) * 340, 180 + Math.floor(i/2) * 240, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ELITE));
+                }
+                
+                if (gameDifficulty === 'coronel') {
+                    const p = getValidSpawnPosition(WIDTH/2, HEIGHT/2, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        12: {
+            name: "Nido de Patrullas",
+            obstacles: (W, H) => {
+                const arr = [];
+                for(let i=0; i<4; i++) {
+                    arr.push(new Obstacle(100 + i*200, 80, 20, 100, false));
+                    arr.push(new Obstacle(100 + i*200, 380, 20, 100, false));
+                }
+                arr.push(new Obstacle(50, 200, 150, 20, false));
+                arr.push(new Obstacle(200, 200, 80, 20, true));
+                arr.push(new Obstacle(280, 200, 180, 20, false));
+                arr.push(new Obstacle(460, 200, 80, 20, true));
+                arr.push(new Obstacle(540, 200, 150, 20, false));
+                arr.push(new Obstacle(120, 340, 150, 20, false));
+                arr.push(new Obstacle(270, 340, 80, 20, true));
+                arr.push(new Obstacle(350, 340, 180, 20, false));
+                arr.push(new Obstacle(530, 340, 80, 20, true));
+                arr.push(new Obstacle(610, 340, 80, 20, false));
+                return arr;
+            },
+            enemies: (allTanks) => {
+                const list = [];
+                const patrolCount = gameDifficulty === 'recluta' ? 6 : (gameDifficulty === 'oficial' ? 8 : 10);
+                for (let i = 0; i < patrolCount; i++) {
+                    const p = getValidSpawnPosition(100 + Math.random()*(WIDTH-200), 100 + Math.random()*(HEIGHT-200), allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.PATROL));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        13: {
+            name: "Caza Mayor",
+            obstacles: (W, H) => [
+            new Obstacle(0, H/3, 220, 20, false),
+            new Obstacle(220, H/3, 80, 20, true),
+            new Obstacle(300, H/3, 200, 20, false),
+            new Obstacle(500, H/3, 80, 20, true),
+            new Obstacle(580, H/3, W-580, 20, false),
+            new Obstacle(0, H*2/3, 150, 20, false),
+            new Obstacle(150, H*2/3, 80, 20, true),
+            new Obstacle(230, H*2/3, 290, 20, false),
+            new Obstacle(520, H*2/3, 80, 20, true),
+            new Obstacle(600, H*2/3, W-600, 20, false),
+            new Obstacle(W/3, 0, 20, H/3, true),
+            new Obstacle(W*2/3, H/3 + 20, 20, H/3-20, true),
+            new Obstacle(W/3, H*2/3 + 20, 20, H/3-20, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const eliteCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < eliteCount; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2, 100 + i*150, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ELITE));
+                }
+                
+                const chaserCount = gameDifficulty === 'recluta' ? 2 : 3;
+                for (let i = 0; i < chaserCount; i++) {
+                    const p = getValidSpawnPosition(100 + i*250, HEIGHT-100, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        14: {
+            name: "Doble Amenaza",
+            obstacles: (W, H) => [
+            new Obstacle(200, 0, 20, 180, false),
+            new Obstacle(200, 180, 20, 70, true),
+            new Obstacle(0, 250, 140, 20, false),
+            new Obstacle(140, 250, 80, 20, true),
+            new Obstacle(W - 220, H - 250, 20, 180, false),
+            new Obstacle(W - 220, H - 70, 20, 70, true),
+            new Obstacle(W - 220, H - 270, 140, 20, false),
+            new Obstacle(W - 80, H - 270, 80, 20, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                const artilleryCount = gameDifficulty === 'recluta' ? 2 : 2;
+                for (let i = 0; i < artilleryCount; i++) {
+                    const xPos = i === 0 ? 100 : WIDTH - 100;
+                    const yPos = i === 0 ? 150 : HEIGHT - 150;
+                    const p = getValidSpawnPosition(xPos, yPos, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ARTILLERY));
+                }
+                
+                const defenderCount = gameDifficulty === 'recluta' ? 2 : (gameDifficulty === 'oficial' ? 3 : 4);
+                for (let i = 0; i < defenderCount; i++) {
+                    const p = getValidSpawnPosition(200 + i*150, HEIGHT/2, allTanks);
+                    const type = gameDifficulty === 'coronel' ? TANK_TYPES.ELITE : TANK_TYPES.PATROL;
+                    list.push(new EnemyTank(p.x, p.y, type));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        15: {
+            name: "La Horda",
+            obstacles: (W, H) => {
+                const arr = [];
+                for(let i=0; i<10; i++) {
+                    arr.push(new Obstacle(Math.random()*(W-100)+50, Math.random()*(H-100)+50, 40, 40, true));
+                }
+                return arr;
+            },
+            enemies: (allTanks) => {
+                const list = [];
+                const totalCount = gameDifficulty === 'recluta' ? 8 : (gameDifficulty === 'oficial' ? 10 : 12);
+                for (let i = 0; i < totalCount; i++) {
+                    const p = getValidSpawnPosition(100 + Math.random()*(WIDTH-200), 100 + Math.random()*(HEIGHT-200), allTanks);
+                    const types = [TANK_TYPES.PATROL, TANK_TYPES.CHASER];
+                    if (gameDifficulty === 'coronel') types.push(TANK_TYPES.STATIC);
+                    list.push(new EnemyTank(p.x, p.y, types[i % types.length]));
+                }
+                allTanks.push(...list);
+                return list;
+            }
+        },
+        
+        16: {
+            name: "El Guantelete",
+            obstacles: (W, H) => [
+            new Obstacle(W/4, H/4, 120, 20, false),
+            new Obstacle(W/4 + 120, H/4, 80, 20, true),
+            new Obstacle(W/4 + 200, H/4, W/2 - 200, 20, false),
+            new Obstacle(W/4, H*3/4, 120, 20, false),
+            new Obstacle(W/4 + 120, H*3/4, 80, 20, true),
+            new Obstacle(W/4 + 200, H*3/4, W/2 - 200, 20, false),
+            new Obstacle(W/4, H/4, 20, H/2, true),
+            new Obstacle(W*3/4, H/4, 20, H/2, true)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                
+                // 5 tanques ELITE en formación
+                for (let i = 0; i < 5; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2 - 150 + i*75, HEIGHT/2 - 100 + (i % 2)*50, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ELITE));
+                }
+                
+                // 5 tanques CHASER distribuidos
+                for (let i = 0; i < 5; i++) {
+                    const p = getValidSpawnPosition(150 + i*140, 80 + (i % 3) * 200, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                
+                // 2 tanques ARTILLERY de apoyo
+                for (let i = 0; i < 2; i++) {
+                    const p = getValidSpawnPosition(WIDTH/2 - 100 + i*200, HEIGHT - 100, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ARTILLERY));
+                }
+                
+                allTanks.push(...list);
+                return list;
+            }
+            
+        },
+        
+        17: {
+            name: "Arena de Campeones",
+            obstacles: (W, H) => [
+            new Obstacle(W/2 - 50, 0, 100, 150, false),
+            new Obstacle(W/2 - 50, H - 150, 100, 150, false),
+            new Obstacle(0, H/2 - 50, 150, 100, false),
+            new Obstacle(W - 150, H/2 - 50, 150, 100, false)
+            ],
+            enemies: (allTanks) => {
+                const list = [];
+                
+                // 8 tanques ELITE en círculo alrededor del jugador - ANILLO EXTERIOR
+                for (let i = 0; i < 8; i++) {
+                    const angle = (Math.PI * 2 / 8) * i;
+                    const radius = 200;
+                    const p = getValidSpawnPosition(
+                    WIDTH/2 + Math.cos(angle) * radius,
+                    HEIGHT/2 + Math.sin(angle) * radius,
+                    allTanks
+                    );
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ELITE));
+                }
+                
+                // 4 tanques CHASER en formación cuadrada - ANILLO MEDIO
+                const chaserPositions = [
+                {x: WIDTH/2 - 120, y: HEIGHT/2 - 120},
+                {x: WIDTH/2 + 120, y: HEIGHT/2 - 120},
+                {x: WIDTH/2 - 120, y: HEIGHT/2 + 120},
+                {x: WIDTH/2 + 120, y: HEIGHT/2 + 120}
+                ];
+                for (let i = 0; i < 4; i++) {
+                    const p = getValidSpawnPosition(chaserPositions[i].x, chaserPositions[i].y, allTanks);
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.CHASER));
+                }
+                
+                // 3 tanques ARTILLERY de largo alcance - ANILLO INTERIOR
+                for (let i = 0; i < 3; i++) {
+                    const angle = (Math.PI * 2 / 3) * i;
+                    const radius = 80;
+                    const p = getValidSpawnPosition(
+                    WIDTH/2 + Math.cos(angle) * radius,
+                    HEIGHT/2 + Math.sin(angle) * radius,
+                    allTanks
+                    );
+                    list.push(new EnemyTank(p.x, p.y, TANK_TYPES.ARTILLERY));
+                }
+                
+                allTanks.push(...list);
+                return list;
+            }
+            
+        }
+    };
+    
+    
+    // ============================================
+    // FUNCIÓN DE CARGA DE NIVELES
+    // ============================================
+    
+    function loadLevel(levelNum) {
+        levelComplete = false;
+        const data = LEVEL_DATA[levelNum];
+        if (!data) {
+            console.warn(`Nivel ${levelNum} no definido.`);
+            return;
+        }
+        
+        enemies = [];
+        obstacles = [];
+        allTanks = [...players];
+        players.forEach(p => p.activateSpawnProtection());
+        tracksCtx.clearRect(0, 0, WIDTH, HEIGHT);
+        
+        // Crear obstáculos
+        obstacles.push(...data.obstacles(WIDTH, HEIGHT));
+        
+        // Reposicionar jugadores
+        if (players[0]) players[0].pos = getValidSpawnPosition(100, HEIGHT / 2, []);
+        if (players[1]) players[1].pos = getValidSpawnPosition(100, HEIGHT / 2 + 60, [players[0]]);
+        
+        // Crear enemigos
+        const newEnemies = data.enemies(allTanks);
+        enemies.push(...newEnemies);
+        
+        // Actualizar UI
+        //document.getElementById("levelName").textContent = `NIVEL ${levelNum}: ${data.name.toUpperCase()}`;
+        updateLevelHUD(levelNum);
+        currentLevel = levelNum;
+        updateUI();
+        
+        // Iniciar cronómetro del nivel
+        levelStartTime = Date.now();
+        totalPausedTime = 0;
+        
+    }
+    
+    function updateLevelHUD(levelNum) {
+        const data = LEVEL_DATA[levelNum];
+        if (!data) return;
+        const levelText = `NIVEL ${levelNum}: ${data.name.toUpperCase()}`;
+        const el = document.getElementById("levelName");
+        if (el) el.textContent = levelText;
+    }
+    
+    
+    function checkCollisions() {
+        // NUEVO - Colisión entre balas (jugador vs enemigo)
+        for (let i = 0; i < players.length; i++) {
+            if (players[i].dead) continue;
+            
+            for (let playerBullet of players[i].bullets) {
+                if (playerBullet.dead) continue;
+                
+                for (let enemy of enemies) {
+                    if (enemy.dead) continue;
+                    
+                    for (let enemyBullet of enemy.bullets) {
+                        if (enemyBullet.dead) continue;
+                        
+                        const dist = playerBullet.pos.distance(enemyBullet.pos);
+                        if (dist < playerBullet.radius + enemyBullet.radius) {
+                            playerBullet.dead = true;
+                            enemyBullet.dead = true;
+                            createExplosion(playerBullet.pos.x, playerBullet.pos.y, 8);
+                            playSound('bounce');
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Colisiones de balas con tanques
+        for (let tank of allTanks) {
+            if (tank.dead) continue;
+            
+            for (let other of allTanks) {
+                if (other === tank || other.dead) continue;
+                
+                for (let i = other.bullets.length - 1; i >= 0; i--) {
+                    const bullet = other.bullets[i];
+                    if (bullet.owner === tank) continue;
+                    
+                    // NUEVO - En oficial y coronel, enemigos no se dañan entre sí
+                    if ((gameDifficulty === 'oficial' || gameDifficulty === 'coronel') && 
+                    tank instanceof EnemyTank && bullet.owner instanceof EnemyTank) {
+                        continue;
+                    }
+                    
+                    if (tank.pos.distance(bullet.pos) < tank.size/2 + bullet.radius) {
+                        // NUEVO - Daño diferente según tipo de bala
+                        const damage = bullet.isSuperBullet ? 2 : 1;
+                        const killed = tank.takeDamage(damage);
+                        bullet.dead = true;
+                        
+                        if (killed && tank.type !== TANK_TYPES.PLAYER) {
+                            // Puntuación según dificultad
+                            const baseScore = 100;
+                            const scoreMultiplier = gameDifficulty === 'recluta' ? 1 : 
+                            (gameDifficulty === 'oficial' ? 1.5 : 2);
+                            totalScore += Math.floor(baseScore * scoreMultiplier);
+                            
+                            // Contador para vida extra
+                            killCounter++;
+                            if (killCounter >= KILLS_FOR_LIFE) {
+                                killCounter = 0;
+                                powerUps.push(new PowerUp(tank.pos.x, tank.pos.y, 'extraLife'));
+                            }
+                            updateUI();
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Colisión jugador con power-ups
+        for (let player of players) {
+            if (player.dead) continue;
+            
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                const powerUp = powerUps[i];
+                if (player.pos.distance(powerUp.pos) < player.size / 2 + powerUp.size / 2) {
+                    if (powerUp.type === 'extraLife') {
+                        // NUEVO - Máximo 5 vidas
+                        if (playerLives < 5) {
+                            playerLives++;
+                            playSound('powerup');
+                            updateUI();
+                        }
+                    }
+                    powerUps.splice(i, 1);
+                }
+            }
+        }
+    }
+    
+    
+    const keys = {};
+    
+    document.addEventListener('keydown', e => {
+        keys[e.key.toLowerCase()] = true;
+        
+        if (e.key.toLowerCase() === 'p') {
+            if (gameState === GAME_STATES.PLAYING) pauseGame();
+            else if (gameState === GAME_STATES.PAUSED) resumeGame();
+            return;
+        }
+        
+        if (gameState !== GAME_STATES.PLAYING) return;
+        
+        if (players[0]) {
+            if (numPlayers === 1) {
+                players[0].controls.up = keys['w'];
+                players[0].controls.down = keys['s'];
+                players[0].controls.left = keys['a'];
+                players[0].controls.right = keys['d'];
+            } else {
+                players[0].controls.up = keys['arrowup'];
+                players[0].controls.down = keys['arrowdown'];
+                players[0].controls.left = keys['arrowleft'];
+                players[0].controls.right = keys['arrowright'];
+            }
+        }
+        
+        if (players[1]) {
+            if (numPlayers === 2) {
+                players[1].controls.up = keys['w'];
+                players[1].controls.down = keys['s'];
+                players[1].controls.left = keys['a'];
+                players[1].controls.right = keys['d'];
+                players[1].rotateTurretLeft = keys['g'];
+                players[1].rotateTurretRight = keys['h'];
+            } else {
+                players[1].controls.up = keys['arrowup'];
+                players[1].controls.down = keys['arrowdown'];
+                players[1].controls.left = keys['arrowleft'];
+                players[1].controls.right = keys['arrowright'];
+            }
+            
+            if (e.key === ' ') players[1].controls.shoot = true;
+        }
+    });
+    
+    document.addEventListener('keyup', e => {
+        keys[e.key.toLowerCase()] = false;
+        
+        if (gameState !== GAME_STATES.PLAYING) return;
+        
+        if (players[0]) {
+            if (numPlayers === 1) {
+                players[0].controls.up = keys['w'];
+                players[0].controls.down = keys['s'];
+                players[0].controls.left = keys['a'];
+                players[0].controls.right = keys['d'];
+            } else {
+                players[0].controls.up = keys['arrowup'];
+                players[0].controls.down = keys['arrowdown'];
+                players[0].controls.left = keys['arrowleft'];
+                players[0].controls.right = keys['arrowright'];
+            }
+        }
+        
+        if (players[1]) {
+            if (numPlayers === 2) {
+                players[1].controls.up = keys['w'];
+                players[1].controls.down = keys['s'];
+                players[1].controls.left = keys['a'];
+                players[1].controls.right = keys['d'];
+                players[1].rotateTurretLeft = keys['g'];
+                players[1].rotateTurretRight = keys['h'];
+            } else {
+                players[1].controls.up = keys['arrowup'];
+                players[1].controls.down = keys['arrowdown'];
+                players[1].controls.left = keys['arrowleft'];
+                players[1].controls.right = keys['arrowright'];
+            }
+        }
+    });
+    
+    canvas.addEventListener('mousemove', e => {
+        if (players[0]) {
+            const r = canvas.getBoundingClientRect();
+            players[0].mousePos.x = e.clientX - r.left;
+            players[0].mousePos.y = e.clientY - r.top;
+        }
+    });
+    
+    canvas.addEventListener('mousedown', e => {
+        if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
+    });
+    
+    // MODIFICADO - Actualizar el nuevo HUD
+    function updateUI() {
+        document.getElementById('levelName').textContent = `NIVEL ${currentLevel}: ${levelNames[currentLevel-1] || ''}`.toUpperCase();
+        // Actualizar display de dificultad
+        const diffIcon = gameDifficulty === 'recluta' ? '🎖️' : (gameDifficulty === 'oficial' ? '⭐' : '🏅');
+        const diffText = gameDifficulty === 'recluta' ? 'RECLUTA' : (gameDifficulty === 'oficial' ? 'OFICIAL' : 'CORONEL GENERAL');
+        document.getElementById('difficultyDisplay').textContent = `${diffIcon} ${diffText}`;
+        
+        document.getElementById('totalScore').textContent = `PUNTOS: ${totalScore}`;
+        // Cuando todos los enemigos están muertos
+        if (enemies.filter(e => !e.dead).length === 0) {
+            if (!levelComplete) {
+                levelComplete = true;
+                
+                // Calcular tiempo empleado (en segundos)
+                const totalTime = Date.now() - levelStartTime;
+                const playedTime = totalTime - totalPausedTime;
+                const secondsPlayed = Math.floor(playedTime / 1000);
+                
+                // Bonificación por tiempo según dificultad
+                // Bonus máximo en menos de 30 segundos, decrece hasta 0 en 60 segundos (1 minuto)
+                const maxTimeBonus = gameDifficulty === 'recluta' ? 500 : 
+                (gameDifficulty === 'oficial' ? 750 : 1000);
+                const minTime = 30; // 30 segundos = bonus máximo
+                const maxTime = 60; // 1 minuto = 0 bonus
+                
+                let timeBonus = 0;
+                if (secondsPlayed <= minTime) {
+                    timeBonus = maxTimeBonus;
+                } else if (secondsPlayed < maxTime) {
+                    // Interpolación lineal
+                    const ratio = (maxTime - secondsPlayed) / (maxTime - minTime);
+                    timeBonus = Math.floor(maxTimeBonus * ratio);
+                }
+                
+                // Añadir bonus a la puntuación
+                totalScore += timeBonus;
+                
+                // Mostrar mensaje con el bonus
+                const bonusMsg = timeBonus > 0 ? `¡BONUS TIEMPO: +${timeBonus}!` : 'NIVEL COMPLETADO';
+                showOnscreenMessage(bonusMsg, 1500);
+                
+                updateUI();
+                
+                if (currentLevel < 17) {
+                    setTimeout(() => loadLevel(currentLevel + 1), 2000);
+                } else {
+                    // Juego completado
+                    gameState = GAME_STATES.MENU;
+                    if (isTopScore(totalScore)) {
+                        showNameModal();
+                    } 
+                    //else {
+                    //    alert('¡HAS GANADO!\nPuntuación final: ' + totalScore);
+                    //    document.getElementById('menu').style.display = 'block';
+                    //}
+                }
+            }
+        }
+        
+        document.getElementById('playerLives').innerHTML = '❤️'.repeat(playerLives) + '🖤'.repeat(Math.max(0, 5 - playerLives));
+        // Mostrar tiempo del nivel (opcional)
+        const playedTime = Date.now() - levelStartTime - totalPausedTime;
+        const seconds = Math.floor(playedTime / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const displaySeconds = seconds % 60;
+        document.getElementById('levelTime').textContent = `${minutes}:${displaySeconds.toString().padStart(2, '0')}`;
+        // Actualizar contador de vida extra
+        document.getElementById('lifeCounter').textContent = `${killCounter}/${KILLS_FOR_LIFE}`;
+        
+    }
+    
+    function showOnscreenMessage(text, duration) {
+        onscreenMessage = text;
+        messageTimer = duration;
+    }
+    
+    function gameLoop(currentTime) {
+        requestAnimationFrame(gameLoop);
+        const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+        lastTime = currentTime;
+        
+        ctx.clearRect(0, 0, WIDTH, HEIGHT); // Limpiar canvas principal
+        
+        if (gameState === GAME_STATES.PLAYING) {
+            // Actualizar power-ups
+            for (let i = powerUps.length - 1; i >= 0; i--) if(powerUps[i].update(deltaTime)) powerUps.splice(i, 1);
+            for(let p of players)p.update(deltaTime); for(let e of enemies)e.update(deltaTime);
+            for(let i=particles.length-1;i>=0;i--)if(particles[i].update(deltaTime))particles.splice(i,1);
+            checkCollisions();
+            if(enemies.filter(e=>!e.dead).length===0 && !levelCompleting){
+                levelCompleting=true;
+                if(currentLevel<17){
+                    const nextLevelNum=currentLevel+1;
+                    setTimeout(()=>{
+                        currentLevel = nextLevelNum;
+                        loadLevel(nextLevelNum);
+                        levelCompleting=false;
+                    },2000);
+                }else{
+                    gameState=GAME_STATES.MENU;
+                    stopBackgroundMusic();
+                    if(isTopScore(totalScore))showNameModal();
+                    //else alert('¡HAS GANADO!');
+                }
+            }
+            if (gameState === GAME_STATES.GAME_OVER) {
+                setTimeout(() => { 
+                    gameState=GAME_STATES.MENU; 
+                    stopBackgroundMusic();
+                    if(isTopScore(totalScore))showNameModal();
+                    else document.getElementById('menu').style.display='block'; 
+                    //alert('GAME OVER\nPuntuación final: '+totalScore); 
+                }, 2000);
+            }
+            updateUI();
+        }
+        
+        for(let o of obstacles)o.draw(); for(let t of allTanks)t.draw(); for(let p of particles)p.draw(); for(let p of powerUps)p.draw();
+        
+        // NUEVO - Dibujar mensaje en pantalla
+        if (messageTimer > 0) {
+            messageTimer -= deltaTime * 1000;
+            ctx.font = "bold 72px Arial";
+            ctx.fillStyle = "rgba(255, 215, 0, " + (messageTimer/1000) + ")";
+            ctx.textAlign = "center";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 4;
+            ctx.strokeText(onscreenMessage, WIDTH / 2, HEIGHT / 2);
+            ctx.fillText(onscreenMessage, WIDTH / 2, HEIGHT / 2);
+        }
+    }
+    
+    function startGame(playerCount) {
+        console.log('===================================');
+        console.log('🎮 START GAME: Iniciando nueva partida');
+        console.log('===================================');
+        document.getElementById('hudContainer').style.display = 'flex';
+        document.getElementById('gameContainer').style.display = 'block';
+        
+        gameDifficulty = document.getElementById('difficultySelect').value;
+        numPlayers = playerCount;
+        gameState = GAME_STATES.PLAYING;
+        document.getElementById('menu').style.display = 'none';
+        totalScore = 0;
+        playerLives = 3;
+        killCounter=0;
+        playerLives = 3; // Reiniciar vidas
+        players=[];enemies=[];allTanks=[];obstacles=[];particles=[];powerUps=[];
+        
+        // NUEVO - Limpiar el canvas de rastros
+        tracksCtx.clearRect(0, 0, WIDTH, HEIGHT);
+        
+        players.push(new PlayerTank(100, HEIGHT/2, 1, '#4a90e2'));
+        if (playerCount === 2) players.push(new PlayerTank(100, HEIGHT/2+60,2,'#e74c3c'));
+        allTanks=[...players];
+        loadLevel(1);
+        console.log('🎮 START GAME: Llamando a stopBackgroundMusic antes de iniciar');
+        stopBackgroundMusic();
+        console.log('🎮 START GAME: Llamando a playBackgroundMusic');
+        playBackgroundMusic();
+        
+        
+    }
+    
+    function showInstructions() {
+        document.getElementById('menu').style.display = 'block';
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('instructions').style.display = 'block';
+        document.getElementById('ranking').style.display = 'none';
+        document.getElementById('settings').style.display = 'none';
+    }
+    function showRanking() {
+        document.getElementById('menu').style.display = 'block';
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('ranking').style.display = 'block';
+        document.getElementById('settings').style.display = 'none';
+        
+        const rankings = JSON.parse(localStorage.getItem('tankRankings') || '[]');
+        const rankingList = document.getElementById('rankingList');
+        rankingList.innerHTML = '';
+        
+        if (rankings.length === 0) {
+            rankingList.innerHTML = '<p style="color: #fff; text-align: center; padding: 20px;">No hay puntuaciones todavía.<br>¡Sé el primero en jugar!</p>';
+            return;
+        }
+        
+        rankings.forEach((entry, index) => {
+            const diffIcon = entry.difficulty === 'coronel' ? '🏅' : (entry.difficulty === 'oficial' ? '⭐' : '🎖️');
+            const diffText = (entry.difficulty || 'recluta').toUpperCase();
+            const levelText = `Nivel ${entry.level || 1}`;
+            
+            const rankItem = document.createElement('div');
+            rankItem.className = 'ranking-item' + (index < 3 ? ' top3' : '');
+            
+            const position = document.createElement('span');
+            position.className = 'rank-position';
+            position.textContent = `#${index + 1}`;
+            
+            const name = document.createElement('span');
+            name.className = 'rank-name';
+            name.textContent = entry.name;
+            
+            const difficulty = document.createElement('div');
+            difficulty.style.color = '#ffd700';
+            difficulty.style.fontSize = '14px';
+            difficulty.innerHTML = `${diffIcon} ${diffText}<br><span style="color: #fff; font-size: 12px;">${levelText}</span>`;
+            
+            const score = document.createElement('span');
+            score.className = 'rank-score';
+            score.textContent = entry.score;
+            
+            rankItem.appendChild(position);
+            rankItem.appendChild(name);
+            rankItem.appendChild(difficulty);
+            rankItem.appendChild(score);
+            rankingList.appendChild(rankItem);
+        });
+    }
+    
+    
+    
+    
+    function showSettings() {
+        document.getElementById('menu').style.display = 'block';
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('ranking').style.display = 'none';
+        document.getElementById('settings').style.display = 'block';
+    }
+    function showMainMenu() {
+        document.getElementById('menu').style.display = 'block';
+        
+        document.getElementById('hudContainer').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'none';
+        
+        document.getElementById('mainMenu').style.display = 'block';
+        document.getElementById('instructions').style.display = 'none';
+        document.getElementById('ranking').style.display = 'none';
+        document.getElementById('settings').style.display = 'none';
+    }
+    function pauseGame() {
+        if (gameState === GAME_STATES.PLAYING) {
+            gameState = GAME_STATES.PAUSED;
+            pauseStartTime = Date.now(); // Guardar cuándo se pausó
+            document.getElementById('pauseOverlay').style.display = 'block';
+        }
+    }
+    
+    function resumeGame() {
+        if (gameState === GAME_STATES.PAUSED) {
+            gameState = GAME_STATES.PLAYING;
+            // Acumular tiempo pausado
+            totalPausedTime += (Date.now() - pauseStartTime);
+            document.getElementById('pauseOverlay').style.display = 'none';
+        }
+    }
+    
+    
+    function quitToMenu() {
+        console.log('===================================');
+        console.log('🏠 QUIT TO MENU: Volviendo al menú principal');
+        console.log('===================================');
+        document.getElementById('hudContainer').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'none';
+        gameState = GAME_STATES.MENU;
+        stopBackgroundMusic();
+        document.getElementById('pauseOverlay').style.display = 'none';
+        document.getElementById('menu').style.display = 'block';
+        showMainMenu();
+    }
+    
+    function loadRanking() {
+        const rankingData = localStorage.getItem('tankRankings'); // <-- Corregido
+        if (rankingData) {
+            return JSON.parse(rankingData);
+        }
+        return [];
+    }
+    function saveRanking(ranking) {
+        localStorage.setItem('tankRankings', JSON.stringify(ranking)); // <-- Corregido
+    }
+    function isTopScore(score) {
+        const ranking = loadRanking();
+        if (ranking.length < 10) return true;
+        return score > ranking[ranking.length - 1].score;
+    }
+    function addToRanking(name, score) {
+        let ranking = loadRanking();
+        ranking.push({ name: name, score: score });
+        ranking.sort((a, b) => b.score - a.score);
+        ranking = ranking.slice(0, 10);
+        saveRanking(ranking);
+    }
+    function displayRanking() {
+        const ranking = loadRanking();
+        const rankingList = document.getElementById('rankingList');
+        rankingList.innerHTML = '';
+        
+        if (ranking.length === 0) {
+            rankingList.innerHTML = '<p style="color: #fff; text-align: center; padding: 20px;">No hay puntuaciones todavía.<br>¡Sé el primero en jugar!</p>';
+            return;
+        }
+        
+        ranking.forEach((entry, index) => {
+            const rankItem = document.createElement('div');
+            rankItem.className = 'rank-item' + (index < 3 ? ' top3' : '');
+            
+            const position = document.createElement('span');
+            position.className = 'rank-position';
+            position.textContent = `#${index + 1}`;
+            
+            const name = document.createElement('span');
+            name.className = 'rank-name';
+            name.textContent = entry.name;
+            
+            const score = document.createElement('span');
+            score.className = 'rank-score';
+            score.textContent = entry.score;
+            
+            rankItem.appendChild(position);
+            rankItem.appendChild(name);
+            rankItem.appendChild(score);
+            rankingList.appendChild(rankItem);
+        });
+    }
+    
+    function showNameModal() {
+        document.getElementById('finalScoreDisplay').textContent = totalScore;
+        document.getElementById('nameModal').style.display = 'block';
+        document.getElementById('playerNameInput').value = '';
+        document.getElementById('playerNameInput').focus();
+    }
+    function saveScore() {
+        
+        const nameInput = document.getElementById('playerNameInput');
+        
+        const name = nameInput.value.trim();
+        
+        // Validar PRIMERO antes de guardar
+        if (name === '') {
+            console.log('ERROR: Nombre vacío');
+            alert('Por favor, introduce tu nombre');
+            return;
+        }
+        
+        
+        // Obtener rankings actuales
+        const rankingDataRaw = localStorage.getItem('tankRankings');
+        
+        const rankings = JSON.parse(rankingDataRaw || '[]');
+        
+        // Agregar nueva puntuación
+        const newEntry = {
+            name: name,
+            score: totalScore,
+            difficulty: gameDifficulty,
+            level: currentLevel,
+            date: new Date().toLocaleDateString()
+        };
+        
+        rankings.push(newEntry);
+        
+        // Ordenar por puntuación descendente
+        rankings.sort((a, b) => b.score - a.score);
+        
+        // Mantener solo top 10
+        rankings.splice(10);
+        
+        // Guardar en localStorage
+        const rankingsJSON = JSON.stringify(rankings);
+        
+        localStorage.setItem('tankRankings', rankingsJSON);
+        
+        // Verificar que se guardó
+        const verification = localStorage.getItem('tankRankings');
+        
+        // Ocultar modal
+        document.getElementById('nameModal').style.display = 'none';
+        
+        
+        gameState = GAME_STATES.MENU;
+        
+        stopBackgroundMusic();
+        // Ocultar containers del juego
+        document.getElementById('hudContainer').style.display = 'none';
+        document.getElementById('gameContainer').style.display = 'none';
+        
+        showRanking();
+    }
+    
+    
+    
+    
+    // Control de volumen de efectos de sonido
+    const volumeSlider = document.getElementById('volumeSlider');
+    const volumeDisplay = document.getElementById('volumeDisplay');
+    const pauseVolumeSlider = document.getElementById('pauseVolumeSlider');
+    const pauseVolumeDisplay = document.getElementById('pauseVolumeDisplay');
+    
+    volumeSlider.addEventListener('input', e => {
+        const v = e.target.value;
+        volumeDisplay.textContent = v;
+        pauseVolumeDisplay.textContent = v;
+        pauseVolumeSlider.value = v;
+        masterVolume = v / 100;
+        localStorage.setItem('tanksVolume', v);
+    });
+    
+    pauseVolumeSlider.addEventListener('input', e => {
+        const v = e.target.value;
+        pauseVolumeDisplay.textContent = v;
+        volumeDisplay.textContent = v;
+        volumeSlider.value = v;
+        masterVolume = v / 100;
+        localStorage.setItem('tanksVolume', v);
+    });
+    
+    // Control de volumen de música
+    const musicSlider = document.getElementById('musicSlider');
+    const musicDisplay = document.getElementById('musicDisplay');
+    const pauseMusicSlider = document.getElementById('pauseMusicSlider');
+    const pauseMusicDisplay = document.getElementById('pauseMusicDisplay');
+    
+    musicSlider.addEventListener('input', e => {
+        const v = e.target.value;
+        musicDisplay.textContent = v;
+        pauseMusicDisplay.textContent = v;
+        pauseMusicSlider.value = v;
+        musicVolume = v / 100;
+        updateMusicVolume();
+        localStorage.setItem('tanksMusicVolume', v);
+    });
+    
+    pauseMusicSlider.addEventListener('input', e => {
+        const v = e.target.value;
+        pauseMusicDisplay.textContent = v;
+        musicDisplay.textContent = v;
+        musicSlider.value = v;
+        musicVolume = v / 100;
+        updateMusicVolume();
+        localStorage.setItem('tanksMusicVolume', v);
+    });
+    
+    // Cargar valores guardados
+    const savedVolume = localStorage.getItem('tanksVolume');
+    if (savedVolume) {
+        volumeSlider.value = savedVolume;
+        pauseVolumeSlider.value = savedVolume;
+        volumeDisplay.textContent = savedVolume;
+        pauseVolumeDisplay.textContent = savedVolume;
+        masterVolume = savedVolume / 100;
+    }
+    
+    const savedMusicVolume = localStorage.getItem('tanksMusicVolume');
+    if (savedMusicVolume) {
+        musicSlider.value = savedMusicVolume;
+        pauseMusicSlider.value = savedMusicVolume;
+        musicDisplay.textContent = savedMusicVolume;
+        pauseMusicDisplay.textContent = savedMusicVolume;
+        musicVolume = savedMusicVolume / 100;
+    }
+    
+    document.getElementById('playerNameInput').addEventListener('keypress',e=>{if(e.key==='Enter')saveScore();});
+    
+    requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

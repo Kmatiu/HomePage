@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Penalty Shooters - Arcade</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial Black', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: #000;
+            cursor: crosshair;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+        }
+        
+        .menu-container {
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+            text-align: center;
+            max-width: 500px;
+            animation: slideIn 0.5s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        h1 {
+            color: #ff6b35;
+            text-shadow: 3px 3px 0 #000;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        
+        h2 {
+            color: #333;
+            margin: 20px 0 10px 0;
+            font-size: 1.3em;
+        }
+        
+        .btn {
+            background: linear-gradient(145deg, #ff6b35, #ff8555);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-small {
+            padding: 10px 20px;
+            font-size: 0.9em;
+        }
+        
+        input[type="text"] {
+            padding: 12px;
+            margin: 10px;
+            border: 3px solid #ff6b35;
+            border-radius: 8px;
+            font-size: 1em;
+            width: 80%;
+            text-align: center;
+        }
+        
+        select {
+            padding: 12px;
+            margin: 10px;
+            border: 3px solid #ff6b35;
+            border-radius: 8px;
+            font-size: 1em;
+            width: 80%;
+            cursor: pointer;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1em;
+            z-index: 50;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.7);
+            max-width: 90%;
+        }
+        
+        .score-display {
+            display: inline-block;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        
+        .shot-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .shot-marker {
+            width: 35px;
+            height: 35px;
+            border: 3px solid white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .shot-marker.goal {
+            background: #00ff00;
+            color: white;
+        }
+        
+        .shot-marker.miss {
+            background: #ff0000;
+            color: white;
+        }
+        
+        .shot-marker.save {
+            background: #ffa500;
+            color: white;
+        }
+        
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 120px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px rgba(255,107,53,0.6);
+            z-index: 60;
+            animation: pulse 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 50;
+        }
+        
+        .leaderboard {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+            text-align: left;
+        }
+        
+        .leaderboard-entry {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 5px solid #ff6b35;
+        }
+        
+        /* MODIFICADO - Indicador de modo portero más pequeño y transparente */
+        #goalkeeperMode {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            color: #FFD700;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            z-index: 55;
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 20px rgba(255,215,0,0.5);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <!-- HUD del juego -->
+    <div id="hud" class="hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div class="score-display">
+                <div style="font-size: 0.9em;">⚽ <span id="player1Name">Jugador 1</span></div>
+                <div style="font-size: 1.8em; margin-top: 3px;"><span id="score1">0</span></div>
+                <div class="shot-tracker" id="tracker1"></div>
+            </div>
+            <div style="text-align: center; padding: 0 15px;">
+                <div id="turnInfo" style="font-size: 1em; font-weight: bold;">Turno: Jugador 1</div>
+                <div id="shotInfo" style="margin-top: 5px; font-size: 0.9em;">Lanzamiento: 1/5</div>
+            </div>
+            <div class="score-display">
+                <div style="font-size: 0.9em;">⚽ <span id="player2Name">PC</span></div>
+                <div style="font-size: 1.8em; margin-top: 3px;"><span id="score2">0</span></div>
+                <div class="shot-tracker" id="tracker2"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="countdown" class="hidden"></div>
+    
+    <!-- MODIFICADO - Indicador modo portero -->
+    <div id="goalkeeperMode" class="hidden">
+        🧤 MODO PORTERO - Haz click donde crees que irá el balón 🧤
+    </div>
+    
+    <div id="controls">
+        <button id="muteBtn" class="btn btn-small">🔊</button>
+    </div>
+    
+    <!-- Menú principal -->
+    <div id="mainMenu" class="ui-overlay">
+        <div class="menu-container">
+            <h1>⚽ PENALTY SHOOTERS ⚽</h1>
+            <h2>Selecciona modo de juego</h2>
+            <button class="btn" onclick="game.selectMode('single')">1 Jugador vs PC</button>
+            <button class="btn" onclick="game.selectMode('double')">2 Jugadores Local</button>
+            <h2>Dificultad</h2>
+            <select id="difficultySelect">
+                <option value="easy">Segunda RFEF (Fácil)</option>
+                <option value="medium" selected>Primera División (Medio)</option>
+                <option value="hard">Champions League (Difícil)</option>
+            </select>
+            <div id="nameInputs" class="hidden">
+                <h2>Nombres</h2>
+                <input type="text" id="player1Input" placeholder="Jugador 1" maxlength="15">
+                <input type="text" id="player2Input" placeholder="Jugador 2" maxlength="15" class="hidden">
+            </div>
+            <button id="startBtn" class="btn hidden" onclick="game.startGame()">¡COMENZAR!</button>
+            <div class="leaderboard" id="leaderboard"></div>
+        </div>
+    </div>
+    
+    <!-- Pantalla de resultados -->
+    <div id="resultsMenu" class="ui-overlay hidden">
+        <div class="menu-container">
+            <h1 id="resultTitle">¡PARTIDO TERMINADO!</h1>
+            <div id="resultStats" style="font-size: 1.5em; margin: 30px 0;"></div>
+            <button class="btn" onclick="game.restartGame()">Jugar de nuevo</button>
+            <button class="btn" onclick="game.backToMenu()">Menú principal</button>
+        </div>
+    </div>
+    
+    <script>
+        class AudioManager {
+            constructor() {
+                this.audioContext = null;
+                this.muted = false;
+                this.musicOscillators = [];
+                this.musicInterval = null;
+            }
+            
+            init() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            
+            playTone(frequency, duration, type = 'sine', volume = 0.3) {
+                if (this.muted || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                
+                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+            
+            play(soundName) {
+                if (this.muted) return;
+                this.init();
+                
+                switch(soundName) {
+                    case 'goal':
+                    
+                    this.playTone(400, 0.3, 'square', 0.6);
+                    setTimeout(() => {
+                        this.playTone(450, 0.3, 'square', 0.6);
+                        this.playTone(350, 0.3, 'sine', 0.4);
+                    }, 150);
+                    setTimeout(() => {
+                        this.playTone(500, 0.4, 'square', 0.65);
+                        this.playTone(400, 0.4, 'sine', 0.45);
+                    }, 350);
+                    setTimeout(() => {
+                        this.playTone(550, 0.5, 'square', 0.7);
+                        this.playTone(450, 0.5, 'sine', 0.5);
+                    }, 600);
+                    setTimeout(() => {
+                        this.playTone(600, 0.6, 'square', 0.75);
+                        this.playTone(500, 0.6, 'sine', 0.55);
+                    }, 900);
+                    setTimeout(() => {
+                        this.playTone(650, 0.8, 'square', 0.8);
+                        this.playTone(550, 0.8, 'sine', 0.6);
+                    }, 1300);
+                    break;
+                    case 'save':
+                    this.playTone(300, 0.1, 'sawtooth', 0.4);
+                    setTimeout(() => this.playTone(250, 0.1, 'sawtooth', 0.4), 100);
+                    setTimeout(() => this.playTone(200, 0.2, 'sawtooth', 0.4), 200);
+                    break;
+                    case 'miss':
+                    this.playTone(400, 0.1, 'triangle', 0.3);
+                    setTimeout(() => this.playTone(300, 0.15, 'triangle', 0.3), 100);
+                    setTimeout(() => this.playTone(200, 0.2, 'triangle', 0.3), 250);
+                    break;
+                    case 'whistle':
+                    this.playTone(900, 0.2, 'square', 0.4);
+                    setTimeout(() => this.playTone(900, 0.2, 'square', 0.4), 250);
+                    break;
+                    case 'countdown':
+                    this.playTone(550, 0.12, 'sine', 0.35);
+                    break;
+                    case 'ready':
+                    this.playTone(660, 0.1, 'sine', 0.4);
+                    setTimeout(() => this.playTone(880, 0.15, 'sine', 0.4), 100);
+                    break;
+                    case 'kick':
+                    this.playTone(150, 0.08, 'sawtooth', 0.3);
+                    break;
+                    case 'post':
+                    this.playTone(800, 0.15, 'square', 0.5);
+                    setTimeout(() => this.playTone(600, 0.2, 'square', 0.4), 150);
+                    break;
+                    case 'net':
+                    this.playTone(400, 0.08, 'sine', 0.3);
+                    setTimeout(() => this.playTone(350, 0.08, 'sine', 0.25), 60);
+                    setTimeout(() => this.playTone(300, 0.1, 'sine', 0.2), 120);
+                    break;
+                }
+            }
+            
+            playMusic() {
+                if (this.muted || !this.audioContext) return;
+                this.init();
+                this.stopMusic();
+                
+                const melodies = [
+                [523, 587, 659, 587, 523, 440, 523, 587],
+                [659, 698, 784, 698, 659, 587, 659, 698]
+                ];
+                const duration = 0.4;
+                let noteIndex = 0;
+                let melodyIndex = 0;
+                
+                this.musicInterval = setInterval(() => {
+                    if (this.muted) return;
+                    
+                    const melody = melodies[melodyIndex % melodies.length];
+                    const note = melody[noteIndex % melody.length];
+                    
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.value = note;
+                    gainNode.gain.value = 0.08;
+                    
+                    oscillator.start();
+                    oscillator.stop(this.audioContext.currentTime + duration);
+                    
+                    noteIndex++;
+                    if (noteIndex % melody.length === 0) {
+                        melodyIndex++;
+                    }
+                }, duration * 1000);
+            }
+            
+            stopMusic() {
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+                this.musicOscillators = [];
+            }
+            
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.muted) {
+                    this.stopMusic();
+                } else {
+                    this.playMusic();
+                }
+                return this.muted;
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, color, vx, vy) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = 1.0;
+                this.size = Math.random() * 5 + 3;
+            }
+            
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.vy += 500 * dt;
+                this.life -= dt * 2;
+            }
+            
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+        
+        class NetEffect {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.life = 1.0;
+                this.maxLife = 0.8;
+                this.ripples = [];
+                for (let i = 0; i < 3; i++) {
+                    this.ripples.push({
+                        radius: 0,
+                        maxRadius: 40 + i * 15,
+                        delay: i * 0.1
+                    });
+                }
+            }
+            
+            update(dt) {
+                this.life -= dt / this.maxLife;
+                this.ripples.forEach(ripple => {
+                    if (ripple.delay > 0) {
+                        ripple.delay -= dt;
+                    } else {
+                        ripple.radius += dt * 80;
+                    }
+                });
+            }
+            
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                this.ripples.forEach(ripple => {
+                    if (ripple.delay <= 0 && ripple.radius < ripple.maxRadius) {
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, ripple.radius, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                });
+                ctx.globalAlpha = 1.0;
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+        
+        class PenaltyGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.audio = new AudioManager();
+                
+                this.state = 'menu';
+                this.mode = null;
+                this.difficulty = 'medium';
+                this.player1Name = 'Jugador 1';
+                this.player2Name = 'PC';
+                
+                this.score1 = 0;
+                this.score2 = 0;
+                this.currentPlayer = 1;
+                this.currentShot = 1;
+                this.maxShots = 5;
+                this.suddenDeath = false;
+                
+                this.player1Shots = [];
+                this.player2Shots = [];
+                
+                this.canShoot = false;
+                this.countdownActive = false;
+                this.waitingNextTurn = false;
+                
+                this.shooting = false;
+                this.charging = false;
+                
+                this.slowMotion = false;
+                this.slowMotionFactor = 0.3;
+                
+                this.goalkeeperMode = false;
+                this.playerGoalkeeperChoice = null;
+                
+                this.ball = { 
+                    x: 0, y: 0, z: 0,
+                    startX: 0, startY: 0, startZ: 0,
+                    targetX: 0, targetY: 0, targetZ: 0,
+                    screenX: 0, screenY: 0,
+                    rotation: 0,
+                    progress: 0
+                };
+                
+                this.mouseX = 0;
+                this.mouseY = 0;
+                
+                this.powerBar = {
+                    value: 0.5,
+                    direction: 1,
+                    speed: 1.2
+                };
+                
+                this.goalkeeper = {
+                    x: 0, y: 0, z: 0,
+                    targetX: 0, targetY: 0, targetZ: 0,
+                    diving: false, celebrating: false,
+                    animTime: 0,
+                    anticipationTime: 0,
+                    anticipationX: 0,
+                    anticipationY: 0,
+                    chosenDirection: null,
+                    leftArm: {angle: 0, targetAngle: 0},
+                    rightArm: {angle: 0, targetAngle: 0},
+                    leftLeg: {angle: 0, targetAngle: 0},
+                    rightLeg: {angle: 0, targetAngle: 0},
+                    torsoRotation: 0
+                };
+                
+                this.particles = [];
+                this.netEffects = [];
+                
+                this.goalkeeperZones = [
+                {x: -0.7, y: -0.6, name: 'arriba-izquierda'},
+                {x: 0, y: -0.7, name: 'arriba-centro'},
+                {x: 0.7, y: -0.6, name: 'arriba-derecha'},
+                {x: -0.8, y: 0, name: 'centro-izquierda'},
+                {x: 0, y: 0, name: 'centro'},
+                {x: 0.8, y: 0, name: 'centro-derecha'},
+                {x: -0.7, y: 0.5, name: 'abajo-izquierda'},
+                {x: 0, y: 0.6, name: 'abajo-centro'},
+                {x: 0.7, y: 0.5, name: 'abajo-derecha'}
+                ];
+                
+                this.resize();
+                this.setupEventListeners();
+                this.loadLeaderboard();
+                this.lastTime = Date.now();
+                this.gameLoop();
+            }
+            
+            // MODIFICADO - En la función resize() - línea 737
+            resize() {
+                this.canvas.width = Math.min(window.innerWidth, 1400);
+                this.canvas.height = Math.min(window.innerHeight, 900);
+                
+                // MODIFICADO - Ajustes correctos
+                this.goalWidth3D = 850;   
+                this.goalHeight3D = 480;  
+                this.goalDepth = 550;     
+                
+                this.penaltyX = this.canvas.width / 2;
+                this.penaltyY = this.canvas.height - 70; // MODIFICADO
+                this.penaltyZ = 0;
+                
+                // MODIFICADO - Portería alineada con la línea de gol
+                this.goalCenterX = this.canvas.width / 2;
+                this.goalCenterZ = this.goalDepth;
+                
+                // Calculamos primero donde queremos la línea de suelo (línea de gol)
+                const perspective = 550;
+                const scale = perspective / (perspective + this.goalDepth);
+                const displayHeight = this.goalHeight3D * scale;
+                
+                // Posicionamos la línea de gol en una posición fija óptima
+                this.goalGroundY = this.canvas.height * 0.68; // Ajusta este valor según necesites
+                
+                // El centro de la portería se calcula restando la mitad de la altura
+                this.goalCenterY = this.goalGroundY - displayHeight / 2;
+                
+            }
+            
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.resize());
+                
+                this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
+                
+                this.canvas.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    this.handleStart(e.touches[0]);
+                });
+                this.canvas.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    this.handleEnd(e.changedTouches[0]);
+                });
+                this.canvas.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                    this.handleMove(e.touches[0]);
+                });
+                
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === ' ') {
+                        e.preventDefault();
+                        if (this.canShoot && !this.charging && this.state === 'playing' && !this.shooting) {
+                            this.startCharging();
+                        }
+                    }
+                    if (e.key === 'r' || e.key === 'R') {
+                        if (this.state === 'results') {
+                            this.restartGame();
+                        }
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.key === ' ' && this.charging) {
+                        this.shoot();
+                    }
+                });
+                
+                document.getElementById('muteBtn').addEventListener('click', () => {
+                    const muted = this.audio.toggleMute();
+                    document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+                });
+            }
+            
+            handleStart(e) {
+                if (this.state !== 'playing' || this.shooting) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+                
+                
+                if (this.goalkeeperMode && this.canShoot) {
+                    this.playerGoalkeeperChoice = {x: this.mouseX, y: this.mouseY};
+                    this.canShoot = false;
+                    document.getElementById('goalkeeperMode').classList.add('hidden');
+                    
+                    setTimeout(() => {
+                        this.executeAIShot();
+                    }, 300);
+                } else if (this.canShoot && !this.goalkeeperMode) {
+                    this.startCharging();
+                }
+            }
+            
+            handleEnd(e) {
+                if (this.charging) {
+                    this.shoot();
+                }
+            }
+            
+            handleMove(e) {
+                if (this.state !== 'playing') return;
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouseX = e.clientX - rect.left;
+                this.mouseY = e.clientY - rect.top;
+            }
+            
+            selectMode(mode) {
+                this.mode = mode;
+                this.difficulty = document.getElementById('difficultySelect').value;
+                
+                document.getElementById('nameInputs').classList.remove('hidden');
+                document.getElementById('startBtn').classList.remove('hidden');
+                
+                if (mode === 'double') {
+                    document.getElementById('player2Input').classList.remove('hidden');
+                } else {
+                    document.getElementById('player2Input').classList.add('hidden');
+                }
+            }
+            
+            startGame() {
+                this.player1Name = document.getElementById('player1Input').value || 'Jugador 1';
+                this.player2Name = this.mode === 'single' ? 'PC' : 
+                (document.getElementById('player2Input').value || 'Jugador 2');
+                
+                document.getElementById('mainMenu').classList.add('hidden');
+                document.getElementById('hud').classList.remove('hidden');
+                
+                this.resetGame();
+                this.state = 'playing';
+                this.audio.playMusic();
+                this.startCountdown();
+            }
+            
+            resetGame() {
+                this.score1 = 0;
+                this.score2 = 0;
+                this.currentPlayer = 1;
+                this.currentShot = 1;
+                this.suddenDeath = false;
+                this.shooting = false;
+                this.charging = false;
+                this.canShoot = false;
+                this.slowMotion = false;
+                this.goalkeeperMode = false;
+                this.playerGoalkeeperChoice = null;
+                this.player1Shots = [];
+                this.player2Shots = [];
+                this.powerBar.value = 0.5;
+                this.powerBar.direction = 1;
+                this.updateHUD();
+                this.resetBall();
+                this.resetGoalkeeper();
+            }
+            
+            resetBall() {
+                this.ball.x = 0;
+                this.ball.y = 0;
+                this.ball.z = 0;
+                this.ball.startX = 0;
+                this.ball.startY = 0;
+                this.ball.startZ = 0;
+                this.ball.targetX = 0;
+                this.ball.targetY = 0;
+                this.ball.targetZ = 0;
+                this.ball.rotation = 0;
+                this.ball.progress = 0;
+            }
+            
+            
+            // MODIFICADO - Portero pisando la línea de gol - línea ~870
+            resetGoalkeeper() {
+                this.goalkeeper.x = 0;
+                // MODIFICADO - Portero en la línea de gol (abajo del todo)
+                this.goalkeeper.y = this.goalHeight3D / 2 - 80; // Ajustado para que pise la línea
+                this.goalkeeper.z = this.goalDepth;
+                this.goalkeeper.diving = false;
+                this.goalkeeper.celebrating = false;
+                this.goalkeeper.animTime = 0;
+                this.goalkeeper.anticipationTime = 0;
+                this.goalkeeper.anticipationX = 0;
+                this.goalkeeper.anticipationY = 0;
+                this.goalkeeper.chosenDirection = null;
+                this.goalkeeper.leftArm = {angle: -0.3, targetAngle: -0.3};
+                this.goalkeeper.rightArm = {angle: 0.3, targetAngle: 0.3};
+                this.goalkeeper.leftLeg = {angle: 0, targetAngle: 0};
+                this.goalkeeper.rightLeg = {angle: 0, targetAngle: 0};
+                this.goalkeeper.torsoRotation = 0;
+            }
+            
+            startCountdown() {
+                this.canShoot = false;
+                this.countdownActive = true;
+                const countdownEl = document.getElementById('countdown');
+                countdownEl.classList.remove('hidden');
+                
+                let count = 3;
+                
+                const countdown = () => {
+                    if (count > 0) {
+                        countdownEl.textContent = count;
+                        this.audio.play('countdown');
+                        count--;
+                        setTimeout(countdown, 1000);
+                    } else {
+                        
+                        if (this.mode === 'single' && this.currentPlayer === 2) {
+                            countdownEl.textContent = '¡PARA EL BALÓN!';
+                            this.goalkeeperMode = true;
+                            document.getElementById('goalkeeperMode').classList.remove('hidden');
+                            
+                            
+                            setTimeout(() => {
+                                document.getElementById('goalkeeperMode').classList.add('hidden');
+                            }, 2000);
+                        } else {
+                            countdownEl.textContent = '¡TIRA!';
+                            this.goalkeeperMode = false;
+                            
+                            const randomZone = this.goalkeeperZones[Math.floor(Math.random() * this.goalkeeperZones.length)];
+                            this.goalkeeper.chosenDirection = randomZone;
+                        }
+                        
+                        this.audio.play('ready');
+                        
+                        setTimeout(() => {
+                            countdownEl.classList.add('hidden');
+                            this.canShoot = true;
+                            this.countdownActive = false;
+                        }, 800);
+                    }
+                };
+                
+                countdown();
+            }
+            
+            startCharging() {
+                if (this.shooting || !this.canShoot || this.goalkeeperMode) return;
+                this.charging = true;
+            }
+            
+            shoot() {
+                if (!this.charging || this.shooting || !this.canShoot) return;
+                
+                this.charging = false;
+                this.shooting = true;
+                this.canShoot = false;
+                this.slowMotion = true;
+                this.audio.play('kick');
+                
+                this.ball.startX = 0;
+                this.ball.startY = 0;
+                this.ball.startZ = 0;
+                this.ball.progress = 0;
+                
+                
+                const targetX = (this.mouseX - this.canvas.width / 2) * 0.85;
+                const targetY = (this.mouseY - this.goalCenterY) * 1.0;
+                const targetZ = this.goalDepth;
+                
+                const power = this.powerBar.value;
+                const powerError = Math.abs(power - 0.5) * 90;
+                
+                this.ball.targetX = targetX + (Math.random() - 0.5) * powerError;
+                this.ball.targetY = targetY + (Math.random() - 0.5) * powerError;
+                this.ball.targetZ = targetZ;
+                
+                this.setGoalkeeperPosition();
+            }
+            
+            
+            executeAIShot() {
+                this.shooting = true;
+                this.slowMotion = true;
+                this.audio.play('kick');
+                
+                this.ball.startX = 0;
+                this.ball.startY = 0;
+                this.ball.startZ = 0;
+                this.ball.progress = 0;
+                
+                const randomZone = this.goalkeeperZones[Math.floor(Math.random() * this.goalkeeperZones.length)];
+                const targetX = randomZone.x * this.goalWidth3D / 2 * 0.9;
+                const targetY = randomZone.y * this.goalHeight3D / 2 * 0.9;
+                const targetZ = this.goalDepth;
+                
+                const variation = 40;
+                this.ball.targetX = targetX + (Math.random() - 0.5) * variation;
+                this.ball.targetY = targetY + (Math.random() - 0.5) * variation;
+                this.ball.targetZ = targetZ;
+                
+                this.setGoalkeeperPositionPlayer();
+            }
+            
+            
+            setGoalkeeperPositionPlayer() {
+                if (!this.playerGoalkeeperChoice) return;
+                
+                setTimeout(() => {
+                    this.goalkeeper.diving = true;
+                    this.goalkeeper.animTime = 0;
+                    
+                    const targetX = (this.playerGoalkeeperChoice.x - this.canvas.width / 2) * 0.85;
+                    const targetY = (this.playerGoalkeeperChoice.y - this.goalCenterY) * 1.0;
+                    
+                    this.goalkeeper.targetX = targetX;
+                    this.goalkeeper.targetY = targetY - this.goalHeight3D / 2 + 60;
+                    this.goalkeeper.targetZ = this.goalDepth;
+                    
+                    this.goalkeeper.leftArm.targetAngle = Math.PI / 2;
+                    this.goalkeeper.rightArm.targetAngle = Math.PI / 2;
+                    this.goalkeeper.leftLeg.targetAngle = -0.3;
+                    this.goalkeeper.rightLeg.targetAngle = 0.3;
+                    this.goalkeeper.torsoRotation = (targetX / this.goalWidth3D) * 0.5;
+                    
+                }, 300);
+            }
+            
+            setGoalkeeperPosition() {
+                const difficultySettings = {
+                    easy: { reactionTime: 0.6, speed: 0.6 },
+                    medium: { reactionTime: 0.4, speed: 0.8 },
+                    hard: { reactionTime: 0.25, speed: 1.0 }
+                };
+                
+                const settings = difficultySettings[this.difficulty];
+                
+                setTimeout(() => {
+                    this.goalkeeper.diving = true;
+                    this.goalkeeper.animTime = 0;
+                    
+                    const zone = this.goalkeeper.chosenDirection;
+                    
+                    this.goalkeeper.targetX = zone.x * this.goalWidth3D / 2;
+                    this.goalkeeper.targetY = zone.y * this.goalHeight3D / 2;
+                    this.goalkeeper.targetZ = this.goalDepth;
+                    
+                    this.goalkeeper.leftArm.targetAngle = Math.PI / 2;
+                    this.goalkeeper.rightArm.targetAngle = Math.PI / 2;
+                    this.goalkeeper.leftLeg.targetAngle = -0.3;
+                    this.goalkeeper.rightLeg.targetAngle = 0.3;
+                    this.goalkeeper.torsoRotation = (this.goalkeeper.targetX / this.goalWidth3D) * 0.5;
+                    
+                }, settings.reactionTime * 1000);
+            }
+            
+            checkGoal() {
+                const finalX = this.ball.targetX;
+                const finalY = this.ball.targetY;
+                const finalZ = this.ball.targetZ;
+                
+                const halfWidth = this.goalWidth3D / 2;
+                const halfHeight = this.goalHeight3D / 2;
+                
+                const inGoalX = Math.abs(finalX) <= halfWidth;
+                const inGoalY = finalY >= -halfHeight && finalY <= halfHeight * 0.85;
+                const inGoalZ = finalZ >= this.goalDepth * 0.85 && finalZ <= this.goalDepth * 1.15;
+                
+                const nearPost = (Math.abs(Math.abs(finalX) - halfWidth) < 45 || 
+                Math.abs(Math.abs(finalY) - halfHeight) < 45);
+                
+                if (inGoalX && inGoalY && inGoalZ) {
+                    if (this.goalkeeper.diving && this.goalkeeper.animTime > 0.4) {
+                        const dist = Math.sqrt(
+                        Math.pow(finalX - this.goalkeeper.targetX, 2) +
+                        Math.pow(finalY - this.goalkeeper.targetY, 2)
+                        );
+                        
+                        const power = this.powerBar.value;
+                        const baseRadius = this.difficulty === 'easy' ? 170 : 
+                        this.difficulty === 'medium' ? 140 : 120;
+                        
+                        const powerMod = Math.abs(power - 0.5) < 0.15 ? 0.8 : 1.35;
+                        const saveRadius = baseRadius * powerMod;
+                        
+                        if (dist < saveRadius) {
+                            this.audio.play('save');
+                            this.createParticles(this.ball.screenX, this.ball.screenY, '#FFD700', 30);
+                            this.goalkeeper.celebrating = true;
+                            this.recordShot('save');
+                            return 'save';
+                        }
+                    }
+                    
+                    // ¡GOL!
+                    this.audio.play('goal');
+                    this.audio.play('net');
+                    this.createParticles(this.ball.screenX, this.ball.screenY, '#00FF00', 80);
+                    this.netEffects.push(new NetEffect(this.ball.screenX, this.ball.screenY));
+                    if (this.currentPlayer === 1) {
+                        this.score1++;
+                    } else {
+                        this.score2++;
+                    }
+                    this.recordShot('goal');
+                    return 'goal';
+                    
+                } else if (nearPost && inGoalZ) {
+                    this.audio.play('post');
+                    this.createParticles(this.ball.screenX, this.ball.screenY, '#FFA500', 35);
+                    this.goalkeeper.celebrating = true;
+                    this.recordShot('miss');
+                    return 'post';
+                } else {
+                    this.audio.play('miss');
+                    this.createParticles(this.ball.screenX, this.ball.screenY, '#FF0000', 25);
+                    this.goalkeeper.celebrating = true;
+                    this.recordShot('miss');
+                    return 'miss';
+                }
+            }
+            
+            recordShot(result) {
+                if (this.currentPlayer === 1) {
+                    this.player1Shots.push(result);
+                } else {
+                    this.player2Shots.push(result);
+                }
+                this.updateShotTrackers();
+            }
+            
+            updateShotTrackers() {
+                const tracker1 = document.getElementById('tracker1');
+                const tracker2 = document.getElementById('tracker2');
+                
+                tracker1.innerHTML = '';
+                tracker2.innerHTML = '';
+                
+                for (let i = 0; i < this.maxShots; i++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'shot-marker';
+                    if (i < this.player1Shots.length) {
+                        marker.classList.add(this.player1Shots[i]);
+                        marker.textContent = this.player1Shots[i] === 'goal' ? '✓' : 
+                        this.player1Shots[i] === 'save' ? '◉' : '✗';
+                    }
+                    tracker1.appendChild(marker);
+                }
+                
+                for (let i = 0; i < this.maxShots; i++) {
+                    const marker = document.createElement('div');
+                    marker.className = 'shot-marker';
+                    if (i < this.player2Shots.length) {
+                        marker.classList.add(this.player2Shots[i]);
+                        marker.textContent = this.player2Shots[i] === 'goal' ? '✓' : 
+                        this.player2Shots[i] === 'save' ? '◉' : '✗';
+                    }
+                    tracker2.appendChild(marker);
+                }
+            }
+            
+            createParticles(x, y, color, count) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 280 + 180;
+                    this.particles.push(new Particle(
+                    x, y, color,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed - 150
+                    ));
+                }
+            }
+            
+            nextTurn() {
+                this.waitingNextTurn = true;
+                this.slowMotion = false;
+                this.playerGoalkeeperChoice = null;
+                this.goalkeeperMode = false; 
+                
+                setTimeout(() => {
+                    this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
+                    
+                    if (this.currentPlayer === 1) {
+                        if (!this.suddenDeath) {
+                            this.currentShot++;
+                        }
+                        
+                        if (this.currentShot > this.maxShots && !this.suddenDeath) {
+                            if (this.score1 === this.score2) {
+                                this.suddenDeath = true;
+                                this.currentShot = 1;
+                            } else {
+                                this.endGame();
+                                return;
+                            }
+                        } else if (this.suddenDeath && this.score1 !== this.score2) {
+                            this.endGame();
+                            return;
+                        }
+                    }
+                    
+                    this.resetBall();
+                    this.resetGoalkeeper(); 
+                    this.updateHUD();
+                    this.waitingNextTurn = false;
+                    
+                    this.startCountdown();
+                }, 3500);
+            }
+            
+            endGame() {
+                this.state = 'results';
+                this.audio.stopMusic();
+                this.audio.play('whistle');
+                
+                const winner = this.score1 > this.score2 ? this.player1Name : this.player2Name;
+                
+                document.getElementById('resultTitle').textContent = 
+                this.score1 === this.score2 ? '¡EMPATE!' : `¡${winner} GANA!`;
+                document.getElementById('resultStats').innerHTML = 
+                `${this.player1Name}: ${this.score1} - ${this.score2} :${this.player2Name}`;
+                
+                document.getElementById('hud').classList.add('hidden');
+                document.getElementById('resultsMenu').classList.remove('hidden');
+                
+                if (this.mode === 'single') {
+                    this.saveScore(this.player1Name, this.score1, this.difficulty);
+                }
+            }
+            
+            restartGame() {
+                document.getElementById('resultsMenu').classList.add('hidden');
+                document.getElementById('hud').classList.remove('hidden');
+                this.resetGame();
+                this.state = 'playing';
+                this.audio.playMusic();
+                this.startCountdown();
+            }
+            
+            backToMenu() {
+                document.getElementById('resultsMenu').classList.add('hidden');
+                document.getElementById('mainMenu').classList.remove('hidden');
+                this.state = 'menu';
+                this.loadLeaderboard();
+            }
+            
+            updateHUD() {
+                document.getElementById('player1Name').textContent = this.player1Name;
+                document.getElementById('player2Name').textContent = this.player2Name;
+                document.getElementById('score1').textContent = this.score1;
+                document.getElementById('score2').textContent = this.score2;
+                
+                const currentName = this.currentPlayer === 1 ? this.player1Name : this.player2Name;
+                document.getElementById('turnInfo').textContent = `Turno: ${currentName}`;
+                
+                const shotText = this.suddenDeath ? '¡MUERTE SÚBITA!' : `${this.currentShot}/${this.maxShots}`;
+                document.getElementById('shotInfo').textContent = `Lanzamiento: ${shotText}`;
+                
+                this.updateShotTrackers();
+            }
+            
+            saveScore(name, score, difficulty) {
+                let scores = JSON.parse(localStorage.getItem('penaltyScores') || '[]');
+                scores.push({
+                    name: name,
+                    score: score,
+                    difficulty: difficulty,
+                    date: new Date().toLocaleDateString()
+                });
+                scores.sort((a, b) => b.score - a.score);
+                scores = scores.slice(0, 10);
+                localStorage.setItem('penaltyScores', JSON.stringify(scores));
+            }
+            
+            loadLeaderboard() {
+                const scores = JSON.parse(localStorage.getItem('penaltyScores') || '[]');
+                const leaderboard = document.getElementById('leaderboard');
+                
+                if (scores.length === 0) {
+                    leaderboard.innerHTML = '<p style="text-align:center; color:#666;">No hay récords aún</p>';
+                    return;
+                }
+                
+                leaderboard.innerHTML = '<h2>🏆 Mejores Puntuaciones</h2>';
+                scores.forEach((entry, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'leaderboard-entry';
+                    const diffText = {easy: '2ªRFEF', medium: '1ªDiv', hard: 'UCL'}[entry.difficulty];
+                    div.innerHTML = `<strong>${i + 1}.</strong> ${entry.name} - ${entry.score} goles (${diffText}) - ${entry.date}`;
+                    leaderboard.appendChild(div);
+                });
+            }
+            
+            update(dt) {
+                if (this.state !== 'playing') return;
+                
+                const effectiveDt = this.slowMotion ? dt * this.slowMotionFactor : dt;
+                
+                
+                if (!this.goalkeeperMode && (this.charging || (this.canShoot && !this.shooting))) {
+                    this.powerBar.value += this.powerBar.direction * this.powerBar.speed * dt;
+                    
+                    if (this.powerBar.value >= 1.0) {
+                        this.powerBar.value = 1.0;
+                        this.powerBar.direction = -1;
+                    } else if (this.powerBar.value <= 0.0) {
+                        this.powerBar.value = 0.0;
+                        this.powerBar.direction = 1;
+                    }
+                }
+                
+                
+                if (this.canShoot && !this.shooting && !this.charging && !this.countdownActive && !this.goalkeeperMode) {
+                    this.goalkeeper.anticipationTime += dt;
+                    this.goalkeeper.anticipationX = Math.sin(this.goalkeeper.anticipationTime * 2) * 20;
+                    this.goalkeeper.anticipationY = Math.sin(this.goalkeeper.anticipationTime * 4) * 5;
+                }
+                
+                if (this.shooting) {
+                    this.ball.progress += effectiveDt * 0.55;
+                    
+                    if (this.ball.progress >= 1.0) {
+                        this.ball.progress = 1.0;
+                        const result = this.checkGoal();
+                        this.shooting = false;
+                        
+                        if (!this.waitingNextTurn) {
+                            this.nextTurn();
+                        }
+                    }
+                    
+                    const t = this.ball.progress;
+                    const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    
+                    this.ball.x = this.ball.startX + (this.ball.targetX - this.ball.startX) * easeT;
+                    this.ball.y = this.ball.startY + (this.ball.targetY - this.ball.startY) * easeT;
+                    this.ball.z = this.ball.startZ + (this.ball.targetZ - this.ball.startZ) * easeT;
+                    
+                    this.ball.rotation += effectiveDt * 10;
+                    
+                    this.updateBallScreenPosition();
+                }
+                
+                if (this.goalkeeper.diving || this.goalkeeper.celebrating) {
+                    this.goalkeeper.animTime += effectiveDt;
+                    
+                    if (this.goalkeeper.diving && this.goalkeeper.animTime < 1.2) {
+                        const t = Math.min(1, this.goalkeeper.animTime / 1.2);
+                        const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                        
+                        this.goalkeeper.x = this.goalkeeper.targetX * easeT;
+                        this.goalkeeper.y = (this.goalHeight3D / 2 - 60) + this.goalkeeper.targetY * easeT;
+                        
+                        this.goalkeeper.leftArm.angle += (this.goalkeeper.leftArm.targetAngle - this.goalkeeper.leftArm.angle) * effectiveDt * 5;
+                        this.goalkeeper.rightArm.angle += (this.goalkeeper.rightArm.targetAngle - this.goalkeeper.rightArm.angle) * effectiveDt * 5;
+                        this.goalkeeper.leftLeg.angle += (this.goalkeeper.leftLeg.targetAngle - this.goalkeeper.leftLeg.angle) * effectiveDt * 5;
+                        this.goalkeeper.rightLeg.angle += (this.goalkeeper.rightLeg.targetAngle - this.goalkeeper.rightLeg.angle) * effectiveDt * 5;
+                    }
+                }
+                
+                this.particles = this.particles.filter(p => {
+                    p.update(dt);
+                    return !p.isDead();
+                });
+                
+                this.netEffects = this.netEffects.filter(e => {
+                    e.update(dt);
+                    return !e.isDead();
+                });
+            }
+            
+            updateBallScreenPosition() {
+                const perspective = 550;
+                const scale = perspective / (perspective + this.ball.z);
+                
+                this.ball.screenX = this.canvas.width / 2 + this.ball.x * scale;
+                this.ball.screenY = this.goalCenterY + this.ball.y * scale;
+            }
+            draw() {
+                const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                skyGradient.addColorStop(0, '#87CEEB');
+                skyGradient.addColorStop(0.5, '#4A90E2');
+                skyGradient.addColorStop(1, '#2C5F8D');
+                this.ctx.fillStyle = skyGradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                this.drawStadium();
+                this.drawGround();
+                this.drawGoal3DFrontal();
+                
+                this.netEffects.forEach(e => e.draw(this.ctx));
+                
+                this.drawGoalkeeper3DRealistic();
+                this.drawBall3DFrontal();
+                
+                
+                if (this.charging && this.canShoot && !this.goalkeeperMode) {
+                    this.drawAimingLine();
+                }
+                
+                this.particles.forEach(p => p.draw(this.ctx));
+                
+                
+                if (!this.goalkeeperMode) {
+                    this.drawPowerBar();
+                    
+                    if ((this.charging || this.canShoot) && !this.shooting && !this.countdownActive) {
+                        this.drawHeightBar();
+                    }
+                }
+                
+                if (this.slowMotion) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
+                    this.ctx.font = 'bold 28px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('⏱️ CÁMARA LENTA', this.canvas.width / 2, 60);
+                }
+                
+                if (this.state === 'playing' && !this.shooting && !this.charging && this.canShoot && !this.countdownActive && !this.goalkeeperMode) {
+                    this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+                    this.ctx.font = 'bold 22px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Click o ESPACIO para apuntar y disparar', 
+                    this.canvas.width / 2, this.canvas.height - 20);
+                }
+            }
+            
+            drawStadium() {
+                const horizonY = this.goalCenterY - 300; // Aumentado de 200 a 300 píxeles de separación
+                
+                this.ctx.fillStyle = '#1a1a2e';
+                this.ctx.fillRect(0, 0, this.canvas.width, horizonY + 150);
+                
+                this.ctx.fillStyle = '#16213e';
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, horizonY);
+                this.ctx.lineTo(0, this.canvas.height);
+                this.ctx.lineTo(this.canvas.width * 0.08, this.canvas.height);
+                this.ctx.lineTo(this.canvas.width * 0.12, horizonY + 100);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.canvas.width, horizonY);
+                this.ctx.lineTo(this.canvas.width, this.canvas.height);
+                this.ctx.lineTo(this.canvas.width * 0.92, this.canvas.height);
+                this.ctx.lineTo(this.canvas.width * 0.88, horizonY + 100);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                for (let row = 0; row < 5; row++) {
+                    const y = horizonY + row * 10;
+                    const numSeats = 55 + row * 5;
+                    
+                    for (let i = 0; i < numSeats; i++) {
+                        const x = (this.canvas.width * 0.12) + (i * (this.canvas.width * 0.76 / numSeats));
+                        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
+                        this.ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                        this.ctx.fillRect(x, y, 5, 4);
+                    }
+                }
+                
+                const boardY = horizonY + 60;
+                const boards = ['PENALTY SHOOTERS', 'ARCADE 2025', '⚽ FOOTBALL ⚽'];
+                boards.forEach((text, i) => {
+                    const x = this.canvas.width * (0.2 + i * 0.3);
+                    this.ctx.fillStyle = '#00FF00';
+                    this.ctx.fillRect(x - 80, boardY, 160, 22);
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.font = 'bold 11px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(text, x, boardY + 15);
+                });
+            }
+            
+            
+            // MODIFICADO - En drawGround() - línea ~1390
+            drawGround() {
+                // MODIFICADO - Césped empieza exactamente en la base de la portería
+                const groundY = this.goalGroundY - 5; // Solo 5px de margen
+                
+                const stripes = 10; // MODIFICADO - Más franjas de césped
+                for (let i = 0; i < stripes; i++) {
+                    const color = i % 2 === 0 ? '#2d7a3e' : '#3ea055';
+                    this.ctx.fillStyle = color;
+                    
+                    const stripeHeight = (this.canvas.height - groundY) / stripes;
+                    const y = groundY + i * stripeHeight;
+                    
+                    const topWidth = this.canvas.width * 0.75;
+                    const bottomWidth = this.canvas.width;
+                    const leftMargin = (this.canvas.width - topWidth) / 2;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(leftMargin * (1 - i / stripes), y);
+                    this.ctx.lineTo(this.canvas.width - leftMargin * (1 - i / stripes), y);
+                    this.ctx.lineTo(this.canvas.width - leftMargin * (1 - (i + 1) / stripes), y + stripeHeight);
+                    this.ctx.lineTo(leftMargin * (1 - (i + 1) / stripes), y + stripeHeight);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                }
+                
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                this.ctx.lineWidth = 5;
+                
+                // MODIFICADO - Línea del área justo debajo de la portería
+                const areaY = this.goalGroundY + 5;
+                const areaWidth = this.goalWidth3D * 1.15;
+                const perspective = 550;
+                const scale = perspective / (perspective + this.goalDepth * 0.55);
+                const displayWidth = areaWidth * scale;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.canvas.width / 2 - displayWidth / 2, areaY);
+                this.ctx.lineTo(this.canvas.width / 2 + displayWidth / 2, areaY);
+                this.ctx.stroke();
+                
+                this.ctx.fillStyle = 'white';
+                this.ctx.beginPath();
+                this.ctx.arc(this.penaltyX, this.penaltyY, 9, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            drawGoal3DFrontal() {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.goalCenterY;
+                
+                const perspective = 550;
+                const scale = perspective / (perspective + this.goalDepth);
+                
+                const displayWidth = this.goalWidth3D * scale;
+                const displayHeight = this.goalHeight3D * scale;
+                
+                const left = centerX - displayWidth / 2;
+                const right = centerX + displayWidth / 2;
+                const top = centerY - displayHeight / 2;
+                const bottom = centerY + displayHeight / 2;
+                
+                const innerScale = 0.80;
+                const innerLeft = centerX - (displayWidth * innerScale) / 2;
+                const innerRight = centerX + (displayWidth * innerScale) / 2;
+                const innerTop = centerY - (displayHeight * innerScale) / 2;
+                const innerBottom = centerY + (displayHeight * innerScale) / 2;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 15, 0.85)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(left, top);
+                this.ctx.lineTo(innerLeft, innerTop);
+                this.ctx.lineTo(innerRight, innerTop);
+                this.ctx.lineTo(right, top);
+                this.ctx.lineTo(right, bottom);
+                this.ctx.lineTo(innerRight, innerBottom);
+                this.ctx.lineTo(innerLeft, innerBottom);
+                this.ctx.lineTo(left, bottom);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                this.ctx.lineWidth = 2.5;
+                
+                for (let i = 0; i <= 18; i++) {
+                    const t = i / 18;
+                    const x = left + displayWidth * t;
+                    const innerX = innerLeft + (innerRight - innerLeft) * t;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, top);
+                    this.ctx.lineTo(innerX, innerTop);
+                    this.ctx.lineTo(innerX, innerBottom);
+                    this.ctx.lineTo(x, bottom);
+                    this.ctx.stroke();
+                }
+                
+                for (let i = 0; i <= 14; i++) {
+                    const t = i / 14;
+                    const y = top + displayHeight * t;
+                    const innerY = innerTop + (innerBottom - innerTop) * t;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(left, y);
+                    this.ctx.lineTo(innerLeft, innerY);
+                    this.ctx.lineTo(innerRight, innerY);
+                    this.ctx.lineTo(right, y);
+                    this.ctx.stroke();
+                }
+                
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+                this.ctx.lineWidth = 20;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+                this.ctx.beginPath();
+                this.ctx.moveTo(left + 6, bottom + 6);
+                this.ctx.lineTo(left + 6, top + 6);
+                this.ctx.lineTo(right + 6, top + 6);
+                this.ctx.lineTo(right + 6, bottom + 6);
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = 'white';
+                this.ctx.lineWidth = 16;
+                this.ctx.beginPath();
+                this.ctx.moveTo(left, bottom);
+                this.ctx.lineTo(left, top);
+                this.ctx.lineTo(right, top);
+                this.ctx.lineTo(right, bottom);
+                this.ctx.stroke();
+            }
+            
+            drawGoalkeeper3DRealistic() {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.goalCenterY;
+                
+                const perspective = 550;
+                const scale = perspective / (perspective + this.goalDepth);
+                
+                let finalGkX = this.goalkeeper.x;
+                let finalGkY = this.goalkeeper.y;
+                
+                if (!this.shooting && this.canShoot && !this.charging && !this.goalkeeperMode && !this.goalkeeper.diving) {
+                    finalGkX += this.goalkeeper.anticipationX;
+                    finalGkY += this.goalkeeper.anticipationY;
+                }
+                
+                const gkScreenX = centerX + finalGkX * scale;
+                const gkScreenY = centerY + finalGkY * scale;
+                const gkScale = scale * 1.6;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(gkScreenX, gkScreenY + 95 * gkScale, 55 * gkScale, 18 * gkScale, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                const bodyColor = this.currentPlayer === 1 ? '#FF6B35' : '#00A8E8';
+                
+                let bounceY = 0;
+                if (this.goalkeeper.celebrating) {
+                    bounceY = Math.sin(this.goalkeeper.animTime * 7) * 20 * gkScale;
+                }
+                
+                if (!this.shooting && this.canShoot && !this.charging && !this.countdownActive && !this.goalkeeperMode && !this.goalkeeper.diving) {
+                    bounceY = Math.abs(Math.sin(this.goalkeeper.anticipationTime * 4)) * 8 * gkScale;
+                }
+                
+                this.ctx.save();
+                this.ctx.translate(gkScreenX, gkScreenY + bounceY);
+                this.ctx.scale(gkScale, gkScale);
+                this.ctx.rotate(this.goalkeeper.torsoRotation);
+                
+                this.drawRealisticLeg(this.ctx, -20, 45, this.goalkeeper.leftLeg.angle, bodyColor, 'left');
+                this.drawRealisticLeg(this.ctx, 20, 45, this.goalkeeper.rightLeg.angle, bodyColor, 'right');
+                
+                const bodyGradient = this.ctx.createLinearGradient(-35, -20, 35, 20);
+                bodyGradient.addColorStop(0, this.lightenColor(bodyColor, 20));
+                bodyGradient.addColorStop(0.5, bodyColor);
+                bodyGradient.addColorStop(1, this.shadeColor(bodyColor, -40));
+                
+                this.ctx.fillStyle = bodyGradient;
+                this.ctx.strokeStyle = this.shadeColor(bodyColor, -50);
+                this.ctx.lineWidth = 2;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(-28, -15);
+                this.ctx.bezierCurveTo(-32, 0, -30, 30, -22, 50);
+                this.ctx.lineTo(-18, 52);
+                this.ctx.lineTo(18, 52);
+                this.ctx.lineTo(22, 50);
+                this.ctx.bezierCurveTo(30, 30, 32, 0, 28, -15);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = this.shadeColor(bodyColor, -70);
+                this.ctx.lineWidth = 1.5;
+                this.ctx.beginPath();
+                this.ctx.moveTo(-15, -10);
+                this.ctx.lineTo(-15, 30);
+                this.ctx.moveTo(15, -10);
+                this.ctx.lineTo(15, 30);
+                this.ctx.stroke();
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                this.ctx.font = 'bold 24px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('1', 0, 25);
+                
+                this.drawRealisticArm(this.ctx, -28, -5, this.goalkeeper.leftArm.angle, bodyColor, 'left');
+                this.drawRealisticArm(this.ctx, 28, -5, this.goalkeeper.rightArm.angle, bodyColor, 'right');
+                
+                this.drawRealisticHead(this.ctx, 0, -40);
+                
+                this.ctx.restore();
+            }
+            
+            drawRealisticLeg(ctx, x, y, angle, color, side) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                
+                const thighGradient = ctx.createLinearGradient(-8, 0, 8, 0);
+                thighGradient.addColorStop(0, this.shadeColor(color, -20));
+                thighGradient.addColorStop(0.5, color);
+                thighGradient.addColorStop(1, this.shadeColor(color, -30));
+                
+                ctx.fillStyle = thighGradient;
+                ctx.strokeStyle = this.shadeColor(color, -50);
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.ellipse(0, 15, 10, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = this.shadeColor(color, -10);
+                ctx.beginPath();
+                ctx.ellipse(side === 'left' ? -2 : 2, 38, 8, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#1a1a1a';
+                ctx.strokeStyle = '#000';
+                ctx.beginPath();
+                ctx.ellipse(side === 'left' ? -2 : 2, 52, 11, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-4, 48 + i * 3);
+                    ctx.lineTo(4, 48 + i * 3);
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
+            }
+            
+            drawRealisticArm(ctx, x, y, angle, color, side) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 16;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 35);
+                ctx.stroke();
+                
+                ctx.lineWidth = 14;
+                ctx.beginPath();
+                ctx.moveTo(0, 35);
+                ctx.lineTo(side === 'left' ? -5 : 5, 60);
+                ctx.stroke();
+                
+                const gloveX = side === 'left' ? -5 : 5;
+                const gloveY = 60;
+                
+                const gloveGradient = ctx.createRadialGradient(gloveX, gloveY, 2, gloveX, gloveY, 16);
+                gloveGradient.addColorStop(0, '#FFE44D');
+                gloveGradient.addColorStop(0.7, '#FFD700');
+                gloveGradient.addColorStop(1, '#FFA500');
+                
+                ctx.fillStyle = gloveGradient;
+                ctx.strokeStyle = '#CC8800';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.arc(gloveX, gloveY, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                for (let i = 0; i < 4; i++) {
+                    const fingerAngle = (i - 1.5) * 0.4;
+                    const fx = gloveX + Math.cos(fingerAngle) * 12;
+                    const fy = gloveY + Math.sin(fingerAngle) * 12;
+                    
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.arc(fx, fy, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                }
+                
+                ctx.fillStyle = '#CC8800';
+                ctx.font = 'bold 8px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('GK', gloveX, gloveY + 3);
+                
+                ctx.restore();
+            }
+            
+            drawRealisticHead(ctx, x, y) {
+                ctx.fillStyle = '#FFD1A3';
+                ctx.strokeStyle = '#E6B88A';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.rect(x - 6, y + 20, 12, 10);
+                ctx.fill();
+                ctx.stroke();
+                
+                const headGradient = ctx.createRadialGradient(x - 8, y - 5, 5, x, y, 28);
+                headGradient.addColorStop(0, '#FFDFC3');
+                headGradient.addColorStop(0.6, '#FFD1A3');
+                headGradient.addColorStop(1, '#E6B88A');
+                
+                ctx.fillStyle = headGradient;
+                ctx.strokeStyle = '#D4A574';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 26, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.fillStyle = '#3d2817';
+                ctx.beginPath();
+                ctx.arc(x, y - 10, 26, Math.PI, 0, true);
+                ctx.fill();
+                
+                ctx.fillStyle = '#FFD1A3';
+                ctx.beginPath();
+                ctx.ellipse(x - 24, y, 6, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.ellipse(x + 24, y, 6, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                if (this.goalkeeper.celebrating) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.arc(x - 9, y - 3, 4, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(x + 9, y - 3, 4, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                    
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(x, y + 5, 12, 0.2, Math.PI - 0.2);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(x - 9, y - 2, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + 9, y - 2, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath();
+                    ctx.arc(x - 8, y - 3, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + 10, y - 3, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = '#2d1f10';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x - 14, y - 10);
+                    ctx.lineTo(x - 5, y - 8);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(x + 14, y - 10);
+                    ctx.lineTo(x + 5, y - 8);
+                    ctx.stroke();
+                    
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x - 8, y + 12);
+                    ctx.lineTo(x + 8, y + 12);
+                    ctx.stroke();
+                }
+                
+                ctx.strokeStyle = '#D4A574';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y + 3);
+                ctx.lineTo(x - 2, y + 8);
+                ctx.stroke();
+            }
+            
+            drawBall3DFrontal() {
+                let ballX, ballY, radius;
+                
+                if (!this.shooting) {
+                    ballX = this.penaltyX;
+                    ballY = this.penaltyY;
+                    radius = 24;
+                    this.drawBallAtPosition(ballX, ballY, radius, 0);
+                } else {
+                    const perspective = 550;
+                    const scale = perspective / (perspective + this.ball.z);
+                    radius = 24 * scale * 1.9;
+                    
+                    this.drawBallAtPosition(this.ball.screenX, this.ball.screenY, radius, this.ball.rotation);
+                }
+            }
+            
+            drawBallAtPosition(x, y, radius, rotation) {
+                const shadowOffset = radius * 0.35;
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                this.ctx.beginPath();
+                this.ctx.ellipse(x + shadowOffset * 0.4, y + radius + shadowOffset, 
+                radius * 0.95, radius * 0.28, 0, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                const ballGradient = this.ctx.createRadialGradient(
+                x - radius * 0.4, y - radius * 0.4, radius * 0.1,
+                x, y, radius
+                );
+                ballGradient.addColorStop(0, '#ffffff');
+                ballGradient.addColorStop(0.35, '#fafafa');
+                ballGradient.addColorStop(0.7, '#e8e8e8');
+                ballGradient.addColorStop(1, '#b8b8b8');
+                
+                this.ctx.fillStyle = ballGradient;
+                this.ctx.strokeStyle = '#2a2a2a';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.fillStyle = '#1a1a1a';
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI * 2 / 6) * i + rotation;
+                    const distance = radius * 0.58;
+                    const px = x + Math.cos(angle) * distance;
+                    const py = y + Math.sin(angle) * distance;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(px, py, radius * 0.24, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+                this.ctx.beginPath();
+                this.ctx.arc(x - radius * 0.42, y - radius * 0.42, radius * 0.38, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                this.ctx.beginPath();
+                this.ctx.arc(x - radius * 0.28, y - radius * 0.28, radius * 0.18, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            drawAimingLine() {
+                this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
+                this.ctx.lineWidth = 6;
+                this.ctx.setLineDash([20, 14]);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.penaltyX, this.penaltyY);
+                this.ctx.lineTo(this.mouseX, this.mouseY);
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+                
+                const angle = Math.atan2(this.mouseY - this.penaltyY, this.mouseX - this.penaltyX);
+                const arrowSize = 38;
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
+                this.ctx.strokeStyle = 'rgba(255, 150, 0, 0.95)';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.mouseX, this.mouseY);
+                this.ctx.lineTo(
+                this.mouseX - arrowSize * Math.cos(angle - Math.PI / 6),
+                this.mouseY - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                this.ctx.lineTo(
+                this.mouseX - arrowSize * Math.cos(angle + Math.PI / 6),
+                this.mouseY - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = 'rgba(255, 100, 0, 1)';
+                this.ctx.lineWidth = 6;
+                this.ctx.beginPath();
+                this.ctx.arc(this.mouseX, this.mouseY, 28, 0, Math.PI * 2);
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.mouseX - 35, this.mouseY);
+                this.ctx.lineTo(this.mouseX + 35, this.mouseY);
+                this.ctx.moveTo(this.mouseX, this.mouseY - 35);
+                this.ctx.lineTo(this.mouseX, this.mouseY + 35);
+                this.ctx.stroke();
+            }
+            
+            drawPowerBar() {
+                if (!this.canShoot && !this.charging) return;
+                
+                const barWidth = 440;
+                const barHeight = 60;
+                const barX = this.canvas.width / 2- barWidth / 2;
+                const barY = this.canvas.height - 140;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                this.ctx.fillRect(barX - 8, barY - 8, barWidth + 16, barHeight + 16);
+                
+                const optimalStart = barWidth * 0.35;
+                const optimalWidth = barWidth * 0.3;
+                
+                this.ctx.fillStyle = 'rgba(0, 255, 0, 0.4)';
+                this.ctx.fillRect(barX + optimalStart, barY, optimalWidth, barHeight);
+                
+                this.ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
+                this.ctx.fillRect(barX + optimalStart * 0.5, barY, optimalStart * 0.5, barHeight);
+                this.ctx.fillRect(barX + optimalStart + optimalWidth, barY, optimalStart * 0.5, barHeight);
+                
+                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
+                this.ctx.fillRect(barX, barY, optimalStart * 0.5, barHeight);
+                this.ctx.fillRect(barX + optimalStart + optimalWidth + optimalStart * 0.5, barY, 
+                barWidth - (optimalStart + optimalWidth + optimalStart * 0.5), barHeight);
+                
+                const indicatorX = barX + this.powerBar.value * barWidth;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                this.ctx.beginPath();
+                this.ctx.moveTo(indicatorX + 3, barY - 14 + 3);
+                this.ctx.lineTo(indicatorX - 16 + 3, barY + 3);
+                this.ctx.lineTo(indicatorX + 16 + 3, barY + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(indicatorX + 3, barY + barHeight + 14 + 3);
+                this.ctx.lineTo(indicatorX - 16 + 3, barY + barHeight + 3);
+                this.ctx.lineTo(indicatorX + 16 + 3, barY + barHeight + 3);
+                this.ctx.closePath();
+                this.ctx.fill();
+                
+                let indicatorColor;
+                if (this.powerBar.value >= 0.35 && this.powerBar.value <= 0.65) {
+                    indicatorColor = '#00FF00';
+                } else if (this.powerBar.value >= 0.2 && this.powerBar.value <= 0.8) {
+                    indicatorColor = '#FFFF00';
+                } else {
+                    indicatorColor = '#FF0000';
+                }
+                
+                this.ctx.fillStyle = indicatorColor;
+                this.ctx.strokeStyle = '#FFF';
+                this.ctx.lineWidth = 4;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(indicatorX, barY - 14);
+                this.ctx.lineTo(indicatorX - 16, barY);
+                this.ctx.lineTo(indicatorX + 16, barY);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(indicatorX, barY + barHeight + 14);
+                this.ctx.lineTo(indicatorX - 16, barY + barHeight);
+                this.ctx.lineTo(indicatorX + 16, barY + barHeight);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = indicatorColor;
+                this.ctx.lineWidth = 6;
+                this.ctx.beginPath();
+                this.ctx.moveTo(indicatorX, barY);
+                this.ctx.lineTo(indicatorX, barY + barHeight);
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = '#FFF';
+                this.ctx.lineWidth = 5;
+                this.ctx.strokeRect(barX, barY, barWidth, barHeight);
+                
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                this.ctx.shadowBlur = 12;
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 24px Arial';
+                this.ctx.textAlign = 'center';
+                
+                let powerText;
+                if (this.powerBar.value >= 0.35 && this.powerBar.value <= 0.65) {
+                    powerText = '✓ POTENCIA ÓPTIMA';
+                } else if (this.powerBar.value >= 0.2 && this.powerBar.value <= 0.8) {
+                    powerText = '⚠ ARRIESGADO';
+                } else {
+                    powerText = '✗ ¡MUY PELIGROSO!';
+                }
+                
+                this.ctx.fillText(powerText, this.canvas.width / 2, barY - 32);
+                this.ctx.fillText('¡Suelta para disparar!', this.canvas.width / 2, barY + barHeight + 42);
+                this.ctx.shadowBlur = 0;
+            }
+            
+            drawHeightBar() {
+                const barX = this.canvas.width - 90;
+                const barY = this.canvas.height / 2 - 300;
+                const barHeight = 600;
+                
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                this.ctx.fillRect(barX - 8, barY - 8, 52, barHeight + 16);
+                
+                const goalTop = this.goalCenterY - this.goalHeight3D / 2;
+                const goalBottom = this.goalCenterY + this.goalHeight3D / 2;
+                const goalTopBar = barY + (goalTop / this.canvas.height) * barHeight;
+                const goalHeightBar = ((goalBottom - goalTop) / this.canvas.height) * barHeight;
+                
+                this.ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
+                this.ctx.fillRect(barX, goalTopBar, 36, goalHeightBar);
+                
+                const barGradient = this.ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+                barGradient.addColorStop(0, 'rgba(255, 50, 50, 0.7)');
+                barGradient.addColorStop(0.3, 'rgba(255, 255, 50, 0.7)');
+                barGradient.addColorStop(0.7, 'rgba(50, 255, 50, 0.7)');
+                barGradient.addColorStop(1, 'rgba(50, 50, 255, 0.7)');
+                this.ctx.fillStyle = barGradient;
+                this.ctx.fillRect(barX, barY, 36, barHeight);
+                
+                const mousePercent = Math.max(0, Math.min(1, this.mouseY / this.canvas.height));
+                const indicatorY = barY + mousePercent * barHeight;
+                
+                const inGoalZone = this.mouseY >= goalTop && this.mouseY <= goalBottom;
+                this.ctx.fillStyle = inGoalZone ? '#00FF00' : '#FF0000';
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 3;
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(barX - 22, indicatorY);
+                this.ctx.lineTo(barX - 5, indicatorY - 14);
+                this.ctx.lineTo(barX - 5, indicatorY + 14);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.beginPath();
+                this.ctx.moveTo(barX + 36 + 22, indicatorY);
+                this.ctx.lineTo(barX + 36 + 5, indicatorY - 14);
+                this.ctx.lineTo(barX + 36 + 5, indicatorY + 14);
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                this.ctx.strokeStyle = '#FFF';
+                this.ctx.lineWidth = 5;
+                this.ctx.strokeRect(barX, barY, 36, barHeight);
+                
+                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+                this.ctx.shadowBlur = 10;
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = 'bold 22px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('↑', barX + 18, barY - 38);
+                this.ctx.fillText('ALTURA', barX + 18, barY - 14);
+                this.ctx.fillText('↓', barX + 18, barY + barHeight + 38);
+                this.ctx.shadowBlur = 0;
+            }
+            
+            lightenColor(color, percent) {
+                const num = parseInt(color.replace("#",""), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = Math.min(255, (num >> 16) + amt);
+                const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+                const B = Math.min(255, (num & 0x0000FF) + amt);
+                return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
+            }
+            
+            shadeColor(color, percent) {
+                const num = parseInt(color.replace("#",""), 16);
+                const amt = Math.round(2.55 * percent);
+                const R = (num >> 16) + amt;
+                const G = (num >> 8 & 0x00FF) + amt;
+                const B = (num & 0x0000FF) + amt;
+                return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
+                (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255))
+                .toString(16).slice(1);
+            }
+            
+            gameLoop() {
+                const now = Date.now();
+                const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+                this.lastTime = now;
+                
+                this.update(dt);
+                this.draw();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        // Inicializar juego
+        let game;
+        window.addEventListener('load', () => {
+            game = new PenaltyGame();
+        });
+    </script>
+</body>
+</html>

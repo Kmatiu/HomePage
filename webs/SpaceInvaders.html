@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Invaders</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        canvas {
+            border: 2px solid #0f0;
+            background: #000;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .controls {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .audio-controls {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .volume-slider {
+            background: #000;
+            color: #0f0;
+            margin: 0 10px;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border: 2px solid #0f0;
+            z-index: 100;
+        }
+
+        .pause-overlay {
+            font-size: 36px;
+        }
+
+        .ranking {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        .ranking h3 {
+            margin-bottom: 10px;
+            color: #ff0;
+        }
+
+        .ranking-list {
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .ranking-entry {
+            margin: 5px 0;
+            padding: 2px;
+        }
+
+        .ranking-entry.highlight {
+            background: rgba(0, 255, 0, 0.2);
+            font-weight: bold;
+        }
+
+        input {
+            background: #000;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        button {
+            background: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0f0;
+            color: #000;
+        }
+
+        input[type="range"] {
+            background: #000;
+            accent-color: #0f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-info">
+        <div>PUNTUACIÓN: <span id="score">0</span></div>
+        <div>VIDAS: <span id="lives">3</span></div>
+        <div>NIVEL: <span id="level">1</span></div>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="controls">
+        <p>CONTROLES: ← → para mover | ESPACIO para disparar | P para pausar | R para reiniciar</p>
+    </div>
+
+    <div class="audio-controls">
+        <label for="volumeSlider">🔊 Volumen:</label>
+        <input type="range" id="volumeSlider" min="0" max="100" value="50" class="volume-slider">
+        <button id="muteBtn">🔇 Silenciar</button>
+    </div>
+
+    <div id="pauseOverlay" class="overlay pause-overlay" style="display: none;">
+        <h2>JUEGO PAUSADO</h2>
+        <p>Presiona P para continuar</p>
+    </div>
+
+    <div id="gameOver" class="overlay" style="display: none;">
+        <h2>GAME OVER</h2>
+        <p>Puntuación Final: <span id="finalScore">0</span></p>
+        <div id="nameInput" style="display: none;">
+            <p>¡Nuevo récord! Ingresa tu nombre:</p>
+            <input type="text" id="playerName" maxlength="15" placeholder="Tu nombre">
+            <br>
+            <button onclick="saveScore()">Guardar</button>
+        </div>
+        <div class="ranking">
+            <h3>TOP 10 PUNTUACIONES</h3>
+            <div id="rankingList" class="ranking-list"></div>
+        </div>
+        <p>Presiona R para jugar de nuevo</p>
+    </div>
+
+    <script>
+        // Configuración del audio
+        let audioContext;
+        let masterGain;
+        let isMuted = false;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                masterGain = audioContext.createGain();
+                masterGain.connect(audioContext.destination);
+                masterGain.gain.value = 0.5;
+            } catch (e) {
+                console.warn('Web Audio API no soportado:', e);
+                audioContext = null;
+            }
+        }
+
+        // Funciones para generar sonidos sintéticos
+        function playSound(frequency, duration, type = 'square', fadeOut = true) {
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+
+            if (fadeOut) {
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            } else {
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.01, audioContext.currentTime + duration);
+            }
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function playLaserSound() {
+            // Sonido láser característico: frecuencia alta que baja rápidamente
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playExplosionSound() {
+            // Sonido de explosión: ruido blanco con envolvente
+            if (!audioContext || isMuted) return;
+
+            const bufferSize = audioContext.sampleRate * 0.3;
+            const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = buffer.getChannelData(0);
+
+            // Generar ruido blanco
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+
+            const source = audioContext.createBufferSource();
+            const gainNode = audioContext.createGain();
+            const filter = audioContext.createBiquadFilter();
+
+            source.buffer = buffer;
+            source.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(2000, audioContext.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.3);
+
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+            source.start(audioContext.currentTime);
+            source.stop(audioContext.currentTime + 0.3);
+        }
+
+        function playPowerUpSound() {
+            // Sonido de subida de nivel
+            const frequencies = [200, 300, 400, 500, 600];
+            frequencies.forEach((freq, index) => {
+                setTimeout(() => {
+                    playSound(freq, 0.1, 'sine', false);
+                }, index * 50);
+            });
+        }
+
+        function playGameOverSound() {
+            // Sonido descendente para game over
+            if (!audioContext || isMuted) return;
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(masterGain);
+
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 2);
+
+            gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 2);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 2);
+        }
+
+        function playHitSound() {
+            // Sonido cuando el jugador es golpeado
+            playSound(150, 0.3, 'triangle');
+        }
+
+        function playInvaderMoveSound() {
+            // Sonido sutil cuando los invasores se mueven
+            playSound(100, 0.05, 'square', false);
+        }
+
+        // Control de volumen
+        function updateVolume() {
+            if (masterGain) {
+                const volume = document.getElementById('volumeSlider').value / 100;
+                masterGain.gain.value = isMuted ? 0 : volume;
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.textContent = isMuted ? '🔊 Activar' : '🔇 Silenciar';
+            updateVolume();
+        }
+
+        // Configuración del juego
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Variables del juego
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = true;
+        let gamePaused = false;
+        let keys = {};
+        let invaderMoveCounter = 0;
+
+        // Clase Jugador
+        class Player {
+            constructor() {
+                this.width = 40;
+                this.height = 20;
+                this.x = canvas.width / 2 - this.width / 2;
+                this.y = canvas.height - 40;
+                this.speed = 5;
+                this.bullets = [];
+                this.lastShot = 0;
+                this.shootDelay = 200;
+            }
+
+            update() {
+                // Movimiento
+                if (keys['ArrowLeft'] && this.x > 0) {
+                    this.x -= this.speed;
+                }
+                if (keys['ArrowRight'] && this.x < canvas.width - this.width) {
+                    this.x += this.speed;
+                }
+
+                // Disparar
+                if (keys[' '] && Date.now() - this.lastShot > this.shootDelay) {
+                    this.bullets.push(new Bullet(this.x + this.width/2 - 2, this.y, -8, '#0f0'));
+                    this.lastShot = Date.now();
+                    playLaserSound();
+                }
+
+                // Actualizar balas
+                this.bullets = this.bullets.filter(bullet => {
+                    bullet.update();
+                    return bullet.y > -10;
+                });
+            }
+
+            draw() {
+                // Dibujar nave del jugador
+                ctx.fillStyle = '#0f0';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+
+                // Detalles de la nave
+                ctx.fillRect(this.x + this.width/2 - 2, this.y - 10, 4, 10);
+                ctx.fillRect(this.x + 5, this.y + this.height, 5, 5);
+                ctx.fillRect(this.x + this.width - 10, this.y + this.height, 5, 5);
+
+                // Dibujar balas
+                this.bullets.forEach(bullet => bullet.draw());
+            }
+        }
+
+        // Clase Invasor
+        class Invader {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 20;
+                this.type = type;
+                this.points = type === 0 ? 30 : type === 1 ? 20 : 10;
+                this.animFrame = 0;
+            }
+
+            update() {
+                this.animFrame++;
+            }
+
+            draw() {
+                ctx.fillStyle = this.type === 0 ? '#f00' : this.type === 1 ? '#ff0' : '#0f0';
+
+                // Animación simple de los invasores
+                const offset = Math.floor(this.animFrame / 30) % 2;
+
+                if (this.type === 0) {
+                    // Invasor tipo 1 (más peligroso)
+                    ctx.fillRect(this.x + offset, this.y, this.width - offset*2, this.height);
+                    ctx.fillRect(this.x + 5, this.y - 5, 20, 5);
+                } else if (this.type === 1) {
+                    // Invasor tipo 2 (medio)
+                    ctx.fillRect(this.x + offset*2, this.y, this.width - offset*4, this.height);
+                    ctx.fillRect(this.x + 8, this.y - 3, 14, 3);
+                } else {
+                    // Invasor tipo 3 (básico)
+                    ctx.fillRect(this.x + offset, this.y, this.width - offset*2, this.height);
+                }
+
+                // Detalles
+                ctx.fillRect(this.x + 10 + offset, this.y + 5, 10, 10);
+            }
+        }
+
+        // Clase Bala
+        class Bullet {
+            constructor(x, y, speed, color) {
+                this.x = x;
+                this.y = y;
+                this.width = 4;
+                this.height = 10;
+                this.speed = speed;
+                this.color = color;
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        // Inicialización del juego
+        let player = new Player();
+        let invaders = [];
+        let invaderBullets = [];
+        let invaderDirection = 1;
+        let invaderSpeed = 1;
+        let invaderDropDistance = 20;
+        let lastInvaderShot = 0;
+
+        function createInvaders() {
+            invaders = [];
+            const rows = 5;
+            const cols = 10;
+            const startX = 50;
+            const startY = 50;
+            const spacingX = 60;
+            const spacingY = 50;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const type = row < 1 ? 0 : row < 3 ? 1 : 2;
+                    invaders.push(new Invader(
+                        startX + col * spacingX,
+                        startY + row * spacingY,
+                        type
+                    ));
+                }
+            }
+        }
+
+        function checkCollisions() {
+            // Balas del jugador vs invasores
+            player.bullets.forEach((bullet, bulletIndex) => {
+                invaders.forEach((invader, invaderIndex) => {
+                    if (bullet.x < invader.x + invader.width &&
+                        bullet.x + bullet.width > invader.x &&
+                        bullet.y < invader.y + invader.height &&
+                        bullet.y + bullet.height > invader.y) {
+
+                        score += invader.points;
+                        invaders.splice(invaderIndex, 1);
+                        player.bullets.splice(bulletIndex, 1);
+                        playExplosionSound();
+                    }
+                });
+            });
+
+            // Balas de invasores vs jugador
+            invaderBullets.forEach((bullet, bulletIndex) => {
+                if (bullet.x < player.x + player.width &&
+                    bullet.x + bullet.width > player.x &&
+                    bullet.y < player.y + player.height &&
+                    bullet.y + bullet.height > player.y) {
+
+                    lives--;
+                    invaderBullets.splice(bulletIndex, 1);
+                    playHitSound();
+
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            });
+
+            // Invasores que llegan abajo
+            invaders.forEach(invader => {
+                if (invader.y + invader.height >= player.y) {
+                    lives = 0;
+                    endGame();
+                }
+            });
+        }
+
+        function updateInvaders() {
+            let moveDown = false;
+
+            // Verificar si algún invasor toca el borde
+            invaders.forEach(invader => {
+                if ((invader.x <= 0 && invaderDirection === -1) ||
+                    (invader.x >= canvas.width - invader.width && invaderDirection === 1)) {
+                    moveDown = true;
+                }
+            });
+
+            if (moveDown) {
+                invaderDirection *= -1;
+                invaders.forEach(invader => {
+                    invader.y += invaderDropDistance;
+                });
+            }
+
+            // Mover invasores
+            invaders.forEach(invader => {
+                invader.x += invaderSpeed * invaderDirection;
+                invader.update();
+            });
+
+            // Sonido de movimiento de invasores (ocasionalmente)
+            invaderMoveCounter++;
+            if (invaderMoveCounter % 60 === 0 && invaders.length > 0) {
+                playInvaderMoveSound();
+            }
+
+            // Disparos de invasores
+            if (Date.now() - lastInvaderShot > 1000 + Math.random() * 2000) {
+                if (invaders.length > 0) {
+                    const shooter = invaders[Math.floor(Math.random() * invaders.length)];
+                    invaderBullets.push(new Bullet(
+                        shooter.x + shooter.width/2 - 2,
+                        shooter.y + shooter.height,
+                        3,
+                        '#f00'
+                    ));
+                    lastInvaderShot = Date.now();
+                    playSound(200, 0.1, 'sawtooth');
+                }
+            }
+
+            // Actualizar balas de invasores
+            invaderBullets = invaderBullets.filter(bullet => {
+                bullet.update();
+                return bullet.y < canvas.height + 10;
+            });
+        }
+
+        function updateGame() {
+            if (!gameRunning || gamePaused) return;
+
+            // Limpiar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Actualizar y dibujar jugador
+            player.update();
+            player.draw();
+
+            // Actualizar y dibujar invasores
+            updateInvaders();
+            invaders.forEach(invader => invader.draw());
+
+            // Dibujar balas de invasores
+            invaderBullets.forEach(bullet => bullet.draw());
+
+            // Verificar colisiones
+            checkCollisions();
+
+            // Verificar si se completó el nivel
+            if (invaders.length === 0) {
+                level++;
+                invaderSpeed += 0.5;
+                createInvaders();
+                player.bullets = [];
+                invaderBullets = [];
+                playPowerUpSound();
+            }
+
+            // Actualizar UI
+            document.getElementById('score').textContent = score;
+            document.getElementById('lives').textContent = lives;
+            document.getElementById('level').textContent = level;
+        }
+
+        function togglePause() {
+            gamePaused = !gamePaused;
+            document.getElementById('pauseOverlay').style.display = gamePaused ? 'block' : 'none';
+        }
+
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('finalScore').textContent = score;
+            playGameOverSound();
+
+            // Verificar si la puntuación merece estar en el ranking
+            if (isTopScore(score)) {
+                document.getElementById('nameInput').style.display = 'block';
+                // Para que la "R" se escriba en el input, debemos enfocarlo.
+                document.getElementById('playerName').focus();
+            }
+
+            displayRanking();
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function getHighScores() {
+            const scores = localStorage.getItem('spaceInvadersHighScores');
+            return scores ? JSON.parse(scores) : [];
+        }
+
+        function saveHighScores(scores) {
+            localStorage.setItem('spaceInvadersHighScores', JSON.stringify(scores));
+        }
+
+        function isTopScore(newScore) {
+            const highScores = getHighScores();
+            return highScores.length < 10 || newScore > highScores[highScores.length - 1].score;
+        }
+
+        function saveScore() {
+            const playerName = document.getElementById('playerName').value.trim();
+            // Utilizar un div custom en lugar de alert()
+            if (!playerName) {
+                const nameInputDiv = document.getElementById('nameInput');
+                // Puedes mostrar un mensaje temporal en el div o usar un elemento temporal
+                const existingWarning = nameInputDiv.querySelector('.warning-message');
+                if (existingWarning) existingWarning.remove();
+
+                const warning = document.createElement('p');
+                warning.className = 'warning-message';
+                warning.style.color = '#f00';
+                warning.textContent = 'Por favor, ingresa tu nombre.';
+                nameInputDiv.prepend(warning);
+
+                // Ocultar después de 2 segundos
+                setTimeout(() => {
+                    if (nameInputDiv.querySelector('.warning-message')) {
+                        nameInputDiv.querySelector('.warning-message').remove();
+                    }
+                }, 2000);
+                document.getElementById('playerName').focus();
+                return;
+            }
+
+            const highScores = getHighScores();
+            highScores.push({ name: playerName, score: score });
+            highScores.sort((a, b) => b.score - a.score);
+            highScores.splice(10); // Mantener solo top 10
+
+            saveHighScores(highScores);
+            document.getElementById('nameInput').style.display = 'none';
+            displayRanking();
+        }
+
+        function displayRanking() {
+            const highScores = getHighScores();
+            const rankingList = document.getElementById('rankingList');
+
+            if (highScores.length === 0) {
+                rankingList.innerHTML = '<p>No hay puntuaciones guardadas</p>';
+                return;
+            }
+
+            let html = '';
+            // Obtenemos el nombre del jugador actual, si lo ha guardado
+            const currentName = document.getElementById('playerName').value.trim();
+
+            highScores.forEach((entry, index) => {
+                // He modificado la lógica de resaltado para ser más robusta, aunque tu código original no lo usaba, es una buena práctica.
+                // Lo mantendremos simple: solo resaltamos si la puntuación final coincide.
+                const isCurrentScore = entry.score === score && index < 10 && currentName === entry.name;
+                const className = isCurrentScore ? 'ranking-entry highlight' : 'ranking-entry';
+                html += `<div class="${className}">${index + 1}. ${entry.name} - ${entry.score}</div>`;
+            });
+
+            rankingList.innerHTML = html;
+        }
+
+        function resetGame() {
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            gamePaused = false;
+            invaderSpeed = 1;
+            invaderMoveCounter = 0;
+
+            player = new Player();
+            invaderBullets = [];
+            createInvaders();
+
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('pauseOverlay').style.display = 'none';
+            document.getElementById('nameInput').style.display = 'none';
+            document.getElementById('playerName').value = '';
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            const isNameInputVisible = document.getElementById('nameInput').style.display !== 'none';
+
+            // 1. Manejar pausa (P)
+            if (e.key === 'p' || e.key === 'P') {
+                if (gameRunning && !isNameInputVisible) { // No pausar si se está ingresando el nombre
+                    togglePause();
+                }
+                return;
+            }
+
+            // 2. Manejar reinicio (R)
+            // ************ MODIFICACIÓN CLAVE AQUÍ ************
+            if (e.key === 'r' || e.key === 'R') {
+                if (document.getElementById('gameOver').style.display === 'block') {
+                    // Si la pantalla de Game Over está visible...
+                    if (!isNameInputVisible) {
+                        // ... y NO se está pidiendo el nombre, entonces se reinicia.
+                        resetGame();
+                    } else {
+                        // ... y SÍ se está pidiendo el nombre, la tecla R debe escribir en el input.
+                        // Prevenimos el comportamiento por defecto (que podría ser, por ejemplo, refrescar la página en ciertos contextos),
+                        // pero permitimos que el evento se propague al input.
+                        // Como el campo está enfocado (focus), la tecla se registrará ahí.
+                        e.stopPropagation(); // Prevenimos que otros listeners lo capturen si hubieran
+                        return;
+                    }
+                }
+                // Si el juego está corriendo o en pausa, la R no tiene efecto (salvo si queremos reiniciar)
+                // Pero como el usuario solo quiere que funcione en Game Over, lo dejamos así.
+            }
+            // *************************************************
+
+            // 3. Manejar guardar puntuación (Enter)
+            if (e.key === 'Enter' && isNameInputVisible) {
+                saveScore();
+                return;
+            }
+
+            // 4. Manejar movimiento y disparo (si no está pausado y no estamos escribiendo un nombre)
+            if (!gamePaused && !isNameInputVisible) {
+                keys[e.key] = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Controles de audio
+        document.getElementById('volumeSlider').addEventListener('input', updateVolume);
+        document.getElementById('muteBtn').addEventListener('click', toggleMute);
+
+        // Manejar la activación del contexto de audio (requerido por algunos navegadores)
+        document.addEventListener('click', () => {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        });
+
+        // Inicializar juego
+        initAudio();
+        createInvaders();
+        setInterval(updateGame, 16); // ~60 FPS
+    </script>
+</body>
+</html>

@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Prompts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 20px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-box:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 20px 20px 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px 30px;
+            background: rgba(255, 255, 255, 0.9);
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .folder {
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .folder-header {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .folder-header:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .folder-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .folder-name {
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .folder-count {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .folder-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .folder-header:hover .folder-actions {
+            opacity: 1;
+        }
+
+        .folder-action-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .folder-action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .folder.expanded .folder-header {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .folder-content {
+            display: none;
+            padding: 0;
+        }
+
+        .folder.expanded .folder-content {
+            display: block;
+        }
+
+        .prompt-list {
+            list-style: none;
+        }
+
+        .prompt-item {
+            padding: 12px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .prompt-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .prompt-item.selected {
+            background: rgba(79, 70, 229, 0.3);
+        }
+
+        .prompt-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            flex: 1;
+        }
+
+        .prompt-item-actions {
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .prompt-item:hover .prompt-item-actions {
+            opacity: 1;
+        }
+
+        .prompt-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .prompt-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .prompt-title {
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .prompt-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .prompt-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #059669;
+        }
+
+        .edit-btn {
+            background: #f59e0b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .edit-btn:hover {
+            background: #d97706;
+        }
+
+        .delete-btn {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #b91c1c;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-size: 16px;
+            margin-top: 50px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .hidden-input {
+            display: none;
+        }
+
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>Carpetas</h2>
+                <input type="text" class="search-box" placeholder="Buscar en esta carpeta..." id="searchBox" oninput="searchPrompts()">
+                <button class="btn btn-primary" onclick="createFolder()" style="width: 100%; margin-top: 10px;">
+                    + Nueva Carpeta
+                </button>
+            </div>
+            <div class="sidebar-content">
+                <div id="folderList"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header">
+                <div class="header-left">
+                    <h1 id="currentFolderTitle">Selecciona una carpeta</h1>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" onclick="createPrompt()">+ Nuevo Prompt</button>
+                    <button class="btn btn-danger" onclick="deleteCurrentFolder()" id="deleteFolderBtn" style="display: none;">Eliminar Carpeta</button>
+                    <button class="btn btn-secondary" onclick="exportData()">Exportar</button>
+                    <button class="btn btn-secondary" onclick="importData()">Importar</button>
+                </div>
+            </div>
+            <div class="content-area">
+                <div id="promptGrid" class="prompt-grid"></div>
+                <div id="emptyState" class="empty-state">
+                    Selecciona una carpeta para ver los prompts
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar carpeta -->
+    <div id="folderModal" class="modal">
+        <div class="modal-content">
+            <h3>Editar Carpeta</h3>
+            <div class="form-group">
+                <label>Nombre:</label>
+                <input type="text" id="folderNameInput" />
+            </div>
+            <div class="form-group">
+                <label>Color:</label>
+                <input type="color" id="folderColorInput" />
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeFolderModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveFolderChanges()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar prompt -->
+    <div id="promptModal" class="modal">
+        <div class="modal-content">
+            <h3>Editar Prompt</h3>
+            <div class="form-group">
+                <label>Título:</label>
+                <input type="text" id="promptTitleInput" />
+            </div>
+            <div class="form-group">
+                <label>Descripción:</label>
+                <textarea id="promptDescriptionInput"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Contenido del Prompt:</label>
+                <textarea id="promptContentInput" style="height: 150px;"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closePromptModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="savePromptChanges()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="importFile" class="hidden-input" accept=".json" />
+
+    <script>
+        let data = {
+            folders: [],
+            prompts: []
+        };
+        let currentFolder = null;
+        let editingFolder = null;
+        let editingPrompt = null;
+        let filteredPrompts = [];
+        let selectedPromptId = null;
+
+        // Cargar datos del localStorage
+        function loadData() {
+            const saved = localStorage.getItem('promptManager');
+            if (saved) {
+                data = JSON.parse(saved);
+            } else {
+                // Datos iniciales con carpeta de Ronie
+                data = {
+                    folders: [
+                        { id: 1, name: 'Prompts de Ronie', color: '#8b5cf6' }
+                    ],
+                    prompts: [
+                        {
+                            id: 1,
+                            folderId: 1,
+                            title: '01 - Space Invaders',
+                            description: 'Crea un juego tipo space invaders fiel al original en un único archivo html.',
+                            content: 'Crea un juego tipo space invaders fiel al original en un único archivo html.'
+                        },
+                        {
+                            id: 2,
+                            folderId: 1,
+                            title: '02 - Solicitar Contexto',
+                            description: 'Para antes de empezar, me hagas cinco preguntas deberías contestar para que tengas suficiente contexto para crear una buena respuesta.',
+                            content: 'Para antes de empezar, me hagas cinco preguntas deberías contestar para que tengas suficiente contexto para crear una buena respuesta.'
+                        },
+                        {
+                            id: 3,
+                            folderId: 1,
+                            title: '03 - Crea mail combinado',
+                            description: 'Sigue el pie de la letra estas especificaciones: Dirigido a [Nombre del Cliente] de la empresa [Nombre de la Empresa], que se especializa en...',
+                            content: 'Sigue el pie de la letra estas especificaciones: Dirigido a [Nombre del Cliente] de la empresa [Nombre de la Empresa], que se especializa en...'
+                        },
+                        {
+                            id: 4,
+                            folderId: 1,
+                            title: '04 - Combina mails',
+                            description: 'Sigue las instrucciones que te he compartido en esta captura. Los campos entre corchetes son los que tienes que usar con tu conocimiento.',
+                            content: 'Sigue las instrucciones que te he compartido en esta captura. Los campos entre corchetes son los que tienes que usar con tu conocimiento.'
+                        },
+                        {
+                            id: 5,
+                            folderId: 1,
+                            title: '05 - Resume Vídeo',
+                            description: 'Crea un resumen detallado sobre el video que te comparto. Obtén los elementos más destacables de la entrevista. Pídele al usuario que a continuación...',
+                            content: 'Crea un resumen detallado sobre el video que te comparto. Obtén los elementos más destacables de la entrevista. Pídele al usuario que a continuación...'
+                        }
+                    ]
+                };
+                saveData();
+            }
+        }
+
+        // Guardar datos en localStorage
+        function saveData() {
+            localStorage.setItem('promptManager', JSON.stringify(data));
+        }
+
+        // Buscar prompts
+        function searchPrompts() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase();
+            if (!currentFolder) return;
+
+            if (searchTerm === '') {
+                filteredPrompts = data.prompts.filter(p => p.folderId === currentFolder.id);
+            } else {
+                filteredPrompts = data.prompts.filter(p => 
+                    p.folderId === currentFolder.id && 
+                    (p.title.toLowerCase().includes(searchTerm) || 
+                     p.description.toLowerCase().includes(searchTerm) ||
+                     p.content.toLowerCase().includes(searchTerm))
+                );
+            }
+            
+            renderFolders();
+            renderPrompts();
+        }
+
+        // Renderizar carpetas
+        function renderFolders() {
+            const folderList = document.getElementById('folderList');
+            folderList.innerHTML = '';
+
+            data.folders.forEach(folder => {
+                const folderEl = document.createElement('div');
+                folderEl.className = 'folder';
+                if (currentFolder && currentFolder.id === folder.id) {
+                    folderEl.classList.add('expanded');
+                }
+
+                const allPrompts = data.prompts.filter(p => p.folderId === folder.id);
+                const promptCount = currentFolder && currentFolder.id === folder.id ? 
+                    filteredPrompts.length : allPrompts.length;
+
+                folderEl.innerHTML = `
+                    <div class="folder-header" onclick="selectFolder(${folder.id})">
+                        <div class="folder-icon" style="background: ${folder.color}"></div>
+                        <div class="folder-name">${folder.name}</div>
+                        <div class="folder-count">${promptCount}</div>
+                        <div class="folder-actions">
+                            <button class="folder-action-btn" onclick="event.stopPropagation(); editFolder(${folder.id})" title="Editar">✎</button>
+                        </div>
+                    </div>
+                    <div class="folder-content">
+                        <ul class="prompt-list" id="promptList${folder.id}"></ul>
+                    </div>
+                `;
+
+                // Renderizar lista de prompts en la carpeta expandida
+                if (currentFolder && currentFolder.id === folder.id) {
+                    const promptList = folderEl.querySelector(`#promptList${folder.id}`);
+                    
+                    if (filteredPrompts.length === 0) {
+                        const searchTerm = document.getElementById('searchBox').value;
+                        const noResultsMsg = searchTerm ? 'No se encontraron prompts' : 'Esta carpeta está vacía';
+                        promptList.innerHTML = `<div class="no-results">${noResultsMsg}</div>`;
+                    } else {
+                        filteredPrompts.forEach(prompt => {
+                            const li = document.createElement('li');
+                            li.className = 'prompt-item';
+                            if (selectedPromptId === prompt.id) {
+                                li.classList.add('selected');
+                            }
+                            
+                            li.innerHTML = `
+                                <div class="prompt-item-title">${prompt.title}</div>
+                                <div class="prompt-item-actions">
+                                    <button class="folder-action-btn" onclick="event.stopPropagation(); editPrompt(${prompt.id})" title="Editar">✎</button>
+                                    <button class="folder-action-btn" onclick="event.stopPropagation(); deletePrompt(${prompt.id})" title="Eliminar">🗑</button>
+                                </div>
+                            `;
+                            
+                            li.onclick = () => selectPrompt(prompt.id);
+                            promptList.appendChild(li);
+                        });
+                    }
+                }
+
+                folderList.appendChild(folderEl);
+            });
+        }
+
+        // Seleccionar prompt
+        function selectPrompt(promptId) {
+            selectedPromptId = promptId;
+            renderFolders();
+            
+            // Scroll al prompt seleccionado en la vista principal
+            const promptCards = document.querySelectorAll('.prompt-card');
+            promptCards.forEach(card => {
+                const cardId = parseInt(card.dataset.promptId);
+                if (cardId === promptId) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    card.style.outline = '3px solid #4f46e5';
+                    setTimeout(() => {
+                        card.style.outline = '';
+                    }, 2000);
+                }
+            });
+        }
+
+        // Seleccionar carpeta
+        function selectFolder(folderId) {
+            currentFolder = data.folders.find(f => f.id === folderId);
+            selectedPromptId = null;
+            document.getElementById('currentFolderTitle').textContent = currentFolder.name;
+            document.getElementById('deleteFolderBtn').style.display = 'inline-block';
+            
+            // Resetear búsqueda
+            document.getElementById('searchBox').value = '';
+            filteredPrompts = data.prompts.filter(p => p.folderId === currentFolder.id);
+            
+            renderFolders();
+            renderPrompts();
+        }
+
+        // Renderizar prompts
+        function renderPrompts() {
+            const promptGrid = document.getElementById('promptGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            if (!currentFolder) {
+                promptGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                emptyState.textContent = 'Selecciona una carpeta para ver los prompts';
+                return;
+            }
+
+            if (filteredPrompts.length === 0) {
+                promptGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                const searchTerm = document.getElementById('searchBox').value;
+                emptyState.textContent = searchTerm ? 
+                    'No se encontraron prompts que coincidan con la búsqueda' : 
+                    'Esta carpeta está vacía. Crea un nuevo prompt para empezar.';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            promptGrid.innerHTML = '';
+
+            filteredPrompts.forEach(prompt => {
+                const promptEl = document.createElement('div');
+                promptEl.className = 'prompt-card';
+                promptEl.dataset.promptId = prompt.id;
+
+                promptEl.innerHTML = `
+                    <div class="prompt-title">${prompt.title}</div>
+                    <div class="prompt-description">${prompt.description}</div>
+                    <div class="prompt-actions">
+                        <button class="copy-btn" onclick="copyToClipboard(${prompt.id}, this)">Copiar</button>
+                        <button class="edit-btn" onclick="editPrompt(${prompt.id})">Editar</button>
+                        <button class="delete-btn" onclick="deletePrompt(${prompt.id})">Eliminar</button>
+                    </div>
+                `;
+
+                promptGrid.appendChild(promptEl);
+            });
+        }
+
+        // Crear carpeta
+        function createFolder() {
+            const name = prompt('Nombre de la carpeta:');
+            if (name && name.trim()) {
+                const newFolder = {
+                    id: Date.now(),
+                    name: name.trim(),
+                    color: '#8b5cf6'
+                };
+                data.folders.push(newFolder);
+                saveData();
+                renderFolders();
+            }
+        }
+
+        // Eliminar carpeta actual
+        function deleteCurrentFolder() {
+            if (!currentFolder) return;
+            
+            const promptCount = data.prompts.filter(p => p.folderId === currentFolder.id).length;
+            const message = promptCount > 0 ? 
+                `¿Estás seguro de que quieres eliminar la carpeta "${currentFolder.name}" y sus ${promptCount} prompts? Esta acción no se puede deshacer.` :
+                `¿Estás seguro de que quieres eliminar la carpeta "${currentFolder.name}"? Esta acción no se puede deshacer.`;
+            
+            if (confirm(message)) {
+                data.folders = data.folders.filter(f => f.id !== currentFolder.id);
+                data.prompts = data.prompts.filter(p => p.folderId !== currentFolder.id);
+                currentFolder = null;
+                selectedPromptId = null;
+                document.getElementById('currentFolderTitle').textContent = 'Selecciona una carpeta';
+                document.getElementById('deleteFolderBtn').style.display = 'none';
+                document.getElementById('searchBox').value = '';
+                saveData();
+                renderFolders();
+                renderPrompts();
+            }
+        }
+
+        // Editar carpeta
+        function editFolder(folderId) {
+            editingFolder = data.folders.find(f => f.id === folderId);
+            document.getElementById('folderNameInput').value = editingFolder.name;
+            document.getElementById('folderColorInput').value = editingFolder.color;
+            document.getElementById('folderModal').classList.add('show');
+        }
+
+        function closeFolderModal() {
+            document.getElementById('folderModal').classList.remove('show');
+            editingFolder = null;
+        }
+
+        function saveFolderChanges() {
+            if (editingFolder) {
+                const newName = document.getElementById('folderNameInput').value.trim();
+                if (!newName) {
+                    alert('El nombre de la carpeta no puede estar vacío');
+                    return;
+                }
+                
+                editingFolder.name = newName;
+                editingFolder.color = document.getElementById('folderColorInput').value;
+                saveData();
+                renderFolders();
+                if (currentFolder && currentFolder.id === editingFolder.id) {
+                    currentFolder = editingFolder;
+                    document.getElementById('currentFolderTitle').textContent = currentFolder.name;
+                }
+                closeFolderModal();
+            }
+        }
+
+        // Crear prompt
+        function createPrompt() {
+            if (!currentFolder) {
+                alert('Selecciona una carpeta primero');
+                return;
+            }
+
+            editingPrompt = {
+                id: Date.now(),
+                folderId: currentFolder.id,
+                title: '',
+                description: '',
+                content: ''
+            };
+
+            document.getElementById('promptTitleInput').value = '';
+            document.getElementById('promptDescriptionInput').value = '';
+            document.getElementById('promptContentInput').value = '';
+            document.getElementById('promptModal').classList.add('show');
+        }
+
+        // Editar prompt
+        function editPrompt(promptId) {
+            editingPrompt = data.prompts.find(p => p.id === promptId);
+            document.getElementById('promptTitleInput').value = editingPrompt.title;
+            document.getElementById('promptDescriptionInput').value = editingPrompt.description;
+            document.getElementById('promptContentInput').value = editingPrompt.content;
+            document.getElementById('promptModal').classList.add('show');
+        }
+
+        function closePromptModal() {
+            document.getElementById('promptModal').classList.remove('show');
+            editingPrompt = null;
+        }
+
+        function savePromptChanges() {
+            if (editingPrompt) {
+                const title = document.getElementById('promptTitleInput').value.trim();
+                const description = document.getElementById('promptDescriptionInput').value.trim();
+                const content = document.getElementById('promptContentInput').value.trim();
+
+                if (!title || !content) {
+                    alert('El título y el contenido son obligatorios');
+                    return;
+                }
+
+                editingPrompt.title = title;
+                editingPrompt.description = description;
+                editingPrompt.content = content;
+
+                if (!data.prompts.find(p => p.id === editingPrompt.id)) {
+                    data.prompts.push(editingPrompt);
+                }
+
+                saveData();
+                searchPrompts(); // Actualizar filtros
+                closePromptModal();
+            }
+        }
+
+        // Eliminar prompt
+        function deletePrompt(promptId) {
+            const prompt = data.prompts.find(p => p.id === promptId);
+            if (prompt && confirm(`¿Estás seguro de que quieres eliminar el prompt "${prompt.title}"? Esta acción no se puede deshacer.`)) {
+                data.prompts = data.prompts.filter(p => p.id !== promptId);
+                if (selectedPromptId === promptId) {
+                    selectedPromptId = null;
+                }
+                saveData();
+                searchPrompts(); // Actualizar filtros
+            }
+        }
+
+        // Copiar al portapapeles - CORREGIDO
+        async function copyToClipboard(promptId, button) {
+            const prompt = data.prompts.find(p => p.id === promptId);
+            if (!prompt) return;
+
+            const textToCopy = prompt.content;
+            
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+                // Feedback visual
+                const originalText = button.textContent;
+                const originalColor = button.style.backgroundColor;
+                button.textContent = '¡Copiado!';
+                button.style.backgroundColor = '#059669';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = originalColor;
+                }, 1500);
+            } catch (err) {
+                console.error('Error al copiar:', err);
+                // Fallback para navegadores antiguos
+                const textarea = document.createElement('textarea');
+                textarea.value = textToCopy;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                const originalText = button.textContent;
+                const originalColor = button.style.backgroundColor;
+                button.textContent = '¡Copiado!';
+                button.style.backgroundColor = '#059669';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.backgroundColor = originalColor;
+                }, 1500);
+            }
+        }
+
+        // Exportar datos
+        function exportData() {
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'prompts-backup.json';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Importar datos
+        function importData() {
+            const fileInput = document.getElementById('importFile');
+            fileInput.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
+                            if (importedData.folders && importedData.prompts) {
+                                if (confirm('¿Quieres reemplazar todos los datos actuales? Esta acción no se puede deshacer.')) {
+                                    data = importedData;
+                                    saveData();
+                                    currentFolder = null;
+                                    selectedPromptId = null;
+                                    document.getElementById('currentFolderTitle').textContent = 'Selecciona una carpeta';
+                                    document.getElementById('deleteFolderBtn').style.display = 'none';
+                                    document.getElementById('searchBox').value = '';
+                                    filteredPrompts = [];
+                                    renderFolders();
+                                    renderPrompts();
+                                    alert('Datos importados correctamente');
+                                }
+                            } else {
+                                alert('Archivo inválido. Debe contener carpetas y prompts.');
+                            }
+                        } catch (err) {
+                            alert('Error al leer el archivo. Asegúrate de que sea un archivo JSON válido.');
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+                // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+                fileInput.value = '';
+            };
+            fileInput.click();
+        }
+
+        // Cerrar modales al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
+                editingFolder = null;
+                editingPrompt = null;
+            }
+        });
+
+        // Atajos de teclado
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + N para nuevo prompt
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n' && currentFolder) {
+                e.preventDefault();
+                createPrompt();
+            }
+            
+            // Escape para cerrar modales
+            if (e.key === 'Escape') {
+                const openModal = document.querySelector('.modal.show');
+                if (openModal) {
+                    openModal.classList.remove('show');
+                    editingFolder = null;
+                    editingPrompt = null;
+                }
+            }
+        });
+
+        // Inicializar la aplicación
+        loadData();
+        renderFolders();
+        renderPrompts();
+
+        // Seleccionar automáticamente la primera carpeta si existe
+        if (data.folders.length > 0) {
+            selectFolder(data.folders[0].id);
+        }
+    </script>
+</body>
+</html>

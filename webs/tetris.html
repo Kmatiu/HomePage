@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clásico Tetris</title>
+    <!-- Importación de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        
+        /* Estilos generales para un look retro */
+        body {
+            background-color: #1a1a2e; /* Fondo oscuro */
+            color: #e0f7fa; /* Texto claro */
+            font-family: 'Press Start 2P', cursive;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            user-select: none; /* Evita la selección de texto */
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            background-color: #0d0c1d;
+            padding: 20px;
+            border: 8px solid #3d0000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            border-radius: 10px;
+        }
+        
+        .game-container.doubles-mode {
+            gap: 40px;
+        }
+        
+        .player-section {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+        }
+        
+        .player-label {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.8rem;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+        }
+        
+        /* Estilo del tablero de juego */
+        #gameCanvas, #gameCanvas2 {
+            border: 4px solid #4a0000;
+            background-color: #000000;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Estilos de la barra lateral de información */
+        .sidebar {
+            width: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            font-size: 10px;
+        }
+        
+        .info-box {
+            background-color: #1e1e3f;
+            padding: 10px;
+            border: 2px solid #3d0000;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .info-box h3 {
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+            color: #ffcc00;
+        }
+        
+        .value {
+            font-size: 1.2rem;
+            color: #00ff00;
+            min-height: 20px;
+            display: block;
+        }
+        
+        .highscore-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.6rem;
+            max-height: 120px;
+            overflow-y: auto;
+            color: #e0f7fa;
+        }
+        
+        .highscore-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+        
+        .highscore-item:last-child {
+            border-bottom: none;
+        }
+        
+        .highscore-rank {
+            color: #ffcc00;
+        }
+        
+        .highscore-item.highlight {
+            background: rgba(0, 255, 0, 0.2);
+            font-weight: bold;
+        }
+        
+        /* Estilo del área de la siguiente pieza */
+        #nextPieceCanvas, #nextPieceCanvas2 {
+            border: 1px solid #4a0000;
+            background-color: #0d0c1d;
+            margin: 0 auto;
+        }
+        
+        .controls-info {
+            font-size: 0.7rem;
+            margin-top: 15px;
+            text-align: left;
+            padding: 10px;
+            background-color: #1e1e3f;
+            border: 2px solid #3d0000;
+            border-radius: 5px;
+        }
+        
+        .overlay {
+            position: fixed; /* Usar fixed para asegurar que cubra todo */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        .overlay-content {
+            background-color: #1a1a2e;
+            padding: 40px 30px;
+            border: 5px solid #00ff00;
+            border-radius: 10px;
+            box-shadow: 0 0 30px #00ff00;
+            max-width: 90%;
+            min-width: 300px;
+        }
+        
+        .overlay-content h2 {
+            font-size: 2rem;
+            color: #ff0000;
+            margin-bottom: 20px;
+        }
+        
+        .overlay-content button {
+            background-color: #3d0000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            padding: 10px 20px;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+        }
+        
+        .overlay-content button:hover {
+            background-color: #00ff00;
+            color: #1a1a2e;
+            box-shadow: 0 0 15px #00ff00;
+        }
+        
+        .input-group {
+            margin-top: 15px;
+        }
+        
+        .input-group input {
+            background-color: #0d0c1d;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 5px 10px;
+            margin-top: 5px;
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            width: 80%;
+            max-width: 200px;
+            user-select: text; /* Añade esta línea */
+        }
+        
+        .input-group button {
+            margin-top: 10px;
+        }
+        
+        .warning-message {
+            color: #ff0000;
+            font-size: 0.6rem;
+            margin-top: 5px;
+        }
+        
+        .ranking {
+            margin-top: 15px;
+            font-size: 0.7rem;
+        }
+        
+        .ranking h3 {
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+        
+        .ranking-list {
+            text-align: left;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .ranking-entry {
+            margin: 5px 0;
+            padding: 2px;
+        }
+        
+        .ranking-entry.highlight {
+            background: rgba(0, 255, 0, 0.2);
+            font-weight: bold;
+        }
+        
+        .game-over-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 0, 0, 0.8);
+            padding: 20px;
+            border: 3px solid #ff0000;
+            border-radius: 10px;
+            font-size: 1.5rem;
+            color: #ffffff;
+            text-shadow: 0 0 10px #ff0000;
+            z-index: 10;
+        }
+        
+    </style>
+</head>
+<body>
+    <!-- Overlay de Menú de Inicio -->
+    <div id="startMenuOverlay" class="overlay" style="display: flex;">
+        <div class="overlay-content">
+            <h2>TETRIS CLÁSICO</h2>
+            <button id="startGameBtn">Partida Individual</button>
+            <button id="startDoublesBtn">Partida Dobles</button>
+            <button id="showHighScoresBtn">Ver mejores puntuaciones</button>
+            <button id="showInstructionsBtn">Ver instrucciones</button>
+            <div style="margin-top: 20px;">
+                <label for="volumeSlider">Volumen</label>
+                <input type="range" id="volumeSlider" min="0" max="100" value="30" />
+            </div>
+        </div>
+    </div>
+    <!-- Overlay de Puntuaciones -->
+    <div id="highScoresOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>TOP 10 PUNTUACIONES</h2>
+            <div id="highScoresMenuList" class="ranking-list" style="max-height: 300px; overflow-y: auto;"></div>
+            <button onclick="closeHighScoresMenu()">Volver</button>
+        </div>
+    </div>
+    
+    <!-- Overlay de Instrucciones -->
+    <div id="instructionsOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>INSTRUCCIONES</h2>
+            <div style="text-align: left; font-size: 0.7rem; line-height: 1.8;">
+                <p><strong style="color: #ffcc00;">CONTROLES INDIVIDUAL:</strong></p>
+                <p>← →: Mover pieza izquierda/derecha</p>
+                <p>↑: Rotar pieza</p>
+                <p>↓: Caída suave</p>
+                <p>ESPACIO: Caída instantánea</p>
+                <p>P: Pausar juego/música</p>
+                <p>R: Reiniciar partida</p>
+                <br>
+                <p><strong style="color: #ffcc00;">CONTROLES DOBLES:</strong></p>
+                <p><strong>Jugador 1 (Derecha):</strong></p>
+                <p>← →: Mover | ↑: Rotar | ↓: Caída suave | ESPACIO: Caída instantánea</p>
+                <p><strong>Jugador 2 (Izquierda):</strong></p>
+                <p>A D: Mover | W: Rotar | S: Caída suave | SHIFT: Caída instantánea</p>
+                <p>P: Pausar | R: Reiniciar</p>
+                <br>
+                <p><strong style="color: #ffcc00;">OBJETIVO:</strong></p>
+                <p>Completa líneas horizontales para sumar puntos. ¡Cada 10 líneas subes de nivel!</p>
+            </div>
+            <button onclick="closeInstructionsMenu()">Volver</button>
+        </div>
+    </div>
+    <h1>TETRIS CLÁSICO // by Ronie</h1>
+    
+    <div class="game-container" id="gameContainer">
+        
+        <!-- Sección Jugador 2 (solo en modo dobles) -->
+        <div id="player2Section" class="player-section" style="display: none;">
+            <div class="sidebar">
+                <div class="info-box">
+                    <h3>PUNTUACIÓN</h3>
+                    <span id="score2" class="value">0</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>LÍNEAS</h3>
+                    <span id="lines2" class="value">0</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>NIVEL</h3>
+                    <span id="level2" class="value">1</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>SIGUIENTE</h3>
+                    <canvas id="nextPieceCanvas2" width="120" height="100"></canvas>
+                </div>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <div class="player-label">JUGADOR 2</div>
+                <canvas id="gameCanvas2" width="300" height="600"></canvas>
+                <div id="gameOver2Indicator" style="display: none;" class="game-over-indicator">PERDISTE</div>
+            </div>
+        </div>
+        
+        <!-- Sección Jugador 1 -->
+        <div id="player1Section" class="player-section">
+            <!-- Barra lateral de información -->
+            <div class="sidebar">
+                <div class="info-box">
+                    <h3>PUNTUACIÓN</h3>
+                    <span id="score" class="value">0</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>LÍNEAS</h3>
+                    <span id="lines" class="value">0</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>NIVEL</h3>
+                    <span id="level" class="value">1</span>
+                </div>
+                
+                <div class="info-box">
+                    <h3>SIGUIENTE</h3>
+                    <canvas id="nextPieceCanvas" width="120" height="100"></canvas>
+                </div>
+                
+                <!-- SECCIÓN: HIGH SCORES -->
+                <div class="info-box">
+                    <h3>TOP 10 PUNTUACIONES</h3>
+                    <ul id="highScoresList" class="highscore-list">
+                        <li>Cargando...</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Canvas principal del juego -->
+            <div class="canvas-wrapper">
+                <div id="player1Label" class="player-label" style="display: none;">JUGADOR 1</div>
+                <canvas id="gameCanvas" width="300" height="600"></canvas>
+                <div id="gameOver1Indicator" style="display: none;" class="game-over-indicator">PERDISTE</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="controls-info" id="controlsInfo">
+        <h3>CONTROLES:</h3>
+        <p>← →: Mover | ↑: Rotar</p>
+        <p>↓: Caída suave | ESPACIO: Caída instantánea</p>
+        <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
+    </div>
+    
+    <!-- Overlay de Game Over con Input de Nombre -->
+    <div id="gameOverOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>¡GAME OVER!</h2>
+            <div id="doublesResults" style="display: none;">
+                <p>Puntuación Jugador 1: <span id="finalScoreP1">0</span> - Nivel: <span id="finalLevelP1">1</span></p>
+                <p>Puntuación Jugador 2: <span id="finalScoreP2">0</span> - Nivel: <span id="finalLevelP2">1</span></p>
+                <p style="color: #ffcc00; margin-top: 10px;">Ganador: <span id="winnerName">-</span></p>
+            </div>
+            <div id="singleResults">
+                <p>Puntuación Final: <span id="finalScore">0</span></p>
+                <p>Alcanzado Nivel: <span id="finalLevel">1</span></p>
+            </div>
+            
+            <!-- Contenedor para la entrada de nombre -->
+            <div id="scoreSubmissionContainer">
+                <div id="nameInputGroup" class="input-group" style="display: none;">
+                    <p>¡Nuevo récord! Ingresa tu nombre:</p>
+                    <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15" style="ime-mode: auto;">
+                    <button onclick="submitScore()">Guardar Puntuación</button>
+                </div>
+                <p id="submissionMessage" style="color: #00ff00; margin-top: 15px; display: none;">¡Puntuación Guardada!</p>
+                <p id="errorSubmission" style="color: #ff0000; margin-top: 15px; display: none;">Error al guardar la puntuación.</p>
+            </div>
+            
+            <div class="ranking">
+                <h3>TOP 10 PUNTUACIONES</h3>
+                <div id="gameOverRankingList" class="ranking-list"></div>
+            </div>
+            
+            <p>Presiona R para jugar de nuevo</p>
+        </div>
+    </div>
+    
+    <!-- Overlay de Pausa -->
+    <div id="pauseOverlay" class="overlay" style="display: none;">
+        <div class="overlay-content">
+            <h2>PAUSA</h2>
+            <p>Presiona 'P' para continuar</p>
+            <p>Control de Música:</p>
+            <button onclick="toggleMusic()">🎵 Activar/Desactivar Música</button>
+        </div>
+    </div>
+    
+    <script>
+        // --- CONFIGURACIÓN DEL JUEGO ---
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 30;
+        const LINES_PER_LEVEL = 10;
+        const BASE_FALL_DELAY = 1000; // ms
+        const LEVEL_DECREASE_RATE = 75; // ms
+        
+        // Variable para modo de juego
+        let isDoublesMode = false;
+        
+        // Canvas y Contextos
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('nextPieceCanvas');
+        const nextCtx = nextCanvas.getContext('2d');
+        
+        const canvas2 = document.getElementById('gameCanvas2');
+        const ctx2 = canvas2.getContext('2d');
+        const nextCanvas2 = document.getElementById('nextPieceCanvas2');
+        const nextCtx2 = nextCanvas2.getContext('2d');
+        
+        // UI Elementos
+        const scoreSpan = document.getElementById('score');
+        const linesSpan = document.getElementById('lines');
+        const levelSpan = document.getElementById('level');
+        const scoreSpan2 = document.getElementById('score2');
+        const linesSpan2 = document.getElementById('lines2');
+        const levelSpan2 = document.getElementById('level2');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const nameInputGroup = document.getElementById('nameInputGroup');
+        const playerNameInput = document.getElementById('playerName');
+        const highScoresList = document.getElementById('highScoresList');
+        const gameOverRankingList = document.getElementById('gameOverRankingList');
+        const submissionMessage = document.getElementById('submissionMessage');
+        const errorSubmission = document.getElementById('errorSubmission');
+        
+        // Estado del Juego - Jugador 1
+        let board;
+        let currentPiece;
+        let nextPiece;
+        let score = 0;
+        let lines = 0;
+        let level = 1;
+        let fallDelay = BASE_FALL_DELAY;
+        let lastTime = 0;
+        let dropCounter = 0;
+        let gameLoopId;
+        let isPaused = false;
+        let isGameOver = false;
+        let isNameInputVisible = false;
+        let isSavingScore = false;
+        
+        // Estado del Juego - Jugador 2
+        let board2;
+        let currentPiece2;
+        let nextPiece2;
+        let score2 = 0;
+        let lines2 = 0;
+        let level2 = 1;
+        let fallDelay2 = BASE_FALL_DELAY;
+        let lastTime2 = 0;
+        let dropCounter2 = 0;
+        let isGameOver2 = false;
+        
+        // Definición de las Piezas (Tetrominos)
+        const PIECES = [
+        // I Piece (4x4)
+        { shape: [
+            [0, 0, 0, 0],
+            [1, 1, 1, 1],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+            ], color: '#00ffff', name: 'I' }, 
+            // T Piece (3x3)
+            { shape: [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0]
+                ], color: '#ff00ff', name: 'T' }, 
+                // S Piece (3x3)
+                { shape: [
+                    [0, 1, 1],
+                    [1, 1, 0],
+                    [0, 0, 0]
+                    ], color: '#00ff00', name: 'S' }, 
+                    // Z Piece (3x3)
+                    { shape: [
+                        [1, 1, 0],
+                        [0, 1, 1],
+                        [0, 0, 0]
+                        ], color: '#ff0000', name: 'Z' }, 
+                        // O Piece (2x2)
+                        { shape: [
+                            [1, 1],
+                            [1, 1]
+                            ], color: '#ffff00', name: 'O' }, 
+                            // L Piece (3x3)
+                            { shape: [
+                                [1, 0, 0],
+                                [1, 1, 1],
+                                [0, 0, 0]
+                                ], color: '#ffaa00', name: 'L' }, 
+                                // J Piece (3x3)
+                                { shape: [
+                                    [0, 0, 1],
+                                    [1, 1, 1],
+                                    [0, 0, 0]
+                                    ], color: '#0000ff', name: 'J' },
+                                    ];
+                                    
+                                    // --- FUNCIONES DE AUDIO ---
+                                    let audioContext;
+                                    let masterGain;
+                                    let musicNode = null;
+                                    let musicGain = null;
+                                    let isMusicPlaying = false;
+                                    
+                                    // Frecuencias exactas para la melodía original de Tetris (Korobeiniki)
+                                    const NOTE_FREQS = {
+                                        'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'B4': 493.88, 
+                                        'C5': 523.25, 'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99, 
+                                        'A5': 880.00, 'B5': 987.77, 'R': 0 // R for Rest
+                                    };
+                                    
+                                    // Secuencia corregida basada en la melodía original de Korobeiniki
+                                    const MELODY_SEQUENCE = [
+                                    // Frase 1
+                                    NOTE_FREQS.E5, NOTE_FREQS.B4, NOTE_FREQS.C5, NOTE_FREQS.D5,
+                                    NOTE_FREQS.C5, NOTE_FREQS.B4, NOTE_FREQS.A4, NOTE_FREQS.A4,
+                                    NOTE_FREQS.C5, NOTE_FREQS.E5, NOTE_FREQS.D5, NOTE_FREQS.C5,
+                                    NOTE_FREQS.B4, NOTE_FREQS.B4, NOTE_FREQS.C5, NOTE_FREQS.D5,
+                                    
+                                    // Frase 2
+                                    NOTE_FREQS.E5, NOTE_FREQS.C5, NOTE_FREQS.A4, NOTE_FREQS.A4,
+                                    NOTE_FREQS.R, NOTE_FREQS.D5, NOTE_FREQS.F5, NOTE_FREQS.A5,
+                                    NOTE_FREQS.G5, NOTE_FREQS.F5, NOTE_FREQS.E5, NOTE_FREQS.C5,
+                                    NOTE_FREQS.E5, NOTE_FREQS.D5, NOTE_FREQS.C5, NOTE_FREQS.B4,
+                                    
+                                    // Frase 3
+                                    NOTE_FREQS.B4, NOTE_FREQS.C5, NOTE_FREQS.D5, NOTE_FREQS.E5,
+                                    NOTE_FREQS.C5, NOTE_FREQS.A4, NOTE_FREQS.A4, NOTE_FREQS.R
+                                    ];
+                                    
+                                    // Duraciones más auténticas (en beats)
+                                    const BASE_BEAT = 0.25; // Duración base inicial del beat
+                                    const MIN_BEAT = 0.1; // Valor mínimo de beat
+                                    const MELODY_DURATION = [
+                                    // Frase 1
+                                    2, 1, 1, 2,  
+                                    1, 1, 2, 1,  
+                                    1, 2, 1, 1,  
+                                    2, 1, 1, 2,  
+                                    
+                                    // Frase 2
+                                    2, 2, 2, 2,  
+                                    2, 1, 1, 2,  
+                                    1, 1, 2, 1,  
+                                    1, 1, 1, 2,  
+                                    
+                                    // Frase 3
+                                    1, 1, 2, 2,  
+                                    2, 2, 2, 2   
+                                    ];
+                                    
+                                    let melodyIndex = 0;
+                                    let melodyTimeout = null;
+                                    
+                                    
+                                    // Inicialización del AudioContext sólo tras interacción del usuario
+                                    function initAudio() {
+                                        try {
+                                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                                            masterGain = audioContext.createGain();
+                                            masterGain.connect(audioContext.destination);
+                                            masterGain.gain.value = 0.3;
+                                        } catch (e) {
+                                            console.warn("Web Audio API no soportado");
+                                            audioContext = null;
+                                        }
+                                    }
+                                    
+                                    // Solo crear AudioContext tras evento user
+                                    if (!audioContext) {
+                                        document.addEventListener('pointerdown', () => {
+                                            if (!audioContext) {
+                                                initAudio();
+                                                if (!isMusicPlaying && !isGameOver) startMusic();
+                                            }
+                                        }, { once: true });
+                                        document.addEventListener('keydown', () => {
+                                            if (!audioContext) {
+                                                initAudio();
+                                                if (!isMusicPlaying && !isGameOver) startMusic();
+                                            }
+                                        }, { once: true });
+                                    }
+                                    
+                                    
+                                    function playSound(frequency, duration, type = 'square', volume = 0.1) {
+                                        if (!audioContext || isPaused) return; 
+                                        
+                                        const oscillator = audioContext.createOscillator();
+                                        const gainNode = audioContext.createGain();
+                                        
+                                        oscillator.connect(gainNode);
+                                        gainNode.connect(masterGain);
+                                        
+                                        oscillator.type = type;
+                                        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                                        
+                                        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+                                        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration); 
+                                        
+                                        oscillator.start(audioContext.currentTime);
+                                        oscillator.stop(audioContext.currentTime + duration);
+                                    }
+                                    
+                                    function playRotateSound() { playSound(440, 0.05, 'sine', 0.2); }
+                                    function playMoveSound() { playSound(100, 0.03, 'square', 0.1); }
+                                    function playDropSound() { playSound(200, 0.1, 'sawtooth', 0.3); }
+                                    function playLineClearSound() { playSound(880, 0.1, 'sine', 0.4); playSound(1320, 0.1, 'sine', 0.4); }
+                                    function playLevelUpSound() { playSound(600, 0.1, 'triangle', 0.3); setTimeout(() => playSound(800, 0.1, 'triangle', 0.3), 100); }
+                                    function playGameOverSound() { playSound(100, 1.5, 'triangle', 0.5); playSound(50, 1.5, 'triangle', 0.5); }
+                                    
+                                    function playMelodyNote() {
+                                        if (!audioContext || isPaused || (isGameOver && !isDoublesMode) || (isDoublesMode && isGameOver && isGameOver2)) {
+                                            return;
+                                        }
+                                        
+                                        if (melodyIndex >= MELODY_SEQUENCE.length) {
+                                            melodyIndex = 0; // Bucle de la melodía
+                                        }
+                                        
+                                        const freq = MELODY_SEQUENCE[melodyIndex];
+                                        const noteDurationSeconds = MELODY_DURATION[melodyIndex] * getCurrentBeat();
+                                        const durationMs = noteDurationSeconds * 1000; 
+                                        
+                                        if (freq > 0) { 
+                                            const oscillator = audioContext.createOscillator();
+                                            const noteGain = audioContext.createGain();
+                                            
+                                            oscillator.connect(noteGain);
+                                            noteGain.connect(masterGain);
+                                            
+                                            oscillator.type = 'square';
+                                            oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                                            
+                                            const releaseTime = audioContext.currentTime + noteDurationSeconds * 0.9;
+                                            
+                                            noteGain.gain.setValueAtTime(0.15, audioContext.currentTime);
+                                            noteGain.gain.linearRampToValueAtTime(0.12, audioContext.currentTime + noteDurationSeconds * 0.1);
+                                            noteGain.gain.linearRampToValueAtTime(0.001, releaseTime);
+                                            
+                                            oscillator.start(audioContext.currentTime);
+                                            oscillator.stop(audioContext.currentTime + noteDurationSeconds);
+                                        }
+                                        
+                                        melodyIndex++;
+                                        melodyTimeout = setTimeout(playMelodyNote, durationMs);
+                                    }
+                                    
+                                    function startMusic() {
+                                        isMusicPlaying = true;
+                                        melodyIndex = 0;
+                                        if (audioContext && audioContext.state === "suspended") {
+                                            audioContext.resume().then(playMelodyNote);
+                                        } else {
+                                            playMelodyNote();
+                                        }
+                                    }
+                                    
+                                    
+                                    function stopMusic() {
+                                        isMusicPlaying = false;
+                                        if (melodyTimeout) {
+                                            clearTimeout(melodyTimeout);
+                                            melodyTimeout = null;
+                                        }
+                                    }
+                                    
+                                    window.toggleMusic = function() {
+                                        if (isMusicPlaying) {
+                                            stopMusic();
+                                        } else {
+                                            startMusic();
+                                        }
+                                    }
+                                    
+                                    document.addEventListener('click', () => {
+                                        if (audioContext && audioContext.state === 'suspended') {
+                                            audioContext.resume();
+                                        }
+                                        if (!isMusicPlaying && !isGameOver) {
+                                            startMusic();
+                                        }
+                                    }, { once: true });
+                                    
+                                    // --- SISTEMA DE PUNTUACIONES ALTAS (LOCAL STORAGE) ---
+                                    function getHighScores() {
+                                        const scores = localStorage.getItem('tetrisHighScores');
+                                        return scores ? JSON.parse(scores) : [];
+                                    }
+                                    
+                                    function saveHighScores(scores) {
+                                        localStorage.setItem('tetrisHighScores', JSON.stringify(scores));
+                                    }
+                                    
+                                    function isTopScore(newScore) {
+                                        const highScores = getHighScores();
+                                        return highScores.length < 10 || newScore > highScores[highScores.length - 1].score;
+                                    }
+                                    
+                                    // Guardar una entrada en el Top 10 incluyendo el nivel
+                                    window.submitScore = function () {
+                                        const playerNameRaw = playerNameInput.value;
+                                        const playerName = playerNameRaw.trim();
+                                        if (!playerName) {
+                                            const existingWarning = nameInputGroup.querySelector('.warning-message');
+                                            if (existingWarning) existingWarning.remove();
+                                            const warning = document.createElement('p');
+                                            warning.className = 'warning-message';
+                                            warning.textContent = 'Por favor, ingresa tu nombre.';
+                                            nameInputGroup.appendChild(warning);
+                                            setTimeout(() => {
+                                                const warning = nameInputGroup.querySelector('.warning-message');
+                                                if (warning) warning.remove();
+                                            }, 2000);
+                                            playerNameInput.focus();
+                                            return;
+                                        }
+                                        
+                                        // Determinar qué puntuación guardar
+                                        let finalScore, finalLevel, finalLines;
+                                        if (isDoublesMode) {
+                                            // Guardar la mejor puntuación
+                                            if (score >= score2) {
+                                                finalScore = score;
+                                                finalLevel = level;
+                                                finalLines = lines;
+                                            } else {
+                                                finalScore = score2;
+                                                finalLevel = level2;
+                                                finalLines = lines2;
+                                            }
+                                        } else {
+                                            finalScore = score;
+                                            finalLevel = level;
+                                            finalLines = lines;
+                                        }
+                                        
+                                        // Recuperar ranking actual
+                                        const highScores = getHighScores();
+                                        // Añadir nueva entrada con nivel alcanzado
+                                        highScores.push({
+                                            name: playerNameRaw,  
+                                            score: finalScore,
+                                            lines: finalLines,
+                                            level: finalLevel
+                                        });
+                                        // Ordenar y recortar a top10
+                                        highScores.sort((a, b) => b.score - a.score);
+                                        highScores.splice(10);
+                                        saveHighScores(highScores);
+                                        
+                                        nameInputGroup.style.display = "none";
+                                        submissionMessage.style.display = "block";
+                                        isNameInputVisible = false;
+                                        displayRanking();
+                                        displayGameOverRanking();
+                                    };
+                                    
+                                    // Mostrar listado Top 10 en la sidebar principal incluyendo nivel
+                                    function displayRanking() {
+                                        const highScores = getHighScores();
+                                        if (highScores.length === 0) {
+                                            highScoresList.innerHTML = `<li>No hay puntuaciones</li>`;
+                                            return;
+                                        }
+                                        let html = "";
+                                        highScores.forEach((entry, index) => {
+                                            html += `<li class="highscore-item">
+      <span class="highscore-rank">${index + 1}.</span>
+      <span>${entry.name.substring(0, 8)}</span>
+      <span>${entry.score}</span>
+      <span>Nivel: ${entry.level || 1}</span>
+    </li>`;
+                                            });
+                                            highScoresList.innerHTML = html;
+                                        }
+                                        
+                                        // Mostrar el ranking cuando termina la partida, incluyendo el nivel alcanzado por cada jugador
+                                        function displayGameOverRanking() {
+                                            const highScores = getHighScores();
+                                            if (highScores.length === 0) {
+                                                gameOverRankingList.innerHTML = `<p>No hay puntuaciones guardadas</p>`;
+                                                return;
+                                            }
+                                            let html = "";
+                                            const currentName = playerNameInput.value.trim();
+                                            
+                                            let finalScore;
+                                            if (isDoublesMode) {
+                                                finalScore = score >= score2 ? score : score2;
+                                            } else {
+                                                finalScore = score;
+                                            }
+                                            
+                                            highScores.forEach((entry, index) => {
+                                                const isCurrentScore = entry.score === finalScore && currentName === entry.name;
+                                                const className = isCurrentScore ? "ranking-entry highlight" : "ranking-entry";
+                                                html += `<div class="${className}">
+      ${index + 1}. ${entry.name} - ${entry.score} - Nivel: ${entry.level || 1}
+    </div>`;
+                                                });
+                                                gameOverRankingList.innerHTML = html;
+                                            }
+                                            
+                                            
+                                            // --- FUNCIONES DEL JUEGO ---
+                                            
+                                            function getCurrentBeat() {
+                                                // Cada nivel reduce 0.01 el beat, pero nunca baja de MIN_BEAT
+                                                const avgLevel = isDoublesMode ? Math.max(level, level2) : level;
+                                                return Math.max(MIN_BEAT, BASE_BEAT - (avgLevel - 1) * 0.01);
+                                            }
+                                            
+                                            function createBoard() {
+                                                return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+                                            }
+                                            
+                                            function getRandomPiece() {
+                                                const index = Math.floor(Math.random() * PIECES.length);
+                                                return {
+                                                    ...PIECES[index],
+                                                    x: Math.floor(COLS / 2) - Math.floor(PIECES[index].shape[0].length / 2),
+                                                    y: 0
+                                                };
+                                            }
+                                            
+                                            function drawBlock(ctx, x, y, color, size) {
+                                                ctx.fillStyle = color;
+                                                ctx.fillRect(x * size, y * size, size, size);
+                                                
+                                                // Efecto de borde (luz)
+                                                ctx.strokeStyle = '#ffffff50'; // borde más claro
+                                                ctx.lineWidth = 1;
+                                                ctx.strokeRect(x * size, y * size, size, size);
+                                                
+                                                // Efecto de sombra (oscuridad)
+                                                ctx.fillStyle = '#00000050'; 
+                                                ctx.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+                                            }
+                                            
+                                            function draw() {
+                                                ctx.fillStyle = '#000000';
+                                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                                
+                                                board.forEach((row, y) => {
+                                                    row.forEach((value, x) => {
+                                                        if (value) {
+                                                            drawBlock(ctx, x, y, value, BLOCK_SIZE);
+                                                        }
+                                                    });
+                                                });
+                                                
+                                                if (currentPiece && !isGameOver) {
+                                                    currentPiece.shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                drawBlock(
+                                                                ctx, 
+                                                                currentPiece.x + dx, 
+                                                                currentPiece.y + dy, 
+                                                                currentPiece.color, 
+                                                                BLOCK_SIZE
+                                                                );
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                                
+                                                scoreSpan.textContent = score;
+                                                linesSpan.textContent = lines;
+                                                levelSpan.textContent = level;
+                                            }
+                                            
+                                            function draw2() {
+                                                if (!isDoublesMode) return;
+                                                
+                                                ctx2.fillStyle = '#000000';
+                                                ctx2.fillRect(0, 0, canvas2.width, canvas2.height);
+                                                
+                                                board2.forEach((row, y) => {
+                                                    row.forEach((value, x) => {
+                                                        if (value) {
+                                                            drawBlock(ctx2, x, y, value, BLOCK_SIZE);
+                                                        }
+                                                    });
+                                                });
+                                                
+                                                if (currentPiece2 && !isGameOver2) {
+                                                    currentPiece2.shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                drawBlock(
+                                                                ctx2, 
+                                                                currentPiece2.x + dx, 
+                                                                currentPiece2.y + dy, 
+                                                                currentPiece2.color, 
+                                                                BLOCK_SIZE
+                                                                );
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                                
+                                                scoreSpan2.textContent = score2;
+                                                linesSpan2.textContent = lines2;
+                                                levelSpan2.textContent = level2;
+                                            }
+                                            
+                                            function drawNextPiece() {
+                                                nextCtx.fillStyle = '#0d0c1d'; 
+                                                nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+                                                
+                                                if (nextPiece) {
+                                                    const shape = nextPiece.shape;
+                                                    const pieceWidth = shape[0].length;
+                                                    const pieceHeight = shape.length;
+                                                    
+                                                    const startX = Math.floor((nextCanvas.width / (BLOCK_SIZE/2) - pieceWidth) / 2);
+                                                    const startY = Math.floor((nextCanvas.height / (BLOCK_SIZE/2) - pieceHeight) / 2);
+                                                    
+                                                    shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                drawBlock(
+                                                                nextCtx, 
+                                                                startX + dx, 
+                                                                startY + dy, 
+                                                                nextPiece.color, 
+                                                                BLOCK_SIZE / 2
+                                                                );
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                            }
+                                            
+                                            function drawNextPiece2() {
+                                                if (!isDoublesMode) return;
+                                                
+                                                nextCtx2.fillStyle = '#0d0c1d'; 
+                                                nextCtx2.fillRect(0, 0, nextCanvas2.width, nextCanvas2.height);
+                                                
+                                                if (nextPiece2) {
+                                                    const shape = nextPiece2.shape;
+                                                    const pieceWidth = shape[0].length;
+                                                    const pieceHeight = shape.length;
+                                                    
+                                                    const startX = Math.floor((nextCanvas2.width / (BLOCK_SIZE/2) - pieceWidth) / 2);
+                                                    const startY = Math.floor((nextCanvas2.height / (BLOCK_SIZE/2) - pieceHeight) / 2);
+                                                    
+                                                    shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                drawBlock(
+                                                                nextCtx2, 
+                                                                startX + dx, 
+                                                                startY + dy, 
+                                                                nextPiece2.color, 
+                                                                BLOCK_SIZE / 2
+                                                                );
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                            }
+                                            
+                                            function checkCollision(board, shape, x, y) {
+                                                for (let dy = 0; dy < shape.length; dy++) {
+                                                    for (let dx = 0; dx < shape[dy].length; dx++) {
+                                                        if (shape[dy][dx] !== 0) {
+                                                            const newX = x + dx;
+                                                            const newY = y + dy;
+                                                            
+                                                            if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                                                                return true;
+                                                            }
+                                                            
+                                                            if (newY >= 0 && board[newY][newX] !== 0) {
+                                                                return true;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                                return false;
+                                            }
+                                            
+                                            function mergePiece(player = 1) {
+                                                if (player === 1) {
+                                                    currentPiece.shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                const boardX = currentPiece.x + dx;
+                                                                const boardY = currentPiece.y + dy;
+                                                                if (boardY >= 0) { 
+                                                                    board[boardY][boardX] = currentPiece.color;
+                                                                }
+                                                            }
+                                                        });
+                                                    });
+                                                } else {
+                                                    currentPiece2.shape.forEach((row, dy) => {
+                                                        row.forEach((value, dx) => {
+                                                            if (value) {
+                                                                const boardX = currentPiece2.x + dx;
+                                                                const boardY = currentPiece2.y + dy;
+                                                                if (boardY >= 0) { 
+                                                                    board2[boardY][boardX] = currentPiece2.color;
+                                                                }
+                                                            }
+                                                        });
+                                                    });
+                                                }
+                                                playDropSound();
+                                            }
+                                            
+                                            function rotate(matrix) {
+                                                const rows = matrix.length;
+                                                const cols = matrix[0].length;
+                                                const newMatrix = Array.from({ length: cols }, () => Array(rows).fill(0));
+                                                
+                                                for (let i = 0; i < rows; i++) {
+                                                    for (let j = 0; j < cols; j++) {
+                                                        newMatrix[j][rows - 1 - i] = matrix[i][j];
+                                                    }
+                                                }
+                                                return newMatrix;
+                                            }
+                                            
+                                            function movePiece(dir, player = 1) {
+                                                if (isPaused) return;
+                                                if (player === 1 && isGameOver) return;
+                                                if (player === 2 && isGameOver2) return;
+                                                
+                                                const currentBoard = player === 1 ? board : board2;
+                                                const piece = player === 1 ? currentPiece : currentPiece2;
+                                                
+                                                if (dir === 'rotate') {
+                                                    const rotated = rotate(piece.shape);
+                                                    
+                                                    if (!checkCollision(currentBoard, rotated, piece.x, piece.y)) {
+                                                        piece.shape = rotated;
+                                                        playRotateSound();
+                                                    } else {
+                                                        const x = piece.x;
+                                                        if (!checkCollision(currentBoard, rotated, x + 1, piece.y)) {
+                                                            piece.x += 1;
+                                                            piece.shape = rotated;
+                                                            playRotateSound();
+                                                        } else if (!checkCollision(currentBoard, rotated, x - 1, piece.y)) {
+                                                            piece.x -= 1;
+                                                            piece.shape = rotated;
+                                                            playRotateSound();
+                                                        }
+                                                    }
+                                                    return;
+                                                }
+                                                
+                                                let dx = 0;
+                                                let dy = 0;
+                                                if (dir === 'left') dx = -1;
+                                                if (dir === 'right') dx = 1;
+                                                if (dir === 'down') dy = 1;
+                                                
+                                                if (dx !== 0) {
+                                                    if (!checkCollision(currentBoard, piece.shape, piece.x + dx, piece.y)) {
+                                                        piece.x += dx;
+                                                        playMoveSound();
+                                                    }
+                                                } else if (dy !== 0) {
+                                                    if (!checkCollision(currentBoard, piece.shape, piece.x, piece.y + dy)) {
+                                                        piece.y += dy;
+                                                    } else {
+                                                        mergePiece(player);
+                                                        clearLines(player);
+                                                        spawnPiece(player);
+                                                    }
+                                                }
+                                            }
+                                            
+                                            function hardDrop(player = 1) {
+                                                if (isPaused) return;
+                                                if (player === 1 && isGameOver) return;
+                                                if (player === 2 && isGameOver2) return;
+                                                
+                                                const currentBoard = player === 1 ? board : board2;
+                                                const piece = player === 1 ? currentPiece : currentPiece2;
+                                                
+                                                let dropped = false;
+                                                while (!checkCollision(currentBoard, piece.shape, piece.x, piece.y + 1)) {
+                                                    piece.y++;
+                                                    dropped = true;
+                                                }
+                                                
+                                                if (dropped) {
+                                                    mergePiece(player);
+                                                    clearLines(player);
+                                                    spawnPiece(player);
+                                                    if (player === 1) {
+                                                        draw();
+                                                    } else {
+                                                        draw2();
+                                                    }
+                                                }
+                                            }
+                                            
+                                            function clearLines(player = 1) {
+                                                const currentBoard = player === 1 ? board : board2;
+                                                let linesCleared = 0;
+                                                
+                                                for (let y = ROWS - 1; y >= 0; y--) {
+                                                    if (currentBoard[y].every(value => value !== 0)) {
+                                                        const row = currentBoard.splice(y, 1)[0].fill(0);
+                                                        currentBoard.unshift(row); 
+                                                        linesCleared++;
+                                                        y++; 
+                                                    }
+                                                }
+                                                
+                                                if (linesCleared > 0) {
+                                                    updateScore(linesCleared, player);
+                                                    playLineClearSound();
+                                                }
+                                            }
+                                            
+                                            function updateScore(cleared, player = 1) {
+                                                const scoreValues = [0, 40, 100, 300, 1200];
+                                                
+                                                if (player === 1) {
+                                                    score += scoreValues[cleared] * (level + 1);
+                                                    lines += cleared;
+                                                    
+                                                    const newLevel = Math.floor(lines / LINES_PER_LEVEL) + 1;
+                                                    if (newLevel > level) {
+                                                        level = newLevel;
+                                                        fallDelay = Math.max(50, BASE_FALL_DELAY - (level - 1) * LEVEL_DECREASE_RATE);
+                                                        playLevelUpSound();
+                                                        if (isMusicPlaying) {
+                                                            stopMusic();
+                                                            startMusic();
+                                                        }    
+                                                    }
+                                                } else {
+                                                    score2 += scoreValues[cleared] * (level2 + 1);
+                                                    lines2 += cleared;
+                                                    
+                                                    const newLevel = Math.floor(lines2 / LINES_PER_LEVEL) + 1;
+                                                    if (newLevel > level2) {
+                                                        level2 = newLevel;
+                                                        fallDelay2 = Math.max(50, BASE_FALL_DELAY - (level2 - 1) * LEVEL_DECREASE_RATE);
+                                                        playLevelUpSound();
+                                                        if (isMusicPlaying) {
+                                                            stopMusic();
+                                                            startMusic();
+                                                        }    
+                                                    }
+                                                }
+                                            }
+                                            
+                                            function spawnPiece(player = 1) {
+                                                if (player === 1) {
+                                                    currentPiece = nextPiece;
+                                                    nextPiece = getRandomPiece();
+                                                    drawNextPiece();
+                                                    
+                                                    if (checkCollision(board, currentPiece.shape, currentPiece.x, currentPiece.y)) {
+                                                        gameOver(1);
+                                                    }
+                                                } else {
+                                                    currentPiece2 = nextPiece2;
+                                                    nextPiece2 = getRandomPiece();
+                                                    drawNextPiece2();
+                                                    
+                                                    if (checkCollision(board2, currentPiece2.shape, currentPiece2.x, currentPiece2.y)) {
+                                                        gameOver(2);
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // --- BUCLE PRINCIPAL DEL JUEGO ---
+                                            function update(time = 0) {
+                                                if (isPaused || (!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2)) {
+                                                    gameLoopId = requestAnimationFrame(update);
+                                                    return;
+                                                }
+                                                
+                                                const deltaTime = time - lastTime;
+                                                lastTime = time;
+                                                
+                                                // Jugador 1
+                                                if (!isGameOver) {
+                                                    dropCounter += deltaTime;
+                                                    if (dropCounter > fallDelay) {
+                                                        movePiece('down', 1);
+                                                        dropCounter = 0;
+                                                    }
+                                                }
+                                                
+                                                // Jugador 2
+                                                if (isDoublesMode && !isGameOver2) {
+                                                    dropCounter2 += deltaTime;
+                                                    if (dropCounter2 > fallDelay2) {
+                                                        movePiece('down', 2);
+                                                        dropCounter2 = 0;
+                                                    }
+                                                }
+                                                
+                                                draw();
+                                                if (isDoublesMode) {
+                                                    draw2();
+                                                }
+                                                
+                                                gameLoopId = requestAnimationFrame(update);
+                                            }
+                                            
+                                            // --- CONTROL DE ESTADO ---
+                                            
+                                            function resetGame() {
+                                                if (gameLoopId) {
+                                                    cancelAnimationFrame(gameLoopId);
+                                                }
+                                                
+                                                // Restablecer estado del juego - Jugador 1
+                                                board = createBoard();
+                                                score = 0;
+                                                lines = 0;
+                                                level = 1;
+                                                fallDelay = BASE_FALL_DELAY;
+                                                isPaused = false;
+                                                isGameOver = false;
+                                                isSavingScore = false;
+                                                dropCounter = 0;
+                                                lastTime = 0;
+                                                isNameInputVisible = false;
+                                                
+                                                nextPiece = getRandomPiece();
+                                                spawnPiece(1);
+                                                
+                                                // Restablecer estado del juego - Jugador 2
+                                                if (isDoublesMode) {
+                                                    board2 = createBoard();
+                                                    score2 = 0;
+                                                    lines2 = 0;
+                                                    level2 = 1;
+                                                    fallDelay2 = BASE_FALL_DELAY;
+                                                    isGameOver2 = false;
+                                                    dropCounter2 = 0;
+                                                    lastTime2 = 0;
+                                                    
+                                                    nextPiece2 = getRandomPiece();
+                                                    spawnPiece(2);
+                                                }
+                                                
+                                                // Ocultar overlays
+                                                gameOverOverlay.style.display = 'none';
+                                                pauseOverlay.style.display = 'none';
+                                                document.getElementById('gameOver1Indicator').style.display = 'none';
+                                                document.getElementById('gameOver2Indicator').style.display = 'none';
+                                                
+                                                // Resetear Game Over UI
+                                                nameInputGroup.style.display = 'none';
+                                                playerNameInput.value = '';
+                                                submissionMessage.style.display = 'none';
+                                                errorSubmission.style.display = 'none';
+                                                
+                                                update();
+                                                if (!isMusicPlaying) {
+                                                    startMusic();
+                                                }
+                                            }
+                                            
+                                            function gameOver(player = 1) {
+                                                if (player === 1) {
+                                                    isGameOver = true;
+                                                    document.getElementById('gameOver1Indicator').style.display = 'block';
+                                                } else {
+                                                    isGameOver2 = true;
+                                                    document.getElementById('gameOver2Indicator').style.display = 'block';
+                                                }
+                                                
+                                                // En modo individual, termina inmediatamente
+                                                if (!isDoublesMode) {
+                                                    stopMusic(); 
+                                                    playGameOverSound(); 
+                                                    
+                                                    document.getElementById('singleResults').style.display = 'block';
+                                                    document.getElementById('doublesResults').style.display = 'none';
+                                                    document.getElementById('finalScore').textContent = score;
+                                                    document.getElementById('finalLevel').textContent = level;
+                                                    
+                                                    if (isTopScore(score)) {
+                                                        nameInputGroup.style.display = 'block';
+                                                        isNameInputVisible = true;
+                                                        playerNameInput.focus();
+                                                    } else {
+                                                        isNameInputVisible = false;
+                                                    }
+                                                    
+                                                    displayGameOverRanking();
+                                                    gameOverOverlay.style.display = 'flex';
+                                                }
+                                                // En modo dobles, esperar a que ambos pierdan
+                                                else if (isGameOver && isGameOver2) {
+                                                    stopMusic(); 
+                                                    playGameOverSound(); 
+                                                    
+                                                    document.getElementById('singleResults').style.display = 'none';
+                                                    document.getElementById('doublesResults').style.display = 'block';
+                                                    document.getElementById('finalScoreP1').textContent = score;
+                                                    document.getElementById('finalLevelP1').textContent = level;
+                                                    document.getElementById('finalScoreP2').textContent = score2;
+                                                    document.getElementById('finalLevelP2').textContent = level2;
+                                                    
+                                                    const winner = score > score2 ? 'Jugador 1' : (score2 > score ? 'Jugador 2' : 'Empate');
+                                                    document.getElementById('winnerName').textContent = winner;
+                                                    
+                                                    const bestScore = Math.max(score, score2);
+                                                    if (isTopScore(bestScore)) {
+                                                        nameInputGroup.style.display = 'block';
+                                                        isNameInputVisible = true;
+                                                        playerNameInput.focus();
+                                                    } else {
+                                                        isNameInputVisible = false;
+                                                    }
+                                                    
+                                                    displayGameOverRanking();gameOverOverlay.style.display = 'flex';
+                                                }
+                                            }
+                                            
+                                            function togglePause() {
+                                                if ((!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2)) return;
+                                                
+                                                isPaused = !isPaused;
+                                                if (isPaused) {
+                                                    pauseOverlay.style.display = 'flex';
+                                                    if (melodyTimeout) clearTimeout(melodyTimeout); 
+                                                } else {
+                                                    pauseOverlay.style.display = 'none';
+                                                    if (isMusicPlaying) {
+                                                        playMelodyNote(); 
+                                                    }
+                                                }
+                                            }
+                                            
+                                            // --- MANEJO DE EVENTOS ---
+                                            
+                                            document.addEventListener('keydown', (e) => {
+                                                // Prevenir scroll
+                                                if ([' ', 'ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) {
+                                                    e.preventDefault();
+                                                }
+                                                
+                                                // 1. Manejar Pausa 'P'
+                                                if (e.key === 'p' || e.key === 'P') {
+                                                    if (!isNameInputVisible) {
+                                                        togglePause();
+                                                    }
+                                                    return;
+                                                }
+                                                
+                                                // 2. Manejar Reinicio 'R'
+                                                if (e.key === 'r' || e.key === 'R') {
+                                                    if ((!isDoublesMode && isGameOver && !isNameInputVisible) || 
+                                                    (isDoublesMode && isGameOver && isGameOver2 && !isNameInputVisible)) {
+                                                        resetGame();
+                                                    } else if (isNameInputVisible) {
+                                                        // Permitir que la R se escriba en el input
+                                                        return;
+                                                    }
+                                                    return;
+                                                }
+                                                
+                                                // 3. Manejar Enter para enviar puntuación
+                                                if ((e.key === 'Enter') && isNameInputVisible) {
+                                                    submitScore();
+                                                    return;
+                                                }
+                                                
+                                                // 4. Si está pausado o el input de nombre está visible, ignorar movimientos de juego.
+                                                if (isPaused || isNameInputVisible) {
+                                                    return;
+                                                }
+                                                
+                                                // Movimientos de juego - Jugador 1 (flechas y WASD alternativo)
+                                                if (!isGameOver) {
+                                                    switch (e.key) {
+                                                        case 'ArrowLeft':
+                                                        movePiece('left', 1);
+                                                        break;
+                                                        case 'ArrowRight':
+                                                        movePiece('right', 1);
+                                                        break;
+                                                        case 'ArrowDown':
+                                                        movePiece('down', 1);
+                                                        dropCounter = 0; 
+                                                        break;
+                                                        case 'ArrowUp':
+                                                        movePiece('rotate', 1);
+                                                        break;
+                                                        case ' ': // Espacio para Hard Drop
+                                                        hardDrop(1);
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                // Movimientos de juego - Jugador 2 (WASD) en modo dobles
+                                                if (isDoublesMode && !isGameOver2) {
+                                                    switch (e.key) {
+                                                        case 'a':
+                                                        case 'A':
+                                                        movePiece('left', 2);
+                                                        break;
+                                                        case 'd':
+                                                        case 'D':
+                                                        movePiece('right', 2);
+                                                        break;
+                                                        case 's':
+                                                        case 'S':
+                                                        movePiece('down', 2);
+                                                        dropCounter2 = 0; 
+                                                        break;
+                                                        case 'w':
+                                                        case 'W':
+                                                        movePiece('rotate', 2);
+                                                        break;
+                                                        case 'Shift': // Shift para Hard Drop jugador 2
+                                                        hardDrop(2);
+                                                        break;
+                                                    }
+                                                }
+                                                
+                                                draw();
+                                                if (isDoublesMode) {
+                                                    draw2();
+                                                }
+                                            });
+                                            
+                                            // --- INICIALIZACIÓN ---
+                                            
+                                            // Referencias al menú
+                                            const startMenuOverlay = document.getElementById("startMenuOverlay");
+                                            const startGameBtn = document.getElementById("startGameBtn");
+                                            const startDoublesBtn = document.getElementById("startDoublesBtn");
+                                            const showHighScoresBtn = document.getElementById("showHighScoresBtn");
+                                            const showInstructionsBtn = document.getElementById("showInstructionsBtn");
+                                            const volumeSlider = document.getElementById("volumeSlider");
+                                            const gameContainer = document.getElementById("gameContainer");
+                                            const player1Section = document.getElementById("player1Section");
+                                            const player2Section = document.getElementById("player2Section");
+                                            const player1Label = document.getElementById("player1Label");
+                                            const controlsInfo = document.getElementById("controlsInfo");
+                                            
+                                            // Muestra el menú de inicio al cargar
+                                            window.onload = function () {
+                                                initAudio();
+                                                startMenuOverlay.style.display = "flex";
+                                                displayRanking(); // Actualiza puntuaciones por si acaso
+                                            };
+                                            
+                                            // Iniciar partida individual
+                                            startGameBtn.onclick = function () {
+                                                isDoublesMode = false;
+                                                
+                                                // Configurar UI para modo individual
+                                                player2Section.style.display = 'none';
+                                                player1Label.style.display = 'none';
+                                                gameContainer.classList.remove('doubles-mode');
+                                                
+                                                // Actualizar controles info
+                                                controlsInfo.innerHTML = `
+                                                    <h3>CONTROLES:</h3>
+                                                    <p>← →: Mover | ↑: Rotar</p>
+                                                    <p>↓: Caída suave | ESPACIO: Caída instantánea</p>
+                                                    <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
+                                                `;
+                                                
+                                                startMenuOverlay.style.display = "none";
+                                                resetGame();
+                                            };
+                                            
+                                            // Iniciar partida dobles
+                                            startDoublesBtn.onclick = function () {
+                                                isDoublesMode = true;
+                                                
+                                                // Configurar UI para modo dobles
+                                                player2Section.style.display = 'flex';
+                                                player1Label.style.display = 'block';
+                                                gameContainer.classList.add('doubles-mode');
+                                                
+                                                // Actualizar controles info
+                                                controlsInfo.innerHTML = `
+                                                    <h3>CONTROLES:</h3>
+                                                    <p><strong>J1 (Derecha):</strong> ← →: Mover | ↑: Rotar | ↓: Caída suave | ESPACIO: Caída instantánea</p>
+                                                    <p><strong>J2 (Izquierda):</strong> A D: Mover | W: Rotar | S: Caída suave | SHIFT: Caída instantánea</p>
+                                                    <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
+                                                `;
+                                                
+                                                startMenuOverlay.style.display = "none";
+                                                resetGame();
+                                            };
+                                            
+                                            // Ver puntuaciones
+                                            showHighScoresBtn.onclick = function () {
+                                                const highScores = getHighScores();
+                                                const highScoresMenuList = document.getElementById('highScoresMenuList');
+                                                
+                                                if (highScores.length === 0) {
+                                                    highScoresMenuList.innerHTML = '<p style="color: #e0f7fa;">No hay puntuaciones aún.</p>';
+                                                } else {
+                                                    let html = "";
+                                                    highScores.forEach((entry, i) => {
+                                                        html += `<div class="ranking-entry">
+                ${i + 1}. ${entry.name.substring(0, 8)} - ${entry.score} puntos - Nivel: ${entry.level || 1}
+            </div>`;
+                                                        });
+                                                        highScoresMenuList.innerHTML = html;
+                                                    }
+                                                    
+                                                    document.getElementById('highScoresOverlay').style.display = 'flex';
+                                                };
+                                                
+                                                // Instrucciones del juego
+                                                showInstructionsBtn.onclick = function () {
+                                                    document.getElementById('instructionsOverlay').style.display = 'flex';
+                                                };
+                                                
+                                                // Funciones para cerrar los menús
+                                                function closeHighScoresMenu() {
+                                                    document.getElementById('highScoresOverlay').style.display = 'none';
+                                                }
+                                                
+                                                function closeInstructionsMenu() {
+                                                    document.getElementById('instructionsOverlay').style.display = 'none';
+                                                }
+                                                
+                                                // Volumen
+                                                volumeSlider.oninput = function () {
+                                                    if (masterGain) {
+                                                        masterGain.gain.value = volumeSlider.value / 100;
+                                                    }
+                                                };
+                                                
+                                            </script>
+                                        </body>
+                                        </html>

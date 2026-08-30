@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arkanoid Retro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(180deg, #000428 0%, #004e92 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #mainContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #gameRow {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .powerUpSidebar, .powerUpSidebarP2 {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 220px;
+            max-width: 220px;
+        }
+
+        .bonus-header {
+            background: rgba(0, 255, 255, 0.15);
+            border: 2px solid #0ff;
+            border-radius: 5px;
+            padding: 12px 15px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            color: #0ff;
+            text-shadow: 0 0 8px #0ff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid #0ff;
+            border-radius: 5px;
+            box-shadow: 0 0 15px #0ff;
+            min-width: 800px;
+        }
+        
+        .hud-section {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 10px 20px;
+            border: 2px solid #0ff;
+            border-radius: 5px;
+            font-size: 18px;
+            color: #0ff;
+            text-shadow: 0 0 5px #0ff;
+            text-align: center;
+        }
+        
+        .hud-section div {
+            margin: 3px 0;
+        }
+        
+        .hud-section span {
+            font-weight: bold;
+            font-size: 22px;
+        }
+        
+        #gameContainer {
+            background: #000;
+            border: 4px solid #0ff;
+            box-shadow: 0 0 20px #0ff, inset 0 0 20px rgba(0, 255, 255, 0.2);
+            position: relative;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #000;
+        }
+        
+        #menu, #pauseMenu, #gameOverScreen, #top10Screen, #instructionsScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        h1 {
+            font-size: 48px;
+            color: #0ff;
+            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+        }
+        
+        h2 {
+            font-size: 32px;
+            color: #ff0;
+            text-shadow: 0 0 10px #ff0;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(180deg, #0ff 0%, #008b8b 100%);
+            color: #000;
+            border: 2px solid #0ff;
+            padding: 15px 40px;
+            margin: 10px;
+            font-size: 20px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        .btn:hover {
+            background: #0ff;
+            box-shadow: 0 0 20px #0ff;
+            transform: scale(1.05);
+        }
+        
+        .volume-control {
+            margin: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .volume-control label {
+            color: #0ff;
+            font-size: 18px;
+            min-width: 100px;
+        }
+        
+        .volume-control input[type="range"] {
+            width: 200px;
+        }
+        
+        #powerUpIndicators, #powerUpIndicatorsP2 {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        
+        .powerup-indicator {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid;
+            padding: 10px 15px;
+            border-radius: 5px;
+            min-width: 200px;
+        }
+        
+        .powerup-indicator.enlarge {
+            border-color: #0f0;
+            color: #0f0;
+        }
+        
+        .powerup-indicator.sticky {
+            border-color: #f0f;
+            color: #f0f;
+        }
+        
+        .powerup-indicator.laser {
+            border-color: #0ff;
+            color: #0ff;
+        }
+        
+        .powerup-icon {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            margin-right: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 5px;
+        }
+        
+        .powerup-info {
+            flex: 1;
+        }
+        
+        .powerup-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .powerup-time {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .powerup-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .powerup-bar-fill {
+            height: 100%;
+            background: currentColor;
+            transition: width 0.1s linear;
+            border-radius: 3px;
+        }
+        
+        #top10List {
+            max-width: 600px;
+            width: 90%;
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #0ff;
+            padding: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .top10-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #0ff;
+            color: #0ff;
+        }
+        
+        .top10-entry:nth-child(1) {
+            color: #ffd700;
+        }
+        
+        .top10-entry:nth-child(2) {
+            color: #c0c0c0;
+        }
+        
+        .top10-entry:nth-child(3) {
+            color: #cd7f32;
+        }
+        
+        #instructionsContent {
+            max-width: 700px;
+            padding: 30px;
+            background: rgba(0, 20, 40, 0.9);
+            border: 2px solid #0ff;
+            text-align: left;
+            line-height: 1.8;
+            /* --- LÍNEAS AÑADIDAS --- */
+            max-height: 85%;      /* Limita la altura al 85% de la pantalla */
+            overflow-y: auto;   /* Muestra la barra de scroll vertical si es necesario */
+        }
+        
+        #instructionsContent h3 {
+            color: #ff0;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        #instructionsContent ul {
+            margin-left: 20px;
+        }
+        
+        #instructionsContent li {
+            margin: 8px 0;
+            color: #0ff;
+        }
+        
+        #nameInputModal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.98);
+            border: 3px solid #0ff;
+            padding: 30px;
+            z-index: 30;
+            box-shadow: 0 0 30px #0ff;
+        }
+        
+        #nameInputModal input {
+            font-size: 24px;
+            padding: 10px;
+            margin: 15px 0;
+            background: #000;
+            color: #0ff;
+            border: 2px solid #0ff;
+            font-family: 'Courier New', monospace;
+            width: 300px;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        #bonusNotification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 3px solid;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 15;
+            animation: bonusPop 0.5s ease-out;
+            pointer-events: none;
+        }
+        
+        @keyframes bonusPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="mainContainer">
+        <div id="hud" class="hidden">
+            
+            <div class="hud-section" id="player2Hud" style="display:none">
+                <div>JUGADOR 2</div>
+                <div>Puntos: <span id="score2">0</span></div>
+                <div>Vidas: <span id="lives2">3</span></div>
+            </div>
+            <div class="hud-section">
+                <div>NIVEL</div>
+                <div><span id="level" style="font-size: 24px;">1/17</span></div>
+                <div style="font-size: 12px; margin-top: 5px; color: #0ff;"><span id="levelName">Inicio</span></div>
+            </div>
+            <div class="hud-section">
+                <div>JUGADOR 1</div>
+                <div>Puntos: <span id="score1">0</span></div>
+                <div>Vidas: <span id="lives1">3</span></div>
+            </div>
+        </div>
+
+        <div id="gameRow">
+            <div id="powerUpSidebarP2" class="hidden">
+                <div class="bonus-header">BONUS ACTIVOS:</div>
+                <div id="powerUpIndicatorsP2"></div>
+            </div>
+            <div id="gameContainer">
+                <canvas id="gameCanvas" width="800" height="600"></canvas>
+                <div id="bonusNotification" class="hidden"></div>
+            
+                <div id="menu">
+                    <h1>ARKANOID</h1>
+                    <button class="btn" onclick="startGame(1)">1 JUGADOR</button>
+                    <button class="btn" onclick="startGame(2)">2 JUGADORES</button>
+                    <button class="btn" onclick="showTop10()">TOP 10</button>
+                    <button class="btn" onclick="showInstructions()">INSTRUCCIONES</button>
+                    
+                    <div class="volume-control">
+                        <label>Música:</label>
+                        <input type="range" id="musicVolume" min="0" max="100" value="50" onchange="updateVolume()">
+                    </div>
+                    <div class="volume-control">
+                        <label>Efectos:</label>
+                        <input type="range" id="sfxVolume" min="0" max="100" value="70" onchange="updateVolume()">
+                    </div>
+                </div>
+                
+                <div id="pauseMenu" class="hidden">
+                    <h2>PAUSA</h2>
+                    <p style="color: #0ff; font-size: 20px; margin: 20px;">Presiona P para continuar</p>
+                    <div class="volume-control">
+                        <label>Música:</label>
+                        <input type="range" id="musicVolumePause" min="0" max="100" value="50" onchange="updateVolume()" oninput="updateVolume()">
+                    </div>
+                    <div class="volume-control">
+                        <label>Efectos:</label>
+                        <input type="range" id="sfxVolumePause" min="0" max="100" value="70" onchange="updateVolume()" oninput="updateVolume()">
+                    </div>
+                    <button class="btn" onclick="returnToMenu()">VOLVER AL MENÚ</button>
+                </div>
+                
+                <div id="gameOverScreen" class="hidden">
+                    <h2>GAME OVER</h2>
+                    <div id="finalScores" style="margin: 30px 0; font-size: 24px; color: #0ff;"></div>
+                    <button class="btn" onclick="returnToMenu()">MENÚ PRINCIPAL</button>
+                </div>
+                
+                <div id="top10Screen" class="hidden">
+                    <h2>TOP 10</h2>
+                    <div id="top10List"></div>
+                    <button class="btn" style="margin-top: 20px;" onclick="hideTop10()">VOLVER</button>
+                </div>
+                
+                <div id="instructionsScreen" class="hidden">
+                    <div id="instructionsContent">
+                        <h2 style="text-align: center;">INSTRUCCIONES</h2>
+                        
+                        <h3>OBJETIVO</h3>
+                        <ul>
+                            <li>Destruye todos los ladrillos de cada nivel</li>
+                            <li>No dejes caer la bola por debajo de tu pala</li>
+                            <li>Completa los 8 niveles con dificultad creciente</li>
+                            <li>¡NUEVO! Los bloques descienden lentamente - ¡Date prisa!</li>
+                        </ul>
+                        
+                        <h3>CONTROLES JUGADOR 1</h3>
+                        <ul>
+                            <li>← → Mover pala</li>
+                            <li>ESPACIO: Lanzar/Soltar bola</li>
+                        </ul>
+                        
+                        <h3>CONTROLES JUGADOR 2</h3>
+                        <ul>
+                            <li>A / D: Mover pala</li>
+                            <li>W: Lanzar/Soltar bola</li>
+                        </ul>
+                        
+                        <h3>CONTROLES GENERALES</h3>
+                        <ul>
+                            <li>P: Pausar / Reanudar</li>
+                            <li>ESC: Volver al menú (en pausa)</li>
+                        </ul>
+                        
+                        <h3>POWER-UPS</h3>
+                        <ul>
+                            <li style="color: #ff0;">AMARILLO [V]: Vida extra (+50 pts)</li>
+                            <li style="color: #0f0;">VERDE [A]: Agrandar pala - 15s</li>
+                            <li style="color: #f00;">ROJO [M]: Multiball x3</li>
+                            <li style="color: #f0f;">MAGENTA [P]: Pegamento - 12s</li>
+                            <li style="color: #0ff;">CIAN [L]: Láser - 20s</li>
+                        </ul>
+                        
+                        <h3>TIPOS DE LADRILLOS</h3>
+                        <ul>
+                            <li>Normales (verde): 1 golpe = 10 puntos</li>
+                            <li>Resistentes (amarillo): 2 golpes = 20 puntos</li>
+                            <li>Muy resistentes (naranja): 3 golpes = 30 puntos</li>
+                            <li>Indestructibles (gris): No se pueden romper</li>
+                        </ul>
+                        
+                        <button class="btn" style="display: block; margin: 20px auto 0;" onclick="hideInstructions()">VOLVER</button>
+                    </div>
+                </div>
+            </div>
+            <div id="powerUpSidebar" class="hidden">
+                <div class="bonus-header">BONUS ACTIVOS:</div>
+                <div id="powerUpIndicators"></div>
+            </div>
+        </div>
+
+        
+        <div id="nameInputModal" class="hidden">
+            <h2 style="color: #ff0;">¡NUEVO RÉCORD!</h2>
+            <p style="color: #0ff; margin: 15px 0;">Introduce tu nombre:</p>
+            <input type="text" id="playerName" maxlength="20" placeholder="TU NOMBRE">
+            <div class="modal-buttons">
+                <button class="btn" onclick="submitScore()">GUARDAR</button>
+                <button class="btn" onclick="skipScoreAndReturnToMenu()">MENÚ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================
+        // CONFIGURACIÓN Y CONSTANTES
+        // ============================
+        
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        const CONFIG = {
+            canvasWidth: 800,
+            canvasHeight: 600,
+            paddleWidth: 100,
+            paddleHeight: 15,
+            paddleSpeed: 9,
+            ballRadius: 6,
+            ballSpeed: 6.5,
+            brickRowCount: 8,
+            brickColumnCount: 13,
+            brickWidth: 58,
+            brickHeight: 20,
+            brickPadding: 2,
+            brickOffsetTop: 80,
+            brickOffsetLeft: 10,
+            maxLives: 3,
+            powerUpSpeed: 3,
+            powerUpDuration: 15000,
+            stickyDuration: 12000,
+            laserDuration: 20000,
+            laserSpeed: 8,
+            laserWidth: 4,
+            laserHeight: 15,
+            brickDescentSpeed: 0.5,
+            brickDescentInterval: 20
+        };
+        
+        // --- INICIO DE LA MODIFICACIÓN DE AUDIO ---
+        let audioContext = null;
+        let bgMusicSource = null;
+        let bgMusicInterval = null;
+        
+        // Función para inicializar el audio context
+        function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (error) {
+                    console.warn('Web Audio API no soportada:', error);
+                }
+            }
+        }
+
+
+        // Funciones para generar sonidos usando la Web Audio API
+
+        /**
+         * Genera un sonido simple con un oscilador.
+         * @param {number} frequency - Frecuencia en Hz.
+         * @param {number} duration - Duración en segundos.
+         * @param {string} type - Tipo de onda ('sine', 'square', 'sawtooth', 'triangle').
+         * @param {number} volume - Ganancia (0 a 1).
+         */
+        function generateSound(frequency, duration, type, volume) {
+            if (!audioContext) {
+                initAudioContext();
+            }
+            
+            if (!audioContext) {
+                return; // No se puede crear audio
+            }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            
+            // Configuración del volumen y envolvente (Attack/Decay)
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        const sounds = {
+            // Estas son funciones que generarán los sonidos al ser llamadas.
+            bounce: (vol) => {
+                generateSound(500, 0.05, 'square', vol * 0.8);
+                generateSound(1000, 0.05, 'square', vol * 0.5);
+            },
+            break: (vol) => {
+                generateSound(120, 0.1, 'sawtooth', vol * 0.7);
+                generateSound(80, 0.1, 'sawtooth', vol * 0.7);
+            },
+            powerup: (vol) => {
+                generateSound(440, 0.05, 'triangle', vol * 0.5);
+                generateSound(880, 0.15, 'triangle', vol * 0.8);
+            },
+            loseLife: (vol) => {
+                generateSound(300, 0.5, 'square', vol * 0.8);
+                generateSound(150, 0.5, 'square', vol * 0.01); // Quick drop
+            },
+            gameOver: (vol) => {
+                generateSound(60, 1.5, 'square', vol * 0.8);
+                generateSound(30, 1.5, 'square', vol * 0.01);
+            },
+            laser: (vol) => {
+                generateSound(1500, 0.08, 'sawtooth', vol * 0.9);
+                generateSound(800, 0.08, 'sawtooth', vol * 0.4);
+            },
+            
+            // La música de fondo se maneja con un secuenciador
+    bgMusic: {
+        play: (vol) => {
+            if (bgMusicInterval) {
+                // Detener cualquier música anterior
+                clearInterval(bgMusicInterval);
+                bgMusicInterval = null;
+            }
+            
+            // Define la melodía: pares de [frecuencia_Hz, duración_segundos]
+            const melody = [
+                // Arpeggio C-E-G-C (Do Mayor)
+                [523, 0.1], // C5
+                [659, 0.1], // E5
+                [784, 0.1], // G5
+                [1046, 0.2], // C6 (largo)
+                
+                // Arpeggio G-B-D-G (Sol Mayor)
+                [392, 0.1], // G4
+                [494, 0.1], // B4
+                [587, 0.1], // D5
+                [784, 0.2]  // G5 (largo)
+            ];
+            
+                const noteDuration = 0.15 * 1000; // La duración base de cada paso del secuenciador en ms
+                let noteIndex = 0;
+                const finalVolume = vol * 0.4; // Ajustar el volumen de la música para que no sea muy fuerte
+                
+                // Función para reproducir la nota actual
+                const playNote = () => {
+                    const [freq, durationFactor] = melody[noteIndex];
+                    
+                    // Generar la nota con un tipo de onda y duración específicos
+                    generateSound(freq, durationFactor * 0.9, 'triangle', finalVolume); 
+                    
+                    noteIndex = (noteIndex + 1) % melody.length; // Ciclo continuo
+                };
+
+                    // Iniciar la melodía y el bucle
+                    playNote(); // Tocar la primera nota inmediatamente
+                    bgMusicInterval = setInterval(playNote, noteDuration);
+                },
+                
+                pause: () => {
+                    if (bgMusicInterval) {
+                        clearInterval(bgMusicInterval);
+                        bgMusicInterval = null;
+                    }
+                },
+                
+                // Simular las propiedades para compatibilidad
+                loop: true,
+                volume: 0.5, 
+                currentTime: 0 
+            }
+        };
+
+        
+        // ============================
+        // VARIABLES GLOBALES DEL JUEGO
+        // ============================
+        
+        let gameState = {
+            currentScreen: 'menu',
+            numPlayers: 1,
+            currentLevel: 1,
+            gameRunning: false,
+            animationId: null,
+            lastTime: 0,
+            frameCount: 0
+        };
+        
+        let player1 = {
+            score: 0,
+            lives: CONFIG.maxLives,
+            paddle: null,
+            powerUps: { enlarge: false, laser: false, sticky: false },
+            powerUpTimers: {},
+            powerUpStartTimes: {}
+        };
+        
+        let player2 = {
+            score: 0,
+            lives: CONFIG.maxLives,
+            paddle: null,
+            powerUps: { enlarge: false, laser: false, sticky: false },
+            powerUpTimers: {},
+            powerUpStartTimes: {}
+        };
+
+        let pausedPowerUpData = {
+            player1: {},
+            player2: {}
+        };
+
+        
+        let balls = [];
+        let bricks = [];
+        let powerUps = [];
+        let lasers = [];
+        let particles = [];
+        
+        let keys = {
+            left: false,
+            right: false,
+            space: false,
+            a: false,
+            d: false,
+            w: false,
+            p: false
+        };
+
+        let scoreToSave = 0;
+        
+        // ============================
+        // DEFINICIÓN DE NIVELES CON FORMAS GEOMÉTRICAS
+        // ============================
+        
+        const LEVELS = [
+            {
+                name: "Nivel 1 - Inicio",
+                pattern: [
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 6.5,
+                powerUpChance: 0.2
+            },
+            {
+                name: "Nivel 2 - Escalera",
+                pattern: [
+                    [3,3,3,3,3,3,3,0,0,0,0,0,0],
+                    [2,2,2,2,2,2,3,3,0,0,0,0,0],
+                    [1,1,1,1,1,2,2,3,3,0,0,0,0],
+                    [1,1,1,1,1,1,2,2,3,3,0,0,0],
+                    [1,1,1,1,1,1,1,2,2,3,3,0,0],
+                    [1,1,1,1,1,1,1,1,2,2,3,3,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 7,
+                powerUpChance: 0.22
+            },
+            {
+                name: "Nivel 3 - Pirámide",
+                pattern: [
+                    [0,0,0,0,0,0,3,0,0,0,0,0,0],
+                    [0,0,0,0,0,3,3,3,0,0,0,0,0],
+                    [0,0,0,0,3,2,2,2,3,0,0,0,0],
+                    [0,0,0,3,2,1,1,1,2,3,0,0,0],
+                    [0,0,3,2,1,1,1,1,1,2,3,0,0],
+                    [0,3,2,1,1,1,1,1,1,1,2,3,0],
+                    [3,2,1,1,1,1,1,1,1,1,1,2,3],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 7.5,
+                powerUpChance: 0.25
+            },
+            {
+                name: "Nivel 4 - Diagonal",
+                pattern: [
+                    [3,0,0,0,0,0,0,0,0,0,0,0,1],
+                    [3,3,0,0,0,0,0,0,0,0,0,1,1],
+                    [2,3,3,0,0,0,0,0,0,0,1,1,2],
+                    [2,2,3,3,0,0,0,0,0,1,1,2,2],
+                    [1,2,2,3,3,0,0,0,1,1,2,2,3],
+                    [1,1,2,2,3,3,0,1,1,2,2,3,3],
+                    [1,1,1,2,2,3,3,1,2,2,3,3,3],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 8,
+                powerUpChance: 0.27
+            },
+            {
+                name: "Nivel 5 - Ajedrez",
+                pattern: [
+                    [3,1,3,1,3,1,3,1,3,1,3,1,3],
+                    [1,3,1,3,1,3,1,3,1,3,1,3,1],
+                    [3,2,3,2,3,2,3,2,3,2,3,2,3],
+                    [2,3,2,3,2,3,2,3,2,3,2,3,2],
+                    [3,2,3,2,3,2,3,2,3,2,3,2,3],
+                    [1,3,1,3,1,3,1,3,1,3,1,3,1],
+                    [3,1,3,1,3,1,3,1,3,1,3,1,3],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 8.5,
+                powerUpChance: 0.3
+            },
+            {
+                name: "Nivel 6 - Fortaleza",
+                pattern: [
+                    [4,3,3,3,3,3,3,3,3,3,3,3,4],
+                    [4,2,2,2,2,2,2,2,2,2,2,2,4],
+                    [4,2,0,0,0,0,0,0,0,0,0,2,4],
+                    [4,2,0,3,3,3,3,3,3,3,0,2,4],
+                    [4,2,0,3,1,1,1,1,1,3,0,2,4],
+                    [4,2,0,3,1,1,1,1,1,3,0,2,4],
+                    [4,2,2,3,3,3,3,3,3,3,2,2,4],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 9,
+                powerUpChance: 0.32
+            },
+            {
+                name: "Nivel 7 - Doble Capa",
+                pattern: [
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3],
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [1,1,1,1,1,1,1,1,1,1,1,1,1],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 9.5,
+                powerUpChance: 0.35
+            },
+            {
+                name: "Nivel 8 - The Boss",
+                pattern: [
+                    [4,3,3,4,3,3,4,3,3,4,3,3,4],
+                    [3,2,2,3,2,2,3,2,2,3,2,2,3],
+                    [3,2,1,3,2,1,3,2,1,3,2,1,3],
+                    [4,3,1,4,3,1,4,3,1,4,3,1,4],
+                    [3,2,1,3,2,1,3,2,1,3,2,1,3],
+                    [3,2,2,3,2,2,3,2,2,3,2,2,3],
+                    [4,3,3,4,3,3,4,3,3,4,3,3,4],
+                    [2,2,2,2,2,2,2,2,2,2,2,2,2]
+                ],
+                ballSpeed: 10,
+                powerUpChance: 0.4
+            },
+            {
+                name: "Nivel 9 - Laberinto",
+                pattern: [
+                    [4,1,1,4,1,1,4,1,1,4,1,1,4],
+                    [1,0,0,1,0,0,1,0,0,1,0,0,1],
+                    [1,0,2,2,2,0,1,0,2,2,2,0,1],
+                    [4,0,2,3,2,0,4,0,2,3,2,0,4],
+                    [1,0,2,2,2,0,1,0,2,2,2,0,1],
+                    [1,0,0,1,0,0,1,0,0,1,0,0,1],
+                    [4,1,1,4,1,1,4,1,1,4,1,1,4],
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3]
+                ],
+                ballSpeed: 10.5,
+                powerUpChance: 0.42
+            },
+            {
+                name: "Nivel 10 - Onda",
+                pattern: [
+                    [3,2,1,0,0,0,1,2,3,2,1,0,0],
+                    [2,1,0,0,0,1,2,3,2,1,0,0,0],
+                    [1,0,0,0,1,2,3,2,1,0,0,0,1],
+                    [0,0,0,1,2,3,2,1,0,0,0,1,2],
+                    [0,0,1,2,3,2,1,0,0,0,1,2,3],
+                    [0,1,2,3,2,1,0,0,0,1,2,3,2],
+                    [1,2,3,2,1,0,0,0,1,2,3,2,1],
+                    [2,3,2,1,0,0,0,1,2,3,2,1,0]
+                ],
+                ballSpeed: 11,
+                powerUpChance: 0.44
+            },
+            {
+                name: "Nivel 11 - Cruz",
+                pattern: [
+                    [0,0,0,3,3,3,3,3,3,3,0,0,0],
+                    [0,0,0,2,2,2,2,2,2,2,0,0,0],
+                    [3,2,1,1,1,1,1,1,1,1,1,2,3],
+                    [3,2,1,1,1,1,1,1,1,1,1,2,3],
+                    [3,2,1,1,1,1,4,1,1,1,1,2,3],
+                    [0,0,0,2,2,2,2,2,2,2,0,0,0],
+                    [0,0,0,3,3,3,3,3,3,3,0,0,0],
+                    [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                ],
+                ballSpeed: 11.5,
+                powerUpChance: 0.46
+            },
+            {
+                name: "Nivel 12 - Espiral",
+                pattern: [
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3],
+                    [3,0,0,0,0,0,0,0,0,0,0,0,2],
+                    [3,0,2,2,2,2,2,2,2,2,2,0,2],
+                    [3,0,2,0,0,0,0,0,0,0,2,0,2],
+                    [3,0,2,0,1,1,1,1,1,0,2,0,2],
+                    [3,0,2,0,0,0,0,0,0,0,2,0,2],
+                    [3,0,2,2,2,2,2,2,2,2,2,0,2],
+                    [3,3,3,3,3,3,3,3,3,3,3,3,2]
+                ],
+                ballSpeed: 12,
+                powerUpChance: 0.48
+            },
+            {
+                name: "Nivel 13 - Diamante",
+                pattern: [
+                    [0,0,0,0,0,0,4,0,0,0,0,0,0],
+                    [0,0,0,0,0,4,3,4,0,0,0,0,0],
+                    [0,0,0,0,4,3,2,3,4,0,0,0,0],
+                    [0,0,0,4,3,2,1,2,3,4,0,0,0],
+                    [0,0,0,0,4,3,2,3,4,0,0,0,0],
+                    [0,0,0,0,0,4,3,4,0,0,0,0,0],
+                    [0,0,0,0,0,0,4,0,0,0,0,0,0],
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3]
+                ],
+                ballSpeed: 12.5,
+                powerUpChance: 0.5
+            },
+            {
+                name: "Nivel 14 - Rejilla",
+                pattern: [
+                    [4,0,4,0,4,0,4,0,4,0,4,0,4],
+                    [0,3,0,3,0,3,0,3,0,3,0,3,0],
+                    [4,0,4,0,4,0,4,0,4,0,4,0,4],
+                    [0,2,0,2,0,2,0,2,0,2,0,2,0],
+                    [4,0,4,0,4,0,4,0,4,0,4,0,4],
+                    [0,1,0,1,0,1,0,1,0,1,0,1,0],
+                    [4,0,4,0,4,0,4,0,4,0,4,0,4],
+                    [3,3,3,3,3,3,3,3,3,3,3,3,3]
+                ],
+                ballSpeed: 13,
+                powerUpChance: 0.52
+            },
+            {
+                name: "Nivel 15 - Torres Gemelas",
+                pattern: [
+                    [4,4,4,0,0,0,0,0,0,0,4,4,4],
+                    [3,3,3,0,0,0,0,0,0,0,3,3,3],
+                    [3,2,3,0,0,0,4,0,0,0,3,2,3],
+                    [3,2,3,0,0,0,0,0,0,0,3,2,3],
+                    [3,2,3,0,0,0,0,0,0,0,3,2,3],
+                    [3,2,3,0,0,0,0,0,0,0,3,2,3],
+                    [3,2,3,3,3,3,3,3,3,3,3,2,3],
+                    [4,4,4,4,4,4,4,4,4,4,4,4,4]
+                ],
+                ballSpeed: 13.5,
+                powerUpChance: 0.54
+            },
+            {
+                name: "Nivel 16 - Apocalipsis",
+                pattern: [
+                    [4,3,4,3,4,3,4,3,4,3,4,3,4],
+                    [3,4,3,4,3,4,3,4,3,4,3,4,3],
+                    [4,3,2,3,2,3,2,3,2,3,2,3,4],
+                    [3,2,3,2,3,2,3,2,3,2,3,2,3],
+                    [2,3,2,1,2,1,2,1,2,1,2,3,2],
+                    [3,2,1,2,1,2,1,2,1,2,1,2,3],
+                    [4,3,2,1,2,1,2,1,2,1,2,3,4],
+                    [4,4,3,3,2,2,1,2,2,3,3,4,4]
+                ],
+                ballSpeed: 14,
+                powerUpChance: 0.56
+            },
+            {
+                name: "Nivel 17 - Armagedón Final",
+                pattern: [
+                    [4,4,4,4,4,4,4,4,4,4,4,4,4],
+                    [4,3,3,3,3,3,3,3,3,3,3,3,4],
+                    [4,3,2,2,2,2,2,2,2,2,2,3,4],
+                    [4,3,2,1,1,1,1,1,1,1,2,3,4],
+                    [4,3,2,1,1,1,4,1,1,1,2,3,4],
+                    [4,3,2,2,2,2,2,2,2,2,2,3,4],
+                    [4,3,3,3,3,3,3,3,3,3,3,3,4],
+                    [4,4,4,4,4,4,4,4,4,4,4,4,4]
+                ],
+                ballSpeed: 14.5,
+                powerUpChance: 0.6
+            }
+        ];
+
+        
+        // ============================
+        // CLASES DEL JUEGO
+        // ============================
+        
+        class Paddle {
+            constructor(playerNum) {
+                this.playerNum = playerNum;
+                this.width = CONFIG.paddleWidth;
+                this.height = CONFIG.paddleHeight;
+                
+                if (gameState.numPlayers === 2) {
+                    if (playerNum === 1) {
+                        this.x = (CONFIG.canvasWidth * 0.75) - (this.width / 2);
+                    } else {
+                        this.x = (CONFIG.canvasWidth * 0.25) - (this.width / 2);
+                    }
+                } else {
+                    this.x = (CONFIG.canvasWidth - this.width) / 2;
+                }
+                
+                this.y = CONFIG.canvasHeight - 40;
+                this.speed = CONFIG.paddleSpeed;
+                this.baseWidth = CONFIG.paddleWidth;
+            }
+
+            
+            move(direction) {
+                let newX = this.x + direction * this.speed;
+                
+                if (newX < 0) newX = 0;
+                if (newX + this.width > CONFIG.canvasWidth) {
+                    newX = CONFIG.canvasWidth - this.width;
+                }
+                
+                if (gameState.numPlayers === 2) {
+                    let otherPaddle = this.playerNum === 1 ? player2.paddle : player1.paddle;
+                    if (otherPaddle) {
+                        if (newX + this.width > otherPaddle.x && newX < otherPaddle.x + otherPaddle.width) {
+                            if (direction > 0) {
+                                newX = otherPaddle.x - this.width;
+                            } else {
+                                newX = otherPaddle.x + otherPaddle.width;
+                            }
+                        }
+                    }
+                }
+                
+                this.x = newX;
+            }
+            
+            draw() {
+                ctx.save();
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+                
+                if (this.playerNum === 1) {
+                    gradient.addColorStop(0, '#00ffff');
+                    gradient.addColorStop(1, '#0088ff');
+                } else {
+                    gradient.addColorStop(0, '#ff00ff');
+                    gradient.addColorStop(1, '#ff0088');
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                ctx.restore();
+            }
+            
+            enlarge() {
+                this.width = this.baseWidth * 1.5;
+            }
+            
+            reset() {
+                this.width = this.baseWidth;
+            }
+        }
+        
+        class Ball {
+            constructor(x, y, speed) {
+                this.x = x;
+                this.y = y;
+                this.radius = CONFIG.ballRadius;
+                this.speed = speed || CONFIG.ballSpeed;
+                this.dx = this.speed * (Math.random() > 0.5 ? 1 : -1);
+                this.dy = -this.speed;
+                this.stuck = true;
+                this.stuckToPaddle = null;
+                this.lastPlayer = null;
+            }
+            
+            update() {
+                if (this.stuck && this.stuckToPaddle) {
+                    this.x = this.stuckToPaddle.x + this.stuckToPaddle.width / 2;
+                    this.y = this.stuckToPaddle.y - this.radius;
+                    return;
+                }
+                
+                this.x += this.dx;
+                this.y += this.dy;
+                
+                if (this.x + this.radius > CONFIG.canvasWidth || this.x - this.radius < 0) {
+                    this.dx = -this.dx;
+                    playSound('bounce');
+                }
+                
+                if (this.y - this.radius < 0) {
+                    this.dy = -this.dy;
+                    playSound('bounce');
+                }
+                
+                this.checkPaddleCollision(player1.paddle, player1);
+                if (gameState.numPlayers === 2 && player2.paddle) {
+                    this.checkPaddleCollision(player2.paddle, player2);
+                }
+                
+                this.checkBrickCollision();
+            }
+            
+            checkPaddleCollision(paddle, player) {
+                if (!paddle) return;
+                
+                if (this.y + this.radius >= paddle.y &&
+                    this.y - this.radius <= paddle.y + paddle.height &&
+                    this.x >= paddle.x &&
+                    this.x <= paddle.x + paddle.width) {
+                    
+                    this.lastPlayer = player;
+                    
+                    if (player.powerUps.sticky) {
+                        this.stuck = true;
+                        this.stuckToPaddle = paddle;
+                        return;
+                    }
+                    
+                    let hitPos = (this.x - paddle.x) / paddle.width;
+                    let angle = (hitPos - 0.5) * Math.PI * 0.6;
+                    
+                    this.dx = this.speed * Math.sin(angle);
+                    this.dy = -this.speed * Math.cos(angle);
+                    this.y = paddle.y - this.radius;
+                    
+                    playSound('bounce');
+                }
+            }
+            
+            checkBrickCollision() {
+                for (let brick of bricks) {
+                    if (!brick.destroyed && brick.type !== 4) {
+                        if (this.x >= brick.x &&
+                            this.x <= brick.x + brick.width &&
+                            this.y >= brick.y &&
+                            this.y <= brick.y + brick.height) {
+                            
+                            let prevX = this.x - this.dx;
+                            let prevY = this.y - this.dy;
+                            
+                            let fromLeft = prevX < brick.x;
+                            let fromRight = prevX > brick.x + brick.width;
+                            let fromTop = prevY < brick.y;
+                            let fromBottom = prevY > brick.y + brick.height;
+                            
+                            if (fromLeft || fromRight) {
+                                this.dx = -this.dx;
+                            }
+                            if (fromTop || fromBottom) {
+                                this.dy = -this.dy;
+                            }
+                            
+                            brick.hit(this);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            launch() {
+                if (this.stuck) {
+                    this.stuck = false;
+                    this.stuckToPaddle = null;
+                    let angle = (Math.random() - 0.5) * Math.PI * 0.4;
+                    this.dx = this.speed * Math.sin(angle);
+                    this.dy = -this.speed * Math.cos(angle);
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(1, '#ffff00');
+                
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+        
+        class Brick {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = CONFIG.brickWidth;
+                this.height = CONFIG.brickHeight;
+                this.type = type;
+                this.hits = type;
+                this.destroyed = type === 0;
+                this.color = this.getColor();
+                this.initialY = y;
+            }
+            
+            getColor() {
+                switch(this.type) {
+                    case 1: return '#00ff00';
+                    case 2: return '#ffff00';
+                    case 3: return '#ff8800';
+                    case 4: return '#888888';
+                    default: return '#000000';
+                }
+            }
+            
+            hit(ball) {
+                if (this.type === 4 || this.destroyed) return;
+                
+                this.hits--;
+                
+                if (this.hits <= 0) {
+                    this.destroyed = true;
+                    
+                    for (let p = 0; p < 15; p++) {
+                        particles.push(new Particle(
+                            this.x + this.width / 2,
+                            this.y + this.height / 2,
+                            this.color
+                        ));
+                    }
+                    
+                    let points = this.type === 1 ? 10 : (this.type === 2 ? 20 : 30);
+                    
+                    if (ball && ball.lastPlayer) {
+                        ball.lastPlayer.score += points;
+                    } else {
+                        player1.score += points;
+                    }
+                    
+                    updateHUD();
+                    
+                    let level = LEVELS[gameState.currentLevel - 1];
+                    if (Math.random() < level.powerUpChance) {
+                        spawnPowerUp(this.x + this.width / 2, this.y + this.height / 2);
+                    }
+                    
+                    playSound('break');
+                    
+                    setTimeout(() => checkLevelComplete(), 100);
+                } else {
+                    this.color = this.getColor();
+                }
+            }
+            
+            descend(amount) {
+                if (this.type !== 0 && !this.destroyed) {
+                    this.y += amount;
+                }
+            }
+            
+            draw() {
+                if (this.destroyed) return;
+                
+                ctx.save();
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.fillRect(this.x, this.y, this.width, 3);
+                
+                if (this.type > 1 && this.hits < this.type) {
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.lineWidth = 2;
+                    
+                    let cracksLevel = this.type - this.hits;
+                    
+                    if (cracksLevel >= 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + 10, this.y + 5);
+                        ctx.lineTo(this.x + this.width - 10, this.y + this.height - 5);
+                        ctx.stroke();
+                    }
+                    
+                    if (cracksLevel >= 2) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + this.width - 10, this.y + 5);
+                        ctx.lineTo(this.x + 10, this.y + this.height - 5);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(this.x + this.width/2, this.y);
+                        ctx.lineTo(this.x + this.width/2, this.y + this.height);
+                        ctx.stroke();
+                    }
+                    
+                    if (cracksLevel >= 2 && this.type === 3) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.x, this.y + this.height/2);
+                        ctx.lineTo(this.x + this.width, this.y + this.height/2);
+                        ctx.stroke();
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        class PowerUp {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.width = 30;
+                this.height = 20;
+                this.type = type;
+                this.speed = CONFIG.powerUpSpeed;
+                this.collected = false;
+                this.color = this.getColor();
+            }
+            
+            getColor() {
+                switch(this.type) {
+                    case 'life': return '#ffff00';
+                    case 'enlarge': return '#00ff00';
+                    case 'multiball': return '#ff0000';
+                    case 'sticky': return '#ff00ff';
+                    case 'laser': return '#00ffff';
+                    default: return '#ffffff';
+                }
+            }
+            
+            update() {
+                this.y += this.speed;
+                
+                if (player1.paddle) {
+                    this.checkPaddleCollision(player1.paddle, player1);
+                }
+                if (gameState.numPlayers === 2 && player2.paddle) {
+                    this.checkPaddleCollision(player2.paddle, player2);
+                }
+                
+                if (this.y > CONFIG.canvasHeight) {
+                    this.collected = true;
+                }
+            }
+            
+            checkPaddleCollision(paddle, player) {
+                if (this.x + this.width >= paddle.x &&
+                    this.x <= paddle.x + paddle.width &&
+                    this.y + this.height >= paddle.y &&
+                    this.y <= paddle.y + paddle.height) {
+                    
+                    this.activate(player);
+                    this.collected = true;
+                    playSound('powerup');
+                }
+            }
+            
+            activate(player) {
+                showBonusNotification(this.type);
+                
+                switch(this.type) {
+                    case 'life':
+                        player.lives++;
+                        player.score += 50;
+                        break;
+                        
+                    case 'enlarge':
+                        player.paddle.enlarge();
+                        player.powerUps.enlarge = true;
+                        player.powerUpStartTimes.enlarge = Date.now();
+                        
+                        clearTimeout(player.powerUpTimers.enlarge);
+                        player.powerUpTimers.enlarge = setTimeout(() => {
+                            player.paddle.reset();
+                            player.powerUps.enlarge = false;
+                            delete player.powerUpStartTimes.enlarge;
+                            updatePowerUpIndicators();
+                        }, CONFIG.powerUpDuration);
+                        break;
+                        
+                    case 'multiball':
+                        if (balls.length > 0) {
+                            let mainBall = balls[0];
+                            for (let i = 0; i < 2; i++) {
+                                let newBall = new Ball(mainBall.x, mainBall.y, mainBall.speed);
+                                let angle = (Math.random() - 0.5) * Math.PI * 0.5;
+                                newBall.dx = newBall.speed * Math.sin(angle);
+                                newBall.dy = -newBall.speed * Math.cos(angle);
+                                newBall.stuck = false;
+                                balls.push(newBall);
+                            }
+                        }
+                        player.score += 100;
+                        break;
+                        
+                    case 'sticky':
+                        player.powerUps.sticky = true;
+                        player.powerUpStartTimes.sticky = Date.now();
+                        
+                        clearTimeout(player.powerUpTimers.sticky);
+                        player.powerUpTimers.sticky = setTimeout(() => {
+                            player.powerUps.sticky = false;
+                            delete player.powerUpStartTimes.sticky;
+                            updatePowerUpIndicators();
+                        }, CONFIG.stickyDuration);
+                        break;
+                        
+                    case 'laser':
+                        player.powerUps.laser = true;
+                        player.powerUpStartTimes.laser = Date.now();
+                        
+                        clearTimeout(player.powerUpTimers.laser);
+                        player.powerUpTimers.laser = setTimeout(() => {
+                            player.powerUps.laser = false;
+                            delete player.powerUpStartTimes.laser;
+                            updatePowerUpIndicators();
+                        }, CONFIG.laserDuration);
+                        break;
+                }
+                
+                updateHUD();
+                updatePowerUpIndicators();
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px Courier New';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                let letter = '';
+                switch(this.type) {
+                    case 'life':      letter = 'V'; break;
+                    case 'enlarge':   letter = 'A'; break;
+                    case 'multiball': letter = 'M'; break;
+                    case 'sticky':    letter = 'P'; break;
+                    case 'laser':     letter = 'L'; break;
+                }
+                
+                ctx.fillText(letter, this.x + this.width / 2, this.y + this.height / 2);
+                ctx.restore();
+            }
+        }
+        
+        class Laser {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = CONFIG.laserWidth;
+                this.height = CONFIG.laserHeight;
+                this.speed = CONFIG.laserSpeed;
+                this.destroyed = false;
+            }
+            
+            update() {
+                this.y -= this.speed;
+                
+                for (let brick of bricks) {
+                    if (!brick.destroyed && brick.type !== 4) {
+                        if (this.x >= brick.x &&
+                            this.x <= brick.x + brick.width &&
+                            this.y >= brick.y &&
+                            this.y <= brick.y + brick.height) {
+                            
+                            brick.hit();
+                            this.destroyed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (this.y + this.height < 0) {
+                    this.destroyed = true;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);
+                gradient.addColorStop(0, '#ffffff');
+                gradient.addColorStop(1, '#00ffff');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.restore();
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 8;
+                this.vy = (Math.random() - 0.5) * 8 - 2;
+                this.size = Math.random() * 4 + 2;
+                this.color = color;
+                this.life = 1.0;
+                this.decay = Math.random() * 0.02 + 0.01;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.3;
+                this.life -= this.decay;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
+                ctx.restore();
+            }
+            
+            isDead() {
+                return this.life <= 0;
+            }
+        }
+        
+        // ============================
+        // FUNCIONES DE INICIALIZACIÓN
+        // ============================
+        
+        function initGame(numPlayers) {
+            gameState.numPlayers = numPlayers;
+            gameState.currentLevel = 1;
+            gameState.frameCount = 0;
+            
+            player1.score = 0;
+            player1.lives = CONFIG.maxLives;
+            player1.paddle = new Paddle(1);
+            player1.powerUps = { enlarge: false, laser: false, sticky: false };
+            player1.powerUpTimers = {};
+            player1.powerUpStartTimes = {};
+            
+            if (numPlayers === 2) {
+                player2.score = 0;
+                player2.lives = CONFIG.maxLives;
+                player2.paddle = new Paddle(2);
+                player2.powerUps = { enlarge: false, laser: false, sticky: false };
+                player2.powerUpTimers = {};
+                player2.powerUpStartTimes = {};
+                
+                document.getElementById('player2Hud').style.display = 'block';
+                document.getElementById('powerUpIndicatorsP2').classList.remove('hidden');
+            } else {
+                player2.paddle = null;
+                document.getElementById('player2Hud').style.display = 'none';
+                document.getElementById('powerUpIndicatorsP2').classList.add('hidden');
+            }
+            
+            loadLevel(gameState.currentLevel);
+            resetBall();
+            updateHUD();
+            updatePowerUpIndicators();
+        }
+        
+        function loadLevel(levelNum) {
+            if (levelNum > LEVELS.length) {
+                gameOver(true);
+                return;
+            }
+            
+            let level = LEVELS[levelNum - 1];
+            bricks = [];
+            
+            for (let row = 0; row < level.pattern.length; row++) {
+                for (let col = 0; col < level.pattern[row].length; col++) {
+                    let type = level.pattern[row][col];
+                    let x = CONFIG.brickOffsetLeft + col * (CONFIG.brickWidth + CONFIG.brickPadding);
+                    let y = CONFIG.brickOffsetTop + row * (CONFIG.brickHeight + CONFIG.brickPadding);
+                    bricks.push(new Brick(x, y, type));
+                }
+            }
+            
+            CONFIG.ballSpeed = level.ballSpeed;
+        }
+        
+        function resetBall() {
+            balls = [];
+            
+            let paddle = null;
+            if (player1.paddle && player1.lives > 0) {
+                paddle = player1.paddle;
+            } else if (gameState.numPlayers === 2 && player2.paddle && player2.lives > 0) {
+                paddle = player2.paddle;
+            }
+            
+            if (paddle) {
+                let ball = new Ball(
+                    paddle.x + paddle.width / 2,
+                    paddle.y - CONFIG.ballRadius,
+                    CONFIG.ballSpeed
+                );
+                ball.stuckToPaddle = paddle;
+                balls.push(ball);
+            }
+        }
+        
+        function spawnPowerUp(x, y) {
+            const types = ['life', 'enlarge', 'multiball', 'sticky', 'laser'];
+            let type = types[Math.floor(Math.random() * types.length)];
+            powerUps.push(new PowerUp(x, y, type));
+        }
+        
+        function showBonusNotification(type) {
+            const notifications = {
+                life: { text: '¡VIDA EXTRA!', color: '#ffff00' },
+                enlarge: { text: '¡PALA GRANDE! (15s)', color: '#00ff00' },
+                multiball: { text: '¡MULTIBALL x3!', color: '#ff0000' },
+                sticky: { text: '¡PEGAMENTO! (12s)', color: '#ff00ff' },
+                laser: { text: '¡LÁSER! (20s)', color: '#00ffff' }
+            };
+            
+            const notif = notifications[type];
+            const elem = document.getElementById('bonusNotification');
+            elem.textContent = notif.text;
+            elem.style.borderColor = notif.color;
+            elem.style.color = notif.color;
+            elem.classList.remove('hidden');
+            
+            setTimeout(() => {
+                elem.classList.add('hidden');
+            }, 1500);
+        }
+        
+        function updatePowerUpIndicators() {
+            const powerUpConfigs = {
+                enlarge: { name: 'PALA GRANDE', icon: 'A', duration: CONFIG.powerUpDuration },
+                sticky: { name: 'PEGAMENTO', icon: 'P', duration: CONFIG.stickyDuration },
+                laser: { name: 'LÁSER', icon: 'L', duration: CONFIG.laserDuration }
+            };
+            
+            updatePlayerIndicators(player1, 'powerUpIndicators', powerUpConfigs);
+            
+            if (gameState.numPlayers === 2) {
+                updatePlayerIndicators(player2, 'powerUpIndicatorsP2', powerUpConfigs);
+            }
+        }
+        
+        function updatePlayerIndicators(player, containerId, powerUpConfigs) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            for (let [key, config] of Object.entries(powerUpConfigs)) {
+                let indicator = container.querySelector(`.powerup-indicator.${key}`);
+                
+                if (player.powerUps[key] && player.powerUpStartTimes[key]) {
+                    const elapsed = Date.now() - player.powerUpStartTimes[key];
+                    const remaining = Math.max(0, config.duration - elapsed);
+                    const percentage = (remaining / config.duration) * 100;
+                    
+                    if (remaining > 0) {
+                        if (!indicator) {
+                            indicator = document.createElement('div');
+                            indicator.className = `powerup-indicator ${key}`;
+                            indicator.innerHTML = `
+                                <div class="powerup-icon">${config.icon}</div>
+                                <div class="powerup-info">
+                                    <div class="powerup-name">${config.name}</div>
+                                    <div class="powerup-time"></div>
+                                    <div class="powerup-bar">
+                                        <div class="powerup-bar-fill"></div>
+                                    </div>
+                                </div>
+                            `;
+                            container.appendChild(indicator);
+                        }
+                        
+                        const timeElem = indicator.querySelector('.powerup-time');
+                        const barFill = indicator.querySelector('.powerup-bar-fill');
+                        
+                        timeElem.textContent = Math.ceil(remaining / 1000) + 's';
+                        barFill.style.width = percentage + '%';
+                    } else if (indicator) {
+                        indicator.remove();
+                    }
+                } else if (indicator) {
+                    indicator.remove();
+                }
+            }
+        }
+        
+        // ============================
+        // LOOP PRINCIPAL DEL JUEGO
+        // ============================
+        
+        function gameLoop(timestamp) {
+            if (!gameState.gameRunning) return;
+            
+            let deltaTime = timestamp - gameState.lastTime;
+            gameState.lastTime = timestamp;
+            
+            ctx.clearRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
+            
+            drawBackground();
+            updateGame();
+            drawGame();
+            
+            if (gameState.frameCount % 5 === 0) {
+                updatePowerUpIndicators();
+            }
+            
+            gameState.animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        function updateGame() {
+            gameState.frameCount++;
+            
+            if (gameState.frameCount % CONFIG.brickDescentInterval === 0) {
+                for (let brick of bricks) {
+                    brick.descend(CONFIG.brickDescentSpeed);
+                    
+                    if (brick.y + brick.height >= CONFIG.canvasHeight - 100 && !brick.destroyed && brick.type !== 0) {
+                        loseLife();
+                    }
+                }
+            }
+            
+            for (let i = balls.length - 1; i >= 0; i--) {
+                balls[i].update();
+                
+                if (balls[i].y - balls[i].radius > CONFIG.canvasHeight) {
+                    balls.splice(i, 1);
+                }
+            }
+            
+            if (balls.length === 0) {
+                loseLife();
+            }
+            
+            for (let i = powerUps.length - 1; i >= 0; i--) {
+                powerUps[i].update();
+                
+                if (powerUps[i].collected) {
+                    powerUps.splice(i, 1);
+                }
+            }
+            
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                lasers[i].update();
+                
+                if (lasers[i].destroyed) {
+                    lasers.splice(i, 1);
+                }
+            }
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                if (particles[i].isDead()) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            if (keys.left && player1.paddle) {
+                player1.paddle.move(-1);
+            }
+            if (keys.right && player1.paddle) {
+                player1.paddle.move(1);
+            }
+            
+            if (gameState.numPlayers === 2 && player2.paddle) {
+                if (keys.a) player2.paddle.move(-1);
+                if (keys.d) player2.paddle.move(1);
+            }
+        }
+        
+        function drawGame() {
+            for (let brick of bricks) {
+                brick.draw();
+            }
+            
+            for (let powerUp of powerUps) {
+                powerUp.draw();
+            }
+            
+            for (let laser of lasers) {
+                laser.draw();
+            }
+            
+            if (player1.paddle) {
+                player1.paddle.draw();
+            }
+            
+            if (player2.paddle) {
+                player2.paddle.draw();
+            }
+            
+            for (let particle of particles) {
+                particle.draw();
+            }
+            
+            for (let ball of balls) {
+                ball.draw();
+            }
+        }
+        
+        function drawBackground() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
+            
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 50; i++) {
+                let x = (i * 137) % CONFIG.canvasWidth;
+                let y = (i * 213) % CONFIG.canvasHeight;
+                ctx.fillRect(x, y, 1, 1);
+            }
+        }
+        
+        // ============================
+        // FUNCIONES DE JUEGO
+        // ============================
+        
+        function loseLife() {
+            // La lógica original para descontar vidas era un poco extraña,
+            // pero la mantenemos para no alterar el gameplay.
+            // Si solo queda una bola, se procesa la pérdida de vida.
+            if (balls.length <= 1) {
+                if (player1.paddle) player1.lives--;
+                if (gameState.numPlayers === 2 && player2.paddle) player2.lives--;
+                
+                updateHUD();
+                playSound('loseLife');
+
+                let player1Alive = player1.lives > 0;
+                // AQUÍ ESTÁ LA CORRECCIÓN CLAVE:
+                // player2Alive solo puede ser true si estamos en modo de 2 jugadores Y el jugador 2 tiene vidas.
+                let player2Alive = gameState.numPlayers === 2 && player2.lives > 0;
+
+                // La condición de Game Over ahora funciona para ambos modos:
+                // - En 1P: se activa si !player1Alive es true (ya que player2Alive siempre será false).
+                // - En 2P: se activa si tanto !player1Alive como !player2Alive son true.
+                if (!player1Alive && !player2Alive) {
+                    gameOver(false);
+                } else {
+                    // Si el juego no ha terminado, eliminamos la pala del jugador que ha perdido.
+                    if (!player1Alive && player1.paddle) {
+                        player1.paddle = null;
+                    }
+                    if (gameState.numPlayers === 2 && !player2Alive && player2.paddle) {
+                        player2.paddle = null;
+                    }
+                    
+                    // Y reiniciamos la bola si todavía queda alguien jugando.
+                    if (player1.paddle || (gameState.numPlayers === 2 && player2.paddle)) {
+                        resetBall();
+                    }
+                }
+            } else {
+                // Si hay multiball, simplemente eliminamos la bola que se ha caído sin quitar vidas.
+                // El bucle principal ya se encarga de eliminar la bola del array.
+            }
+        }        
+        function checkLevelComplete() {
+            let remainingBricks = 0;
+            for (let brick of bricks) {
+                if (!brick.destroyed && brick.type !== 0 && brick.type !== 4) {
+                    remainingBricks++;
+                }
+            }
+            
+            if (remainingBricks === 0) {
+                for (let ball of balls) {
+                    ball.dx = 0;
+                    ball.dy = 0;
+                }
+                player1.score += 500;
+                gameState.currentLevel++;
+                updateHUD();
+                
+                if (gameState.currentLevel > LEVELS.length) {
+                    gameOver(true);
+                } else {
+                    setTimeout(() => {
+                        loadLevel(gameState.currentLevel);
+                        resetBall();
+                        powerUps = [];
+                        lasers = [];
+                        gameState.frameCount = 0;
+                        updateHUD();
+                    }, 1000);
+                }
+            }
+        }
+        
+        function gameOver(victory) {
+            gameState.gameRunning = false;
+            cancelAnimationFrame(gameState.animationId);
+            sounds.bgMusic.pause();
+
+            if (!victory) {
+                playSound('gameOver');
+            }
+
+            let finalScoresDiv = document.getElementById('finalScores');
+
+            if (gameState.numPlayers === 1) {
+                finalScoresDiv.innerHTML = `
+                    <div>Tu puntuación: ${player1.score}</div>
+                    <div style="margin-top: 10px;">Nivel alcanzado: ${gameState.currentLevel}</div>
+                `;
+            } else {
+                finalScoresDiv.innerHTML = `
+                    <div>Jugador 1: ${player1.score}</div>
+                    <div>Jugador 2: ${player2.score}</div>
+                    <div style="margin-top: 10px;">Nivel alcanzado: ${gameState.currentLevel}</div>
+                `;
+            }
+
+            if (victory) {
+                finalScoresDiv.innerHTML = `
+                    <div style="color: #ff0; font-size: 28px; margin-bottom: 20px;">¡VICTORIA!</div>
+                ` + finalScoresDiv.innerHTML;
+            }
+
+            // Siempre mostramos la pantalla de Game Over
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+
+            let bestScore = gameState.numPlayers === 2 ? Math.max(player1.score, player2.score) : player1.score;
+            checkTop10(bestScore);
+        }
+
+        function checkTop10(score) {
+            let top10 = loadTop10();
+            
+            let entraEnTop10 = false;
+            if (top10.length < 10 || score > top10[top10.length - 1].score) {
+                entraEnTop10 = true;
+            }
+
+            if (entraEnTop10) {
+                scoreToSave = score; // Guardamos la puntuación en nuestra nueva variable
+                document.getElementById('nameInputModal').classList.remove('hidden');
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerName').focus();
+            }
+            // Ya no hay 'else', porque la pantalla de Game Over ya está visible.
+        }
+
+        function skipScoreAndReturnToMenu() {
+            document.getElementById('nameInputModal').classList.add('hidden');
+            // No hace falta hacer nada más, la pantalla de Game Over ya está visible.
+        }
+
+        function submitScore() {
+            let name = document.getElementById('playerName').value.trim();
+
+            if (!name) {
+                alert('Por favor, introduce un nombre');
+                return;
+            }
+            
+            let score = scoreToSave; // Usamos la puntuación que guardamos
+            let top10 = loadTop10();
+            
+            let date = new Date();
+            let dateStr = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+            
+            top10.push({ name: name, score: score, date: dateStr });
+            top10.sort((a, b) => b.score - a.score);
+            top10 = top10.slice(0, 10);
+            
+            saveTop10(top10);
+            document.getElementById('nameInputModal').classList.add('hidden');
+            // Ya no es necesario mostrar la pantalla de Game Over ni usar un temporizador.
+        }
+
+        function loadTop10() {
+            let data = localStorage.getItem('arkanoidTop10');
+            if (data) {
+                try {
+                    return JSON.parse(data);
+                } catch (e) {
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        function saveTop10(top10) {
+            localStorage.setItem('arkanoidTop10', JSON.stringify(top10));
+        }        
+
+        function showTop10() {
+            let top10 = loadTop10();
+            let listDiv = document.getElementById('top10List');
+            
+            if (top10.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; color: #0ff; padding: 30px;">No hay registros aún</div>';
+            } else {
+                let html = '';
+                top10.forEach((entry, index) => {
+                    html += `
+                        <div class="top10-entry">
+                            <span>${index + 1}. ${entry.name}</span>
+                            <span>${entry.score} pts - ${entry.date}</span>
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = html;
+            }
+            
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('top10Screen').classList.remove('hidden');
+        }
+        
+        function hideTop10() {
+            document.getElementById('top10Screen').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+        }
+        
+        // ============================
+        // FUNCIONES DE MENÚ
+        // ============================
+        
+        function startGame(numPlayers) {
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            
+            initGame(numPlayers);
+                        
+            if (numPlayers === 2) {
+                document.getElementById('powerUpSidebarP2').classList.remove('hidden');
+            } else {
+                document.getElementById('powerUpSidebarP2').classList.add('hidden');
+            }
+            
+            document.getElementById('powerUpSidebar').classList.remove('hidden');
+
+            gameState.gameRunning = true;
+
+            gameState.currentScreen = 'playing';
+            initAudioContext();
+            gameState.lastTime = performance.now();
+
+            // -> AÑADE ESTA LÍNEA para obtener el volumen:
+            let musicVol = parseInt(document.getElementById('musicVolume').value) / 100;
+
+        
+            sounds.bgMusic.currentTime = 0;
+            // -> MODIFICA ESTA LÍNEA para pasar el volumen:
+            sounds.bgMusic.play(musicVol); 
+    
+            gameState.animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        function returnToMenu() {
+            gameState.gameRunning = false;
+            cancelAnimationFrame(gameState.animationId);
+            sounds.bgMusic.pause();
+            
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            document.getElementById('nameInputModal').classList.add('hidden');
+            document.getElementById('powerUpIndicators').innerHTML = '';
+            document.getElementById('powerUpIndicatorsP2').innerHTML = '';
+            document.getElementById('powerUpSidebarP2').classList.add('hidden');
+            document.getElementById('powerUpSidebar').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+            
+            gameState.currentScreen = 'menu';
+            
+            for (let key in player1.powerUpTimers) {
+                clearTimeout(player1.powerUpTimers[key]);
+            }
+            for (let key in player2.powerUpTimers) {
+                clearTimeout(player2.powerUpTimers[key]);
+            }
+        }
+
+        
+        function showInstructions() {
+            document.getElementById('menu').classList.add('hidden');
+            document.getElementById('instructionsScreen').classList.remove('hidden');
+        }
+        
+        function hideInstructions() {
+            document.getElementById('instructionsScreen').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+        }
+        
+        function updateHUD() {
+            document.getElementById('score1').textContent = player1.score;
+            document.getElementById('lives1').textContent = player1.lives;
+            document.getElementById('level').textContent = gameState.currentLevel + '/17';
+            let currentLevelData = LEVELS[gameState.currentLevel - 1];
+            document.getElementById('levelName').textContent = currentLevelData ? currentLevelData.name.replace(/^Nivel \d+ - /, '') : '';
+            
+            if (gameState.numPlayers === 2) {
+                document.getElementById('score2').textContent = player2.score;
+                document.getElementById('lives2').textContent = player2.lives;
+            }
+        }
+        
+        // ============================
+        // CONTROL DE AUDIO
+        // ============================
+        
+        function playSound(soundName) {
+            if (!audioContext) {
+               initAudioContext();    
+            }
+            if (sounds[soundName] && typeof sounds[soundName] === 'function') {
+                let sfxVol = parseInt(document.getElementById('sfxVolume').value) / 100;
+                // Llama a la función generadora de sonido con el volumen de SFX
+                sounds[soundName](sfxVol); 
+            }
+            // No hace falta el .catch(e => {}) ya que no es una Promise como el .play() de un Audio HTML
+        }
+        
+        function updateVolume() {
+            const isHidden = (el) => el ? el.closest('.hidden') !== null : true;
+            const musicMenu = document.getElementById('musicVolume');
+            const sfxMenu = document.getElementById('sfxVolume');
+            const musicPause = document.getElementById('musicVolumePause');
+            const sfxPause = document.getElementById('sfxVolumePause');
+
+            const pauseVisible = musicPause && !isHidden(musicPause) && sfxPause && !isHidden(sfxPause);
+
+            const musicVal = pauseVisible && musicPause ? musicPause.value : (musicMenu ? musicMenu.value : '50');
+            const sfxVal = pauseVisible && sfxPause ? sfxPause.value : (sfxMenu ? sfxMenu.value : '70');
+
+            if (musicMenu) musicMenu.value = musicVal;
+            if (musicPause) musicPause.value = musicVal;
+            if (sfxMenu) sfxMenu.value = sfxVal;
+            if (sfxPause) sfxPause.value = sfxVal;
+        }
+
+        
+        // ============================
+        // CONTROL DE TECLADO
+        // ============================
+        
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    keys.left = true;
+                    e.preventDefault();
+                    break;
+                case 'ArrowRight':
+                    keys.right = true;
+                    e.preventDefault();
+                    break;
+                case ' ':
+                    if (gameState.currentScreen === 'playing' && !keys.space) {
+                        keys.space = true;
+                        for (let ball of balls) {
+                            if (ball.stuck) {
+                                ball.launch();
+                            }
+                        }
+                        if (player1.powerUps.laser && player1.paddle) {
+                            lasers.push(new Laser(
+                                player1.paddle.x + player1.paddle.width / 2 - CONFIG.laserWidth / 2,
+                                player1.paddle.y
+                            ));
+                            playSound('laser');
+                        }
+                    }
+                    e.preventDefault();
+                    break;
+                case 'a':
+                case 'A':
+                    keys.a = true;
+                    break;
+                case 'd':
+                case 'D':
+                    keys.d = true;
+                    break;
+                case 'w':
+                case 'W':
+                    if (gameState.currentScreen === 'playing' && gameState.numPlayers === 2 && !keys.w) {
+                        keys.w = true;
+                        for (let ball of balls) {
+                            if (ball.stuck && ball.stuckToPaddle === player2.paddle) {
+                                ball.launch();
+                            }
+                        }
+                        if (player2.powerUps.laser && player2.paddle) {
+                            lasers.push(new Laser(
+                                player2.paddle.x + player2.paddle.width / 2 - CONFIG.laserWidth / 2,
+                                player2.paddle.y
+                            ));
+                            playSound('laser');
+                        }
+                    }
+                    break;
+                case 'p':
+                case 'P':
+                    if (gameState.currentScreen === 'playing') {
+                        togglePause();
+                    } else if (gameState.currentScreen === 'paused') {
+                        togglePause();
+                    }
+                    break;
+                case 'Escape':
+                    if (gameState.currentScreen === 'paused') {
+                        returnToMenu();
+                    }
+                    break;
+                case 'Enter':
+                    if (!document.getElementById('nameInputModal').classList.contains('hidden')) {
+                        submitScore();
+                    }
+                    break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            switch(e.key) {
+                case 'ArrowLeft':
+                    keys.left = false;
+                    break;
+                case 'ArrowRight':
+                    keys.right = false;
+                    break;
+                case ' ':
+                    keys.space = false;
+                    break;
+                case 'a':
+                case 'A':
+                    keys.a = false;
+                    break;
+                case 'd':
+                case 'D':
+                    keys.d = false;
+                    break;
+                case 'w':
+                case 'W':
+                    keys.w = false;
+                    break;
+            }
+        });
+        
+        function savePowerUpState(player, playerKey) {
+            const powerUpConfigs = {
+                enlarge: CONFIG.powerUpDuration,
+                sticky: CONFIG.stickyDuration,
+                laser: CONFIG.laserDuration
+            };
+            
+            pausedPowerUpData[playerKey] = {};
+            
+            for (let [key, duration] of Object.entries(powerUpConfigs)) {
+                if (player.powerUps[key] && player.powerUpStartTimes[key]) {
+                    const elapsed = Date.now() - player.powerUpStartTimes[key];
+                    const remaining = Math.max(0, duration - elapsed);
+                    
+                    pausedPowerUpData[playerKey][key] = remaining;
+                    
+                    clearTimeout(player.powerUpTimers[key]);
+                }
+            }
+        }
+        
+        function restorePowerUpState(player, playerKey) {
+            const powerUpConfigs = {
+                enlarge: CONFIG.powerUpDuration,
+                sticky: CONFIG.stickyDuration,
+                laser: CONFIG.laserDuration
+            };
+            
+            for (let [key, duration] of Object.entries(powerUpConfigs)) {
+                if (pausedPowerUpData[playerKey][key] !== undefined) {
+                    const remaining = pausedPowerUpData[playerKey][key];
+                    
+                    if (remaining > 0) {
+                        player.powerUpStartTimes[key] = Date.now();
+                        
+                        player.powerUpTimers[key] = setTimeout(() => {
+                            if (key === 'enlarge') {
+                                player.paddle.reset();
+                            }
+                            player.powerUps[key] = false;
+                            delete player.powerUpStartTimes[key];
+                            updatePowerUpIndicators();
+                        }, remaining);
+                    }
+                }
+            }
+            
+            pausedPowerUpData[playerKey] = {};
+        }
+        
+
+        function togglePause() {
+            if (gameState.currentScreen === 'playing') {
+                gameState.gameRunning = false;
+                gameState.currentScreen = 'paused';
+                cancelAnimationFrame(gameState.animationId);
+                sounds.bgMusic.pause();
+                
+                // Guardar estado de power-ups del jugador 1
+                savePowerUpState(player1, 'player1');
+                
+                // Guardar estado de power-ups del jugador 2 si existe
+                if (gameState.numPlayers === 2 && player2.paddle) {
+                    savePowerUpState(player2, 'player2');
+                }
+                
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else if (gameState.currentScreen === 'paused') {
+                gameState.currentScreen = 'playing';
+                gameState.gameRunning = true;
+                initAudioContext();
+                gameState.lastTime = performance.now();
+                
+                // Restaurar estado de power-ups del jugador 1
+                restorePowerUpState(player1, 'player1');
+                
+                // Restaurar estado de power-ups del jugador 2 si existe
+                if (gameState.numPlayers === 2 && player2.paddle) {
+                    restorePowerUpState(player2, 'player2');
+                }
+                
+                let musicVol = parseInt(document.getElementById('musicVolume').value) / 100;
+                sounds.bgMusic.play(musicVol);
+                
+                document.getElementById('pauseMenu').classList.add('hidden');
+                gameState.animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        
+        // ============================
+        // INICIALIZACIÓN
+        // ============================
+        
+        window.addEventListener('load', () => {
+            updateVolume();
+        });
+    </script>
+</body>
+</html>

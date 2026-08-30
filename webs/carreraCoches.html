@@ -1,0 +1,3268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route 66 - Retro Road Racer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #gameContainer {
+            position: relative;
+            /* 148vh * (2/3) = 98.6vh -> el contenedor nunca desborda en apaisado */
+            width: min(100%, 900px, 148vh);
+            aspect-ratio: 3/2;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            touch-action: none;
+        }
+        #menuScreen, #pauseScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        .hidden {
+            display: none !important;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 30px;
+            text-shadow: 4px 4px 0 #ff006e, 8px 8px 0 #8338ec;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .menu-section {
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px;
+            min-width: 400px;
+            border: 3px solid #ff006e;
+        }
+        .difficulty-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        .difficulty-btn {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            border: 2px solid #fff;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+        .difficulty-btn:hover {
+            background: #555;
+            transform: scale(1.1);
+        }
+        .difficulty-btn.selected {
+            background: #ff006e;
+            border-color: #ff006e;
+            box-shadow: 0 0 20px #ff006e;
+        }
+        .slider-container {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .slider-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            margin: 10px;
+            border: 3px solid #8338ec;
+            background: #3a0ca3;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+        button:hover {
+            background: #5a4fcf;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(131,56,236,0.5);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        #rankingList {
+            max-height: 300px;
+            overflow-y: auto;
+            text-align: left;
+            margin: 15px 0;
+        }
+        .ranking-item {
+            padding: 8px;
+            border-bottom: 1px solid #444;
+            font-size: 0.9em;
+        }
+        .ranking-item:nth-child(1) { color: #ffd700; }
+        .ranking-item:nth-child(2) { color: #c0c0c0; }
+        .ranking-item:nth-child(3) { color: #cd7f32; }
+        #pauseScreen {
+            background: rgba(0,0,0,0.9);
+        }
+        .pause-panel {
+            background: rgba(30,30,60,0.95);
+            padding: 40px;
+            border-radius: 15px;
+            border: 4px solid #ff006e;
+            box-shadow: 0 0 50px rgba(255,0,110,0.5);
+        }
+        #instructions {
+            max-width: 500px;
+            text-align: left;
+            line-height: 1.6;
+        }
+        #instructions ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        #nameInput {
+            padding: 10px;
+            font-size: 1.2em;
+            font-family: 'Courier New', monospace;
+            border: 2px solid #ff006e;
+            background: #222;
+            color: #fff;
+            text-align: center;
+            max-width: 300px;
+        }
+        .stats-display {
+            margin: 20px 0;
+            font-size: 1.1em;
+            line-height: 1.8;
+        }
+        .stats-display strong {
+            color: #ff006e;
+        }
+        #locationSign {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            
+            background: rgba(0,0,0,0.8);
+            border-radius: 15px;
+            border: 4px solid #ffaa00;
+            color: #ffaa00;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 5;
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            
+            width: 250px;
+            padding: 20px;
+            font-size: 1.8em;
+            text-align: center;
+            
+            left: auto;
+        }
+        /* MODIFICADO - Estilos para la cuenta atrás */
+        #countdownOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        #countdownOverlay.active {
+            opacity: 1;
+        }
+        #countdownText {
+            font-size: 6em;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 20px #ff006e, 0 0 40px #ff006e, 0 0 60px #ff006e;
+            animation: countdownPulse 0.8s ease-in-out;
+        }
+        @keyframes countdownPulse {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        /* Diálogos nativos: aportan backdrop, cierre con Escape y trampa de foco */
+        dialog {
+            background: rgba(20,20,40,0.98);
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            padding: 30px;
+            border-radius: 15px;
+            border: 3px solid #ff006e;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        dialog#instructionsDialog {
+            border-color: #8338ec;
+        }
+        dialog::backdrop {
+            background: rgba(0,0,0,0.6);
+        }
+        /* Controles táctiles: solo en dispositivos de puntero grueso */
+        #touchControls {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px;
+            gap: 10px;
+            z-index: 6;
+            pointer-events: none;
+        }
+        #touchControls .touch-group {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+        .touch-btn {
+            width: 64px;
+            height: 64px;
+            margin: 0;
+            padding: 0;
+            font-size: 1.6em;
+            line-height: 1;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.6);
+            background: rgba(0,0,0,0.45);
+            color: #fff;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            transition: none;
+        }
+        .touch-btn:active {
+            background: rgba(255,0,110,0.6);
+            transform: none;
+        }
+        .touch-btn:hover {
+            background: rgba(0,0,0,0.45);
+            transform: none;
+            box-shadow: none;
+        }
+        #pauseTouchBtn {
+            position: absolute;
+            top: 56px;
+            right: 10px;
+            z-index: 6;
+            display: none;
+            width: 48px;
+            height: 48px;
+            font-size: 1.1em;
+        }
+        body.touch-device #touchControls,
+        body.touch-device #pauseTouchBtn {
+            display: flex;
+        }
+        @media (max-width: 560px) {
+            h1 { font-size: 2em; }
+            .menu-section { min-width: 0; width: 92%; padding: 12px; }
+            .difficulty-selector { flex-direction: column; }
+            .difficulty-btn { font-size: 1em; }
+            button { padding: 10px 18px; font-size: 1em; }
+            #countdownText { font-size: 4em; }
+            #locationSign { width: 170px; font-size: 1.1em; padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="900" height="600"></canvas>
+        
+        <!-- CARTEL DE UBICACIÓN -->
+        <div id="locationSign" role="status" aria-live="polite"></div>
+        
+        <!-- CONTROLES TÁCTILES -->
+        <button id="pauseTouchBtn" class="touch-btn" type="button" aria-label="Pausar">⏸</button>
+        <div id="touchControls">
+            <div class="touch-group">
+                <button class="touch-btn" type="button" data-touch="left" aria-label="Carril izquierdo">◀</button>
+                <button class="touch-btn" type="button" data-touch="right" aria-label="Carril derecho">▶</button>
+            </div>
+            <div class="touch-group">
+                <button class="touch-btn" type="button" data-touch="brake" aria-label="Frenar">▼</button>
+                <button class="touch-btn" type="button" data-touch="accel" aria-label="Acelerar">▲</button>
+            </div>
+        </div>
+        
+        <!-- MODIFICADO - Overlay de cuenta atrás -->
+        <div id="countdownOverlay">
+            <div id="countdownText"></div>
+        </div>
+        
+        <!-- MENÚ PRINCIPAL -->
+        <div id="menuScreen">
+            <h1>🏎 ROUTE 66 🏎</h1>
+            
+            <div class="menu-section">
+                <h2>Selecciona Dificultad</h2>
+                <div class="difficulty-selector" role="group" aria-label="Selecciona dificultad">
+                    <button class="difficulty-btn" type="button" data-diff="easy" aria-pressed="false">Pod de Tatooine (Fácil)</button>
+                    <button class="difficulty-btn selected" type="button" data-diff="normal" aria-pressed="true">Speeder Rebelde (Normal)</button>
+                    <button class="difficulty-btn" type="button" data-diff="hard" aria-pressed="false">Halcón Milenario (Difícil)</button>
+                </div>
+            </div>
+            
+            <div class="menu-section">
+                <div class="slider-container">
+                    <label for="musicVolSlider">🎵 Volumen Música: <span id="musicVolLabel">70%</span></label>
+                    <input type="range" id="musicVolSlider" min="0" max="100" value="70">
+                </div>
+                <div class="slider-container">
+                    <label for="sfxVolSlider">🔊 Volumen Efectos: <span id="sfxVolLabel">80%</span></label>
+                    <input type="range" id="sfxVolSlider" min="0" max="100" value="80">
+                </div>
+            </div>
+            
+            <button id="startBtn">INICIAR JUEGO</button>
+            <button id="rankingBtn">VER RANKING</button>
+            <button id="instructionsBtn">INSTRUCCIONES</button>
+            <button id="resetRankingBtn">RESET RANKING</button>
+        </div>
+        
+        <!-- PANTALLA DE PAUSA -->
+        <div id="pauseScreen" class="hidden">
+            <div class="pause-panel">
+                <h1 style="font-size: 2.5em;">⏸ PAUSA</h1>
+                
+                <div class="menu-section">
+                    <div class="slider-container">
+                        <label for="pauseMusicVolSlider">🎵 Volumen Música: <span id="pauseMusicVolLabel">70%</span></label>
+                        <input type="range" id="pauseMusicVolSlider" min="0" max="100" value="70">
+                    </div>
+                    <div class="slider-container">
+                        <label for="pauseSfxVolSlider">🔊 Volumen Efectos: <span id="pauseSfxVolLabel">80%</span></label>
+                        <input type="range" id="pauseSfxVolSlider" min="0" max="100" value="80">
+                    </div>
+                </div>
+                
+                <button id="resumeBtn">REANUDAR (P)</button>
+                <button id="quitBtn">VOLVER AL MENÚ</button>
+            </div>
+        </div>
+        
+        <!-- PANTALLA GAME OVER / VICTORY -->
+        <div id="gameOverScreen" class="hidden">
+            <h1 id="gameOverTitle">GAME OVER</h1>
+            <div class="stats-display" id="statsDisplay"></div>
+            <div id="nameInputSection" class="hidden">
+                <p>¡Entra en el Top 10! Introduce tu nombre:</p>
+                <input type="text" id="nameInput" maxlength="18" placeholder="TU NOMBRE">
+                <br>
+                <button id="submitScoreBtn">GUARDAR PUNTUACIÓN</button>
+            </div>
+            <button id="backToMenuBtn">VOLVER AL MENÚ</button>
+        </div>
+    </div>
+    
+    <!-- DIÁLOGOS (estáticos: evitan IDs duplicados al abrirlos varias veces) -->
+    <dialog id="rankingDialog" aria-labelledby="rankingDialogTitle">
+        <h2 id="rankingDialogTitle" style="text-align:center; color:#ff006e;">🏆 TOP 10 RANKING 🏆</h2>
+        <div id="rankingList"></div>
+        <button id="closeRankingBtn" type="button" style="margin-top:20px; width:100%;">CERRAR</button>
+    </dialog>
+    
+    <dialog id="instructionsDialog" aria-labelledby="instructionsDialogTitle">
+        <h2 id="instructionsDialogTitle">📖 INSTRUCCIONES</h2>
+        <div id="instructions">
+            <ul>
+                <li><strong>↑</strong> - Acelerar</li>
+                <li><strong>↓</strong> - Frenar</li>
+                <li><strong>← →</strong> - Cambiar de carril</li>
+                <li><strong>P</strong> - Pausar/Reanudar</li>
+                <li><strong>En móvil</strong> - Botones ◀ ▶ ▲ ▼ en pantalla</li>
+            </ul>
+            <p><strong>Objetivo:</strong> Pasa los 5 checkpoints antes de que se acabe el tiempo.</p>
+            <p><strong>Evita</strong> los coches enemigos y obstáculos. Cada colisión resta una vida.</p>
+            <p><strong>Cada checkpoint</strong> suma tiempo extra según la dificultad.</p>
+        </div>
+        <button id="closeInstructionsBtn" type="button" style="margin-top:20px; width:100%;">CERRAR</button>
+    </dialog>
+    
+    <script>
+        'use strict';
+        
+        // ==========================================
+        // CONFIG - Configuración global del juego
+        // ==========================================
+        const CONFIG = {
+            // Canvas
+            canvasWidth: 900,
+            canvasHeight: 600,
+            
+            // Juego
+            initialTime: 45,
+            totalCheckpoints: 5,
+            
+            // Dificultades
+            difficulties: {
+                easy: {
+                    name: 'Pod de Tatooine',
+                    lives: 5,
+                    spawnInterval: 1400,
+                    enemiesPerWave: 1,
+                    enemyBaseSpeed: 0.02,
+                    checkpointTimeBonus: 45
+                },
+                normal: {
+                    name: 'Speeder Rebelde',
+                    lives: 4,
+                    spawnInterval: 1000,
+                    enemiesPerWave: 1,
+                    enemyBaseSpeed: 0.0275,
+                    checkpointTimeBonus: 40
+                },
+                hard: {
+                    name: 'Halcón Milenario',
+                    lives: 3,
+                    spawnInterval: 800,
+                    enemiesPerWave: 1.2,
+                    enemyBaseSpeed: 0.0375,
+                    checkpointTimeBonus: 40
+                }
+            },
+            
+            // Carretera
+            roadLanes: 3,
+            laneWidth: 120,
+            roadWidth: 360,
+            vanishingPointY: 180,
+            totalBiomes: 5,
+            
+            // Jugador - CORREGIDO: unidades por SEGUNDO, no por frame
+            playerAcceleration: 0.6,      // antes 0.01/frame
+            playerMaxSpeed: 1.5,
+            playerBrakeDecel: 3.0,        // antes 0.5/frame (≈30/s: frenada instantánea)
+            playerFriction: 1.5,          // antes 0.05/frame
+            // Factores de suavizado exponencial referidos a un frame de 60 Hz
+            laneChangeSmoothing: 0.15,
+            roadCurveSmoothing: 0.1,
+            
+            // Bucle
+            maxDeltaTime: 50,             // techo del delta (≈20 fps) para pestañas en segundo plano
+            
+            // Enemigos
+            enemyMaxDepth: 30,
+            
+            // Obstáculos
+            obstacleSpawnInterval: 2500,
+            obstacleMaxDepth: 35,
+            
+            // Checkpoints
+            checkpointSpacing: 50,
+            checkpointTriggerDistance: 7,   // umbral, no ventana (ver checkCheckpoints)
+            
+            // Scoring
+            scorePerSecond: 10,
+            scorePerCheckpoint: 500,
+            
+            // Audio
+            defaultMusicVolume: 0.7,
+            defaultSfxVolume: 0.8,
+            
+            // Persistencia
+            rankingKey: 'route66_ranking_v1',
+            maxRankingEntries: 10,
+            
+            // Ubicaciones Route 66
+            locations: [
+            'Desierto de Nevada',
+            'Springfield',
+            'Missouri',
+            'California',
+            'Los Ángeles'
+            ]
+        };
+        
+        // ==========================================
+        // VARIABLES GLOBALES
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let gameState = 'menu';
+        let currentDifficulty = 'normal';
+        let difficultyConfig = CONFIG.difficulties.normal;
+        
+        // Estado del juego
+        let lives = CONFIG.difficulties.normal.lives;
+        let timeRemaining = CONFIG.initialTime;
+        let score = 0;
+        let checkpointsPassed = 0;
+        let totalCollisions = 0;
+        let lastFrameTime = 0;
+        let impactFlashTime = 0;
+        
+        // Cuenta atrás
+        let countdownActive = false;
+        
+        // Identificadores cancelables (bucle y temporizadores)
+        let rafId = null;
+        let countdownTimerId = null;
+        let countdownAnimTimerId = null;
+        let locationSignTimerId = null;
+        
+        // Jugador
+        let player = {
+            lane: 1,
+            targetLane: 1,
+            speed: 0,
+            depth: 5
+        };
+        
+        // Enemigos
+        let enemies = [];
+        let lastEnemySpawn = 0;
+        
+        // Obstáculos
+        let obstacles = [];
+        let lastObstacleSpawn = 0;
+        
+        // Checkpoints
+        let checkpoints = [];
+        
+        // Carretera y curva
+        let roadCurve = 0;
+        let targetRoadCurve = 0;
+        let roadScroll = 0;
+        
+        // Sistema día/noche mejorado
+        let skyPhase = 0; // 0=noche, 1=amanecer, 2=día, 3=atardecer, 4=anochecer
+        
+        // Input
+        let keys = {};
+        
+        // Sprites
+        let playerCarSprite = null;
+        let enemyCarSprites = [];
+        let obstacleSprites = [];
+        
+        let currentBiome = 0;
+        let biomeTransition = 0;
+        
+        // ==========================================
+        // AUDIO - Web Audio API
+        // ==========================================
+        let audioContext;
+        let masterGain, musicGain, sfxGain;
+        let musicPattern = [];
+        let currentMusicNote = 0;
+        let musicVariation = 0;
+        let musicVolume = CONFIG.defaultMusicVolume;
+        let sfxVolume = CONFIG.defaultSfxVolume;
+
+        // Scheduler de música: setInterval no tiene precisión suficiente para audio,
+        // así que solo despierta al planificador; las notas se programan contra
+        // audioContext.currentTime, que sí es un reloj de audio estable.
+        const MUSIC_LOOKAHEAD_MS = 25;      // cada cuánto despierta el planificador
+        const MUSIC_SCHEDULE_AHEAD = 0.15;  // segundos de margen que se programan por delante
+        let musicSchedulerId = null;
+        let nextNoteTime = 0;
+        let musicPlaying = false;
+
+        function initAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                masterGain = audioContext.createGain();
+                musicGain = audioContext.createGain();
+                sfxGain = audioContext.createGain();
+
+                masterGain.connect(audioContext.destination);
+                musicGain.connect(masterGain);
+                sfxGain.connect(masterGain);
+
+                masterGain.gain.value = 1.0;
+                musicGain.gain.value = musicVolume;
+                sfxGain.gain.value = sfxVolume;
+
+                generateMusicPattern();
+            } catch(e) {
+                console.warn('Web Audio API no disponible:', e);
+            }
+        }
+
+        // La política de autoplay deja el contexto en 'suspended' hasta que hay un
+        // gesto del usuario. Sin este resume() no hay sonido en Safari/iOS, y en
+        // cualquier navegador currentTime no avanza y los SFX se acumulan.
+        function resumeAudio() {
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
+        }
+
+        function generateMusicPattern() {
+            // TEMA PRINCIPAL DE STAR WARS (simplificado)
+            // Secuencia icónica: SOL - SOL - SOL - DO - SOL - FA - MI - RE - DO'
+
+            const starWarsMainTheme = [
+            // Frase 1: "Ta ta ta TAAA ta"
+            [196, 392, 588],  // SOL (G)
+            [196, 392, 588],  // SOL
+            [196, 392, 588],  // SOL
+            [262, 523, 785],  // DO alto (C) - largo
+            [196, 392, 784],  // SOL
+
+            // Frase 2: "ta ta ta"
+            [175, 349, 523],  // FA (F)
+            [165, 330, 494],  // MI (E)
+            [147, 294, 440],  // RE (D)
+            [262, 523, 785],  // DO alto (C) - largo
+            [196, 392, 588],  // SOL
+
+            // Frase 3: repetición variada
+            [175, 349, 523],  // FA
+            [165, 330, 494],  // MI
+            [147, 294, 440],  // RE
+            [262, 523, 785],  // DO alto
+            [196, 392, 588],  // SOL
+
+            // Interludio (Marcha Imperial mezclada)
+            [196, 196, 392],  // SOL bajo
+            [196, 196, 392],
+            [196, 196, 392],
+            [185, 185, 370],  // FA# bajo
+            [208, 208, 415],  // SOL#
+
+            // Vuelta al tema
+            [196, 392, 588],
+            [262, 523, 785],
+            [196, 392, 784]
+            ];
+
+            musicPattern = starWarsMainTheme;
+        }
+
+        function getNoteDuration() {
+            return (320 - (musicVariation * 15)) / 1000; // segundos por nota
+        }
+
+        function startMusic() {
+            if (!audioContext) return;
+            stopMusic();
+
+            currentMusicNote = 0;
+            musicPlaying = true;
+            nextNoteTime = audioContext.currentTime + 0.05;
+
+            musicSchedulerId = setInterval(scheduleMusic, MUSIC_LOOKAHEAD_MS);
+            scheduleMusic();
+        }
+
+        function scheduleMusic() {
+            if (!audioContext || !musicPlaying) return;
+
+            // En pausa el reloj de audio sigue corriendo: se empuja el siguiente
+            // ataque para no acumular notas atrasadas y dispararlas todas de golpe.
+            if (gameState === 'paused') {
+                nextNoteTime = Math.max(nextNoteTime, audioContext.currentTime + 0.05);
+                return;
+            }
+
+            const duration = getNoteDuration();
+
+            while (nextNoteTime < audioContext.currentTime + MUSIC_SCHEDULE_AHEAD) {
+                playMusicNote(musicPattern[currentMusicNote], nextNoteTime, duration);
+                currentMusicNote = (currentMusicNote + 1) % musicPattern.length;
+                nextNoteTime += duration;
+            }
+        }
+
+        function playMusicNote(frequencies, startTime, duration) {
+            if (!audioContext) return;
+
+            const release = Math.max(0.15, duration * 1.4);
+
+            frequencies.forEach((freq, i) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+
+                osc.type = i === 0 ? 'sawtooth' : 'triangle';
+                osc.frequency.value = freq + (musicVariation * 3);
+
+                gain.gain.setValueAtTime(0.12, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, startTime + release);
+
+                osc.connect(gain);
+                gain.connect(musicGain);
+
+                // Liberar los nodos en cuanto el oscilador termina, en lugar de
+                // dejar cientos de gains colgando de musicGain esperando al GC.
+                osc.onended = () => {
+                    osc.disconnect();
+                    gain.disconnect();
+                };
+
+                osc.start(startTime);
+                osc.stop(startTime + release + 0.05);
+            });
+        }
+
+        function stopMusic() {
+            musicPlaying = false;
+            if (musicSchedulerId !== null) {
+                clearInterval(musicSchedulerId);
+                musicSchedulerId = null;
+            }
+        }
+
+        function varyMusic() {
+            musicVariation = (musicVariation + 1) % 3;
+            // No se reinicia el scheduler: basta con cambiar la duración de nota,
+            // que getNoteDuration() ya lee en cada planificación.
+        }
+
+        function playSFX(type) {
+            if (!audioContext) return;
+
+            const now = audioContext.currentTime;
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+
+            osc.connect(gain);
+            gain.connect(sfxGain);
+            osc.onended = () => { osc.disconnect(); gain.disconnect(); };
+
+            switch(type) {
+                case 'collision':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+                break;
+
+                case 'checkpoint':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(sfxGain);
+                osc2.onended = () => { osc2.disconnect(); gain2.disconnect(); };
+                osc2.type = 'sine';
+                osc2.frequency.value = 660;
+                gain2.gain.setValueAtTime(0.2, now + 0.1);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc2.start(now + 0.1);
+                osc2.stop(now + 0.35);
+                break;
+
+                case 'button':
+                osc.type = 'square';
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+
+                case 'overtake':
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                break;
+
+                case 'countdown':
+                osc.type = 'square';
+                osc.frequency.value = 1000;
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                break;
+
+                case 'countdownGo':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+                break;
+
+                default:
+                // Tipo desconocido: no dejar el oscilador creado sin arrancar.
+                osc.disconnect();
+                gain.disconnect();
+                return;
+            }
+        }
+
+        function setMusicVolume(vol) {
+            musicVolume = vol;
+            if (musicGain) musicGain.gain.value = vol;
+        }
+
+        function setSfxVolume(vol) {
+            sfxVolume = vol;
+            if (sfxGain) sfxGain.gain.value = vol;
+        }
+        // ==========================================
+        // SPRITES - Generación procedural 3D
+        // ==========================================
+        
+        function createCarSprite(color, isPlayer = false) {
+            const size = isPlayer ? 90 : 70;
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = size;
+            spriteCanvas.height = size;
+            const sCtx = spriteCanvas.getContext('2d');
+            
+            const cx = size / 2;
+            const cy = size / 2;
+            
+            // Sombra
+            sCtx.fillStyle = 'rgba(0,0,0,0.4)';
+            sCtx.fillRect(cx - 30, cy + 25, 60, 8);
+            
+  if (isPlayer) {
+    // MODIFICADO - X-34 LANDSPEEDER más pequeño y detallado
+    const bodyW = 48; // Ancho reducido
+    const bodyH = 32; // Alto reducido
+    
+    // MODIFICADO - Sombra de levitación
+    sCtx.fillStyle = 'rgba(0,0,0,0.3)';
+    sCtx.beginPath();
+    sCtx.ellipse(cx, cy + 30, 24, 7, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    // Cuerpo principal con volumen
+    const bodyGradient = sCtx.createLinearGradient(cx - 24, cy - 5, cx - 24, cy + 20);
+    bodyGradient.addColorStop(0, '#B22222');
+    bodyGradient.addColorStop(0.4, '#8B0000');
+    bodyGradient.addColorStop(1, '#5C0000');
+    sCtx.fillStyle = bodyGradient;
+    
+    // Parte superior del casco
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 20, cy - 6);
+    sCtx.lineTo(cx - 24, cy + 8);
+    sCtx.lineTo(cx - 20, cy + 20);
+    sCtx.lineTo(cx + 20, cy + 20);
+    sCtx.lineTo(cx + 24, cy + 8);
+    sCtx.lineTo(cx + 20, cy - 6);
+    sCtx.closePath();
+    sCtx.fill();
+    
+    // Lado oscuro (sombra del casco)
+    sCtx.fillStyle = '#4A0000';
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 20, cy - 6);
+    sCtx.lineTo(cx - 24, cy + 8);
+    sCtx.lineTo(cx - 20, cy + 20);
+    sCtx.lineTo(cx - 20, cy - 6);
+    sCtx.closePath();
+    sCtx.fill();
+    
+    // Lado claro (reflejo)
+    sCtx.fillStyle = '#CD5C5C';
+    sCtx.beginPath();
+    sCtx.moveTo(cx + 20, cy - 6);
+    sCtx.lineTo(cx + 24, cy + 8);
+    sCtx.lineTo(cx + 20, cy + 20);
+    sCtx.lineTo(cx + 20, cy - 6);
+    sCtx.closePath();
+    sCtx.fill();
+    
+    // Capó delantero (beige/marrón)
+    const hoodGradient = sCtx.createLinearGradient(cx, cy - 4, cx, cy + 6);
+    hoodGradient.addColorStop(0, '#D2B48C');
+    hoodGradient.addColorStop(1, '#A0826D');
+    sCtx.fillStyle = hoodGradient;
+    sCtx.fillRect(cx - 18, cy - 4, 36, 10);
+    
+    // Líneas del capó
+    sCtx.strokeStyle = '#8B7355';
+    sCtx.lineWidth = 0.8;
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 18, cy + 1);
+    sCtx.lineTo(cx + 18, cy + 1);
+    sCtx.stroke();
+    
+    // Parabrisas (cristal con reflejos)
+    const windshieldGradient = sCtx.createLinearGradient(cx, cy - 2, cx, cy + 6);
+    windshieldGradient.addColorStop(0, 'rgba(200, 230, 255, 0.8)');
+    windshieldGradient.addColorStop(1, 'rgba(100, 150, 200, 0.6)');
+    sCtx.fillStyle = windshieldGradient;
+    
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 16, cy + 6);
+    sCtx.lineTo(cx - 14, cy - 2);
+    sCtx.lineTo(cx + 14, cy - 2);
+    sCtx.lineTo(cx + 16, cy + 6);
+    sCtx.closePath();
+    sCtx.fill();
+    
+    // Marco del parabrisas
+    sCtx.strokeStyle = '#4A4A4A';
+    sCtx.lineWidth = 1.5;
+    sCtx.stroke();
+    
+    // Reflejo brillante en el cristal
+    sCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    sCtx.fillRect(cx - 14, cy - 1, 10, 3);
+    
+    // Barra divisoria central
+    sCtx.strokeStyle = '#3A3A3A';
+    sCtx.lineWidth = 1;
+    sCtx.beginPath();
+    sCtx.moveTo(cx, cy - 2);
+    sCtx.lineTo(cx, cy + 6);
+    sCtx.stroke();
+    
+    // Asientos (textura de cuero)
+    const seatGradient = sCtx.createLinearGradient(cx, cy + 8, cx, cy + 16);
+    seatGradient.addColorStop(0, '#3E2723');
+    seatGradient.addColorStop(1, '#1C0E0C');
+    sCtx.fillStyle = seatGradient;
+    
+    // Asiento izquierdo
+    sCtx.fillRect(cx - 15, cy + 8, 10, 8);
+    sCtx.fillStyle = '#5D4037';
+    sCtx.fillRect(cx - 14, cy + 8, 8, 3);
+    
+    // Asiento derecho
+    sCtx.fillStyle = seatGradient;
+    sCtx.fillRect(cx + 5, cy + 8, 10, 8);
+    sCtx.fillStyle = '#5D4037';
+    sCtx.fillRect(cx + 6, cy + 8, 8, 3);
+    
+    // Motor lateral expuesto (izquierda)
+    sCtx.fillStyle = '#606060';
+    sCtx.fillRect(cx - 24, cy + 1, 11, 8);
+    sCtx.fillStyle = '#4A4A4A';
+    sCtx.fillRect(cx - 23, cy + 2, 9, 6);
+    
+    // Rejilla del motor
+    sCtx.fillStyle = '#2A2A2A';
+    for(let i = 0; i < 3; i++) {
+        sCtx.fillRect(cx - 22 + i*3, cy + 3, 1.5, 4);
+    }
+    
+    // Detalle brillante
+    sCtx.fillStyle = '#808080';
+    sCtx.fillRect(cx - 23, cy + 2, 9, 1.5);
+
+    // TURBINAS TRASERAS (3 unidades realistas)
+    const turbineY = cy + 18;
+    const turbines = [
+        {x: cx - 18, w: 9},
+        {x: cx - 4, w: 8},
+        {x: cx + 10, w: 9}
+    ];
+    
+    turbines.forEach(turb => {
+        // Carcasa con volumen
+        const turbineGrad = sCtx.createLinearGradient(turb.x, turbineY, turb.x, turbineY + 5);
+        turbineGrad.addColorStop(0, '#757575');
+        turbineGrad.addColorStop(1, '#4A4A4A');
+        sCtx.fillStyle = turbineGrad;
+        sCtx.fillRect(turb.x, turbineY, turb.w, 5);
+        
+        // Interior oscuro (tobera)
+        sCtx.fillStyle = '#1A1A1A';
+        sCtx.fillRect(turb.x + 1, turbineY + 1, turb.w - 2, 3);
+        
+        // Anillos internos
+        sCtx.strokeStyle = '#0A0A0A';
+        sCtx.lineWidth = 0.8;
+        sCtx.beginPath();
+        sCtx.arc(turb.x + turb.w/2, turbineY + 2.5, turb.w/3, 0, Math.PI * 2);
+        sCtx.stroke();
+        
+        // Resplandor (gradiente radial)
+        const glowGrad = sCtx.createRadialGradient(
+            turb.x + turb.w/2, turbineY + 7, 1,
+            turb.x + turb.w/2, turbineY + 7, turb.w
+        );
+        glowGrad.addColorStop(0, 'rgba(0, 180, 255, 0.9)');
+        glowGrad.addColorStop(0.5, 'rgba(0, 150, 255, 0.6)');
+        glowGrad.addColorStop(1, 'rgba(0, 100, 200, 0.1)');
+        sCtx.fillStyle = glowGrad;
+        sCtx.fillRect(turb.x - 2, turbineY + 5, turb.w + 4, 5);
+        
+        // Núcleo brillante
+        sCtx.fillStyle = 'rgba(150, 220, 255, 0.9)';
+        sCtx.fillRect(turb.x + 2, turbineY + 6, turb.w - 4, 2);
+    });
+    
+    // Paneles laterales desgastados
+    sCtx.fillStyle = '#8B4513';
+    sCtx.fillRect(cx - 23, cy + 12, 5, 6);
+    sCtx.fillRect(cx + 18, cy + 12, 5, 6);
+    
+    // Detalles de desgaste
+    sCtx.fillStyle = 'rgba(70, 50, 30, 0.6)';
+    sCtx.fillRect(cx - 22, cy + 13, 3, 2);
+    sCtx.fillRect(cx + 19, cy + 14, 3, 2);
+    
+    // Línea de detalle amarilla característica
+    sCtx.strokeStyle = '#FFD700';
+    sCtx.lineWidth = 1.2;
+    sCtx.shadowColor = 'rgba(255, 215, 0, 0.4)';
+    sCtx.shadowBlur = 2;
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 20, cy + 3);
+    sCtx.lineTo(cx + 20, cy + 3);
+    sCtx.stroke();
+    sCtx.shadowBlur = 0;
+    
+    // Rejilla de ventilación lateral
+    sCtx.fillStyle = '#3A3A3A';
+    for(let i = 0; i < 4; i++) {
+        sCtx.fillRect(cx - 10 + i*5, cy + 10, 3, 1);
+    }
+    
+} else {
+
+                // (Este es el código original para los coches enemigos, lo dejamos)
+                sCtx.fillStyle = color;
+                sCtx.beginPath();
+                sCtx.moveTo(cx - 20, cy - 5);
+                sCtx.lineTo(cx - 25, cy + 10);
+                sCtx.lineTo(cx - 20, cy + 20);
+                sCtx.lineTo(cx + 20, cy + 20);
+                sCtx.lineTo(cx + 25, cy + 10);
+                sCtx.lineTo(cx + 20, cy - 5);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                const darkerColor = shadeColor(color, -30);
+                sCtx.fillStyle = darkerColor;
+                sCtx.beginPath();
+                sCtx.moveTo(cx - 20, cy - 5);
+                sCtx.lineTo(cx - 25, cy + 10);
+                sCtx.lineTo(cx - 20, cy + 20);
+                sCtx.lineTo(cx - 20, cy - 5);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                const lighterColor = shadeColor(color, 20);
+                sCtx.fillStyle = lighterColor;
+                sCtx.beginPath();
+                sCtx.moveTo(cx + 20, cy - 5);
+                sCtx.lineTo(cx + 25, cy + 10);
+                sCtx.lineTo(cx + 20, cy + 20);
+                sCtx.lineTo(cx + 20, cy - 5);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                sCtx.fillStyle = '#222';
+                sCtx.beginPath();
+                sCtx.moveTo(cx - 15, cy - 15);
+                sCtx.lineTo(cx - 18, cy - 5);
+                sCtx.lineTo(cx + 18, cy - 5);
+                sCtx.lineTo(cx + 15, cy - 15);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                sCtx.fillStyle = 'rgba(100,150,200,0.6)';
+                sCtx.fillRect(cx - 12, cy - 3, 24, 6);
+                
+                sCtx.fillStyle = '#ff0000';
+                sCtx.fillRect(cx - 22, cy + 15, 6, 4);
+                sCtx.fillRect(cx + 16, cy + 15, 6, 4);
+                
+                sCtx.fillStyle = '#fff';
+                sCtx.fillRect(cx - 8, cy + 18, 16, 3);
+                
+                sCtx.fillStyle = '#111';
+                sCtx.fillRect(cx - 22, cy + 8, 5, 8);
+                sCtx.fillRect(cx + 17, cy + 8, 5, 8);
+                
+                sCtx.fillStyle = '#444';
+                sCtx.fillRect(cx - 21, cy + 9, 3, 6);
+                sCtx.fillRect(cx + 18, cy + 9, 3, 6);
+            }
+            
+            return spriteCanvas;
+        }
+        
+        function createObstacleSprite(type) {
+            const size = 60;
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = size;
+            spriteCanvas.height = size;
+            const sCtx = spriteCanvas.getContext('2d');
+            
+            const cx = size / 2;
+            const cy = size / 2;
+            
+            switch(type) {
+                case 'rock':
+                sCtx.fillStyle = '#666';
+                sCtx.beginPath();
+                sCtx.moveTo(cx, cy - 15);
+                sCtx.lineTo(cx + 12, cy - 5);
+                sCtx.lineTo(cx + 10, cy + 10);
+                sCtx.lineTo(cx - 10, cy + 10);
+                sCtx.lineTo(cx - 12, cy - 5);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                sCtx.fillStyle = '#888';
+                sCtx.beginPath();
+                sCtx.moveTo(cx, cy - 15);
+                sCtx.lineTo(cx + 12, cy - 5);
+                sCtx.lineTo(cx, cy + 5);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                sCtx.fillStyle = '#444';
+                sCtx.beginPath();
+                sCtx.moveTo(cx, cy - 15);
+                sCtx.lineTo(cx - 12, cy - 5);
+                sCtx.lineTo(cx, cy + 5);
+                sCtx.closePath();
+                sCtx.fill();
+                break;
+                
+                case 'hole':
+                sCtx.fillStyle = '#111';
+                sCtx.beginPath();
+                sCtx.ellipse(cx, cy, 20, 12, 0, 0, Math.PI * 2);
+                sCtx.fill();
+                
+                sCtx.fillStyle = '#222';
+                sCtx.beginPath();
+                sCtx.ellipse(cx, cy, 15, 8, 0, 0, Math.PI * 2);
+                sCtx.fill();
+                
+                sCtx.strokeStyle = '#000';
+                sCtx.lineWidth = 2;
+                sCtx.beginPath();
+                sCtx.ellipse(cx, cy, 20, 12, 0, 0, Math.PI * 2);
+                sCtx.stroke();
+                break;
+                
+                case 'cone':
+                sCtx.fillStyle = '#ff6600';
+                sCtx.beginPath();
+                sCtx.moveTo(cx, cy - 18);
+                sCtx.lineTo(cx + 10, cy + 12);
+                sCtx.lineTo(cx - 10, cy + 12);
+                sCtx.closePath();
+                sCtx.fill();
+                
+                sCtx.fillStyle = '#fff';
+                sCtx.fillRect(cx - 8, cy - 5, 16, 3);
+                sCtx.fillRect(cx - 8, cy + 3, 16, 3);
+                
+                sCtx.fillStyle = '#333';
+                sCtx.fillRect(cx - 12, cy + 12, 24, 3);
+                break;
+                
+                case 'barrier':
+                sCtx.fillStyle = '#ff0000';
+                sCtx.fillRect(cx - 18, cy - 5, 36, 8);
+                
+                sCtx.fillStyle = '#fff';
+                for (let i = 0; i < 4; i++) {
+                    sCtx.fillRect(cx - 18 + i * 12, cy - 5, 6, 8);
+                }
+                
+                sCtx.fillStyle = '#888';
+                sCtx.fillRect(cx - 20, cy + 3, 3, 10);
+                sCtx.fillRect(cx + 17, cy + 3, 3, 10);
+                break;
+            }
+            
+            return spriteCanvas;
+        }
+        
+function createPodracerSprite() {
+    const size = 70; // MODIFICADO - Reducido de 90 a 70
+    const spriteCanvas = document.createElement('canvas');
+    spriteCanvas.width = size;
+    spriteCanvas.height = size;
+    const sCtx = spriteCanvas.getContext('2d');
+    const cx = size / 2;
+    const cy = size / 2;
+
+    // MODIFICADO - Sombra de levitación (difusa y ovalada)
+    sCtx.fillStyle = 'rgba(0,0,0,0.35)';
+    sCtx.beginPath();
+    sCtx.ellipse(cx, cy + 26, 28, 8, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    // Sombra más cercana a cada motor
+    sCtx.fillStyle = 'rgba(0,0,0,0.25)';
+    sCtx.beginPath();
+    sCtx.ellipse(cx - 16, cy + 24, 10, 4, 0, 0, Math.PI * 2);
+    sCtx.ellipse(cx + 16, cy + 24, 10, 4, 0, 0, Math.PI * 2);
+    sCtx.fill();
+
+    // MOTOR IZQUIERDO (más detallado y compacto)
+    // Cuerpo principal con perspectiva 3D
+    const leftMotorGradient = sCtx.createLinearGradient(cx - 30, cy - 6, cx - 10, cy + 10);
+    leftMotorGradient.addColorStop(0, '#A0A0A0');
+    leftMotorGradient.addColorStop(0.3, '#8B8B8B');
+    leftMotorGradient.addColorStop(1, '#606060');
+    sCtx.fillStyle = leftMotorGradient;
+    
+    // Forma cilíndrica principal
+    sCtx.beginPath();
+    sCtx.ellipse(cx - 20, cy - 6, 10, 5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    sCtx.fillRect(cx - 30, cy - 6, 20, 16);
+    sCtx.beginPath();
+    sCtx.ellipse(cx - 20, cy + 10, 10, 5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    // Reflejo metálico superior
+    sCtx.fillStyle = '#C0C0C0';
+    sCtx.fillRect(cx - 29, cy - 5, 18, 3);
+    
+    // Bandas mecánicas (detalles)
+    sCtx.fillStyle = '#404040';
+    sCtx.fillRect(cx - 30, cy - 2, 20, 1.5);
+    sCtx.fillRect(cx - 30, cy + 3, 20, 1.5);
+    sCtx.fillRect(cx - 30, cy + 8, 20, 1.5);
+    
+    // Panel de refrigeración
+    sCtx.fillStyle = '#555';
+    for(let i = 0; i < 3; i++) {
+        sCtx.fillRect(cx - 28 + i*6, cy, 4, 6);
+    }
+    
+    // Tobera trasera (con profundidad)
+    sCtx.fillStyle = '#2A2A2A';
+    sCtx.fillRect(cx - 30, cy + 10, 20, 6);
+    sCtx.fillStyle = '#1A1A1A';
+    for(let i = 0; i < 5; i++) {
+        sCtx.fillRect(cx - 29 + i*4, cy + 11, 2, 4);
+    }
+    
+    // Resplandor motor (efecto de profundidad)
+    const leftGlow = sCtx.createRadialGradient(cx - 20, cy + 18, 2, cx - 20, cy + 18, 12);
+    leftGlow.addColorStop(0, 'rgba(0, 255, 255, 1)');
+    leftGlow.addColorStop(0.5, 'rgba(0, 200, 255, 0.8)');
+    leftGlow.addColorStop(1, 'rgba(0, 150, 255, 0.2)');
+    sCtx.fillStyle = leftGlow;
+    sCtx.fillRect(cx - 29, cy + 16, 18, 6);
+    
+    // Núcleo brillante del motor
+    sCtx.fillStyle = 'rgba(200, 255, 255, 0.9)';
+    sCtx.fillRect(cx - 24, cy + 17, 8, 3);
+
+    // MOTOR DERECHO (simétrico con detalles)
+    const rightMotorGradient = sCtx.createLinearGradient(cx + 10, cy - 6, cx + 30, cy + 10);
+    rightMotorGradient.addColorStop(0, '#606060');
+    rightMotorGradient.addColorStop(0.7, '#8B8B8B');
+    rightMotorGradient.addColorStop(1, '#A0A0A0');
+    sCtx.fillStyle = rightMotorGradient;
+    
+    sCtx.beginPath();
+    sCtx.ellipse(cx + 20, cy - 6, 10, 5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    sCtx.fillRect(cx + 10, cy - 6, 20, 16);
+    sCtx.beginPath();
+    sCtx.ellipse(cx + 20, cy + 10, 10, 5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    sCtx.fillStyle = '#C0C0C0';
+    sCtx.fillRect(cx + 11, cy - 5, 18, 3);
+    
+    sCtx.fillStyle = '#404040';
+    sCtx.fillRect(cx + 10, cy - 2, 20, 1.5);
+    sCtx.fillRect(cx + 10, cy + 3, 20, 1.5);
+    sCtx.fillRect(cx + 10, cy + 8, 20, 1.5);
+    
+    sCtx.fillStyle = '#555';
+    for(let i = 0; i < 3; i++) {
+        sCtx.fillRect(cx + 12 + i*6, cy, 4, 6);
+    }
+    
+    sCtx.fillStyle = '#2A2A2A';
+    sCtx.fillRect(cx + 10, cy + 10, 20, 6);
+    sCtx.fillStyle = '#1A1A1A';
+    for(let i = 0; i < 5; i++) {
+        sCtx.fillRect(cx + 11 + i*4, cy + 11, 2, 4);
+    }
+    
+    const rightGlow = sCtx.createRadialGradient(cx + 20, cy + 18, 2, cx + 20, cy + 18, 12);
+    rightGlow.addColorStop(0, 'rgba(0, 255, 255, 1)');
+    rightGlow.addColorStop(0.5, 'rgba(0, 200, 255, 0.8)');
+    rightGlow.addColorStop(1, 'rgba(0, 150, 255, 0.2)');
+    sCtx.fillStyle = rightGlow;
+    sCtx.fillRect(cx + 11, cy + 16, 18, 6);
+    
+    sCtx.fillStyle = 'rgba(200, 255, 255, 0.9)';
+    sCtx.fillRect(cx + 16, cy + 17, 8, 3);
+
+    // CABINA (más realista y detallada)
+    // Casco con gradiente metalizado
+    const cabinGradient = sCtx.createLinearGradient(cx, cy + 6, cx, cy + 20);
+    cabinGradient.addColorStop(0, '#E0AC69');
+    cabinGradient.addColorStop(0.5, '#C89050');
+    cabinGradient.addColorStop(1, '#A67C52');
+    sCtx.fillStyle = cabinGradient;
+    
+    // Forma aerodinámica
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 5, cy + 6);
+    sCtx.quadraticCurveTo(cx - 7, cy + 10, cx - 8, cy + 18);
+    sCtx.lineTo(cx + 8, cy + 18);
+    sCtx.quadraticCurveTo(cx + 7, cy + 10, cx + 5, cy + 6);
+    sCtx.closePath();
+    sCtx.fill();
+    
+    // Línea de contorno
+    sCtx.strokeStyle = '#6B4423';
+    sCtx.lineWidth = 1;
+    sCtx.stroke();
+    
+    // Visor del piloto (cúpula)
+    const visorGradient = sCtx.createRadialGradient(cx, cy + 11, 2, cx, cy + 11, 6);
+    visorGradient.addColorStop(0, 'rgba(100, 150, 200, 0.6)');
+    visorGradient.addColorStop(1, 'rgba(20, 30, 50, 0.9)');
+    sCtx.fillStyle = visorGradient;
+    sCtx.beginPath();
+    sCtx.ellipse(cx, cy + 11, 5, 3.5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    // Reflejo en el visor
+    sCtx.fillStyle = 'rgba(200, 220, 255, 0.4)';
+    sCtx.beginPath();
+    sCtx.ellipse(cx - 1, cy + 10, 2, 1.5, 0, 0, Math.PI * 2);
+    sCtx.fill();
+    
+    // Detalles mecánicos en la cabina
+    sCtx.fillStyle = '#8B4513';
+    sCtx.fillRect(cx - 3, cy + 14, 6, 2);
+    sCtx.fillStyle = '#5D3A1A';
+    sCtx.fillRect(cx - 2, cy + 15, 4, 1);
+
+    // CABLES DE ENERGÍA (más realistas con sombra)
+    sCtx.shadowColor = 'rgba(255, 215, 0, 0.5)';
+    sCtx.shadowBlur = 3;
+    sCtx.strokeStyle = '#FFD700';
+    sCtx.lineWidth = 2;
+    
+    // Cable izquierdo superior
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 20, cy + 8);
+    sCtx.quadraticCurveTo(cx - 12, cy + 10, cx - 5, cy + 8);
+    sCtx.stroke();
+    
+    // Cable izquierdo inferior
+    sCtx.beginPath();
+    sCtx.moveTo(cx - 20, cy + 12);
+    sCtx.quadraticCurveTo(cx - 12, cy + 14, cx - 6, cy + 12);
+    sCtx.stroke();
+    
+    // Cable derecho superior
+    sCtx.beginPath();
+    sCtx.moveTo(cx + 20, cy + 8);
+    sCtx.quadraticCurveTo(cx + 12, cy + 10, cx + 5, cy + 8);
+    sCtx.stroke();
+    
+    // Cable derecho inferior
+    sCtx.beginPath();
+    sCtx.moveTo(cx + 20, cy + 12);
+    sCtx.quadraticCurveTo(cx + 12, cy + 14, cx + 6, cy + 12);
+    sCtx.stroke();
+    
+    sCtx.shadowBlur = 0;
+    
+    // Conectores metálicos
+    sCtx.fillStyle = '#B8860B';
+    sCtx.beginPath();
+    sCtx.arc(cx - 5, cy + 8, 1.5, 0, Math.PI * 2);
+    sCtx.arc(cx + 5, cy + 8, 1.5, 0, Math.PI * 2);
+    sCtx.fill();
+
+    return spriteCanvas;
+}
+
+        function createFalconSprite() {
+            const size = 90;
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = size;
+            spriteCanvas.height = size;
+            const sCtx = spriteCanvas.getContext('2d');
+            const cx = size / 2;
+            const cy = size / 2;
+            
+            // Sombra elíptica grande
+            sCtx.fillStyle = 'rgba(0,0,0,0.5)';
+            sCtx.beginPath();
+            sCtx.ellipse(cx, cy + 32, 44, 26, 0, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            // PLATO PRINCIPAL (forma asimétrica característica)
+            const plateGradient = sCtx.createRadialGradient(cx, cy + 5, 10, cx, cy + 5, 40);
+            plateGradient.addColorStop(0, '#D3D3D3');
+            plateGradient.addColorStop(0.6, '#B0C4DE');
+            plateGradient.addColorStop(1, '#8B949E');
+            sCtx.fillStyle = plateGradient;
+            
+            sCtx.beginPath();
+            sCtx.ellipse(cx, cy + 5, 42, 29, 0, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            // Contorno oscuro
+            sCtx.strokeStyle = '#556B2F';
+            sCtx.lineWidth = 2;
+            sCtx.stroke();
+            
+            // PANELES GREEBLING (detalles técnicos)
+            sCtx.fillStyle = '#778899';
+            sCtx.beginPath();
+            sCtx.ellipse(cx - 8, cy + 3, 26, 18, 0, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            sCtx.fillStyle = '#696969';
+            sCtx.fillRect(cx - 15, cy - 5, 20, 12);
+            sCtx.fillRect(cx + 5, cy + 2, 18, 10);
+            
+            // Líneas de paneles
+            sCtx.strokeStyle = '#4F4F4F';
+            sCtx.lineWidth = 1;
+            for(let i = -20; i <= 20; i += 8) {
+                sCtx.beginPath();
+                sCtx.moveTo(cx + i, cy - 10);
+                sCtx.lineTo(cx + i, cy + 20);
+                sCtx.stroke();
+            }
+            
+            // ANTENA PARABÓLICA (círculo superior izquierdo)
+            sCtx.fillStyle = '#E0E0E0';
+            sCtx.beginPath();
+            sCtx.arc(cx - 22, cy - 2, 9, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            sCtx.strokeStyle = '#888';
+            sCtx.lineWidth = 2;
+            sCtx.stroke();
+            
+            // Centro de la antena
+            sCtx.fillStyle = '#4A4A4A';
+            sCtx.beginPath();
+            sCtx.arc(cx - 22, cy - 2, 5, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            // MANDÍBULAS FRONTALES (icónicas)
+            sCtx.fillStyle = plateGradient;
+            
+            // Mandíbula izquierda
+            sCtx.beginPath();
+            sCtx.moveTo(cx - 18, cy - 22);
+            sCtx.lineTo(cx - 12, cy - 25);
+            sCtx.lineTo(cx - 10, cy - 8);
+            sCtx.lineTo(cx - 16, cy - 5);
+            sCtx.closePath();
+            sCtx.fill();
+            sCtx.strokeStyle = '#556B2F';
+            sCtx.lineWidth = 1.5;
+            sCtx.stroke();
+            
+            // Mandíbula derecha
+            sCtx.beginPath();
+            sCtx.moveTo(cx + 6, cy - 22);
+            sCtx.lineTo(cx + 12, cy - 25);
+            sCtx.lineTo(cx + 14, cy - 8);
+            sCtx.lineTo(cx + 8, cy - 5);
+            sCtx.closePath();
+            sCtx.fill();
+            sCtx.stroke();
+            
+            // MUESCA CENTRAL (entre mandíbulas)
+            sCtx.fillStyle = '#2F4F4F';
+            sCtx.fillRect(cx - 6, cy - 20, 12, 16);
+            
+            // Detalle muesca
+            sCtx.fillStyle = '#1C1C1C';
+            sCtx.fillRect(cx - 4, cy - 18, 8, 12);
+            
+            // CABINA LATERAL (tubo característico derecho)
+            sCtx.fillStyle = '#A9A9A9';
+            sCtx.fillRect(cx + 26, cy, 18, 12);
+            
+            // Sombra cabina
+            sCtx.fillStyle = '#696969';
+            sCtx.fillRect(cx + 26, cy + 6, 18, 6);
+            
+            // Ventana cabina (azul claro)
+            sCtx.fillStyle = 'rgba(135, 206, 250, 0.85)';
+            sCtx.beginPath();
+            sCtx.moveTo(cx + 30, cy + 2);
+            sCtx.lineTo(cx + 42, cy + 3);
+            sCtx.lineTo(cx + 42, cy + 8);
+            sCtx.lineTo(cx + 30, cy + 9);
+            sCtx.closePath();
+            sCtx.fill();
+            
+            // Marco ventana
+            sCtx.strokeStyle = '#4F4F4F';
+            sCtx.lineWidth = 1;
+            sCtx.stroke();
+            
+            // RESPLANDOR DEL HIPERMOTOR (lo más icónico - azul brillante trasero)
+            const engineY = cy + 26;
+            
+            // Glow exterior (halo)
+            const outerGlow = sCtx.createRadialGradient(cx, engineY, 15, cx, engineY, 45);
+            outerGlow.addColorStop(0, 'rgba(0, 191, 255, 0.6)');
+            outerGlow.addColorStop(0.5, 'rgba(135, 206, 250, 0.3)');
+            outerGlow.addColorStop(1, 'rgba(0, 191, 255, 0)');
+            sCtx.fillStyle = outerGlow;
+            sCtx.fillRect(cx - 45, engineY - 10, 90, 20);
+            
+            // Motor principal (elíptico)
+            const engineGradient = sCtx.createLinearGradient(cx - 38, engineY, cx + 38, engineY);
+            engineGradient.addColorStop(0, 'rgba(0, 191, 255, 0.3)');
+            engineGradient.addColorStop(0.3, 'rgba(135, 206, 250, 1)');
+            engineGradient.addColorStop(0.7, 'rgba(135, 206, 250, 1)');
+            engineGradient.addColorStop(1, 'rgba(0, 191, 255, 0.3)');
+            
+            sCtx.fillStyle = engineGradient;
+            sCtx.beginPath();
+            sCtx.ellipse(cx, engineY, 38, 6, 0, 0, Math.PI * 2);
+            sCtx.fill();
+            
+            // Línea central brillante
+            sCtx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            sCtx.fillRect(cx - 35, engineY - 1, 70, 2);
+            
+            // Partículas de escape
+            sCtx.fillStyle = 'rgba(173, 216, 230, 0.7)';
+            for(let i = 0; i < 5; i++) {
+                const px = cx - 30 + Math.random() * 60;
+                const py = engineY + 8 + Math.random() * 6;
+                sCtx.beginPath();
+                sCtx.arc(px, py, 1 + Math.random() * 2, 0, Math.PI * 2);
+                sCtx.fill();
+            }
+            
+            // Marcas de desgaste (característico del Halcón)
+            sCtx.fillStyle = 'rgba(80, 80, 80, 0.4)';
+            sCtx.fillRect(cx - 10, cy + 8, 15, 3);
+            sCtx.fillRect(cx + 8, cy - 2, 12, 2);
+            sCtx.fillRect(cx - 25, cy + 12, 10, 2);
+            
+            return spriteCanvas;
+        }
+        
+        function shadeColor(color, percent) {
+            // Antes solo aceptaba '#rrggbb'. Con un 'rgb(r,g,b)' (que es lo que
+            // devuelve getSkyColor) el parseInt daba NaN y la función devolvía
+            // negro en silencio: el degradado del cielo se fundía siempre a
+            // negro en el horizonte, con cualquier fase del día.
+            const c = color.startsWith('#') ? hexToRgb(color) : parseRgb(color);
+            const amt = Math.round(2.55 * percent);
+            const R = Math.min(255, Math.max(0, c.r + amt));
+            const G = Math.min(255, Math.max(0, c.g + amt));
+            const B = Math.min(255, Math.max(0, c.b + amt));
+            return `rgb(${R},${G},${B})`;
+        }
+        
+        function initSprites() {
+            //playerCarSprite = createCarSprite('#d62828', true);
+            
+            const enemyColors = ['#2a9d8f', '#e9c46a', '#8338ec', '#457b9d'];
+            enemyCarSprites = enemyColors.map(color => createCarSprite(color, false));
+            
+            const obstacleTypes = ['rock', 'hole', 'cone', 'barrier'];
+            obstacleSprites = obstacleTypes.map(type => ({
+                type: type,
+                sprite: createObstacleSprite(type)
+            }));
+        }
+        
+        // ==========================================
+        // INPUT - Manejo de teclado
+        // ==========================================
+        
+        const GAME_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '];
+        
+        function changeLane(delta) {
+            if (gameState !== 'playing') return;
+            const next = player.targetLane + delta;
+            if (next < 0 || next > CONFIG.roadLanes - 1) return;
+            player.targetLane = next;
+        }
+        
+        document.addEventListener('keydown', (e) => {
+            // Evita el scroll de la página con las flechas
+            if (GAME_KEYS.includes(e.key) && !(e.target instanceof HTMLInputElement)) {
+                e.preventDefault();
+            }
+            if (countdownActive) return;
+            
+            keys[e.key] = true;
+            
+            // El auto-repeat del sistema operativo no debe generar acciones
+            // discretas: si no, el cambio de carril depende de la configuración
+            // de repetición de teclado del usuario.
+            if (e.repeat) return;
+            
+            if (e.key === 'ArrowLeft') changeLane(-1);
+            if (e.key === 'ArrowRight') changeLane(1);
+            
+            if (e.key === 'p' || e.key === 'P') {
+                if (gameState === 'playing') {
+                    pauseGame();
+                } else if (gameState === 'paused') {
+                    resumeGame();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Sin esto, si el usuario cambia de pestaña manteniendo una flecha el
+        // keyup se pierde y la tecla se queda "pegada" al volver.
+        window.addEventListener('blur', () => { keys = {}; });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) keys = {};
+        });
+        
+        // ---- Entrada táctil ----
+        const TOUCH_KEY_MAP = { accel: 'ArrowUp', brake: 'ArrowDown' };
+        
+        function initTouchControls() {
+            const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (isTouch) document.body.classList.add('touch-device');
+            
+            document.querySelectorAll('#touchControls [data-touch]').forEach(btn => {
+                const action = btn.dataset.touch;
+                
+                btn.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    resumeAudio();
+                    if (countdownActive) return;
+                    if (action === 'left') changeLane(-1);
+                    else if (action === 'right') changeLane(1);
+                    else keys[TOUCH_KEY_MAP[action]] = true;
+                });
+                
+                const release = (e) => {
+                    e.preventDefault();
+                    if (TOUCH_KEY_MAP[action]) keys[TOUCH_KEY_MAP[action]] = false;
+                };
+                btn.addEventListener('pointerup', release);
+                btn.addEventListener('pointercancel', release);
+                btn.addEventListener('pointerleave', release);
+            });
+            
+            document.getElementById('pauseTouchBtn').addEventListener('click', () => {
+                if (gameState === 'playing') pauseGame();
+                else if (gameState === 'paused') resumeGame();
+            });
+        }
+        
+        // ==========================================
+        // GAME LOGIC - Lógica principal del juego
+        // ==========================================
+        
+        function initGame() {
+            // MODIFICADO: Mover esto al principio
+            difficultyConfig = CONFIG.difficulties[currentDifficulty];
+            
+            // MODIFICADO: Usar las vidas de la dificultad
+            lives = difficultyConfig.lives; 
+            
+            switch(currentDifficulty) {
+                case 'easy':
+                playerCarSprite = createPodracerSprite();
+                break;
+                case 'hard':
+                playerCarSprite = createFalconSprite();
+                break;
+                case 'normal':
+                default:
+                // Usamos el sprite original (rojo) para el "Speeder Rebelde"
+                playerCarSprite = createCarSprite('#d62828', true); 
+                break;
+            }
+            
+            timeRemaining = CONFIG.initialTime;
+            score = 0;
+            checkpointsPassed = 0;
+            totalCollisions = 0;
+            
+            player.lane = 1;
+            player.targetLane = 1;
+            player.speed = 0;
+            player.depth = 5;
+            
+            enemies = [];
+            obstacles = [];
+            checkpoints = [];
+            lastEnemySpawn = 0;
+            lastObstacleSpawn = 0;
+            
+            roadCurve = 0;
+            targetRoadCurve = 0;
+            roadScroll = 0;
+            
+            skyPhase = 0;
+            
+            currentBiome = 0;
+            biomeTransition = 0;
+            
+            for (let i = 0; i < CONFIG.totalCheckpoints; i++) {
+                checkpoints.push({
+                    depth: CONFIG.checkpointSpacing * (i + 1),
+                    passed: false
+                });
+            }
+            
+            impactFlashTime = 0;
+            keys = {};
+            lastFrameTime = performance.now();
+        }
+        
+        // Cancela cualquier temporizador o bucle de una partida anterior.
+        function cancelPendingTimers() {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            clearTimeout(countdownTimerId);
+            clearTimeout(countdownAnimTimerId);
+            clearTimeout(locationSignTimerId);
+            countdownTimerId = null;
+            countdownAnimTimerId = null;
+            locationSignTimerId = null;
+            countdownActive = false;
+            
+            const overlay = document.getElementById('countdownOverlay');
+            if (overlay) overlay.classList.remove('active');
+            const sign = document.getElementById('locationSign');
+            if (sign) sign.style.opacity = '0';
+        }
+        
+        function startCountdown() {
+            countdownActive = true;
+            const overlay = document.getElementById('countdownOverlay');
+            const text = document.getElementById('countdownText');
+            
+            overlay.classList.add('active');
+            
+            const countdownSequence = ['3', '2', '1', '¡ACELERA!'];
+            let currentIndex = 0;
+            
+            function showNext() {
+                if (currentIndex >= countdownSequence.length) return;
+                
+                text.textContent = countdownSequence[currentIndex];
+                text.style.animation = 'none';
+                
+                countdownAnimTimerId = setTimeout(() => {
+                    text.style.animation = 'countdownPulse 0.8s ease-in-out';
+                }, 10);
+                
+                playSFX(currentIndex < countdownSequence.length - 1 ? 'countdown' : 'countdownGo');
+                
+                currentIndex++;
+                
+                if (currentIndex < countdownSequence.length) {
+                    countdownTimerId = setTimeout(showNext, 1000);
+                } else {
+                    countdownTimerId = setTimeout(() => {
+                        overlay.classList.remove('active');
+                        countdownActive = false;
+                        gameState = 'playing';
+                        lastFrameTime = performance.now();
+                        showLocationSign(CONFIG.locations[0]);
+                    }, 1000);
+                }
+            }
+            
+            showNext();
+        }
+        
+        function startGame() {
+            // Sin esto, dos llamadas a startGame() dejarían dos rAF vivos y el
+            // juego correría al doble de velocidad.
+            cancelPendingTimers();
+            
+            initGame();
+            gameState = 'countdown';
+            hideAllScreens();
+            startMusic();
+            startCountdown();
+            
+            rafId = requestAnimationFrame(gameLoop);
+        }
+        
+        function pauseGame() {
+            if (gameState !== 'playing') return;
+            gameState = 'paused';
+            keys = {};
+            document.getElementById('pauseScreen').classList.remove('hidden');
+            syncVolumeUI();
+        }
+        
+        function resumeGame() {
+            if (gameState !== 'paused') return;
+            gameState = 'playing';
+            document.getElementById('pauseScreen').classList.add('hidden');
+            lastFrameTime = performance.now();
+        }
+        
+        function quitToMenu() {
+            stopMusic();
+            cancelPendingTimers();
+            gameState = 'menu';
+            showMenu();
+            syncVolumeUI();
+        }
+        
+        function showLocationSign(location) {
+            if (!location) return;
+            const sign = document.getElementById('locationSign');
+            sign.textContent = location;
+            sign.style.opacity = '1';
+            
+            // Sin cancelar el anterior, dos checkpoints seguidos harían que el
+            // primer temporizador ocultase el segundo cartel antes de tiempo.
+            clearTimeout(locationSignTimerId);
+            locationSignTimerId = setTimeout(() => {
+                sign.style.opacity = '0';
+            }, 3000);
+        }
+        
+        function updateGame(deltaTime) {
+            // MODIFICADO - No actualizar durante la cuenta atrás
+            if (countdownActive) return;
+            
+            timeRemaining -= deltaTime / 1000;
+            if (timeRemaining <= 0) {
+                endGame(false);
+                return;
+            }
+            
+            if (biomeTransition < 1) {
+                biomeTransition += deltaTime / 15000;
+                biomeTransition = Math.min(1, biomeTransition);
+            }
+            
+            score += (CONFIG.scorePerSecond * deltaTime) / 1000;
+            
+            handlePlayerInput(deltaTime);
+            updateRoadCurve(deltaTime);
+            
+            roadScroll += player.speed * deltaTime / 100;
+            
+            updateEnemySpawn(deltaTime);
+            updateEnemies(deltaTime);
+            updateObstacleSpawn(deltaTime);
+            updateObstacles(deltaTime);
+            
+            checkCollisions();
+            if (gameState !== 'playing') return;   // se acabaron las vidas
+            
+            checkCheckpoints();
+            if (gameState !== 'playing') return;
+            
+            if (checkpointsPassed >= CONFIG.totalCheckpoints) {
+                endGame(true);
+            }
+        }
+        
+        // Factor de interpolación independiente del framerate. Multiplicar el
+        // factor por dt directamente no vale: con deltas grandes superaría 1 y
+        // el valor oscilaría alrededor del objetivo.
+        function smoothingFactor(perFrameFactor, deltaTime) {
+            return 1 - Math.pow(1 - perFrameFactor, deltaTime / 16.6667);
+        }
+        
+        function handlePlayerInput(deltaTime) {
+            const dt = deltaTime / 1000;
+            
+            if (keys['ArrowUp']) {
+                player.speed = Math.min(player.speed + CONFIG.playerAcceleration * dt, CONFIG.playerMaxSpeed);
+            }
+            
+            if (keys['ArrowDown']) {
+                player.speed = Math.max(player.speed - CONFIG.playerBrakeDecel * dt, 0);
+            }
+            
+            if (!keys['ArrowUp'] && !keys['ArrowDown']) {
+                player.speed = Math.max(player.speed - CONFIG.playerFriction * dt, 0);
+            }
+            
+            // El cambio de carril se dispara en keydown / pointerdown (acción
+            // discreta), aquí solo se interpola hacia el carril objetivo.
+            const k = smoothingFactor(CONFIG.laneChangeSmoothing, deltaTime);
+            player.lane += (player.targetLane - player.lane) * k;
+            
+            targetRoadCurve = (player.targetLane - 1) * 0.35;
+        }
+        
+        function updateRoadCurve(deltaTime) {
+            const k = smoothingFactor(CONFIG.roadCurveSmoothing, deltaTime);
+            roadCurve += (targetRoadCurve - roadCurve) * k;
+        }
+        
+        function updateEnemySpawn(deltaTime) {
+            lastEnemySpawn += deltaTime;
+            
+            const speedFactor = player.speed / CONFIG.playerMaxSpeed;
+            const adjustedInterval = difficultyConfig.spawnInterval / (0.5 + speedFactor * 0.5);
+            
+            if (lastEnemySpawn >= adjustedInterval) {
+                lastEnemySpawn = 0;
+                
+                // `for (i = 0; i < 1.2; i++)` solo iteraba una vez: la parte
+                // fraccionaria se perdía. Ahora es probabilidad de enemigo extra.
+                const base = Math.floor(difficultyConfig.enemiesPerWave);
+                const extra = Math.random() < (difficultyConfig.enemiesPerWave - base) ? 1 : 0;
+                
+                for (let i = 0; i < base + extra; i++) {
+                    spawnEnemy();
+                }
+            }
+        }
+        
+        function spawnEnemy() {
+            const occupiedLanes = new Set(
+            enemies
+            .filter(e => e.active && e.depth > 15 && e.depth < 25)
+            .map(e => Math.round(e.lane))
+            );
+            
+            obstacles.forEach(obs => {
+                if (obs.active && obs.depth > 15 && obs.depth < 25) {
+                    occupiedLanes.add(Math.round(obs.lane));
+                }
+            });
+            
+            let lane;
+            if (occupiedLanes.size >= 2) {
+                const availableLanes = [0, 1, 2].filter(l => !occupiedLanes.has(l));
+                lane = availableLanes.length > 0 
+                ? availableLanes[Math.floor(Math.random() * availableLanes.length)] 
+                : Math.floor(Math.random() * CONFIG.roadLanes);
+            } else {
+                lane = Math.floor(Math.random() * CONFIG.roadLanes);
+            }
+            
+            const spriteIndex = Math.floor(Math.random() * enemyCarSprites.length);
+            
+            enemies.push({
+                lane: lane,
+                depth: CONFIG.enemyMaxDepth + Math.random() * 5,
+                speed: difficultyConfig.enemyBaseSpeed + (Math.random() * 0.01),
+                sprite: enemyCarSprites[spriteIndex],
+                wobble: Math.random() * 0.3 - 0.15,
+                active: true,
+                overtaken: false
+            });
+        }
+        
+        function updateObstacleSpawn(deltaTime) {
+            lastObstacleSpawn += deltaTime;
+            
+            if (lastObstacleSpawn >= CONFIG.obstacleSpawnInterval) {
+                lastObstacleSpawn = 0;
+                spawnObstacle();
+            }
+        }
+        
+        function spawnObstacle() {
+            const occupiedLanes = new Set();
+            
+            enemies.forEach(e => {
+                if (e.active && e.depth > 20 && e.depth < 35) {
+                    occupiedLanes.add(Math.round(e.lane));
+                }
+            });
+            
+            obstacles.forEach(obs => {
+                if (obs.active && obs.depth > 20 && obs.depth < 35) {
+                    occupiedLanes.add(Math.round(obs.lane));
+                }
+            });
+            
+            if (occupiedLanes.size >= 2) {
+                const availableLanes = [0, 1, 2].filter(l => !occupiedLanes.has(l));
+                if (availableLanes.length === 0) return;
+                
+                const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+                const obstacleData = obstacleSprites[Math.floor(Math.random() * obstacleSprites.length)];
+                
+                obstacles.push({
+                    lane: lane,
+                    depth: CONFIG.obstacleMaxDepth + Math.random() * 5,
+                    type: obstacleData.type,
+                    sprite: obstacleData.sprite,
+                    active: true
+                });
+            } else {
+                const lane = Math.floor(Math.random() * CONFIG.roadLanes);
+                const obstacleData = obstacleSprites[Math.floor(Math.random() * obstacleSprites.length)];
+                
+                obstacles.push({
+                    lane: lane,
+                    depth: CONFIG.obstacleMaxDepth + Math.random() * 5,
+                    type: obstacleData.type,
+                    sprite: obstacleData.sprite,
+                    active: true
+                });
+            }
+        }
+        
+        function updateObstacles(deltaTime) {
+            obstacles.forEach(obstacle => {
+                if (!obstacle.active) return;
+                
+                obstacle.depth -= player.speed * deltaTime / 100;
+                
+                if (obstacle.depth < 2) {
+                    obstacle.active = false;
+                }
+            });
+            
+            obstacles = obstacles.filter(o => o.active);
+        }
+        
+        function updateEnemies(deltaTime) {
+            enemies.forEach(enemy => {
+                if (!enemy.active) return;
+                
+                const previousDepth = enemy.depth;
+                
+                enemy.depth -= (player.speed + enemy.speed) * deltaTime / 100;
+                
+                if (!enemy.overtaken && previousDepth > player.depth && enemy.depth <= player.depth) {
+                    enemy.overtaken = true;
+                    playSFX('overtake');
+                }
+                
+                if (enemy.depth > 15) {
+                    enemy.lane += enemy.wobble * deltaTime / 100;
+                    enemy.lane = Math.max(0, Math.min(CONFIG.roadLanes - 1, enemy.lane));
+                }
+                
+                if (enemy.depth < 2) {
+                    enemy.active = false;
+                }
+            });
+            
+            enemies = enemies.filter(e => e.active);
+        }
+        
+        function checkCollisions() {
+            // Bucles clásicos con corte: handleCollision puede terminar la
+            // partida, y un forEach seguiría iterando después de endGame().
+            for (let i = 0; i < enemies.length; i++) {
+                const enemy = enemies[i];
+                if (!enemy.active) continue;
+                
+                if (Math.abs(enemy.lane - player.lane) < 0.4 &&
+                    Math.abs(enemy.depth - player.depth) < 1.5) {
+                    handleCollision(enemy);
+                    if (gameState !== 'playing') return;
+                }
+            }
+            
+            for (let i = 0; i < obstacles.length; i++) {
+                const obstacle = obstacles[i];
+                if (!obstacle.active) continue;
+                
+                if (Math.abs(obstacle.lane - player.lane) < 0.4 &&
+                    Math.abs(obstacle.depth - player.depth) < 1.5) {
+                    handleCollision(obstacle);
+                    if (gameState !== 'playing') return;
+                }
+            }
+        }
+        
+        function handleCollision(object) {
+            object.active = false;
+            lives--;
+            totalCollisions++;
+            
+            playSFX('collision');
+            createImpactEffect();
+            
+            player.speed *= 0.5;
+            
+            if (lives <= 0) {
+                lives = 0;
+                endGame(false);
+            }
+        }
+        
+        function createImpactEffect() {
+            impactFlashTime = performance.now();
+        }
+        
+        function checkCheckpoints() {
+            const distanceTraveled = roadScroll / 10;
+            
+            checkpoints.forEach((checkpoint, index) => {
+                if (checkpoint.passed) return;
+                
+                const checkpointDistance = checkpoint.depth - distanceTraveled;
+                
+                // Umbral unidireccional, no ventana [6, 8]: con un frame largo se
+                // podía atravesar la ventana entera y dejar la partida
+                // silenciosamente imposible de ganar. El flag `passed` ya evita
+                // el doble disparo.
+                if (checkpointDistance <= CONFIG.checkpointTriggerDistance) {
+                    checkpoint.passed = true;
+                    checkpointsPassed++;
+                    
+                    timeRemaining += difficultyConfig.checkpointTimeBonus;
+                    score += CONFIG.scorePerCheckpoint;
+                    
+                    playSFX('checkpoint');
+                    varyMusic();
+                    
+                    // Fuente única para bioma y fase de cielo, en lugar de dos
+                    // variables que podían desincronizarse.
+                    const stage = Math.min(checkpointsPassed, CONFIG.totalBiomes - 1);
+                    if (stage > currentBiome) {
+                        currentBiome = stage;
+                        biomeTransition = 0;
+                    }
+                    skyPhase = stage;
+                    
+                    if (checkpointsPassed < CONFIG.locations.length) {
+                        showLocationSign(CONFIG.locations[checkpointsPassed]);
+                    }
+                }
+            });
+        }
+        
+        function endGame(victory) {
+            // Idempotente: sin esta guarda, morir en el mismo frame en que se
+            // cruza el último checkpoint mostraba la pantalla dos veces y
+            // terminaba en 'victory'.
+            if (gameState !== 'playing') return;
+            
+            gameState = victory ? 'victory' : 'gameover';
+            stopMusic();
+            cancelPendingTimers();
+            showGameOverScreen(victory);
+        }
+        
+        // ==========================================
+        // RENDER - Dibujado en canvas
+        // ==========================================
+        
+        let frameSkyColor = '#000';
+        
+        function render() {
+            // getSkyColor() se llamaba tres veces por frame para el mismo valor
+            frameSkyColor = getSkyColor();
+            
+            ctx.fillStyle = frameSkyColor;
+            ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
+            
+            renderSky();
+            renderRoad();
+            renderRoadside();
+            renderCheckpoints();
+            renderObstacles();
+            renderEnemies();
+            renderPlayer();
+            
+            if (performance.now() - impactFlashTime < 200) {
+                ctx.fillStyle = 'rgba(255,0,0,0.3)';
+                ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
+            }
+            
+            renderHUD();
+        }
+        
+        // MODIFICADO - Sistema de cielo dinámico según fase
+        function getSkyColor() {
+            const progress = biomeTransition;
+            
+            const nightSky = [25, 25, 60];
+            const dawnSky = [135, 150, 200];
+            const daySky = [135, 206, 250]; // MODIFICADO - Azul cielo intenso (checkpoint 2)
+            const sunsetSky = [255, 150, 100]; // MODIFICADO - Atardecer (checkpoint 3)
+            const duskSky = [40, 40, 80];
+            
+            let currentSky, nextSky;
+            
+            if (skyPhase === 0) {
+                currentSky = nightSky;
+                nextSky = dawnSky;
+            } else if (skyPhase === 1) {
+                currentSky = dawnSky;
+                nextSky = daySky;
+            } else if (skyPhase === 2) {
+                // MODIFICADO - Entre checkpoint 2 y 3: día intenso
+                currentSky = daySky;
+                nextSky = sunsetSky;
+            } else if (skyPhase === 3) {
+                // MODIFICADO - Entre checkpoint 3 y 4: atardecer
+                currentSky = sunsetSky;
+                nextSky = duskSky;
+            } else {
+                currentSky = duskSky;
+                nextSky = nightSky;
+            }
+            
+            const r = Math.round(currentSky[0] + (nextSky[0] - currentSky[0]) * progress);
+            const g = Math.round(currentSky[1] + (nextSky[1] - currentSky[1]) * progress);
+            const b = Math.round(currentSky[2] + (nextSky[2] - currentSky[2]) * progress);
+            
+            return `rgb(${r},${g},${b})`;
+        }
+        
+        function renderSky() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, CONFIG.vanishingPointY);
+            gradient.addColorStop(0, frameSkyColor);
+            gradient.addColorStop(1, shadeColor(frameSkyColor, -20));
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.vanishingPointY);
+            
+            const celestialY = CONFIG.vanishingPointY - 50;
+            const celestialX = CONFIG.canvasWidth / 2 + 200;
+            
+            if (skyPhase === 0) {
+                renderStars();
+                renderMoon(celestialX, celestialY, 1.0);
+            } else if (skyPhase === 1) {
+                const moonOpacity = Math.max(0, 1 - biomeTransition);
+                const sunOpacity = biomeTransition;
+                if (moonOpacity > 0) renderMoon(celestialX, celestialY, moonOpacity);
+                if (sunOpacity > 0) renderSun(celestialX, celestialY, sunOpacity, 1.0);
+                renderClouds();
+            } else if (skyPhase === 2) {
+                // MODIFICADO - Día pleno con sol brillante
+                renderSun(celestialX, celestialY, 1.0, 1.0);
+                renderClouds();
+            } else if (skyPhase === 3) {
+                // MODIFICADO - Atardecer: sol baja
+                const sunHeight = celestialY + (CONFIG.vanishingPointY - celestialY) * biomeTransition * 0.7;
+                const sunIntensity = 1.0 - biomeTransition * 0.6;
+                renderSunset(celestialX, sunHeight, sunIntensity);
+                renderClouds();
+            } else if (skyPhase === 4) {
+                const moonOpacity = biomeTransition;
+                if (moonOpacity > 0) renderMoon(celestialX, celestialY, moonOpacity);
+            }
+        }
+        
+        function renderStars() {
+            ctx.fillStyle = '#fff';
+            const starPositions = [
+            {x: 100, y: 50}, {x: 200, y: 30}, {x: 350, y: 70},
+            {x: 500, y: 40}, {x: 650, y: 60}, {x: 750, y: 35},
+            {x: 150, y: 120}, {x: 400, y: 100}, {x: 600, y: 90},
+            {x: 800, y: 110}, {x: 250, y: 150}, {x: 700, y: 140}
+            ];
+            
+            starPositions.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        function renderMoon(x, y, opacity) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.fillStyle = '#f0f0f0';
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'rgba(200,200,200,0.3)';
+            ctx.beginPath();
+            ctx.arc(x - 8, y - 5, 5, 0, Math.PI * 2);
+            ctx.arc(x + 6, y + 3, 4, 0, Math.PI * 2);
+            ctx.arc(x - 2, y + 8, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        function renderSun(x, y, opacity, intensity) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            
+            ctx.fillStyle = `rgba(255, 220, ${100 * intensity}, ${intensity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 40, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = `rgba(255, 230, 150, ${intensity * 0.3})`;
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 8; i++) {
+                const angle = (i / 8) * Math.PI * 2;
+                const x1 = x + Math.cos(angle) * 45;
+                const y1 = y + Math.sin(angle) * 45;
+                const x2 = x + Math.cos(angle) * 60;
+                const y2 = y + Math.sin(angle) * 60;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+        
+        function renderSunset(x, y, intensity) {
+            ctx.save();
+            
+            ctx.fillStyle = `rgba(255, ${150 * intensity}, ${50 * intensity}, ${intensity})`;
+            ctx.beginPath();
+            ctx.arc(x, y, 35, 0, Math.PI * 2);
+            ctx.fill();
+            
+            const gradient = ctx.createRadialGradient(x, y, 35, x, y, 100);
+            gradient.addColorStop(0, `rgba(255, 150, 50, ${intensity * 0.3})`);
+            gradient.addColorStop(1, 'rgba(255, 100, 50, 0)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, CONFIG.canvasWidth, CONFIG.vanishingPointY);
+            
+            ctx.restore();
+        }
+        
+        function renderClouds() {
+            if (skyPhase === 0 || skyPhase === 4) return;
+            
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            
+            const cloudPositions = [
+            {x: 150, y: 80, scale: 1},
+            {x: 500, y: 60, scale: 0.8},
+            {x: 750, y: 100, scale: 1.2}
+            ];
+            
+            cloudPositions.forEach(cloud => {
+                const x = (cloud.x + roadScroll * 0.1) % CONFIG.canvasWidth;
+                const y = cloud.y;const s = cloud.scale;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 20 * s, 0, Math.PI * 2);
+                ctx.arc(x + 25 * s, y, 25 * s, 0, Math.PI * 2);
+                ctx.arc(x + 50 * s, y, 20 * s, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        // Proyecta una profundidad normalizada (0 = horizonte, 1 = cámara) a
+        // coordenadas de pantalla. Centraliza la fórmula que antes estaba
+        // repetida en seis funciones de render.
+        function projectRoad(perspective) {
+            const y = CONFIG.vanishingPointY + perspective * (CONFIG.canvasHeight - CONFIG.vanishingPointY);
+            const width = perspective * CONFIG.roadWidth;
+            const centerX = CONFIG.canvasWidth / 2 + roadCurve * 400 * (1 - perspective);
+            return { y, width, centerX };
+        }
+        
+        function getGroundColor() {
+            // Usa currentBiome, la misma variable que renderRoadside, en lugar de
+            // checkpointsPassed: eran dos fuentes que podían divergir.
+            switch (currentBiome) {
+                case 0: return '#f4d03f';
+                case 1: return biomeTransition < 0.5
+                    ? '#f4d03f'
+                    : interpolateColor('#f4d03f', '#c8b88a', biomeTransition * 2 - 1);
+                case 2: return interpolateColor('#c8b88a', '#8fbc8f', biomeTransition);
+                case 3: return interpolateColor('#8fbc8f', '#2d5016', biomeTransition);
+                case 4: return interpolateColor('#2d5016', '#505050', biomeTransition);
+                default: return '#505050';
+            }
+        }
+        
+        function renderRoad() {
+            ctx.fillStyle = getGroundColor();
+            ctx.fillRect(0, CONFIG.vanishingPointY, CONFIG.canvasWidth, CONFIG.canvasHeight - CONFIG.vanishingPointY);
+            
+            const numSegments = 100;
+            
+            for (let i = 0; i < numSegments; i++) {
+                // Cada segmento se dibuja como trapecio entre su borde y el del
+                // siguiente. Antes eran bandas de 6 px de alto sobre una y que
+                // crece cuadráticamente, lo que dejaba huecos cerca de la cámara.
+                const zNear = i / numSegments;
+                const zFar = (i + 1) / numSegments;
+                const pNear = zNear * zNear;
+                const pFar = zFar * zFar;
+                
+                const near = projectRoad(pNear);
+                const far = projectRoad(pFar);
+                
+                const nearLeft = near.centerX - near.width / 2;
+                const nearRight = near.centerX + near.width / 2;
+                const farLeft = far.centerX - far.width / 2;
+                const farRight = far.centerX + far.width / 2;
+                
+                const segmentIndex = Math.floor((roadScroll + i * 5) / 10);
+                ctx.fillStyle = segmentIndex % 2 === 0 ? '#555' : '#666';
+                
+                ctx.beginPath();
+                ctx.moveTo(nearLeft, near.y);
+                ctx.lineTo(nearRight, near.y);
+                ctx.lineTo(farRight, far.y);
+                ctx.lineTo(farLeft, far.y);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Bordes blancos dibujados con el propio segmento: así siguen la
+                // curva, en lugar de las dos rectas del punto de fuga al borde
+                // inferior que cortaban por dentro del asfalto.
+                const edgeNear = Math.max(1, 3 * pNear);
+                const edgeFar = Math.max(1, 3 * pFar);
+                ctx.fillStyle = '#fff';
+                
+                ctx.beginPath();
+                ctx.moveTo(nearLeft - edgeNear, near.y);
+                ctx.lineTo(nearLeft, near.y);
+                ctx.lineTo(farLeft, far.y);
+                ctx.lineTo(farLeft - edgeFar, far.y);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.moveTo(nearRight, near.y);
+                ctx.lineTo(nearRight + edgeNear, near.y);
+                ctx.lineTo(farRight + edgeFar, far.y);
+                ctx.lineTo(farRight, far.y);
+                ctx.closePath();
+                ctx.fill();
+                
+                if (i % 8 < 4 && pNear > 0.1) {
+                    const laneW = near.width / CONFIG.roadLanes;
+                    const laneWFar = far.width / CONFIG.roadLanes;
+                    
+                    for (let lane = 1; lane < CONFIG.roadLanes; lane++) {
+                        const xn = nearLeft + lane * laneW;
+                        const xf = farLeft + lane * laneWFar;
+                        ctx.beginPath();
+                        ctx.moveTo(xn - 1, near.y);
+                        ctx.lineTo(xn + 1, near.y);
+                        ctx.lineTo(xf + 1, far.y);
+                        ctx.lineTo(xf - 1, far.y);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+        
+        function interpolateColor(color1, color2, factor) {
+            const c1 = color1.startsWith('#') ? hexToRgb(color1) : parseRgb(color1);
+            const c2 = color2.startsWith('#') ? hexToRgb(color2) : parseRgb(color2);
+            
+            const r = Math.round(c1.r + (c2.r - c1.r) * factor);
+            const g = Math.round(c1.g + (c2.g - c1.g) * factor);
+            const b = Math.round(c1.b + (c2.b - c1.b) * factor);
+            
+            return `rgb(${r},${g},${b})`;
+        }
+        
+        function hexToRgb(hex) {
+            const num = parseInt(hex.replace('#', ''), 16);
+            return {
+                r: (num >> 16) & 255,
+                g: (num >> 8) & 255,
+                b: num & 255
+            };
+        }
+        
+        function parseRgb(rgb) {
+            const match = rgb.match(/\d+/g);
+            return {
+                r: parseInt(match[0]),
+                g: parseInt(match[1]),
+                b: parseInt(match[2])
+            };
+        }
+        
+        function renderRoadside() {
+            const spacing = 1.5;   // separación entre elementos, en unidades de scroll
+            const count = 20;
+            // Antes: z = (i + roadScroll % 30) / 30, que hacía a z recorrer 0..1,63
+            // y teletransportaba todos los elementos al dar la vuelta el módulo.
+            // Ahora el desplazamiento es continuo dentro de un solo hueco.
+            const offset = (roadScroll / spacing) % 1;
+            
+            for (let i = count - 1; i >= 0; i--) {
+                const z = (i + 1 - offset) / count;
+                if (z <= 0 || z > 1) continue;
+                
+                const perspective = z * z;
+                const scale = perspective * 2;
+                
+                if (scale < 0.1) continue;
+                
+                const { y, centerX } = projectRoad(perspective);
+                
+                const xLeft = centerX - CONFIG.roadWidth / 2 - 50 * perspective;
+                const xRight = centerX + CONFIG.roadWidth / 2 + 50 * perspective;
+                
+                switch(currentBiome) {
+                    case 0:
+                    renderCactus(xLeft, y, scale);
+                    renderCactus(xRight, y, scale);
+                    break;
+                    case 1:
+                    if (biomeTransition < 0.5) {
+                        renderCactus(xLeft, y, scale);
+                        renderCactus(xRight, y, scale);
+                    } else {
+                        renderTree(xLeft, y, scale);
+                        renderTree(xRight, y, scale);
+                    }
+                    break;
+                    case 2:
+                    renderTree(xLeft, y, scale);
+                    renderTree(xRight, y, scale);
+                    break;
+                    case 3:
+                    renderBush(xLeft, y, scale);
+                    renderBush(xRight, y, scale);
+                    break;
+                    case 4:
+                    renderStreetLight(xLeft, y, scale);
+                    renderStreetLight(xRight, y, scale);
+                    break;
+                }
+            }
+            
+            renderBiomeBackground();
+        }
+        
+        function renderCactus(x, y, scale) {
+            if (scale < 0.2) return;
+            const height = 35 * scale;
+            const width = 4 * scale;
+            
+            ctx.fillStyle = '#228B22';
+            
+            ctx.fillRect(x - width/2, y, width, height);
+            
+            const leftArmWidth = width * 0.8;
+            const leftArmHeight = height * 0.3;
+            const leftArmY = y + height * 0.4;
+            ctx.fillRect(x - width * 2.5, leftArmY, leftArmWidth, leftArmHeight);
+            ctx.fillRect(x - width * 2.5, leftArmY, width * 2, leftArmWidth);
+            
+            const rightArmWidth = width * 0.8;
+            const rightArmHeight = height * 0.25;
+            const rightArmY = y + height * 0.5;
+            ctx.fillRect(x + width * 1.7, rightArmY, rightArmWidth, rightArmHeight);
+            ctx.fillRect(x + width/2, rightArmY, width * 2, rightArmWidth);
+        }
+        
+        function renderTree(x, y, scale) {
+            if (scale < 0.2) return;
+            const height = 40 * scale;
+            
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(x - 3 * scale, y, 6 * scale, height);
+            
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(x, y - 5 * scale, 12 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function renderBush(x, y, scale) {
+            if(scale < 0.2) return;
+            const bushWidth = 20 * scale;
+            const bushHeight = 6 * scale;
+            
+            ctx.fillStyle = '#6B8E23';
+            ctx.fillRect(x - bushWidth/2, y + 5 * scale, bushWidth, bushHeight);
+            
+            ctx.beginPath();
+            ctx.ellipse(x - bushWidth/4, y + 8 * scale, bushWidth/8, bushHeight/2, 0, 0, Math.PI * 2);
+            ctx.ellipse(x + bushWidth/4, y + 8 * scale, bushWidth/8, bushHeight/2, 0, 0, Math.PI * 2);
+            ctx.ellipse(x, y + 8 * scale, bushWidth/8, bushHeight/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function renderStreetLight(x, y, scale) {
+            if (scale < 0.2) return;
+            const height = 45 * scale;
+            
+            ctx.fillStyle = '#888';
+            ctx.fillRect(x - 1 * scale, y, 2 * scale, height);
+            
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y - 5 * scale, 5 * scale, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        function renderBiomeBackground() {
+            const vanishX = CONFIG.canvasWidth / 2;
+            const horizonY = CONFIG.vanishingPointY;
+            
+            let mountainScale = 0;
+            if (currentBiome === 1) {
+                mountainScale = biomeTransition;
+            } else if (currentBiome === 2) {
+                mountainScale = Math.max(0, 1.0 - biomeTransition);
+            }
+            
+            if (mountainScale > 0) {
+                ctx.fillStyle = `rgba(100, 100, 150, ${mountainScale * 0.6})`;
+                for (let i = 0; i < 5; i++) {
+                    const x = (vanishX - 300) + i * 150;
+                    const baseHeight = 50;
+                    const mountainHeight = baseHeight * mountainScale;
+                    ctx.beginPath();
+                    ctx.moveTo(x, horizonY);
+                    ctx.lineTo(x + 50, horizonY - mountainHeight);
+                    ctx.lineTo(x + 100, horizonY);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            
+            // MODIFICADO - Mar aparece en checkpoint 3 (currentBiome === 3)
+            // y desaparece COMPLETAMENTE al pasar checkpoint 4 (cuando currentBiome === 4 y biomeTransition > 0)
+            if (currentBiome === 3) {
+                const seaProgress = biomeTransition;
+                const maxSeaHeight = 60;
+                const seaHeight = maxSeaHeight * seaProgress;
+                
+                const seaGradient = ctx.createLinearGradient(0, horizonY - seaHeight, 0, horizonY);
+                seaGradient.addColorStop(0, '#4169E1');
+                seaGradient.addColorStop(1, '#1E90FF');
+                
+                ctx.fillStyle = seaGradient;
+                ctx.fillRect(0, horizonY - seaHeight, CONFIG.canvasWidth, seaHeight);
+                
+                if (seaProgress > 0.3) {
+                    renderSailboat(horizonY, seaProgress);
+                }
+            }
+            // MODIFICADO - El mar NO se renderiza en currentBiome === 4
+            // (desaparece instantáneamente al cruzar checkpoint 4)
+            
+            if (currentBiome === 4) {
+                const buildingProgress = biomeTransition;
+                const buildingStartX = vanishX - 400;
+                
+                for (let i = 0; i < 10; i++) {
+                    const x = buildingStartX + i * 80;
+                    const buildingBaseHeight = 30 + (i % 3) * 20;
+                    const buildingHeight = buildingBaseHeight * buildingProgress;
+                    
+                    ctx.fillStyle = `rgba(60, 60, 80, ${0.8 * buildingProgress})`;
+                    ctx.fillRect(x, horizonY - buildingHeight, 70, buildingHeight);
+                    
+                    ctx.fillStyle = `rgba(255, 255, 200, ${0.6 * buildingProgress})`;
+                    const windowRows = Math.floor(buildingHeight / 15);
+                    for (let row = 0; row < windowRows && row < 3; row++) {
+                        for (let col = 0; col < 3; col++) {
+                            const windowX = x + 10 + col * 20;
+                            const windowY = horizonY - buildingHeight + 5 + row * 15;
+                            ctx.fillRect(windowX, windowY, 8, 8);
+                        }
+                    }
+                }
+            }
+        }
+        
+        function renderSailboat(horizonY, opacity) {
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            
+            const boatX = 700;
+            const boatY = horizonY - 20;
+            
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(boatX - 20, boatY);
+            ctx.lineTo(boatX - 15, boatY + 10);
+            ctx.lineTo(boatX + 15, boatY + 10);
+            ctx.lineTo(boatX + 20, boatY);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(boatX, boatY);
+            ctx.lineTo(boatX, boatY - 25);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(boatX, boatY - 25);
+            ctx.lineTo(boatX + 15, boatY - 5);
+            ctx.lineTo(boatX, boatY);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        function renderCheckpoints() {
+            checkpoints.forEach((checkpoint, index) => {
+                if (checkpoint.passed) return;
+                
+                const distanceTraveled = roadScroll / 10;
+                const depthDiff = checkpoint.depth - distanceTraveled;
+                
+                if (depthDiff < 0 || depthDiff > 50) return;
+                
+                const z = 1 - (depthDiff / 50);
+                const perspective = z * z;
+                
+                const y = CONFIG.vanishingPointY + perspective * (CONFIG.canvasHeight - CONFIG.vanishingPointY);
+                const width = perspective * CONFIG.roadWidth;
+                
+                const curveAmount = roadCurve * 400 * (1 - perspective);
+                const centerX = CONFIG.canvasWidth / 2 + curveAmount;
+                
+                const isFinishLine = (index === CONFIG.totalCheckpoints - 1);
+                
+                const numSquares = 8;
+                const squareWidth = width / numSquares;
+                
+                for (let i = 0; i < numSquares; i++) {
+                    ctx.fillStyle = i % 2 === 0 ? '#000' : '#fff';
+                    const x = centerX - width / 2 + i * squareWidth;
+                    ctx.fillRect(x, y - 5 * perspective, squareWidth, 10 * perspective);
+                }
+                
+                if (perspective > 0.3) {
+                    ctx.fillStyle = isFinishLine ? '#00ff00' : '#ffff00';
+                    ctx.font = `${20 * perspective}px monospace`;
+                    ctx.textAlign = 'center';
+                    const text = isFinishLine ? '🏁 META 🏁' : `CHECKPOINT ${index + 1}`;
+                    ctx.fillText(text, centerX, y - 15 * perspective);
+                }
+            });
+        }
+        
+        function renderObstacles() {
+            const sortedObstacles = [...obstacles].sort((a, b) => b.depth - a.depth);
+            
+            sortedObstacles.forEach(obstacle => {
+                if (!obstacle.active) return;
+                
+                const z = 1 - (obstacle.depth / CONFIG.obstacleMaxDepth);
+                // Math.max(0, z*z) no recortaba nada: un cuadrado nunca es
+                // negativo, y con depth > maxDepth el objeto se dibujaba como si
+                // estuviera cerca, moviéndose hacia atrás.
+                if (z <= 0) return;
+                const perspective = z * z;
+                
+                if (perspective < 0.05) return;
+                
+                const y = CONFIG.vanishingPointY + perspective * (CONFIG.canvasHeight - CONFIG.vanishingPointY);
+                
+                const curveAmount = roadCurve * 400 * (1 - perspective);
+                const centerX = CONFIG.canvasWidth / 2 + curveAmount;
+                const laneX = centerX + (obstacle.lane - 1) * CONFIG.laneWidth * perspective;
+                
+                const scale = perspective * 1.0;
+                const spriteWidth = obstacle.sprite.width * scale;
+                const spriteHeight = obstacle.sprite.height * scale;
+                
+                ctx.drawImage(
+                obstacle.sprite,
+                laneX - spriteWidth / 2,
+                y - spriteHeight,
+                spriteWidth,
+                spriteHeight
+                );
+            });
+        }
+        
+        function renderEnemies() {
+            const sortedEnemies = [...enemies].sort((a, b) => b.depth - a.depth);
+            
+            sortedEnemies.forEach(enemy => {
+                if (!enemy.active) return;
+                
+                const z = 1 - (enemy.depth / CONFIG.enemyMaxDepth);
+                if (z <= 0) return;
+                const perspective = z * z;
+                
+                if (perspective < 0.05) return;
+                
+                const y = CONFIG.vanishingPointY + perspective * (CONFIG.canvasHeight - CONFIG.vanishingPointY);
+                
+                const curveAmount = roadCurve * 400 * (1 - perspective);
+                const centerX = CONFIG.canvasWidth / 2 + curveAmount;
+                const laneX = centerX + (enemy.lane - 1) * CONFIG.laneWidth * perspective;
+                
+                const scale = perspective * 1.2;
+                const spriteWidth = enemy.sprite.width * scale;
+                const spriteHeight = enemy.sprite.height * scale;
+                
+                ctx.drawImage(
+                enemy.sprite,
+                laneX - spriteWidth / 2,
+                y - spriteHeight,
+                spriteWidth,
+                spriteHeight
+                );
+            });
+        }
+        
+        function renderPlayer() {
+            if (!playerCarSprite) return;
+            
+            // Misma proyección que renderEnemies: antes usaba perspective=0.8 fijo
+            // y centerX fijo, así que el vehículo no seguía la curva y su
+            // desplazamiento por carril no coincidía con el de los enemigos con
+            // los que colisiona.
+            const z = 1 - (player.depth / CONFIG.enemyMaxDepth);
+            const perspective = z * z;
+            
+            const y = CONFIG.vanishingPointY + perspective * (CONFIG.canvasHeight - CONFIG.vanishingPointY);
+            
+            const curveAmount = roadCurve * 400 * (1 - perspective);
+            const centerX = CONFIG.canvasWidth / 2 + curveAmount;
+            const laneX = centerX + (player.lane - 1) * CONFIG.laneWidth * perspective;
+            
+            const scale = perspective * 2.2;
+            const spriteWidth = playerCarSprite.width * scale;
+            const spriteHeight = playerCarSprite.height * scale;
+            
+            ctx.drawImage(
+            playerCarSprite,
+            laneX - spriteWidth / 2,
+            y - spriteHeight,
+            spriteWidth,
+            spriteHeight
+            );
+        }
+        
+        let speedGradientCache = null;
+        
+        function renderHUD() {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(0, 0, CONFIG.canvasWidth, 50);
+            ctx.fillRect(0, CONFIG.canvasHeight - 40, CONFIG.canvasWidth, 40);
+            
+            ctx.font = '20px monospace';
+            ctx.textAlign = 'left';
+            
+            ctx.fillStyle = lives > 1 ? '#00ff00' : '#ff0000';
+            ctx.fillText(`❤️ x${lives}`, 20, 30);
+            
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = Math.floor(timeRemaining % 60);
+            const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            ctx.fillStyle = timeRemaining > 10 ? '#ffffff' : '#ff0000';
+            ctx.fillText(`⏱️ ${timeStr}`, 150, 30);
+            
+            ctx.fillStyle = '#ffff00';
+            ctx.fillText(`🏆 ${Math.floor(score)}`, 350, 30);
+            
+            ctx.fillStyle = '#00ffff';
+            ctx.textAlign = 'right';
+            ctx.fillText(`🏁 ${checkpointsPassed}/${CONFIG.totalCheckpoints}`, CONFIG.canvasWidth - 20, 30);
+            
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'left';
+            ctx.fillText(`VELOCIDAD`, 20, CONFIG.canvasHeight - 15);
+            
+            const speedBarWidth = 200;
+            const speedBarHeight = 15;
+            const speedBarX = 150;
+            const speedBarY = CONFIG.canvasHeight - 25;
+            
+            ctx.strokeStyle = '#fff';
+            ctx.strokeRect(speedBarX, speedBarY, speedBarWidth, speedBarHeight);
+            
+            const speedFill = (player.speed / CONFIG.playerMaxSpeed) * speedBarWidth;
+            // El degradado es constante: se crea una sola vez, no en cada frame
+            if (!speedGradientCache) {
+                speedGradientCache = ctx.createLinearGradient(speedBarX, 0, speedBarX + speedBarWidth, 0);
+                speedGradientCache.addColorStop(0, '#00ff00');
+                speedGradientCache.addColorStop(0.5, '#ffff00');
+                speedGradientCache.addColorStop(1, '#ff0000');
+            }
+            ctx.fillStyle = speedGradientCache;
+            ctx.fillRect(speedBarX, speedBarY, speedFill, speedBarHeight);
+        }
+        
+        // ==========================================
+        // GAME LOOP - Bucle principal
+        // ==========================================
+        
+        function gameLoop() {
+            rafId = null;
+            
+            if (gameState !== 'playing' && gameState !== 'paused' && gameState !== 'countdown') {
+                return;
+            }
+            
+            const currentTime = performance.now();
+            // Techo del delta: con la pestaña en segundo plano rAF se congela y
+            // el delta puede valer decenas de segundos, lo que terminaría la
+            // partida sola y teletransportaría a los enemigos sin colisión.
+            const deltaTime = Math.min(currentTime - lastFrameTime, CONFIG.maxDeltaTime);
+            lastFrameTime = currentTime;
+            
+            if (gameState === 'playing') {
+                updateGame(deltaTime);
+            }
+            
+            render();
+            
+            if (gameState === 'playing' || gameState === 'paused' || gameState === 'countdown') {
+                rafId = requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        // ==========================================
+        // UI HANDLERS - Manejo de interfaz
+        // ==========================================
+        
+        function hideAllScreens() {
+            document.getElementById('menuScreen').classList.add('hidden');
+            document.getElementById('pauseScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden');
+        }
+        
+        function showMenu() {
+            hideAllScreens();
+            document.getElementById('menuScreen').classList.remove('hidden');
+        }
+        
+        function showGameOverScreen(victory) {
+            hideAllScreens();
+            const screen = document.getElementById('gameOverScreen');
+            const title = document.getElementById('gameOverTitle');
+            const statsDisplay = document.getElementById('statsDisplay');
+            const nameInputSection = document.getElementById('nameInputSection');
+            
+            title.textContent = victory ? '🏆 ¡VICTORIA! 🏆' : '💥 GAME OVER 💥';
+            title.style.color = victory ? '#00ff00' : '#ff0000';
+            
+            const finalScore = Math.floor(score);
+            const stats = `
+        <strong>Puntuación Final:</strong> ${finalScore}<br>
+        <strong>Tiempo Restante:</strong> ${Math.floor(timeRemaining)}s<br>
+        <strong>Checkpoints:</strong> ${checkpointsPassed}/${CONFIG.totalCheckpoints}<br>
+        <strong>Colisiones:</strong> ${totalCollisions}<br>
+        <strong>Dificultad:</strong> ${difficultyConfig.name}
+    `;
+            statsDisplay.innerHTML = stats;
+            
+            const ranking = loadRanking();
+            const entersRanking = ranking.length < CONFIG.maxRankingEntries || 
+            finalScore > ranking[ranking.length - 1]?.score;
+            
+            if (entersRanking) {
+                document.getElementById('nameInput').value = '';
+                nameInputSection.classList.remove('hidden');
+                setTimeout(() => document.getElementById('nameInput').focus(), 100);
+            } else {
+                nameInputSection.classList.add('hidden');
+            }
+            
+            screen.classList.remove('hidden');
+        }
+        
+        // Fallback en memoria: en contextos donde localStorage está bloqueado
+        // (iframe sandbox, modo privado de algunos navegadores) el ranking sigue
+        // funcionando durante la sesión en lugar de perderse en silencio.
+        let rankingMemory = [];
+        let storageAvailable = (() => {
+            try {
+                const k = '__t';
+                localStorage.setItem(k, '1');
+                localStorage.removeItem(k);
+                return true;
+            } catch(e) {
+                return false;
+            }
+        })();
+        
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+        
+        function loadRanking() {
+            if (!storageAvailable) return rankingMemory.slice();
+            try {
+                const data = localStorage.getItem(CONFIG.rankingKey);
+                const parsed = data ? JSON.parse(data) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch(e) {
+                return [];
+            }
+        }
+        
+        function saveRanking(ranking) {
+            rankingMemory = ranking.slice();
+            if (!storageAvailable) return;
+            try {
+                localStorage.setItem(CONFIG.rankingKey, JSON.stringify(ranking));
+            } catch(e) {
+                console.error('Error al guardar ranking:', e);
+            }
+        }
+        
+        function addToRanking(name, score, difficulty) {
+            const ranking = loadRanking();
+            
+            const entry = {
+                name: name.trim() || 'ANÓNIMO',
+                score: Math.floor(score),
+                difficulty: difficulty,
+                date: new Date().toLocaleDateString('es-ES')
+            };
+            
+            ranking.push(entry);
+            ranking.sort((a, b) => b.score - a.score);
+            
+            const topRanking = ranking.slice(0, CONFIG.maxRankingEntries);
+            saveRanking(topRanking);
+        }
+        
+        function showRanking() {
+            const ranking = loadRanking();
+            const rankingList = document.getElementById('rankingList');
+            
+            if (ranking.length === 0) {
+                rankingList.innerHTML = '<p style="text-align:center; color:#888;">No hay registros aún</p>';
+            } else {
+                // entry.name procede de un input y se inyecta con innerHTML:
+                // el maxlength del HTML no es una garantía, hay que escapar.
+                rankingList.innerHTML = ranking.map((entry, index) => `
+            <div class="ranking-item">
+                <strong>#${index + 1}</strong> - ${escapeHtml(entry.name)} 
+                <span style="float:right;">
+                    ${Number(entry.score) || 0} pts (${escapeHtml(entry.difficulty)}) - ${escapeHtml(entry.date)}
+                </span>
+            </div>
+        `).join('');
+            }
+        }
+        
+        function resetRanking() {
+            if (confirm('¿Estás seguro de que quieres resetear el ranking?')) {
+                rankingMemory = [];
+                if (storageAvailable) {
+                    try { localStorage.removeItem(CONFIG.rankingKey); } catch(e) {}
+                }
+                playSFX('button');
+                showRanking();
+                alert('Ranking reseteado');
+            }
+        }
+        
+        // ==========================================
+        // EVENT LISTENERS - Eventos de UI
+        // ==========================================
+        
+        // Mantiene sincronizados los cuatro sliders (menú y pausa) con el estado
+        // real del volumen, que antes divergían al cambiarlo desde la pausa.
+        function syncVolumeUI() {
+            const music = Math.round(musicVolume * 100);
+            const sfx = Math.round(sfxVolume * 100);
+            
+            document.getElementById('musicVolSlider').value = music;
+            document.getElementById('pauseMusicVolSlider').value = music;
+            document.getElementById('musicVolLabel').textContent = `${music}%`;
+            document.getElementById('pauseMusicVolLabel').textContent = `${music}%`;
+            
+            document.getElementById('sfxVolSlider').value = sfx;
+            document.getElementById('pauseSfxVolSlider').value = sfx;
+            document.getElementById('sfxVolLabel').textContent = `${sfx}%`;
+            document.getElementById('pauseSfxVolLabel').textContent = `${sfx}%`;
+        }
+        
+        document.querySelectorAll('.difficulty-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                resumeAudio();
+                playSFX('button');
+                document.querySelectorAll('.difficulty-btn').forEach(b => {
+                    b.classList.remove('selected');
+                    b.setAttribute('aria-pressed', 'false');
+                });
+                btn.classList.add('selected');
+                btn.setAttribute('aria-pressed', 'true');
+                currentDifficulty = btn.dataset.diff;
+            });
+        });
+        
+        ['musicVolSlider', 'pauseMusicVolSlider'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                setMusicVolume(e.target.value / 100);
+                syncVolumeUI();
+            });
+        });
+        
+        ['sfxVolSlider', 'pauseSfxVolSlider'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                setSfxVolume(e.target.value / 100);
+                syncVolumeUI();
+            });
+        });
+        
+        document.getElementById('startBtn').addEventListener('click', () => {
+            resumeAudio();
+            playSFX('button');
+            startGame();
+        });
+        
+        // Diálogos nativos: aportan backdrop, cierre con Escape y gestión de foco,
+        // y al ser estáticos ya no se pueden duplicar IDs abriéndolos dos veces.
+        const rankingDialog = document.getElementById('rankingDialog');
+        const instructionsDialog = document.getElementById('instructionsDialog');
+        
+        document.getElementById('rankingBtn').addEventListener('click', () => {
+            resumeAudio();
+            playSFX('button');
+            showRanking();
+            if (!rankingDialog.open) rankingDialog.showModal();
+        });
+        
+        document.getElementById('closeRankingBtn').addEventListener('click', () => {
+            playSFX('button');
+            rankingDialog.close();
+        });
+        
+        document.getElementById('instructionsBtn').addEventListener('click', () => {
+            resumeAudio();
+            playSFX('button');
+            if (!instructionsDialog.open) instructionsDialog.showModal();
+        });
+        
+        document.getElementById('closeInstructionsBtn').addEventListener('click', () => {
+            playSFX('button');
+            instructionsDialog.close();
+        });
+        
+        document.getElementById('resetRankingBtn').addEventListener('click', () => {
+            resumeAudio();
+            resetRanking();
+        });
+        
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            playSFX('button');
+            resumeGame();
+        });
+        
+        document.getElementById('quitBtn').addEventListener('click', () => {
+            playSFX('button');
+            quitToMenu();
+        });
+        
+        document.getElementById('submitScoreBtn').addEventListener('click', () => {
+            const btn = document.getElementById('submitScoreBtn');
+            btn.disabled = true;   // evita guardar la misma puntuación dos veces
+            
+            const name = document.getElementById('nameInput').value;
+            addToRanking(name, score, difficultyConfig.name);
+            playSFX('button');
+            document.getElementById('nameInputSection').classList.add('hidden');
+            alert('¡Puntuación guardada!');
+        });
+        
+        document.getElementById('nameInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('submitScoreBtn').click();
+            }
+        });
+        
+        document.getElementById('backToMenuBtn').addEventListener('click', () => {
+            playSFX('button');
+            quitToMenu();
+        });
+        
+        function init() {
+            initAudio();
+            initSprites();
+            initTouchControls();
+            syncVolumeUI();
+            
+            // Red de seguridad: cualquier gesto del usuario desbloquea el
+            // contexto de audio, no solo los botones que ya llaman a resumeAudio.
+            const unlock = () => resumeAudio();
+            document.addEventListener('pointerdown', unlock, { once: true });
+            document.addEventListener('keydown', unlock, { once: true });
+        }
+        
+        // El script está al final de body, así que en la práctica DOMContentLoaded
+        // aún no ha saltado; la comprobación de readyState lo hace robusto si
+        // algún día el script se mueve o se carga con defer.
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+    </script>
+</body>
+</html>
