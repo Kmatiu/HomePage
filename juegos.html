@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Videojuegos Retro</title>
+
+<meta name="theme-color" content="#0f0c2d">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./images/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Juegos">
+
+<style>
+    /* Sin Font Awesome ni Google Fonts: cualquier dependencia externa es una
+       cosa más que puede fallar sin conexión. Los iconos son emoji y la
+       tipografía es la del sistema. */
+    :root {
+        --fondo: #0f0c2d;
+        --tarjeta: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.14);
+        --acento: #00ffc8;
+        --acento2: #ff006e;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+        margin: 0;
+        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                 max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        background: radial-gradient(1200px 800px at 20% -10%, #2a1a5e 0%, var(--fondo) 55%),
+                    var(--fondo);
+        color: var(--texto);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        overflow-x: hidden;
+    }
+
+    header {
+        max-width: 900px;
+        margin: 0 auto 22px;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: clamp(1.6rem, 6vw, 2.6rem);
+        margin: 8px 0 6px;
+        letter-spacing: 1px;
+    }
+
+    h1 .destacado {
+        background: linear-gradient(90deg, var(--acento), var(--acento2));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .subtitulo {
+        color: var(--apagado);
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    main { max-width: 900px; margin: 0 auto; }
+
+    /* auto-fit + minmax: el navegador decide cuántas columnas caben, así que
+       no hace falta un punto de ruptura por cada tamaño de pantalla. */
+    .rejilla {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 26px;
+    }
+
+    .juego {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 18px 12px;
+        min-height: 116px;
+        background: var(--tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        color: var(--texto);
+        text-decoration: none;
+        text-align: center;
+        transition: transform 0.15s, border-color 0.15s, background 0.15s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .juego .icono { font-size: 2rem; line-height: 1; }
+    .juego .nombre { font-weight: 600; font-size: 0.95rem; }
+    .juego .nota { font-size: 0.7rem; color: var(--apagado); }
+
+    /* En una pantalla táctil el :hover se queda pegado tras tocar */
+    @media (hover: hover) {
+        .juego:hover {
+            transform: translateY(-3px);
+            border-color: var(--acento);
+            background: rgba(0, 255, 200, 0.09);
+        }
+    }
+
+    .juego:active { transform: scale(0.97); }
+
+    .juego.desarrollo { opacity: 0.72; }
+
+    /* ---------- Panel sin conexión ---------- */
+    .panel {
+        background: var(--tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+
+    .panel h2 {
+        margin: 0 0 6px;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .panel p {
+        margin: 0 0 12px;
+        color: var(--apagado);
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    button {
+        font: inherit;
+        font-weight: 600;
+        padding: 11px 18px;
+        border-radius: 10px;
+        border: 1px solid var(--acento);
+        background: rgba(0, 255, 200, 0.12);
+        color: var(--acento);
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    button.secundario {
+        border-color: var(--borde);
+        background: transparent;
+        color: var(--apagado);
+    }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    @media (hover: hover) {
+        button:not(:disabled):hover { background: rgba(0, 255, 200, 0.22); }
+    }
+
+    .barra {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 12px;
+        display: none;
+    }
+
+    .barra.visible { display: block; }
+
+    .barra > div {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, var(--acento), var(--acento2));
+        transition: width 0.2s;
+    }
+
+    .estado {
+        margin-top: 10px;
+        font-size: 0.82rem;
+        color: var(--apagado);
+        line-height: 1.5;
+    }
+
+    .estado.ok { color: var(--acento); }
+    .estado.error { color: #ff8080; }
+
+    .aviso-red {
+        display: none;
+        margin: 0 auto 16px;
+        max-width: 900px;
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: rgba(255, 200, 0, 0.14);
+        border: 1px solid rgba(255, 200, 0, 0.5);
+        color: #ffd76a;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+
+    body.sin-conexion .aviso-red { display: block; }
+
+    footer {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 10px 0 20px;
+        text-align: center;
+        color: var(--apagado);
+        font-size: 0.75rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🎮 <span class="destacado">Videojuegos</span></h1>
+    <p class="subtitulo">Clásicos arcade para jugar en cualquier momento</p>
+</header>
+
+<div class="aviso-red" id="avisoRed">
+    Estás sin conexión. Solo se abrirán los juegos que hayas descargado.
+</div>
+
+<main>
+    <div class="rejilla" id="rejilla"></div>
+
+    <section class="panel">
+        <h2>📶 Jugar sin conexión</h2>
+        <p>
+            Descarga los juegos en el dispositivo para poder jugar en el metro, en un avión
+            o donde no haya cobertura. Ocupa poco: son páginas web, no vídeo.
+        </p>
+
+        <div class="acciones">
+            <button id="btnDescargar">Descargar sin conexión</button>
+            <button id="btnBorrar" class="secundario">Borrar descarga</button>
+        </div>
+
+        <div class="barra" id="barra"><div id="barraRelleno"></div></div>
+        <div class="estado" id="estado">Comprobando…</div>
+    </section>
+</main>
+
+<footer>
+    Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
+</footer>
+
+<script>
+(function () {
+    'use strict';
+
+    /* ------------------------------------------------------------------
+       CATÁLOGO
+       Fuente única: de aquí salen tanto las tarjetas como la lista de
+       archivos que se descarga para jugar sin conexión. Añadir un juego
+       nuevo es añadir una línea aquí y nada más.
+       "extras" son los archivos que ese juego necesita aparte de su HTML.
+       ------------------------------------------------------------------ */
+    var JUEGOS = [
+        { archivo: 'webs/SpaceInvaders.html',  nombre: 'Space Invaders', icono: '👾' },
+        { archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱',
+          extras: ['https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
+        { archivo: 'webs/PacMan.html',         nombre: 'PacMan',         icono: '🟡' },
+        { archivo: 'webs/quiz.html',           nombre: 'Quiz',           icono: '❓',
+          extras: ['https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js',
+                   'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
+        { archivo: 'webs/super-pang.html',     nombre: 'Súper Pang',     icono: '🎯',
+          extras: ['images/world-map.png'] },
+        { archivo: 'webs/arkanoid.html',       nombre: 'Arkanoid',       icono: '🧩' },
+        { archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥' },
+        { archivo: 'webs/carreraCoches.html',  nombre: 'Ruta 66',        icono: '🏎️', desarrollo: true },
+        { archivo: 'webs/penaltis.html',       nombre: 'Penaltis',       icono: '⚽', desarrollo: true }
+    ];
+
+    var BASE = ['./', './juegos.html', './manifest.json',
+                './images/icono-192.png', './images/icono-512.png',
+                './images/apple-touch-icon.png'];
+
+    function listaCompleta() {
+        var urls = BASE.slice();
+        JUEGOS.forEach(function (j) {
+            urls.push('./' + j.archivo);
+            (j.extras || []).forEach(function (x) {
+                urls.push(x.indexOf('http') === 0 ? x : './' + x);
+            });
+        });
+        // Sin duplicados: varios juegos comparten la misma fuente
+        return urls.filter(function (u, i) { return urls.indexOf(u) === i; });
+    }
+
+    /* ------------------------------------------------------------------
+       TARJETAS
+       ------------------------------------------------------------------ */
+    var rejilla = document.getElementById('rejilla');
+
+    JUEGOS.forEach(function (j) {
+        /* Enlaces reales en lugar de window.open: se pueden abrir con el
+           teclado, con el botón central del ratón, y sobre todo no los
+           bloquea el navegador móvil como sí ocurre con las ventanas nuevas.
+           Sin target="_blank" para que, instalado como aplicación, el juego
+           se abra dentro de la propia app y no salte al navegador. */
+        var a = document.createElement('a');
+        a.className = 'juego' + (j.desarrollo ? ' desarrollo' : '');
+        a.href = j.archivo;
+
+        var ico = document.createElement('div');
+        ico.className = 'icono';
+        ico.textContent = j.icono;
+
+        var nom = document.createElement('div');
+        nom.className = 'nombre';
+        nom.textContent = j.nombre;
+
+        a.appendChild(ico);
+        a.appendChild(nom);
+
+        if (j.desarrollo) {
+            var nota = document.createElement('div');
+            nota.className = 'nota';
+            nota.textContent = 'en desarrollo';
+            a.appendChild(nota);
+        }
+
+        rejilla.appendChild(a);
+    });
+
+    /* ------------------------------------------------------------------
+       ESTADO DE RED
+       ------------------------------------------------------------------ */
+    function pintarRed() {
+        document.body.classList.toggle('sin-conexion', !navigator.onLine);
+    }
+    window.addEventListener('online', pintarRed);
+    window.addEventListener('offline', pintarRed);
+    pintarRed();
+
+    /* ------------------------------------------------------------------
+       SERVICE WORKER
+       ------------------------------------------------------------------ */
+    var estadoEl = document.getElementById('estado');
+    var btnDescargar = document.getElementById('btnDescargar');
+    var btnBorrar = document.getElementById('btnBorrar');
+    var barra = document.getElementById('barra');
+    var relleno = document.getElementById('barraRelleno');
+
+    function decir(texto, clase) {
+        estadoEl.textContent = texto;
+        estadoEl.className = 'estado' + (clase ? ' ' + clase : '');
+    }
+
+    if (!('serviceWorker' in navigator)) {
+        decir('Este navegador no permite guardar los juegos para usarlos sin conexión.', 'error');
+        btnDescargar.disabled = true;
+        btnBorrar.disabled = true;
+        return;
+    }
+
+    /* Un service worker exige HTTPS. GitHub Pages lo sirve por HTTPS, pero al
+       abrir el archivo con doble clic (file://) no funciona, y conviene decirlo
+       en lugar de dejar el botón fallando en silencio. */
+    if (location.protocol === 'file:') {
+        decir('Abre esta página desde una dirección web (GitHub Pages). Con doble clic sobre el archivo, el modo sin conexión no puede activarse.', 'error');
+        btnDescargar.disabled = true;
+        btnBorrar.disabled = true;
+        return;
+    }
+
+    var registro = null;
+
+    /* Envía un mensaje al service worker y espera su respuesta.
+       onProgreso se llama con cada archivo terminado. */
+    function hablarConSW(mensaje, onProgreso) {
+        return new Promise(function (resolve, reject) {
+            var sw = navigator.serviceWorker.controller ||
+                     (registro && (registro.active || registro.waiting));
+
+            if (!sw) {
+                reject(new Error('El service worker aún no está activo. Recarga la página.'));
+                return;
+            }
+
+            var canal = new MessageChannel();
+            var listo = false;
+
+            canal.port1.onmessage = function (ev) {
+                var d = ev.data || {};
+                if (d.finished || d.cleared || typeof d.cached === 'number') {
+                    listo = true;
+                    resolve(d);
+                } else if (onProgreso) {
+                    onProgreso(d);
+                }
+            };
+
+            sw.postMessage(mensaje, [canal.port2]);
+
+            /* Si algo va mal y no llega respuesta, no dejar el botón colgado */
+            setTimeout(function () {
+                if (!listo) reject(new Error('El navegador no ha respondido a tiempo.'));
+            }, 120000);
+        });
+    }
+
+    function comprobarEstado() {
+        var urls = listaCompleta();
+        hablarConSW({ type: 'STATUS', urls: urls })
+            .then(function (r) {
+                if (r.cached >= r.total) {
+                    decir('Todo descargado (' + r.total + ' archivos). Puedes jugar sin conexión.', 'ok');
+                } else if (r.cached > 0) {
+                    decir('Descarga incompleta: ' + r.cached + ' de ' + r.total + ' archivos.');
+                } else {
+                    decir('Aún no has descargado los juegos.');
+                }
+            })
+            .catch(function () {
+                decir('Listo para descargar.');
+            });
+    }
+
+    btnDescargar.addEventListener('click', function () {
+        var urls = listaCompleta();
+
+        btnDescargar.disabled = true;
+        btnBorrar.disabled = true;
+        barra.classList.add('visible');
+        relleno.style.width = '0%';
+        decir('Descargando…');
+
+        hablarConSW({ type: 'PRECACHE', urls: urls }, function (p) {
+            if (!p.total) return;
+            relleno.style.width = Math.round((p.done / p.total) * 100) + '%';
+            decir('Descargando… ' + p.done + ' de ' + p.total);
+        })
+        .then(function (r) {
+            relleno.style.width = '100%';
+            btnDescargar.disabled = false;
+            btnBorrar.disabled = false;
+
+            if (r.failed) {
+                /* No se oculta el problema: si un archivo no existe (por ejemplo
+                   un juego aún en desarrollo), conviene saber cuál. */
+                decir('Descargados ' + (r.total - r.failed) + ' de ' + r.total +
+                      ' archivos. No se encontraron: ' +
+                      r.failedUrls.map(function (u) {
+                          return u.split('/').pop();
+                      }).join(', '), 'error');
+            } else {
+                decir('Listo. Los juegos ya funcionan sin conexión.', 'ok');
+            }
+        })
+        .catch(function (err) {
+            btnDescargar.disabled = false;
+            btnBorrar.disabled = false;
+            barra.classList.remove('visible');
+            decir('No se pudo completar la descarga: ' + err.message, 'error');
+        });
+    });
+
+    btnBorrar.addEventListener('click', function () {
+        if (!confirm('¿Borrar los juegos descargados? Necesitarás conexión para volver a jugar.')) return;
+
+        hablarConSW({ type: 'CLEAR' })
+            .then(function () {
+                barra.classList.remove('visible');
+                relleno.style.width = '0%';
+                decir('Descarga borrada.');
+            })
+            .catch(function (err) {
+                decir('No se pudo borrar: ' + err.message, 'error');
+            });
+    });
+
+    navigator.serviceWorker.register('./sw.js')
+        .then(function (reg) {
+            registro = reg;
+
+            /* Si ya hay un service worker controlando la página se puede
+               consultar el estado ya; si acaba de instalarse, hay que esperar
+               a que tome el control. */
+            if (navigator.serviceWorker.controller) {
+                comprobarEstado();
+            } else {
+                navigator.serviceWorker.addEventListener('controllerchange', comprobarEstado);
+                decir('Preparando…');
+                setTimeout(comprobarEstado, 1500);
+            }
+        })
+        .catch(function (err) {
+            decir('No se pudo activar el modo sin conexión: ' + err.message, 'error');
+            btnDescargar.disabled = true;
+            btnBorrar.disabled = true;
+        });
+})();
+</script>
+</body>
+</html>
