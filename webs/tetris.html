@@ -2,14 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Clásico Tetris</title>
-    <!-- Importación de Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind estaba importado pero no se usa ni una sola de sus clases:
+         eran ~400 KB de script descargados y ejecutados para nada en cada carga. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         
         /* Estilos generales para un look retro */
+        * { box-sizing: border-box; }
+
+        html, body { height: 100%; }
+
         body {
             background-color: #1a1a2e; /* Fondo oscuro */
             color: #e0f7fa; /* Texto claro */
@@ -18,30 +24,66 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
+            /* dvh tiene en cuenta la barra de direcciones del móvil */
+            height: 100vh;
+            height: 100dvh;
+            margin: 0;
+            padding: 8px;
+            padding-top: max(8px, env(safe-area-inset-top, 0px));
+            padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+            gap: 8px;
+            overflow: hidden;
+            overscroll-behavior: none;
             user-select: none; /* Evita la selección de texto */
         }
-        
+
+        h1 {
+            font-size: clamp(0.7rem, 3vw, 1.4rem);
+            text-align: center;
+            margin: 0;
+            flex: 0 0 auto;
+        }
+
+        /* Los tableros conservan su buffer de 300x600 (la lógica del juego no
+           cambia) y se escalan para caber en la altura disponible. */
         .game-container {
             display: flex;
             flex-direction: row;
-            gap: 20px;
+            gap: 12px;
             background-color: #0d0c1d;
-            padding: 20px;
-            border: 8px solid #3d0000;
+            padding: 10px;
+            border: 4px solid #3d0000;
             box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
             border-radius: 10px;
+            flex: 1 1 auto;
+            min-height: 0;
+            max-width: 100%;
+            justify-content: center;
         }
-        
+
         .game-container.doubles-mode {
-            gap: 40px;
+            gap: 16px;
         }
-        
+
         .player-section {
             display: flex;
             flex-direction: row;
-            gap: 20px;
+            gap: 12px;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: flex;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        #gameCanvas, #gameCanvas2 {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
         }
         
         .player-label {
@@ -70,8 +112,11 @@
             width: 150px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
             font-size: 10px;
+            overflow-y: auto;
+            min-height: 0;
+            flex: 0 0 auto;
         }
         
         .info-box {
@@ -243,6 +288,160 @@
             font-weight: bold;
         }
         
+        /* ---------- BOTONERA TÁCTIL ---------- */
+        /* Tetris pide movimientos discretos y repetibles (una celda cada vez),
+           y una rotación que no se pueda confundir con un desplazamiento. Por
+           eso aquí van botones y no gestos: deslizar es impreciso justo cuando
+           más falta hace la precisión, encajando la pieza en el hueco. */
+        #touchControls {
+            display: none;
+            flex: 0 0 auto;
+            width: 100%;
+            justify-content: space-around;
+            align-items: flex-end;
+            gap: 10px;
+            padding-top: 4px;
+        }
+
+        body.touch-device #touchControls { display: flex; }
+
+        .touch-cluster {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .pad-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .touch-btn {
+            width: 58px;
+            height: 52px;
+            border: 2px solid #00ff00;
+            background: rgba(0, 60, 0, 0.55);
+            color: #00ff00;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 15px;
+            line-height: 1;
+            border-radius: 8px;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+        }
+
+        .touch-btn.wide { width: 88px; }
+        .touch-btn:active { background: rgba(0, 255, 0, 0.35); }
+
+        .cluster-label {
+            font-size: 0.5rem;
+            color: #ffcc00;
+        }
+
+        /* Botones de partida: en móvil no existen las teclas P ni R */
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            flex: 0 0 auto;
+            width: 100%;
+        }
+
+        .top-bar button {
+            background: #3d0000;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7rem;
+            padding: 6px 10px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        /* En táctil el :hover se queda pegado tras tocar */
+        @media (hover: none) {
+            .overlay-content button:hover {
+                background-color: #3d0000;
+                color: #00ff00;
+                box-shadow: none;
+            }
+        }
+
+        #doublesNote {
+            font-size: 0.55rem;
+            color: #ff8080;
+            margin-top: 6px;
+            line-height: 1.6;
+        }
+
+        #startDoublesBtn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            border-color: #666;
+            color: #999;
+        }
+
+        /* ---------- PANTALLAS ESTRECHAS ---------- */
+        /* La barra lateral en columna junto al tablero pedía 150 px extra de
+           ancho; en móvil pasa a ser una fila compacta sobre el tablero. */
+        @media (max-width: 720px) {
+            .player-section {
+                flex-direction: column;
+                gap: 6px;
+                flex: 1 1 auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                gap: 6px;
+                justify-content: center;
+                align-items: stretch;
+                overflow: visible;
+                font-size: 8px;
+            }
+
+            .info-box {
+                padding: 4px 6px;
+                flex: 1 1 0;
+                min-width: 0;
+            }
+
+            .info-box h3 { font-size: 0.5rem; margin-bottom: 2px; }
+            .value { font-size: 0.8rem; min-height: 0; }
+
+            /* El Top 10 ya está en el menú de inicio: aquí solo robaría sitio */
+            .sidebar .info-box:last-child { display: none; }
+
+            #nextPieceCanvas, #nextPieceCanvas2 { width: 56px; height: 46px; }
+
+            .canvas-wrapper { flex: 1 1 auto; justify-content: center; }
+
+            .game-container { padding: 6px; border-width: 3px; gap: 6px; }
+
+            .controls-info { display: none; }
+
+            .overlay-content { padding: 20px 14px; min-width: 0; }
+            .overlay-content h2 { font-size: 1.1rem; margin-bottom: 12px; }
+            .overlay-content button { font-size: 0.6rem; padding: 8px 12px; }
+            .input-group input { font-size: 16px; }  /* menos de 16px hace zoom en iOS */
+        }
+
+        /* El texto de teclas no sirve en un móvil */
+        body.touch-device .controls-info { display: none; }
+
+        @media (max-height: 700px) {
+            h1 { font-size: 0.7rem; }
+            .touch-btn { height: 44px; width: 52px; font-size: 13px; }
+            .touch-btn.wide { width: 78px; }
+        }
+
         .game-over-indicator {
             position: absolute;
             top: 50%;
@@ -267,6 +466,7 @@
             <h2>TETRIS CLÁSICO</h2>
             <button id="startGameBtn">Partida Individual</button>
             <button id="startDoublesBtn">Partida Dobles</button>
+            <div id="doublesNote" style="display:none;"></div>
             <button id="showHighScoresBtn">Ver mejores puntuaciones</button>
             <button id="showInstructionsBtn">Ver instrucciones</button>
             <div style="margin-top: 20px;">
@@ -311,6 +511,12 @@
         </div>
     </div>
     <h1>TETRIS CLÁSICO // by Ronie</h1>
+
+    <div class="top-bar">
+        <button id="pauseBtn" type="button" aria-label="Pausar">⏸ PAUSA</button>
+        <button id="restartBtn" type="button" aria-label="Reiniciar">↺ REINICIAR</button>
+        <button id="menuBtn" type="button" aria-label="Menú">☰ MENÚ</button>
+    </div>
     
     <div class="game-container" id="gameContainer">
         
@@ -387,6 +593,33 @@
         </div>
     </div>
     
+    <div id="touchControls">
+        <div class="touch-cluster" id="touchP2" style="display:none;" data-player="2">
+            <div class="cluster-label">JUGADOR 2</div>
+            <div class="pad-row">
+                <button class="touch-btn" type="button" data-player="2" data-act="left" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-player="2" data-act="rotate" aria-label="Rotar">↻</button>
+                <button class="touch-btn" type="button" data-player="2" data-act="right" aria-label="Derecha">▶</button>
+            </div>
+            <div class="pad-row">
+                <button class="touch-btn" type="button" data-player="2" data-act="down" aria-label="Caída suave">▼</button>
+                <button class="touch-btn wide" type="button" data-player="2" data-act="drop" aria-label="Caída instantánea">⤓</button>
+            </div>
+        </div>
+        <div class="touch-cluster" id="touchP1" data-player="1">
+            <div class="cluster-label" id="touchP1Label" style="display:none;">JUGADOR 1</div>
+            <div class="pad-row">
+                <button class="touch-btn" type="button" data-player="1" data-act="left" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-player="1" data-act="rotate" aria-label="Rotar">↻</button>
+                <button class="touch-btn" type="button" data-player="1" data-act="right" aria-label="Derecha">▶</button>
+            </div>
+            <div class="pad-row">
+                <button class="touch-btn" type="button" data-player="1" data-act="down" aria-label="Caída suave">▼</button>
+                <button class="touch-btn wide" type="button" data-player="1" data-act="drop" aria-label="Caída instantánea">⤓</button>
+            </div>
+        </div>
+    </div>
+
     <div class="controls-info" id="controlsInfo">
         <h3>CONTROLES:</h3>
         <p>← →: Mover | ↑: Rotar</p>
@@ -424,7 +657,8 @@
                 <div id="gameOverRankingList" class="ranking-list"></div>
             </div>
             
-            <p>Presiona R para jugar de nuevo</p>
+            <button id="playAgainBtn" type="button">JUGAR DE NUEVO</button>
+            <p style="font-size:0.6rem; margin-top:10px;">También puedes pulsar R</p>
         </div>
     </div>
     
@@ -432,7 +666,8 @@
     <div id="pauseOverlay" class="overlay" style="display: none;">
         <div class="overlay-content">
             <h2>PAUSA</h2>
-            <p>Presiona 'P' para continuar</p>
+            <p>Presiona 'P' o el botón para continuar</p>
+            <button onclick="togglePause()">CONTINUAR</button>
             <p>Control de Música:</p>
             <button onclick="toggleMusic()">🎵 Activar/Desactivar Música</button>
         </div>
@@ -739,13 +974,45 @@
                                     }, { once: true });
                                     
                                     // --- SISTEMA DE PUNTUACIONES ALTAS (LOCAL STORAGE) ---
+                                    // Respaldo en memoria: si localStorage está bloqueado (modo
+                                    // privado, iframe con sandbox) o el contenido está corrupto, el
+                                    // JSON.parse sin protección tiraba el juego entero.
+                                    let scoresMemory = [];
+                                    const storageOK = (() => {
+                                        try {
+                                            localStorage.setItem('__t', '1');
+                                            localStorage.removeItem('__t');
+                                            return true;
+                                        } catch (e) {
+                                            return false;
+                                        }
+                                    })();
+
+                                    function escapeHtml(str) {
+                                        return String(str).replace(/[&<>"']/g, c => ({
+                                            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+                                        }[c]));
+                                    }
+
                                     function getHighScores() {
-                                        const scores = localStorage.getItem('tetrisHighScores');
-                                        return scores ? JSON.parse(scores) : [];
+                                        if (!storageOK) return scoresMemory.slice();
+                                        try {
+                                            const scores = localStorage.getItem('tetrisHighScores');
+                                            const parsed = scores ? JSON.parse(scores) : [];
+                                            return Array.isArray(parsed) ? parsed : [];
+                                        } catch (e) {
+                                            return [];
+                                        }
                                     }
                                     
                                     function saveHighScores(scores) {
-                                        localStorage.setItem('tetrisHighScores', JSON.stringify(scores));
+                                        scoresMemory = scores.slice();
+                                        if (!storageOK) return;
+                                        try {
+                                            localStorage.setItem('tetrisHighScores', JSON.stringify(scores));
+                                        } catch (e) {
+                                            console.warn('No se pudo guardar el ranking:', e);
+                                        }
                                     }
                                     
                                     function isTopScore(newScore) {
@@ -823,7 +1090,7 @@
                                         highScores.forEach((entry, index) => {
                                             html += `<li class="highscore-item">
       <span class="highscore-rank">${index + 1}.</span>
-      <span>${entry.name.substring(0, 8)}</span>
+      <span>${escapeHtml(entry.name.substring(0, 8))}</span>
       <span>${entry.score}</span>
       <span>Nivel: ${entry.level || 1}</span>
     </li>`;
@@ -852,7 +1119,7 @@
                                                 const isCurrentScore = entry.score === finalScore && currentName === entry.name;
                                                 const className = isCurrentScore ? "ranking-entry highlight" : "ranking-entry";
                                                 html += `<div class="${className}">
-      ${index + 1}. ${entry.name} - ${entry.score} - Nivel: ${entry.level || 1}
+      ${index + 1}. ${escapeHtml(entry.name)} - ${Number(entry.score) || 0} - Nivel: ${Number(entry.level) || 1}
     </div>`;
                                                 });
                                                 gameOverRankingList.innerHTML = html;
@@ -1239,7 +1506,14 @@
                                                     return;
                                                 }
                                                 
-                                                const deltaTime = time - lastTime;
+                                                // Tras volver de segundo plano (una notificación en el
+                                                // móvil) el delta puede valer decenas de segundos. Y en el
+                                                // primer frame tras resetGame(), con lastTime a 0, valía
+                                                // directamente performance.now(): la pieza caía sola nada
+                                                // más empezar la partida.
+                                                if (!lastTime) lastTime = time;
+                                                let deltaTime = time - lastTime;
+                                                if (deltaTime > 250) deltaTime = 250;
                                                 lastTime = time;
                                                 
                                                 // Jugador 1
@@ -1490,6 +1764,128 @@
                                                 }
                                             });
                                             
+                                            // --- CONTROL TÁCTIL ---
+                                            // Una acción del juego, se dispare desde teclado o botón.
+                                            function doAction(act, player) {
+                                                if (isPaused || isNameInputVisible) return;
+                                                if (player === 1 && isGameOver) return;
+                                                if (player === 2 && (!isDoublesMode || isGameOver2)) return;
+
+                                                switch (act) {
+                                                    case 'left':   movePiece('left', player); break;
+                                                    case 'right':  movePiece('right', player); break;
+                                                    case 'rotate': movePiece('rotate', player); break;
+                                                    case 'down':
+                                                        movePiece('down', player);
+                                                        if (player === 1) dropCounter = 0; else dropCounter2 = 0;
+                                                        break;
+                                                    case 'drop':   hardDrop(player); break;
+                                                }
+
+                                                draw();
+                                                if (isDoublesMode) draw2();
+                                            }
+
+                                            // Los desplazamientos y la caída suave se repiten al mantener
+                                            // pulsado, como hace el teclado. La rotación y la caída
+                                            // instantánea no: son acciones de una sola vez.
+                                            const REPEAT_DELAY = 220;
+                                            const REPEAT_RATE = 70;
+                                            const REPEATABLE = ['left', 'right', 'down'];
+                                            const heldButtons = new Map();
+
+                                            function initTouchControls() {
+                                                if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+                                                    document.body.classList.add('touch-device');
+                                                }
+
+                                                document.querySelectorAll('#touchControls [data-act]').forEach(btn => {
+                                                    const act = btn.dataset.act;
+                                                    const player = parseInt(btn.dataset.player, 10);
+
+                                                    const press = (e) => {
+                                                        e.preventDefault();
+                                                        if (heldButtons.has(btn)) return;
+
+                                                        doAction(act, player);
+
+                                                        if (REPEATABLE.includes(act)) {
+                                                            const t = setTimeout(() => {
+                                                                const iv = setInterval(() => doAction(act, player), REPEAT_RATE);
+                                                                heldButtons.set(btn, { interval: iv });
+                                                            }, REPEAT_DELAY);
+                                                            heldButtons.set(btn, { timeout: t });
+                                                        } else {
+                                                            heldButtons.set(btn, {});
+                                                        }
+                                                    };
+
+                                                    const release = (e) => {
+                                                        if (e) e.preventDefault();
+                                                        const h = heldButtons.get(btn);
+                                                        if (!h) return;
+                                                        if (h.timeout) clearTimeout(h.timeout);
+                                                        if (h.interval) clearInterval(h.interval);
+                                                        heldButtons.delete(btn);
+                                                    };
+
+                                                    btn.addEventListener('pointerdown', press);
+                                                    btn.addEventListener('pointerup', release);
+                                                    btn.addEventListener('pointercancel', release);
+                                                    btn.addEventListener('pointerleave', release);
+                                                });
+                                            }
+
+                                            function releaseAllButtons() {
+                                                heldButtons.forEach(h => {
+                                                    if (h.timeout) clearTimeout(h.timeout);
+                                                    if (h.interval) clearInterval(h.interval);
+                                                });
+                                                heldButtons.clear();
+                                            }
+
+                                            // Si se cambia de aplicación con un botón pulsado se pierde el
+                                            // evento de soltar y la pieza seguiría moviéndose sola al volver.
+                                            window.addEventListener('blur', releaseAllButtons);
+                                            document.addEventListener('visibilitychange', () => {
+                                                if (document.hidden) releaseAllButtons();
+                                                lastTime = 0;
+                                            });
+
+                                            // --- DISPONIBILIDAD DEL MODO DOBLES ---
+                                            // Dos tableros más sus marcadores no caben en un móvil, en
+                                            // ninguna de las dos orientaciones. Se decide midiendo el hueco
+                                            // real, no adivinando el dispositivo por el user-agent: un móvil
+                                            // apaisado y una tablet vertical se confunden fácilmente, y el
+                                            // user-agent además miente.
+                                            const DOUBLES_MIN_WIDTH = 720;
+                                            const DOUBLES_MIN_HEIGHT = 480;
+
+                                            function doublesFits() {
+                                                return window.innerWidth >= DOUBLES_MIN_WIDTH &&
+                                                       window.innerHeight >= DOUBLES_MIN_HEIGHT;
+                                            }
+
+                                            function updateDoublesAvailability() {
+                                                const btn = document.getElementById('startDoublesBtn');
+                                                const note = document.getElementById('doublesNote');
+                                                if (!btn || !note) return;
+
+                                                if (doublesFits()) {
+                                                    btn.disabled = false;
+                                                    note.style.display = 'none';
+                                                } else {
+                                                    btn.disabled = true;
+                                                    note.style.display = 'block';
+                                                    note.textContent = window.innerWidth < DOUBLES_MIN_WIDTH && window.innerHeight >= DOUBLES_MIN_WIDTH
+                                                        ? 'Dobles necesita más ancho: gira el dispositivo o usa una tablet.'
+                                                        : 'Dobles necesita una pantalla mayor (tablet u ordenador).';
+                                                }
+                                            }
+
+                                            window.addEventListener('resize', updateDoublesAvailability);
+                                            window.addEventListener('orientationchange', () => setTimeout(updateDoublesAvailability, 200));
+
                                             // --- INICIALIZACIÓN ---
                                             
                                             // Referencias al menú
@@ -1508,9 +1904,36 @@
                                             // Muestra el menú de inicio al cargar
                                             window.onload = function () {
                                                 initAudio();
+                                                initTouchControls();
+                                                updateDoublesAvailability();
                                                 startMenuOverlay.style.display = "flex";
                                                 displayRanking(); // Actualiza puntuaciones por si acaso
                                             };
+
+                                            // Botones de partida: en móvil no existen las teclas P ni R
+                                            document.getElementById('pauseBtn').addEventListener('click', () => {
+                                                if (!isNameInputVisible) togglePause();
+                                            });
+
+                                            document.getElementById('restartBtn').addEventListener('click', () => {
+                                                if (isNameInputVisible) return;
+                                                releaseAllButtons();
+                                                resetGame();
+                                            });
+
+                                            document.getElementById('menuBtn').addEventListener('click', () => {
+                                                releaseAllButtons();
+                                                isPaused = true;
+                                                pauseOverlay.style.display = 'none';
+                                                gameOverOverlay.style.display = 'none';
+                                                updateDoublesAvailability();
+                                                startMenuOverlay.style.display = 'flex';
+                                            });
+
+                                            document.getElementById('playAgainBtn').addEventListener('click', () => {
+                                                releaseAllButtons();
+                                                resetGame();
+                                            });
                                             
                                             // Iniciar partida individual
                                             startGameBtn.onclick = function () {
@@ -1529,6 +1952,9 @@
                                                     <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
                                                 `;
                                                 
+                                                document.getElementById('touchP2').style.display = 'none';
+                                                document.getElementById('touchP1Label').style.display = 'none';
+
                                                 startMenuOverlay.style.display = "none";
                                                 resetGame();
                                             };
@@ -1550,6 +1976,9 @@
                                                     <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
                                                 `;
                                                 
+                                                document.getElementById('touchP2').style.display = 'flex';
+                                                document.getElementById('touchP1Label').style.display = 'block';
+
                                                 startMenuOverlay.style.display = "none";
                                                 resetGame();
                                             };
@@ -1565,7 +1994,7 @@
                                                     let html = "";
                                                     highScores.forEach((entry, i) => {
                                                         html += `<div class="ranking-entry">
-                ${i + 1}. ${entry.name.substring(0, 8)} - ${entry.score} puntos - Nivel: ${entry.level || 1}
+                ${i + 1}. ${escapeHtml(entry.name.substring(0, 8))} - ${Number(entry.score) || 0} puntos - Nivel: ${Number(entry.level) || 1}
             </div>`;
                                                         });
                                                         highScoresMenuList.innerHTML = html;
