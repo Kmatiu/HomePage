@@ -2,7 +2,7 @@
   "name": "Videojuegos Retro",
   "short_name": "Juegos",
   "description": "Colección de juegos arcade para jugar en el navegador, también sin conexión.",
-  "start_url": "./juegos.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

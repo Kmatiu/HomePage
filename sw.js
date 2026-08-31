@@ -4,11 +4,11 @@
    Press Start 2P).
 
    IMPORTANTE: este archivo tiene que estar en la RAÍZ del repositorio, al lado
-   de juegos.html. Un service worker solo controla las páginas que cuelgan de su
+   de index.html. Un service worker solo controla las páginas que cuelgan de su
    propia carpeta, así que si se sube dentro de webs/ no vería ni images/ ni la
    portada, y la descarga sin conexión no serviría de nada. */
 
-var VERSION = 'v1';
+var VERSION = 'v2';
 var CACHE = 'juegos-' + VERSION;
 
 /* Lo mínimo para que la portada abra sin conexión. Se cachea solo al instalar,
@@ -16,7 +16,7 @@ var CACHE = 'juegos-' + VERSION;
    descargan con el botón "Descargar sin conexión". */
 var SHELL = [
   './',
-  './juegos.html',
+  './index.html',
   './manifest.json',
   './images/icono-192.png',
   './images/icono-512.png',
@@ -112,7 +112,7 @@ function redPrimero(req) {
            devuelve una promesa y una promesa SIEMPRE es verdadera, así que la
            segunda opción nunca llegaría a evaluarse y el resultado sería
            `undefined`. Hay que encadenar los then. */
-        return caches.match('./juegos.html')
+        return caches.match('./index.html')
           .then(function (p) { return p || caches.match('./'); })
           .then(function (p) {
             if (p) return p;
