@@ -346,22 +346,66 @@
 
         body.touch-device .pad-col.usada { display: flex; }
 
-        .touch-pad {
+        /* Zona de arrastre: el chasis va en la dirección hacia la que empujas
+           el dedo, como el mando de Pac-Man, pero encerrado en su propio círculo
+           para que no se pise con la puntería sobre el campo. */
+        .stick {
+            position: relative;
+            width: 132px;
+            height: 132px;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.06);
             display: grid;
-            grid-template-columns: repeat(3, auto);
-            gap: 6px;
+            place-items: center;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        /* Vertical: los mandos pasan a filas bajo el campo */
+        .stick-knob {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: rgba(74, 144, 226, 0.55);
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            pointer-events: none;
+            transition: transform 0.09s ease-out;
+        }
+
+        .stick.p2 .stick-knob { background: rgba(231, 76, 60, 0.55); }
+
+        /* Mientras se arrastra no interesa suavizado: debe pegarse al dedo */
+        .stick.activo .stick-knob { transition: none; }
+
+        .stick-label {
+            position: absolute;
+            bottom: -16px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+        }
+
+        /* Vertical: el mando abajo a la izquierda, sin tapar el campo */
         @media (max-aspect-ratio: 1/1) {
-            #playArea { flex-direction: column; gap: 10px; }
-            #gameStage { order: -1; }
-            .pad-col {
-                flex-direction: row;
-                width: 100%;
-                justify-content: space-around;
-                gap: 16px;
+            #playArea {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr auto;
+                grid-template-areas: "campo campo" "izq der";
+                gap: 8px;
             }
+            #gameStage { grid-area: campo; min-width: 0; }
+            #colIzq { grid-area: izq; }
+            #colDer { grid-area: der; }
+            .pad-col { flex-direction: row; justify-content: center; }
+        }
+
+        @media (max-height: 420px) {
+            .stick { width: 104px; height: 104px; }
+            .stick-knob { width: 46px; height: 46px; }
         }
 
         .touch-pad .spacer { width: 54px; height: 54px; }
@@ -502,14 +546,9 @@
 
         <!-- Mando izquierdo: jugador 1 (o jugador 2 cuando hay dos) -->
         <div class="pad-col" id="colIzq">
-            <div class="touch-pad p1" id="padP1">
-                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="1" data-dir="up" aria-label="Arriba">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="1" data-dir="left" aria-label="Izquierda">◀</button>
-                <button class="touch-btn" type="button" data-p="1" data-dir="down" aria-label="Abajo">▼</button>
-                <button class="touch-btn" type="button" data-p="1" data-dir="right" aria-label="Derecha">▶</button>
+            <div class="stick" id="stickP1" role="application" aria-label="Mover el tanque">
+                <div class="stick-knob"></div>
+                <div class="stick-label" id="labelP1" style="display:none;">J1</div>
             </div>
         </div>
 
@@ -518,7 +557,7 @@
         <canvas id="tracksCanvas" width="800" height="600"></canvas>
         <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-        <div id="aimHint">Toca el campo para apuntar y disparar</div>
+        <div id="aimHint">Arrastra el mando para moverte · toca el campo para disparar</div>
         
         <div id="pauseOverlay">
             <div id="pauseMenu">
@@ -556,14 +595,9 @@
 
         <!-- Mando derecho: solo se usa en la partida de dos jugadores -->
         <div class="pad-col" id="colDer">
-            <div class="touch-pad p2" id="padP2">
-                <div class="pad-label">J2</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
+            <div class="stick p2" id="stickP2" role="application" aria-label="Mover el tanque del jugador 2">
+                <div class="stick-knob"></div>
+                <div class="stick-label">J2</div>
             </div>
         </div>
 
@@ -2397,12 +2431,74 @@
     // Apuntar con el dedo sobre el campo es el equivalente exacto del ratón:
     // la torreta gira hacia el punto tocado. Tocar dispara, y arrastrar sigue
     // apuntando sin gastar más disparos, igual que mover el ratón.
-    const dirKeys = { up: 'up', down: 'down', left: 'left', right: 'right' };
-
-    function setTouchDir(playerIndex, dir, value) {
+    /* Aplica un vector de empuje a los controles de un jugador. */
+    function aplicarVector(playerIndex, dx, dy) {
         const p = players[playerIndex];
         if (!p) return;
-        p.controls[dirKeys[dir]] = value;
+        p.controls.left  = dx < 0;
+        p.controls.right = dx > 0;
+        p.controls.up    = dy < 0;
+        p.controls.down  = dy > 0;
+    }
+
+    const RADIO_STICK = 46;      // hasta dónde llega la bola del mando
+    const ZONA_MUERTA = 14;      // por debajo de esto no se mueve: evita giros
+                                 // involuntarios al apoyar el pulgar
+
+    function crearStick(el, playerIndex) {
+        if (!el) return;
+
+        const knob = el.querySelector('.stick-knob');
+        let punteroActivo = null;
+        let ox = 0, oy = 0;
+
+        function soltar() {
+            aplicarVector(playerIndex, 0, 0);
+            knob.style.transform = 'translate(0px, 0px)';
+            el.classList.remove('activo');
+            punteroActivo = null;
+        }
+
+        el.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            if (gameState !== GAME_STATES.PLAYING) return;
+            punteroActivo = e.pointerId;
+            ox = e.clientX;
+            oy = e.clientY;
+            el.classList.add('activo');
+            try { el.setPointerCapture(e.pointerId); } catch (err) {}
+        });
+
+        el.addEventListener('pointermove', (e) => {
+            if (e.pointerId !== punteroActivo) return;
+            e.preventDefault();
+
+            let dx = e.clientX - ox;
+            let dy = e.clientY - oy;
+
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > RADIO_STICK) {
+                dx = dx / dist * RADIO_STICK;
+                dy = dy / dist * RADIO_STICK;
+            }
+
+            knob.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+            aplicarVector(playerIndex,
+                Math.abs(dx) > ZONA_MUERTA ? dx : 0,
+                Math.abs(dy) > ZONA_MUERTA ? dy : 0);
+        });
+
+        ['pointerup', 'pointercancel'].forEach((tipo) => {
+            el.addEventListener(tipo, (e) => {
+                if (e.pointerId !== punteroActivo) return;
+                e.preventDefault();
+                soltar();
+            });
+        });
+
+        /* Devuelve la función de limpieza para la pérdida de foco */
+        el._soltar = soltar;
     }
 
     function releaseAllTouchDirs() {
@@ -2410,6 +2506,10 @@
             if (!p) continue;
             p.controls.up = p.controls.down = p.controls.left = p.controls.right = false;
         }
+        ['stickP1', 'stickP2'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && el._soltar) el._soltar();
+        });
     }
 
     function initTouchControls() {
@@ -2417,18 +2517,12 @@
             document.body.classList.add('touch-device');
         }
 
-        document.querySelectorAll('[data-dir]').forEach(btn => {
-            const idx = parseInt(btn.dataset.p, 10) - 1;
-            const dir = btn.dataset.dir;
-
-            const press = (e) => { e.preventDefault(); if (gameState === GAME_STATES.PLAYING) setTouchDir(idx, dir, true); };
-            const release = (e) => { e.preventDefault(); setTouchDir(idx, dir, false); };
-
-            btn.addEventListener('pointerdown', press);
-            btn.addEventListener('pointerup', release);
-            btn.addEventListener('pointercancel', release);
-            btn.addEventListener('pointerleave', release);
-        });
+        /* Zona de arrastre. La dirección sale del vector entre el punto donde
+           aterrizó el dedo y donde está ahora, no de qué botón se ha tocado.
+           Como el vector se descompone en los dos ejes por separado, las
+           diagonales salen solas: el juego ya normaliza el vector resultante. */
+        crearStick(document.getElementById('stickP1'), 0);
+        crearStick(document.getElementById('stickP2'), 1);
 
         // Puntería sobre el campo
         const container = document.getElementById('gameContainer');
@@ -2479,6 +2573,7 @@
         document.getElementById('colDer').classList.toggle('usada', count === 2);
         document.getElementById('labelP1').style.display = count === 2 ? 'block' : 'none';
         document.getElementById('aimHint').classList.add('visible');
+        releaseAllTouchDirs();
     }
 
     // ================= DISPONIBILIDAD DE 2 JUGADORES =================
