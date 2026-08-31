@@ -8,7 +8,7 @@
    propia carpeta, así que si se sube dentro de webs/ no vería ni images/ ni la
    portada, y la descarga sin conexión no serviría de nada. */
 
-var VERSION = 'v2';
+var VERSION = 'v3';
 var CACHE = 'juegos-' + VERSION;
 
 /* Lo mínimo para que la portada abra sin conexión. Se cachea solo al instalar,
@@ -101,7 +101,21 @@ function guardar(req, res) {
    al repositorio, el jugador la recibe en cuanto tenga cobertura en lugar de
    quedarse con la copia antigua para siempre. */
 function redPrimero(req) {
-  return fetch(req)
+  /* `cache: 'reload'` salta la caché HTTP del navegador.
+     Sin esto, GitHub Pages sirve los HTML con Cache-Control: max-age=600, así
+     que durante diez minutos el propio navegador devolvía su copia antigua sin
+     llegar a preguntar al servidor: se subía una corrección al repositorio y el
+     jugador seguía viendo la versión de antes aunque tuviera cobertura.
+     Para las peticiones de navegación no se puede reutilizar el Request (su
+     modo no se puede reconstruir), así que se pide por URL. */
+  var peticion;
+  try {
+    peticion = new Request(req.url, { cache: 'reload', credentials: 'same-origin' });
+  } catch (err) {
+    peticion = req;
+  }
+
+  return fetch(peticion)
     .then(function (r) { return guardar(req, r); })
     .catch(function () {
       return caches.match(req).then(function (m) {
