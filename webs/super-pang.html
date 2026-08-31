@@ -16,6 +16,7 @@
         body {
             background: #000;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             /* dvh tiene en cuenta la barra de direcciones del móvil */
@@ -88,25 +89,60 @@
            simultáneas. Con botones, el pulgar izquierdo camina y el derecho
            dispara sin soltar. Van superpuestos al tablero para no robarle
            altura, y semitransparentes para tapar lo mínimo. */
-        #touchControls {
-            position: absolute;
-            inset: 0;
-            display: none;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: 10px;
-            pointer-events: none;
-            z-index: 8;
+        /* Los mandos van FUERA del campo: superpuestos tapaban al personaje
+           cada vez que caminaba por la franja inferior, que es justo donde pasa
+           la mayor parte del juego.
+
+           En apaisado se colocan a los lados, aprovechando las franjas negras
+           que sobran (el campo es 8:5 y la pantalla del móvil es mucho más
+           alargada). En vertical se colocan debajo. */
+        #playArea {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+            min-height: 0;
         }
 
-        body.touch-device #touchControls { display: flex; }
+        #stageWrap {
+            flex: 1 1 auto;
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pad-col {
+            flex: 0 0 auto;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        body.touch-device .pad-col.usada { display: flex; }
 
         .touch-pad {
             display: grid;
             grid-template-columns: repeat(3, auto);
             gap: 6px;
-            pointer-events: auto;
             align-items: end;
+        }
+
+        @media (max-aspect-ratio: 1/1) {
+            #playArea { flex-direction: column; gap: 10px; }
+            #stageWrap { order: -1; }
+            .pad-col {
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-around;
+                gap: 16px;
+            }
         }
 
         .touch-pad .spacer { width: 56px; }
@@ -141,6 +177,10 @@
         .touch-btn:active { background: rgba(0, 255, 255, 0.3); }
         .touch-btn.fire:active { background: rgba(255, 80, 80, 0.35); }
 
+        /* Al estar fuera del campo ya no necesitan ser translúcidos */
+        .touch-btn { background: rgba(0, 60, 90, 0.7); }
+        .touch-btn.fire { background: rgba(90, 0, 0, 0.7); }
+
         .pad-label {
             grid-column: 1 / -1;
             text-align: center;
@@ -150,25 +190,29 @@
         }
 
         /* Botón de pausa: en móvil no existe la tecla P */
-        #pauseTouchBtn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            z-index: 9;
+        /* Barra propia fuera del campo para el botón de pausa */
+        #topBar {
             display: none;
+            flex: 0 0 auto;
+            justify-content: flex-end;
+            width: 100%;
+            padding: 4px 6px;
+        }
+
+        body.touch-device #topBar { display: flex; }
+
+        #pauseTouchBtn {
             width: 44px;
-            height: 44px;
+            height: 34px;
             border-radius: 8px;
             border: 2px solid rgba(0, 255, 255, 0.75);
             background: rgba(0, 30, 45, 0.6);
             color: #00ffff;
-            font-size: 16px;
+            font-size: 14px;
             font-family: inherit;
             cursor: pointer;
             touch-action: manipulation;
         }
-
-        body.touch-device #pauseTouchBtn { display: block; }
 
         #rotateHint {
             position: absolute;
@@ -488,41 +532,42 @@
     </style>
 </head>
 <body>
+
+<div id="topBar">
+    <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
+</div>
+
+<div id="playArea">
+
+    <!-- Columna izquierda: jugador 1, y jugador 2 cuando hay dos -->
+    <div class="pad-col" id="colIzq">
+        <div class="touch-pad" id="padP2" style="display:none;">
+            <div class="pad-label">J2</div>
+            <div class="spacer"></div>
+            <button class="touch-btn" type="button" data-player="2" data-key="w" aria-label="Subir J2">▲</button>
+            <div class="spacer"></div>
+            <button class="touch-btn" type="button" data-player="2" data-key="a" aria-label="Izquierda J2">◀</button>
+            <button class="touch-btn" type="button" data-player="2" data-key="s" aria-label="Bajar J2">▼</button>
+            <button class="touch-btn" type="button" data-player="2" data-key="d" aria-label="Derecha J2">▶</button>
+        </div>
+        <button class="touch-btn fire" type="button" data-shoot="2" id="fireP2" style="display:none;" aria-label="Disparar J2">ARPÓN</button>
+
+        <div class="touch-pad" id="padP1">
+            <div class="pad-label" id="labelP1" style="display:none;">J1</div>
+            <div class="spacer"></div>
+            <button class="touch-btn" type="button" data-player="1" data-key="ArrowUp" aria-label="Subir">▲</button>
+            <div class="spacer"></div>
+            <button class="touch-btn" type="button" data-player="1" data-key="ArrowLeft" aria-label="Izquierda">◀</button>
+            <button class="touch-btn" type="button" data-player="1" data-key="ArrowDown" aria-label="Bajar">▼</button>
+            <button class="touch-btn" type="button" data-player="1" data-key="ArrowRight" aria-label="Derecha">▶</button>
+        </div>
+    </div>
+
+    <div id="stageWrap">
     <div id="gameContainer">
         <canvas id="gameCanvas" width="960" height="600"></canvas>
 
         <div id="rotateHint">↻ Gira el móvil a horizontal</div>
-        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
-
-        <div id="touchControls">
-            <div class="touch-pad" id="padP1">
-                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-player="1" data-key="ArrowUp" aria-label="Subir">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-player="1" data-key="ArrowLeft" aria-label="Izquierda">◀</button>
-                <button class="touch-btn" type="button" data-player="1" data-key="ArrowDown" aria-label="Bajar">▼</button>
-                <button class="touch-btn" type="button" data-player="1" data-key="ArrowRight" aria-label="Derecha">▶</button>
-            </div>
-
-            <div class="touch-pad" id="padP2" style="display:none;">
-                <div class="pad-label">J2</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-player="2" data-key="w" aria-label="Subir J2">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-player="2" data-key="a" aria-label="Izquierda J2">◀</button>
-                <button class="touch-btn" type="button" data-player="2" data-key="s" aria-label="Bajar J2">▼</button>
-                <button class="touch-btn" type="button" data-player="2" data-key="d" aria-label="Derecha J2">▶</button>
-            </div>
-
-            <div class="touch-pad" id="padFire">
-                <button class="touch-btn fire" type="button" data-shoot="1" aria-label="Disparar">ARPÓN</button>
-            </div>
-
-            <div class="touch-pad" id="padFire2" style="display:none;">
-                <button class="touch-btn fire" type="button" data-shoot="2" aria-label="Disparar J2">ARPÓN J2</button>
-            </div>
-        </div>
         
         <div id="menu">
             <div class="menu-title">SUPER PANG</div>
@@ -615,6 +660,14 @@
             <button class="menu-button" id="btnMenu">Menú principal</button>
         </div>
     </div>
+    </div>
+
+    <!-- Columna derecha: el arpón del jugador 1 -->
+    <div class="pad-col" id="colDer">
+        <button class="touch-btn fire" type="button" data-shoot="1" aria-label="Disparar">ARPÓN</button>
+    </div>
+
+</div>
     
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -3582,7 +3635,7 @@
                     document.body.classList.add('touch-device');
                 }
 
-                document.querySelectorAll('#touchControls [data-key]').forEach(btn => {
+                document.querySelectorAll('[data-key]').forEach(btn => {
                     const key = btn.dataset.key;
 
                     const press = (e) => {
@@ -3603,7 +3656,7 @@
                     btn.addEventListener('pointerleave', release);
                 });
 
-                document.querySelectorAll('#touchControls [data-shoot]').forEach(btn => {
+                document.querySelectorAll('[data-shoot]').forEach(btn => {
                     const player = parseInt(btn.dataset.shoot, 10);
                     btn.addEventListener('pointerdown', (e) => {
                         e.preventDefault();
@@ -3623,8 +3676,13 @@
             }
 
             function showTouchPadsFor(players) {
+                /* Con dos jugadores, el segundo se sienta a la izquierda del
+                   aparato, así que tiene su cruceta y su arpón en esa misma
+                   columna en vez de tener que cruzar el brazo. */
+                document.getElementById('colIzq').classList.add('usada');
+                document.getElementById('colDer').classList.add('usada');
                 document.getElementById('padP2').style.display = players === 2 ? 'grid' : 'none';
-                document.getElementById('padFire2').style.display = players === 2 ? 'grid' : 'none';
+                document.getElementById('fireP2').style.display = players === 2 ? 'block' : 'none';
                 document.getElementById('labelP1').style.display = players === 2 ? 'block' : 'none';
             }
 
