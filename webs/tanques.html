@@ -313,29 +313,55 @@
         
 
         /* ================= CONTROLES TÁCTILES =================
-           El tanque se mueve con el chasis (cuatro direcciones) mientras la
-           torreta apunta de forma independiente, que con ratón es apuntar y
-           con el dedo es tocar el punto del campo al que quieres disparar.
-           Por eso aquí conviven las dos cosas: cruceta para el chasis y
-           puntería directa sobre el campo, que es como funciona el ratón. */
-        #touchControls {
-            position: absolute;
-            inset: 0;
-            display: none;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: 10px;
-            pointer-events: none;
-            z-index: 5;
+           El tanque mueve el chasis con la cruceta mientras la torreta apunta
+           de forma independiente: con ratón se apunta moviéndolo, y con el dedo
+           se toca el punto del campo al que quieres disparar.
+
+           Los botones van FUERA del campo de juego. Superpuestos tapaban
+           justamente la zona a la que ibas a apuntar, que en este juego es
+           donde disparas, así que el problema no era estético.
+
+           En apaisado se colocan a los lados, aprovechando las franjas negras
+           que sobran a izquierda y derecha (el campo es 4:3 y la pantalla es
+           mucho más alargada). En vertical se colocan debajo. */
+        #playArea {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
         }
 
-        body.touch-device #gameContainer.active #touchControls { display: flex; }
+        .pad-col {
+            flex: 0 0 auto;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        body.touch-device .pad-col.usada { display: flex; }
 
         .touch-pad {
             display: grid;
             grid-template-columns: repeat(3, auto);
             gap: 6px;
-            pointer-events: auto;
+        }
+
+        /* Vertical: los mandos pasan a filas bajo el campo */
+        @media (max-aspect-ratio: 1/1) {
+            #playArea { flex-direction: column; gap: 10px; }
+            #gameStage { order: -1; }
+            .pad-col {
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-around;
+                gap: 16px;
+            }
         }
 
         .touch-pad .spacer { width: 54px; height: 54px; }
@@ -345,7 +371,7 @@
             height: 54px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.75);
-            background: rgba(0, 0, 0, 0.42);
+            background: rgba(255, 255, 255, 0.10);
             color: #fff;
             font-family: inherit;
             font-size: 19px;
@@ -361,15 +387,6 @@
         .touch-pad.p2 .touch-btn { border-color: rgba(231, 76, 60, 0.9); color: #ffb0a6; }
         .touch-pad.p1 .touch-btn { border-color: rgba(74, 144, 226, 0.9); color: #b9d8ff; }
 
-        .touch-btn.fire {
-            width: 76px;
-            height: 76px;
-            font-size: 12px;
-            border-color: rgba(255, 200, 0, 0.9);
-            color: #ffd700;
-            background: rgba(60, 45, 0, 0.45);
-        }
-
         .touch-btn:active { background: rgba(255, 255, 255, 0.28); }
 
         .pad-label {
@@ -381,24 +398,24 @@
             pointer-events: none;
         }
 
+        /* El botón de pausa vive en la barra superior, que ya está fuera del
+           campo, en lugar de flotar sobre una esquina del tablero. */
         #pauseTouchBtn {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            z-index: 6;
             display: none;
-            width: 42px;
-            height: 42px;
+            width: 40px;
+            height: 36px;
             border-radius: 8px;
             border: 2px solid rgba(255,255,255,0.75);
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.35);
             color: #fff;
-            font-size: 15px;
+            font-size: 14px;
+            font-family: inherit;
             cursor: pointer;
             touch-action: manipulation;
+            flex: 0 0 auto;
         }
 
-        body.touch-device #gameContainer.active #pauseTouchBtn { display: block; }
+        body.touch-device #pauseTouchBtn { display: block; }
 
         #aimHint {
             position: absolute;
@@ -454,7 +471,6 @@
 
             .touch-btn { width: 46px; height: 46px; font-size: 16px; }
             .touch-pad .spacer { width: 46px; height: 46px; }
-            .touch-btn.fire { width: 64px; height: 64px; font-size: 11px; }
         }
     </style>
 </head>
@@ -477,18 +493,15 @@
             <div>PRÓXIMA VIDA</div>
             <div id="lifeCounter">0/10</div>
         </div>
+
+        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
         
     </div>
     
-    <div id="gameStage">
-    <div id="gameContainer">
-        <canvas id="tracksCanvas" width="800" height="600"></canvas>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="playArea">
 
-        <div id="aimHint">Toca el campo para apuntar y disparar</div>
-        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
-
-        <div id="touchControls">
+        <!-- Mando izquierdo: jugador 1 (o jugador 2 cuando hay dos) -->
+        <div class="pad-col" id="colIzq">
             <div class="touch-pad p1" id="padP1">
                 <div class="pad-label" id="labelP1" style="display:none;">J1</div>
                 <div class="spacer"></div>
@@ -498,21 +511,14 @@
                 <button class="touch-btn" type="button" data-p="1" data-dir="down" aria-label="Abajo">▼</button>
                 <button class="touch-btn" type="button" data-p="1" data-dir="right" aria-label="Derecha">▶</button>
             </div>
-
-            <div class="touch-pad p2" id="padP2" style="display:none;">
-                <div class="pad-label">J2</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
-            </div>
-
-            <div class="touch-pad" id="padFire">
-                <button class="touch-btn fire" type="button" data-fire="1" aria-label="Disparar">FUEGO</button>
-            </div>
         </div>
+
+    <div id="gameStage">
+    <div id="gameContainer">
+        <canvas id="tracksCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div id="aimHint">Toca el campo para apuntar y disparar</div>
         
         <div id="pauseOverlay">
             <div id="pauseMenu">
@@ -546,6 +552,21 @@
         
         
     </div>
+    </div>
+
+        <!-- Mando derecho: solo se usa en la partida de dos jugadores -->
+        <div class="pad-col" id="colDer">
+            <div class="touch-pad p2" id="padP2">
+                <div class="pad-label">J2</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
+            </div>
+        </div>
+
     </div>
     <div id="menu">
         <div id="mainMenu">
@@ -2396,7 +2417,7 @@
             document.body.classList.add('touch-device');
         }
 
-        document.querySelectorAll('#touchControls [data-dir]').forEach(btn => {
+        document.querySelectorAll('[data-dir]').forEach(btn => {
             const idx = parseInt(btn.dataset.p, 10) - 1;
             const dir = btn.dataset.dir;
 
@@ -2409,19 +2430,15 @@
             btn.addEventListener('pointerleave', release);
         });
 
-        document.querySelectorAll('#touchControls [data-fire]').forEach(btn => {
-            btn.addEventListener('pointerdown', (e) => {
-                e.preventDefault();
-                if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
-            });
-        });
-
         // Puntería sobre el campo
         const container = document.getElementById('gameContainer');
         let aiming = false;
 
         const aim = (e, fire) => {
-            if (e.target.closest('#touchControls') || e.target.closest('button')) return;
+            /* Los mandos están fuera del campo, así que aquí solo llegan toques
+               sobre el propio tablero. Se mantiene la comprobación por si algún
+               día vuelve a haber algo superpuesto (los menús, por ejemplo). */
+            if (e.target.closest('button')) return;
             if (gameState !== GAME_STATES.PLAYING || !players[0]) return;
 
             const p = toCanvasPos(e.clientX, e.clientY);
@@ -2456,7 +2473,10 @@
     }
 
     function showTouchPadsFor(count) {
-        document.getElementById('padP2').style.display = count === 2 ? 'grid' : 'none';
+        /* Con un jugador solo se usa la columna izquierda; la derecha se oculta
+           para que el tablero aproveche todo el espacio sobrante. */
+        document.getElementById('colIzq').classList.add('usada');
+        document.getElementById('colDer').classList.toggle('usada', count === 2);
         document.getElementById('labelP1').style.display = count === 2 ? 'block' : 'none';
         document.getElementById('aimHint').classList.add('visible');
     }
