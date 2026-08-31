@@ -11,29 +11,45 @@
             box-sizing: border-box;
         }
         
+        html, body { height: 100%; }
+
         body {
             font-family: 'Courier New', monospace;
             background: linear-gradient(180deg, #000428 0%, #004e92 100%);
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* dvh tiene en cuenta la barra de direcciones del móvil */
+            height: 100vh;
+            height: 100dvh;
             color: #fff;
             overflow: hidden;
+            overscroll-behavior: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
         }
-        
+
         #mainContainer {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+            padding: 8px;
+            align-items: center;
         }
-        
+
+        /* El canvas conserva su buffer de 800x600 (las coordenadas del juego no
+           cambian) y se escala para caber. max-width + max-height sobre un
+           elemento reemplazado conservan la proporción automáticamente. */
         #gameRow {
             display: flex;
             flex-direction: row;
-            align-items: flex-start;
+            align-items: center;
             justify-content: center;
             gap: 20px;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
         }
         
         .powerUpSidebar, .powerUpSidebarP2 {
@@ -63,13 +79,17 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 20px;
-            padding: 15px 20px;
+            gap: 10px;
+            padding: 8px 12px;
             background: rgba(0, 0, 0, 0.8);
             border: 3px solid #0ff;
             border-radius: 5px;
             box-shadow: 0 0 15px #0ff;
-            min-width: 800px;
+            /* min-width: 800px obligaba a la página a medir 800px como mínimo */
+            width: 100%;
+            max-width: 1280px;
+            flex: 0 0 auto;
+            flex-wrap: wrap;
         }
         
         .hud-section {
@@ -97,11 +117,20 @@
             border: 4px solid #0ff;
             box-shadow: 0 0 20px #0ff, inset 0 0 20px rgba(0, 255, 255, 0.2);
             position: relative;
+            display: flex;
+            max-width: 100%;
+            max-height: 100%;
+            min-height: 0;
+            min-width: 0;
+            touch-action: none;
         }
-        
+
         #gameCanvas {
             display: block;
             background: #000;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
         }
         
         #menu, #pauseMenu, #gameOverScreen, #top10Screen, #instructionsScreen {
@@ -151,11 +180,17 @@
             box-shadow: 0 0 10px #0ff;
         }
         
-        .btn:hover {
-            background: #0ff;
-            box-shadow: 0 0 20px #0ff;
-            transform: scale(1.05);
+        /* En táctil el :hover se queda pegado tras tocar y el botón se
+           quedaría ampliado hasta que tocases otra cosa. */
+        @media (hover: hover) {
+            .btn:hover {
+                background: #0ff;
+                box-shadow: 0 0 20px #0ff;
+                transform: scale(1.05);
+            }
         }
+
+        .btn:active { background: #0ff; }
         
         .volume-control {
             margin: 15px;
@@ -309,7 +344,7 @@
         }
         
         #nameInputModal {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -354,6 +389,139 @@
             pointer-events: none;
         }
         
+        /* Botones de partida: en móvil no existen las teclas P ni ESC */
+        .hud-buttons {
+            display: flex;
+            gap: 6px;
+            flex: 0 0 auto;
+        }
+
+        .hud-buttons button {
+            background: rgba(0, 255, 255, 0.1);
+            color: #0ff;
+            border: 2px solid #0ff;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            line-height: 1;
+            padding: 8px 12px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        #touchHint {
+            position: absolute;
+            left: 50%;
+            bottom: 14%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #0ff;
+            color: #0ff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 12;
+            display: none;
+            max-width: 90%;
+        }
+
+        body.touch-device #touchHint.visible { display: block; }
+
+        /* ---------- PANTALLAS ESTRECHAS ---------- */
+        /* Las barras laterales piden 220px cada una: con el canvas de 800 la
+           maquetación necesitaba 1280px de ancho. Por debajo de eso pasan a ser
+           una fila compacta bajo el tablero. */
+        @media (max-width: 1279px) {
+            #gameRow {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .powerUpSidebar, .powerUpSidebarP2 {
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                min-width: 0;
+                max-width: 100%;
+                width: 100%;
+                gap: 8px;
+                flex: 0 0 auto;
+                flex-wrap: wrap;
+            }
+
+            #powerUpIndicators, #powerUpIndicatorsP2 {
+                flex-direction: row;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .bonus-header {
+                padding: 4px 8px;
+                font-size: 11px;
+                letter-spacing: 1px;
+            }
+
+            .powerup-indicator {
+                min-width: 0;
+                padding: 4px 8px;
+            }
+
+            .powerup-icon {
+                width: 24px;
+                height: 24px;
+                font-size: 14px;
+                margin-right: 6px;
+            }
+
+            .powerup-name { display: none; }
+            .powerup-time { font-size: 14px; }
+            .powerup-bar { display: none; }
+        }
+
+        @media (max-width: 720px) {
+            #mainContainer { padding: 4px; gap: 4px; }
+
+            #hud {
+                padding: 5px 6px;
+                gap: 6px;
+                font-size: 12px;
+            }
+
+            .hud-section {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+
+            .hud-section span { font-size: 15px; }
+            .hud-section div { margin: 1px 0; }
+
+            h1 { font-size: clamp(24px, 8vw, 48px); margin-bottom: 14px; letter-spacing: 2px; }
+            h2 { font-size: clamp(20px, 6vw, 32px); margin-bottom: 10px; }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 15px;
+                margin: 5px;
+            }
+
+            .volume-control { margin: 6px; gap: 8px; }
+            .volume-control label { font-size: 14px; min-width: 62px; }
+            .volume-control input[type="range"] { width: 120px; }
+
+            /* Los menús van dentro del tablero, que en móvil es pequeño */
+            #menu, #pauseMenu, #gameOverScreen, #top10Screen, #instructionsScreen {
+                overflow-y: auto;
+                padding: 10px;
+            }
+
+            #instructionsContent { padding: 14px; font-size: 13px; line-height: 1.5; }
+            #nameInputModal { padding: 18px; }
+            #nameInputModal input { width: min(260px, 70vw); font-size: 16px; }
+        }
+
         @keyframes bonusPop {
             0% {
                 transform: translate(-50%, -50%) scale(0);
@@ -388,6 +556,9 @@
                 <div>Puntos: <span id="score1">0</span></div>
                 <div>Vidas: <span id="lives1">3</span></div>
             </div>
+            <div class="hud-buttons">
+                <button id="pauseBtn" type="button" aria-label="Pausar">⏸</button>
+            </div>
         </div>
 
         <div id="gameRow">
@@ -398,6 +569,7 @@
             <div id="gameContainer">
                 <canvas id="gameCanvas" width="800" height="600"></canvas>
                 <div id="bonusNotification" class="hidden"></div>
+                <div id="touchHint">Arrastra el dedo para mover la pala · toca para lanzar</div>
             
                 <div id="menu">
                     <h1>ARKANOID</h1>
@@ -408,17 +580,18 @@
                     
                     <div class="volume-control">
                         <label>Música:</label>
-                        <input type="range" id="musicVolume" min="0" max="100" value="50" onchange="updateVolume()">
+                        <input type="range" id="musicVolume" min="0" max="100" value="50" onchange="updateVolume()" oninput="updateVolume()">
                     </div>
                     <div class="volume-control">
                         <label>Efectos:</label>
-                        <input type="range" id="sfxVolume" min="0" max="100" value="70" onchange="updateVolume()">
+                        <input type="range" id="sfxVolume" min="0" max="100" value="70" onchange="updateVolume()" oninput="updateVolume()">
                     </div>
                 </div>
                 
                 <div id="pauseMenu" class="hidden">
                     <h2>PAUSA</h2>
-                    <p style="color: #0ff; font-size: 20px; margin: 20px;">Presiona P para continuar</p>
+                    <p style="color: #0ff; font-size: 16px; margin: 12px;">Pulsa P o el botón de abajo para continuar</p>
+                    <button class="btn" onclick="togglePause()">CONTINUAR</button>
                     <div class="volume-control">
                         <label>Música:</label>
                         <input type="range" id="musicVolumePause" min="0" max="100" value="50" onchange="updateVolume()" oninput="updateVolume()">
@@ -466,6 +639,13 @@
                             <li>W: Lanzar/Soltar bola</li>
                         </ul>
                         
+                        <h3>CONTROLES TÁCTILES (MÓVIL)</h3>
+                        <ul>
+                            <li>Arrastra el dedo sobre el tablero para mover la pala</li>
+                            <li>Toca sin arrastrar para lanzar la bola o disparar el láser</li>
+                            <li>Con 2 jugadores, cada dedo controla la pala más cercana</li>
+                        </ul>
+
                         <h3>CONTROLES GENERALES</h3>
                         <ul>
                             <li>P: Pausar / Reanudar</li>
@@ -1031,6 +1211,33 @@
             }
 
             
+            // Coloca la pala centrada en una coordenada del canvas. Reutiliza
+            // los mismos topes que move(), incluida la separación entre palas
+            // en modo de dos jugadores.
+            moveTo(centerX) {
+                const objetivo = centerX - this.width / 2;
+                const direction = objetivo > this.x ? 1 : -1;
+                let newX = objetivo;
+
+                if (newX < 0) newX = 0;
+                if (newX + this.width > CONFIG.canvasWidth) {
+                    newX = CONFIG.canvasWidth - this.width;
+                }
+
+                if (gameState.numPlayers === 2) {
+                    let otherPaddle = this.playerNum === 1 ? player2.paddle : player1.paddle;
+                    if (otherPaddle) {
+                        if (newX + this.width > otherPaddle.x && newX < otherPaddle.x + otherPaddle.width) {
+                            newX = direction > 0
+                                ? otherPaddle.x - this.width
+                                : otherPaddle.x + otherPaddle.width;
+                        }
+                    }
+                }
+
+                this.x = newX;
+            }
+
             move(direction) {
                 let newX = this.x + direction * this.speed;
                 
@@ -1719,35 +1926,69 @@
         // LOOP PRINCIPAL DEL JUEGO
         // ============================
         
+        // El juego mueve todo por FRAME (pala 9 px, bola 6,5 px, láser 8 px) y
+        // cuenta el descenso de ladrillos en frames. El deltaTime se calculaba
+        // pero no se usaba para nada, así que en un móvil de 120 Hz —que son
+        // muchos hoy— todo iba literalmente al doble de velocidad. Con un
+        // acumulador de paso fijo se mantienen 60 pasos por segundo en
+        // cualquier pantalla y todas las constantes originales siguen valiendo.
+        const STEP_MS = 1000 / 60;
+        const MAX_FRAME_MS = 250;   // techo tras volver de segundo plano
+        const MAX_STEPS = 5;        // evita la espiral de la muerte
+        let accumulator = 0;
+
         function gameLoop(timestamp) {
             if (!gameState.gameRunning) return;
-            
+
+            gameState.animationId = requestAnimationFrame(gameLoop);
+
             let deltaTime = timestamp - gameState.lastTime;
             gameState.lastTime = timestamp;
-            
+            if (deltaTime > MAX_FRAME_MS) deltaTime = MAX_FRAME_MS;
+
+            accumulator += deltaTime;
+
+            let steps = 0;
+            while (accumulator >= STEP_MS && steps < MAX_STEPS) {
+                updateGame();
+                accumulator -= STEP_MS;
+                steps++;
+
+                if (!gameState.gameRunning) {
+                    accumulator = 0;
+                    break;
+                }
+            }
+
             ctx.clearRect(0, 0, CONFIG.canvasWidth, CONFIG.canvasHeight);
-            
             drawBackground();
-            updateGame();
             drawGame();
-            
-            if (gameState.frameCount % 5 === 0) {
+
+            if (gameState.frameCount % 5 < steps || steps === 0) {
                 updatePowerUpIndicators();
             }
-            
-            gameState.animationId = requestAnimationFrame(gameLoop);
         }
         
         function updateGame() {
             gameState.frameCount++;
             
             if (gameState.frameCount % CONFIG.brickDescentInterval === 0) {
+                let alcanzaronElLimite = false;
+
                 for (let brick of bricks) {
                     brick.descend(CONFIG.brickDescentSpeed);
-                    
+
                     if (brick.y + brick.height >= CONFIG.canvasHeight - 100 && !brick.destroyed && brick.type !== 0) {
-                        loseLife();
+                        alcanzaronElLimite = true;
                     }
+                }
+
+                // Antes loseLife() se llamaba DENTRO del bucle, una vez por cada
+                // ladrillo pasado del límite. Con trece columnas cruzando a la
+                // vez eso descontaba trece vidas en un mismo frame: game over
+                // instantáneo en cuanto los ladrillos bajaban lo suficiente.
+                if (alcanzaronElLimite) {
+                    loseLife();
                 }
             }
             
@@ -1999,8 +2240,33 @@
             // Ya no es necesario mostrar la pantalla de Game Over ni usar un temporizador.
         }
 
+        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
+        // iframe con sandbox) el guardado lanzaba y cortaba el fin de partida.
+        let top10Memory = [];
+        const storageOK = (() => {
+            try {
+                localStorage.setItem('__t', '1');
+                localStorage.removeItem('__t');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        })();
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
         function loadTop10() {
-            let data = localStorage.getItem('arkanoidTop10');
+            if (!storageOK) return top10Memory.slice();
+            let data = null;
+            try {
+                data = localStorage.getItem('arkanoidTop10');
+            } catch (e) {
+                data = null;
+            }
             if (data) {
                 try {
                     return JSON.parse(data);
@@ -2012,7 +2278,13 @@
         }
 
         function saveTop10(top10) {
-            localStorage.setItem('arkanoidTop10', JSON.stringify(top10));
+            top10Memory = top10.slice();
+            if (!storageOK) return;
+            try {
+                localStorage.setItem('arkanoidTop10', JSON.stringify(top10));
+            } catch (e) {
+                console.warn('No se pudo guardar el Top 10:', e);
+            }
         }        
 
         function showTop10() {
@@ -2026,8 +2298,8 @@
                 top10.forEach((entry, index) => {
                     html += `
                         <div class="top10-entry">
-                            <span>${index + 1}. ${entry.name}</span>
-                            <span>${entry.score} pts - ${entry.date}</span>
+                            <span>${index + 1}. ${escapeHtml(entry.name)}</span>
+                            <span>${Number(entry.score) || 0} pts - ${escapeHtml(entry.date)}</span>
                         </div>
                     `;
                 });
@@ -2104,6 +2376,13 @@
         }
 
         
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            resumeAudio();
+            if (gameState.currentScreen === 'playing' || gameState.currentScreen === 'paused') {
+                togglePause();
+            }
+        });
+
         function showInstructions() {
             document.getElementById('menu').classList.add('hidden');
             document.getElementById('instructionsScreen').classList.remove('hidden');
@@ -2267,6 +2546,153 @@
             }
         });
         
+        // ============================
+        // CONTROL TÁCTIL
+        // ============================
+        // En Arkanoid la pala se mueve en un solo eje, así que lo natural no son
+        // botones sino arrastrar: la pala se coloca donde está el dedo, en
+        // posición absoluta. Un toque sin arrastrar lanza la bola o dispara.
+        //
+        // Con dos jugadores ambas palas están abajo, una en cada mitad, así que
+        // cada dedo se asigna a la pala más cercana y se pueden usar dos a la vez.
+        // Con un jugador, el primer dedo mueve y cualquier dedo adicional
+        // dispara, que es lo que hace falta para el láser mientras se arrastra.
+
+        const TAP_TOLERANCE = 8;          // px de pantalla para distinguir toque de arrastre
+        const activePointers = new Map(); // pointerId -> { player, startX, startY, moved }
+
+        function canvasXFromClient(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            if (!rect.width) return null;
+            return (clientX - rect.left) / rect.width * CONFIG.canvasWidth;
+        }
+
+        function playerOf(paddle) {
+            if (paddle && paddle === player2.paddle) return player2;
+            return player1;
+        }
+
+        function pickPlayerForTouch(canvasX) {
+            const enUso = new Set();
+            for (const p of activePointers.values()) {
+                if (p.player) enUso.add(p.player);
+            }
+
+            if (gameState.numPlayers === 1) {
+                if (!player1.paddle || enUso.has(player1)) return null;
+                return player1;
+            }
+
+            const candidatos = [player1, player2]
+                .filter(p => p.paddle && !enUso.has(p))
+                .sort((a, b) => {
+                    const ca = Math.abs(a.paddle.x + a.paddle.width / 2 - canvasX);
+                    const cb = Math.abs(b.paddle.x + b.paddle.width / 2 - canvasX);
+                    return ca - cb;
+                });
+
+            return candidatos[0] || null;
+        }
+
+        // Equivalente táctil de ESPACIO (jugador 1) y W (jugador 2)
+        function launchOrFire(player) {
+            if (!player || !player.paddle || gameState.currentScreen !== 'playing') return;
+
+            for (let ball of balls) {
+                if (!ball.stuck) continue;
+                if (gameState.numPlayers === 2 && ball.stuckToPaddle !== player.paddle) continue;
+                ball.launch();
+            }
+
+            if (player.powerUps.laser && player.paddle) {
+                lasers.push(new Laser(
+                    player.paddle.x + player.paddle.width / 2 - CONFIG.laserWidth / 2,
+                    player.paddle.y
+                ));
+                playSound('laser');
+            }
+        }
+
+        function initTouchControls() {
+            const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+            if (isTouch) document.body.classList.add('touch-device');
+
+            const container = document.getElementById('gameContainer');
+            const hint = document.getElementById('touchHint');
+
+            container.addEventListener('pointerdown', (e) => {
+                resumeAudio();
+
+                // Los menús que se superponen al tablero siguen siendo pulsables
+                if (e.target.closest('.btn') || e.target.closest('input')) return;
+                if (gameState.currentScreen !== 'playing') return;
+
+                const cx = canvasXFromClient(e.clientX);
+                if (cx === null) return;
+
+                const player = pickPlayerForTouch(cx);
+                activePointers.set(e.pointerId, {
+                    player: player,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    moved: false
+                });
+
+                if (player && player.paddle) {
+                    player.paddle.moveTo(cx);
+                    try { container.setPointerCapture(e.pointerId); } catch (err) {}
+                } else {
+                    // No hay pala libre: este dedo dispara
+                    launchOrFire(gameState.numPlayers === 1
+                        ? player1
+                        : playerOf(nearestPaddle(cx)));
+                }
+
+                hint.classList.remove('visible');
+            });
+
+            container.addEventListener('pointermove', (e) => {
+                const entry = activePointers.get(e.pointerId);
+                if (!entry || !entry.player || !entry.player.paddle) return;
+
+                if (Math.abs(e.clientX - entry.startX) > TAP_TOLERANCE ||
+                    Math.abs(e.clientY - entry.startY) > TAP_TOLERANCE) {
+                    entry.moved = true;
+                }
+
+                const cx = canvasXFromClient(e.clientX);
+                if (cx !== null) entry.player.paddle.moveTo(cx);
+            });
+
+            const endPointer = (e) => {
+                const entry = activePointers.get(e.pointerId);
+                if (!entry) return;
+                activePointers.delete(e.pointerId);
+
+                // Toque sin arrastre: lanzar bola / disparar láser
+                if (!entry.moved && entry.player) {
+                    launchOrFire(entry.player);
+                }
+            };
+
+            container.addEventListener('pointerup', endPointer);
+            container.addEventListener('pointercancel', endPointer);
+        }
+
+        function nearestPaddle(canvasX) {
+            const palas = [player1.paddle, player2.paddle].filter(Boolean);
+            if (!palas.length) return null;
+            return palas.reduce((a, b) =>
+                Math.abs(a.x + a.width / 2 - canvasX) <= Math.abs(b.x + b.width / 2 - canvasX) ? a : b);
+        }
+
+        function resumeAudio() {
+            if (!audioContext) initAudioContext();
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().catch(() => {});
+            }
+        }
+
         function savePowerUpState(player, playerKey) {
             const powerUpConfigs = {
                 enlarge: CONFIG.powerUpDuration,
@@ -2361,7 +2787,20 @@
         // INICIALIZACIÓN
         // ============================
         
+        document.addEventListener('pointerdown', resumeAudio);
+        document.addEventListener('keydown', resumeAudio);
+
+        // Si se cambia de aplicación con el dedo apoyado o una tecla pulsada,
+        // el evento de soltar se pierde y la pala se queda moviéndose sola.
+        window.addEventListener('blur', () => {
+            activePointers.clear();
+            keys.left = keys.right = keys.a = keys.d = keys.space = keys.w = false;
+        });
+
         window.addEventListener('load', () => {
+            initTouchControls();
+            const hint = document.getElementById('touchHint');
+            if (hint) hint.classList.add('visible');
             updateVolume();
         });
     </script>
