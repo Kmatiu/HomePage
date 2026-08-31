@@ -252,6 +252,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
+    <div style="margin-top:6px; opacity:0.6;">portada v3</div>
 </footer>
 
 <script>
@@ -281,16 +282,30 @@
         { archivo: 'webs/penaltis.html',       nombre: 'Penaltis',       icono: '⚽', desarrollo: true }
     ];
 
-    var BASE = ['./', './juegos.html', './manifest.json',
-                './images/icono-192.png', './images/icono-512.png',
-                './images/apple-touch-icon.png'];
+    /* La portada se identifica sola en lugar de llevar su nombre escrito a
+       mano: así, si el archivo se renombra (juegos.html -> index.html) o se
+       mueve de carpeta, la lista de descarga sigue siendo correcta.
+       Se guardan las dos formas —la carpeta y el archivo— porque para el
+       navegador "/repo/" y "/repo/index.html" son dos entradas distintas de
+       caché aunque sirvan el mismo contenido. */
+    var SIN_PARAMS = location.href.split('#')[0].split('?')[0];
+    var CARPETA = SIN_PARAMS.replace(/[^/]*$/, '');
+
+    /* La portada se lista por su URL real (SIN_PARAMS) y por la de carpeta.
+       No se añade ningún nombre de archivo escrito a mano: si se lista un
+       "index.html" que no existe, la descarga informaría de un archivo perdido
+       que en realidad nunca fue necesario. */
+    var BASE = [CARPETA, SIN_PARAMS, CARPETA + 'manifest.json',
+                CARPETA + 'images/icono-192.png',
+                CARPETA + 'images/icono-512.png',
+                CARPETA + 'images/apple-touch-icon.png'];
 
     function listaCompleta() {
         var urls = BASE.slice();
         JUEGOS.forEach(function (j) {
-            urls.push('./' + j.archivo);
+            urls.push(CARPETA + j.archivo);
             (j.extras || []).forEach(function (x) {
-                urls.push(x.indexOf('http') === 0 ? x : './' + x);
+                urls.push(x.indexOf('http') === 0 ? x : CARPETA + x);
             });
         });
         // Sin duplicados: varios juegos comparten la misma fuente
