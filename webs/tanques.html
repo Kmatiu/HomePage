@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tanks! - Juego de estrategia de tanques</title>
     <style>
         * {
@@ -11,6 +11,8 @@
             box-sizing: border-box;
         }
         
+        html, body { height: 100%; }
+
         body {
             font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
@@ -18,13 +20,29 @@
             flex-direction: column; /* MODIFICADO - Para colocar el HUD arriba */
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* dvh tiene en cuenta la barra de direcciones del móvil */
+            height: 100vh;
+            height: 100dvh;
             overflow: hidden;
+            overscroll-behavior: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
         }
-        
+
+        /* Zona flexible que reparte la altura entre el HUD y el tablero */
+        #gameStage {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         /* MODIFICADO - Nuevo contenedor para el HUD */
         #hudContainer {
-            width: 810px; /* Ancho del canvas + bordes */
+            width: 100%;          /* antes 810px fijos: forzaba el desbordamiento */
+            max-width: 810px;
+            flex: 0 0 auto;
             background: #111;
             color: white;
             padding: 10px 20px;
@@ -58,39 +76,47 @@
             letter-spacing: 3px;
         }
         
+        /* Los canvas conservan su buffer de 800x600 (las coordenadas del juego
+           no cambian) y se escalan para caber. El de rastros va en flujo y
+           marca el tamaño; el principal se superpone encima. */
         #gameContainer {
             background: #c2b280; /* MODIFICADO - Color de fondo de arena */
             border: 5px solid #444;
             border-radius: 0 0 10px 10px; /* MODIFICADO */
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             position: relative;
-            width: 810px; /* Ancho fijo para contener los canvas */
-            height: 610px;
             display: none;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
         }
-        
-        
-        /* MODIFICADO - Lienzos superpuestos */
-        canvas {
+
+        #gameContainer.active { display: flex; }
+
+        #tracksCanvas {
+            position: static;
+            display: block;
+            background: transparent;
+            max-width: 100%;
+            max-height: 100%;
+            z-index: 1;
+            touch-action: none;
+        }
+
+        #gameCanvas {
             position: absolute;
             top: 0;
             left: 0;
-            display: block;
-        }
-        
-        #gameCanvas {
+            width: 100%;
+            height: 100%;
             background: transparent; /* El lienzo principal es transparente */
             z-index: 2;
-        }
-        
-        #tracksCanvas {
-            background: transparent; /* El lienzo de rastros también */
-            z-index: 1;
+            touch-action: none;
         }
         
         
         #menu {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -285,6 +311,151 @@
             color: #ffd700;
         }
         
+
+        /* ================= CONTROLES TÁCTILES =================
+           El tanque se mueve con el chasis (cuatro direcciones) mientras la
+           torreta apunta de forma independiente, que con ratón es apuntar y
+           con el dedo es tocar el punto del campo al que quieres disparar.
+           Por eso aquí conviven las dos cosas: cruceta para el chasis y
+           puntería directa sobre el campo, que es como funciona el ratón. */
+        #touchControls {
+            position: absolute;
+            inset: 0;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        body.touch-device #gameContainer.active #touchControls { display: flex; }
+
+        .touch-pad {
+            display: grid;
+            grid-template-columns: repeat(3, auto);
+            gap: 6px;
+            pointer-events: auto;
+        }
+
+        .touch-pad .spacer { width: 54px; height: 54px; }
+
+        .touch-btn {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.75);
+            background: rgba(0, 0, 0, 0.42);
+            color: #fff;
+            font-family: inherit;
+            font-size: 19px;
+            font-weight: bold;
+            line-height: 1;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+        }
+
+        .touch-pad.p2 .touch-btn { border-color: rgba(231, 76, 60, 0.9); color: #ffb0a6; }
+        .touch-pad.p1 .touch-btn { border-color: rgba(74, 144, 226, 0.9); color: #b9d8ff; }
+
+        .touch-btn.fire {
+            width: 76px;
+            height: 76px;
+            font-size: 12px;
+            border-color: rgba(255, 200, 0, 0.9);
+            color: #ffd700;
+            background: rgba(60, 45, 0, 0.45);
+        }
+
+        .touch-btn:active { background: rgba(255, 255, 255, 0.28); }
+
+        .pad-label {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+        }
+
+        #pauseTouchBtn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 6;
+            display: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.75);
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 15px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        body.touch-device #gameContainer.active #pauseTouchBtn { display: block; }
+
+        #aimHint {
+            position: absolute;
+            left: 50%;
+            top: 10px;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.75);
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 6;
+            display: none;
+            text-align: center;
+            max-width: 88%;
+        }
+
+        body.touch-device #aimHint.visible { display: block; }
+
+        #twoPlayersNote {
+            color: #ff8a80;
+            font-size: 13px;
+            margin: -6px auto 12px;
+            max-width: 280px;
+            text-align: center;
+            display: none;
+            line-height: 1.5;
+        }
+
+        #btn2P:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(0.85);
+        }
+
+        /* En táctil el :hover se queda pegado tras tocar */
+        @media (hover: none) {
+            .menu-button:hover { transform: none; }
+        }
+
+        @media (max-width: 720px), (max-height: 500px) {
+            #hudContainer { padding: 4px 8px; font-size: 12px; border-width: 3px; }
+            #levelName { font-size: 13px; margin-bottom: 2px; }
+            #playerInfo, #enemyInfo { font-size: 11px; }
+            #playerLives { font-size: 14px; letter-spacing: 1px; }
+            #difficultyDisplay { font-size: 10px !important; }
+            #gameContainer { border-width: 3px; }
+
+            #menu { padding: 18px 14px; width: 94%; max-width: 380px; }
+            #menu h1 { font-size: 26px; margin-bottom: 16px; }
+            .menu-button { width: 100%; max-width: 260px; padding: 11px; font-size: 15px; margin: 8px auto; }
+
+            .touch-btn { width: 46px; height: 46px; font-size: 16px; }
+            .touch-pad .spacer { width: 46px; height: 46px; }
+            .touch-btn.fire { width: 64px; height: 64px; font-size: 11px; }
+        }
     </style>
 </head>
 <body>
@@ -309,9 +480,39 @@
         
     </div>
     
+    <div id="gameStage">
     <div id="gameContainer">
         <canvas id="tracksCanvas" width="800" height="600"></canvas>
         <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+        <div id="aimHint">Toca el campo para apuntar y disparar</div>
+        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
+
+        <div id="touchControls">
+            <div class="touch-pad p1" id="padP1">
+                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="1" data-dir="up" aria-label="Arriba">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="1" data-dir="left" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-p="1" data-dir="down" aria-label="Abajo">▼</button>
+                <button class="touch-btn" type="button" data-p="1" data-dir="right" aria-label="Derecha">▶</button>
+            </div>
+
+            <div class="touch-pad p2" id="padP2" style="display:none;">
+                <div class="pad-label">J2</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
+            </div>
+
+            <div class="touch-pad" id="padFire">
+                <button class="touch-btn fire" type="button" data-fire="1" aria-label="Disparar">FUEGO</button>
+            </div>
+        </div>
         
         <div id="pauseOverlay">
             <div id="pauseMenu">
@@ -345,6 +546,7 @@
         
         
     </div>
+    </div>
     <div id="menu">
         <div id="mainMenu">
             <h1>🎮 TANKS! 🎮</h1>
@@ -358,7 +560,8 @@
             </div>
             
             <button class="menu-button" onclick="startGame(1)">1 JUGADOR</button>
-            <button class="menu-button" onclick="startGame(2)">2 JUGADORES</button>
+            <button class="menu-button" id="btn2P" onclick="startGame(2)">2 JUGADORES</button>
+            <div id="twoPlayersNote"></div>
             <button class="menu-button" onclick="showInstructions()">INSTRUCCIONES</button>
             <button class="menu-button ranking-button" onclick="showRanking()">🏆 RANKING TOP 10</button>
             <button class="menu-button" onclick="showSettings()">⚙️ AJUSTES</button>
@@ -2061,6 +2264,12 @@
     const keys = {};
     
     document.addEventListener('keydown', e => {
+        // Sin esto las flechas y el espacio hacen scroll de la página
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key) &&
+            !(e.target instanceof HTMLInputElement)) {
+            e.preventDefault();
+        }
+
         keys[e.key.toLowerCase()] = true;
         
         if (e.key.toLowerCase() === 'p') {
@@ -2140,17 +2349,165 @@
         }
     });
     
+    // Convierte coordenadas de pantalla a coordenadas internas del canvas.
+    // Antes se restaba solo el desplazamiento: bastaba porque el canvas se
+    // mostraba a tamaño real, pero al escalarlo en móvil la puntería se
+    // desviaría tanto más cuanto menor fuese la escala.
+    function toCanvasPos(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        if (!r.width || !r.height) return null;
+        return {
+            x: (clientX - r.left) / r.width * WIDTH,
+            y: (clientY - r.top) / r.height * HEIGHT
+        };
+    }
+
     canvas.addEventListener('mousemove', e => {
-        if (players[0]) {
-            const r = canvas.getBoundingClientRect();
-            players[0].mousePos.x = e.clientX - r.left;
-            players[0].mousePos.y = e.clientY - r.top;
-        }
+        if (!players[0]) return;
+        const p = toCanvasPos(e.clientX, e.clientY);
+        if (p) { players[0].mousePos.x = p.x; players[0].mousePos.y = p.y; }
     });
     
     canvas.addEventListener('mousedown', e => {
         if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
     });
+
+    // ================= CONTROL TÁCTIL =================
+    // Apuntar con el dedo sobre el campo es el equivalente exacto del ratón:
+    // la torreta gira hacia el punto tocado. Tocar dispara, y arrastrar sigue
+    // apuntando sin gastar más disparos, igual que mover el ratón.
+    const dirKeys = { up: 'up', down: 'down', left: 'left', right: 'right' };
+
+    function setTouchDir(playerIndex, dir, value) {
+        const p = players[playerIndex];
+        if (!p) return;
+        p.controls[dirKeys[dir]] = value;
+    }
+
+    function releaseAllTouchDirs() {
+        for (const p of players) {
+            if (!p) continue;
+            p.controls.up = p.controls.down = p.controls.left = p.controls.right = false;
+        }
+    }
+
+    function initTouchControls() {
+        if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+            document.body.classList.add('touch-device');
+        }
+
+        document.querySelectorAll('#touchControls [data-dir]').forEach(btn => {
+            const idx = parseInt(btn.dataset.p, 10) - 1;
+            const dir = btn.dataset.dir;
+
+            const press = (e) => { e.preventDefault(); if (gameState === GAME_STATES.PLAYING) setTouchDir(idx, dir, true); };
+            const release = (e) => { e.preventDefault(); setTouchDir(idx, dir, false); };
+
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointercancel', release);
+            btn.addEventListener('pointerleave', release);
+        });
+
+        document.querySelectorAll('#touchControls [data-fire]').forEach(btn => {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
+            });
+        });
+
+        // Puntería sobre el campo
+        const container = document.getElementById('gameContainer');
+        let aiming = false;
+
+        const aim = (e, fire) => {
+            if (e.target.closest('#touchControls') || e.target.closest('button')) return;
+            if (gameState !== GAME_STATES.PLAYING || !players[0]) return;
+
+            const p = toCanvasPos(e.clientX, e.clientY);
+            if (!p) return;
+
+            players[0].mousePos.x = p.x;
+            players[0].mousePos.y = p.y;
+            if (fire) players[0].controls.shoot = true;
+
+            document.getElementById('aimHint').classList.remove('visible');
+        };
+
+        container.addEventListener('pointerdown', (e) => {
+            if (e.pointerType === 'mouse') return;   // el ratón ya tiene sus listeners
+            aiming = true;
+            aim(e, true);
+        });
+
+        container.addEventListener('pointermove', (e) => {
+            if (!aiming || e.pointerType === 'mouse') return;
+            aim(e, false);
+        });
+
+        const stopAim = () => { aiming = false; };
+        container.addEventListener('pointerup', stopAim);
+        container.addEventListener('pointercancel', stopAim);
+
+        document.getElementById('pauseTouchBtn').addEventListener('click', () => {
+            if (gameState === GAME_STATES.PLAYING) pauseGame();
+            else if (gameState === GAME_STATES.PAUSED) resumeGame();
+        });
+    }
+
+    function showTouchPadsFor(count) {
+        document.getElementById('padP2').style.display = count === 2 ? 'grid' : 'none';
+        document.getElementById('labelP1').style.display = count === 2 ? 'block' : 'none';
+        document.getElementById('aimHint').classList.add('visible');
+    }
+
+    // ================= DISPONIBILIDAD DE 2 JUGADORES =================
+    // Dos crucetas más la zona de puntería no caben en un móvil. Se decide
+    // midiendo el hueco real, no adivinando el aparato por el user-agent: un
+    // móvil apaisado y una tablet vertical se confunden, y además miente.
+    const TWO_P_MIN_WIDTH = 720;
+    const TWO_P_MIN_HEIGHT = 480;
+
+    function twoPlayersFits() {
+        if (!document.body.classList.contains('touch-device')) return true;
+        return window.innerWidth >= TWO_P_MIN_WIDTH && window.innerHeight >= TWO_P_MIN_HEIGHT;
+    }
+
+    function updateTwoPlayersAvailability() {
+        const btn = document.getElementById('btn2P');
+        const note = document.getElementById('twoPlayersNote');
+        if (!btn || !note) return;
+
+        if (twoPlayersFits()) {
+            btn.disabled = false;
+            note.style.display = 'none';
+        } else {
+            btn.disabled = true;
+            note.style.display = 'block';
+            note.textContent = window.innerHeight > window.innerWidth
+                ? 'Dos jugadores necesita más ancho: gira el dispositivo o usa una tablet.'
+                : 'Dos jugadores necesita una pantalla mayor (tablet u ordenador).';
+        }
+    }
+
+    window.addEventListener('resize', updateTwoPlayersAvailability);
+    window.addEventListener('orientationchange', () => setTimeout(updateTwoPlayersAvailability, 200));
+
+    // Al cambiar de aplicación se pierde el evento de soltar y el tanque
+    // seguiría avanzando solo al volver.
+    function clearKeys() {
+        // `keys` es const: hay que vaciarlo, no reasignarlo.
+        for (const k of Object.keys(keys)) keys[k] = false;
+        releaseAllTouchDirs();
+    }
+
+    window.addEventListener('blur', clearKeys);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) clearKeys();
+    });
+
+    initTouchControls();
+    updateTwoPlayersAvailability();
     
     // MODIFICADO - Actualizar el nuevo HUD
     function updateUI() {
@@ -2231,6 +2588,11 @@
     
     function gameLoop(currentTime) {
         requestAnimationFrame(gameLoop);
+        // requestAnimationFrame llama con currentTime undefined si el bucle se
+        // arranca a mano, y en el primer frame real lastTime vale 0, así que
+        // el delta era el tiempo transcurrido desde que cargó la página.
+        if (typeof currentTime !== 'number') currentTime = performance.now();
+        if (!lastTime) lastTime = currentTime;
         const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
         lastTime = currentTime;
         
@@ -2286,11 +2648,14 @@
     }
     
     function startGame(playerCount) {
+        if (playerCount === 2 && !twoPlayersFits()) return;
+        showTouchPadsFor(playerCount);
+
         console.log('===================================');
         console.log('🎮 START GAME: Iniciando nueva partida');
         console.log('===================================');
         document.getElementById('hudContainer').style.display = 'flex';
-        document.getElementById('gameContainer').style.display = 'block';
+        document.getElementById('gameContainer').classList.add('active');
         
         gameDifficulty = document.getElementById('difficultySelect').value;
         numPlayers = playerCount;
@@ -2331,7 +2696,7 @@
         document.getElementById('ranking').style.display = 'block';
         document.getElementById('settings').style.display = 'none';
         
-        const rankings = JSON.parse(localStorage.getItem('tankRankings') || '[]');
+        const rankings = JSON.parse(safeGetItem('tankRankings') || '[]');
         const rankingList = document.getElementById('rankingList');
         rankingList.innerHTML = '';
         
@@ -2384,10 +2749,11 @@
         document.getElementById('settings').style.display = 'block';
     }
     function showMainMenu() {
+        updateTwoPlayersAvailability();
         document.getElementById('menu').style.display = 'block';
         
         document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('gameContainer').classList.remove('active');
         
         document.getElementById('mainMenu').style.display = 'block';
         document.getElementById('instructions').style.display = 'none';
@@ -2417,7 +2783,7 @@
         console.log('🏠 QUIT TO MENU: Volviendo al menú principal');
         console.log('===================================');
         document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('gameContainer').classList.remove('active');
         gameState = GAME_STATES.MENU;
         stopBackgroundMusic();
         document.getElementById('pauseOverlay').style.display = 'none';
@@ -2425,15 +2791,46 @@
         showMainMenu();
     }
     
+    // Respaldo en memoria: si localStorage está bloqueado (modo privado,
+    // iframe con sandbox) o el contenido está corrupto, el JSON.parse sin
+    // protección tiraba el juego al abrir el ranking.
+    let rankingMemory = [];
+    const storageOK = (() => {
+        try {
+            localStorage.setItem('__t', '1');
+            localStorage.removeItem('__t');
+            return true;
+        } catch (e) {
+            return false;
+        }
+    })();
+
+    function safeGetItem(key) {
+        if (!storageOK) return null;
+        try { return localStorage.getItem(key); } catch (e) { return null; }
+    }
+
+    function safeSetItem(key, value) {
+        if (!storageOK) return;
+        try { localStorage.setItem(key, value); } catch (e) { console.warn('No se pudo guardar:', e); }
+    }
+
     function loadRanking() {
-        const rankingData = localStorage.getItem('tankRankings'); // <-- Corregido
+        if (!storageOK) return rankingMemory.slice();
+        const rankingData = safeGetItem('tankRankings'); // <-- Corregido
         if (rankingData) {
-            return JSON.parse(rankingData);
+            try {
+                const parsed = JSON.parse(rankingData);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
         }
         return [];
     }
     function saveRanking(ranking) {
-        localStorage.setItem('tankRankings', JSON.stringify(ranking)); // <-- Corregido
+        rankingMemory = ranking.slice();
+        safeSetItem('tankRankings', JSON.stringify(ranking)); // <-- Corregido
     }
     function isTopScore(score) {
         const ranking = loadRanking();
@@ -2501,7 +2898,7 @@
         
         
         // Obtener rankings actuales
-        const rankingDataRaw = localStorage.getItem('tankRankings');
+        const rankingDataRaw = safeGetItem('tankRankings');
         
         const rankings = JSON.parse(rankingDataRaw || '[]');
         
@@ -2525,10 +2922,10 @@
         // Guardar en localStorage
         const rankingsJSON = JSON.stringify(rankings);
         
-        localStorage.setItem('tankRankings', rankingsJSON);
+        safeSetItem('tankRankings', rankingsJSON);
         
         // Verificar que se guardó
-        const verification = localStorage.getItem('tankRankings');
+        const verification = safeGetItem('tankRankings');
         
         // Ocultar modal
         document.getElementById('nameModal').style.display = 'none';
@@ -2539,7 +2936,7 @@
         stopBackgroundMusic();
         // Ocultar containers del juego
         document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').style.display = 'none';
+        document.getElementById('gameContainer').classList.remove('active');
         
         showRanking();
     }
@@ -2559,7 +2956,7 @@
         pauseVolumeDisplay.textContent = v;
         pauseVolumeSlider.value = v;
         masterVolume = v / 100;
-        localStorage.setItem('tanksVolume', v);
+        safeSetItem('tanksVolume', v);
     });
     
     pauseVolumeSlider.addEventListener('input', e => {
@@ -2568,7 +2965,7 @@
         volumeDisplay.textContent = v;
         volumeSlider.value = v;
         masterVolume = v / 100;
-        localStorage.setItem('tanksVolume', v);
+        safeSetItem('tanksVolume', v);
     });
     
     // Control de volumen de música
@@ -2584,7 +2981,7 @@
         pauseMusicSlider.value = v;
         musicVolume = v / 100;
         updateMusicVolume();
-        localStorage.setItem('tanksMusicVolume', v);
+        safeSetItem('tanksMusicVolume', v);
     });
     
     pauseMusicSlider.addEventListener('input', e => {
@@ -2594,11 +2991,11 @@
         musicSlider.value = v;
         musicVolume = v / 100;
         updateMusicVolume();
-        localStorage.setItem('tanksMusicVolume', v);
+        safeSetItem('tanksMusicVolume', v);
     });
     
     // Cargar valores guardados
-    const savedVolume = localStorage.getItem('tanksVolume');
+    const savedVolume = safeGetItem('tanksVolume');
     if (savedVolume) {
         volumeSlider.value = savedVolume;
         pauseVolumeSlider.value = savedVolume;
@@ -2607,7 +3004,7 @@
         masterVolume = savedVolume / 100;
     }
     
-    const savedMusicVolume = localStorage.getItem('tanksMusicVolume');
+    const savedMusicVolume = safeGetItem('tanksMusicVolume');
     if (savedMusicVolume) {
         musicSlider.value = savedMusicVolume;
         pauseMusicSlider.value = savedMusicVolume;
