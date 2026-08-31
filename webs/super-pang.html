@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Super Pang - Retro Game</title>
     <style>
         * {
@@ -11,27 +11,43 @@
             box-sizing: border-box;
         }
         
+        html, body { height: 100%; }
+
         body {
             background: #000;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            /* dvh tiene en cuenta la barra de direcciones del móvil */
+            height: 100vh;
+            height: 100dvh;
             font-family: 'Courier New', monospace;
             overflow: hidden;
+            overscroll-behavior: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
         }
-        
+
+        /* El canvas conserva su buffer de 960x600 (las coordenadas del juego no
+           cambian) y se escala para caber. El contenedor se ajusta al canvas,
+           así que las capas con inset:0 siguen encajando exactamente. */
         #gameContainer {
             position: relative;
             background: #111;
             box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
+            display: flex;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
         }
-        
+
         canvas {
             display: block;
             image-rendering: pixelated;
             image-rendering: crisp-edges;
             background: #000;
+            max-width: 100%;
+            max-height: 100%;
+            touch-action: none;
         }
         
         #menu {
@@ -52,7 +68,7 @@
         
         
         .menu-title {
-            font-size: 52px;
+            font-size: clamp(24px, 7vw, 52px);
             color: #00ffff;
             text-shadow: 3px 3px 0 #ff00ff, 6px 6px 0 #000;
             margin-bottom: 15px;
@@ -66,6 +82,154 @@
             50% { transform: scale(1.05); }
         }
         
+        /* ---------- CONTROLES TÁCTILES ---------- */
+        /* En este juego hay que moverse y disparar A LA VEZ, así que los gestos
+           no valen: un dedo deslizando no puede expresar dos acciones continuas
+           simultáneas. Con botones, el pulgar izquierdo camina y el derecho
+           dispara sin soltar. Van superpuestos al tablero para no robarle
+           altura, y semitransparentes para tapar lo mínimo. */
+        #touchControls {
+            position: absolute;
+            inset: 0;
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px;
+            pointer-events: none;
+            z-index: 8;
+        }
+
+        body.touch-device #touchControls { display: flex; }
+
+        .touch-pad {
+            display: grid;
+            grid-template-columns: repeat(3, auto);
+            gap: 6px;
+            pointer-events: auto;
+            align-items: end;
+        }
+
+        .touch-pad .spacer { width: 56px; }
+
+        .touch-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 255, 255, 0.75);
+            background: rgba(0, 30, 45, 0.5);
+            color: #00ffff;
+            font-family: inherit;
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+        }
+
+        .touch-btn.fire {
+            width: 84px;
+            height: 84px;
+            font-size: 13px;
+            border-color: rgba(255, 80, 80, 0.85);
+            background: rgba(60, 0, 0, 0.5);
+            color: #ff8080;
+        }
+
+        .touch-btn:active { background: rgba(0, 255, 255, 0.3); }
+        .touch-btn.fire:active { background: rgba(255, 80, 80, 0.35); }
+
+        .pad-label {
+            grid-column: 1 / -1;
+            text-align: center;
+            font-size: 10px;
+            color: #00ffff;
+            pointer-events: none;
+        }
+
+        /* Botón de pausa: en móvil no existe la tecla P */
+        #pauseTouchBtn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            z-index: 9;
+            display: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 8px;
+            border: 2px solid rgba(0, 255, 255, 0.75);
+            background: rgba(0, 30, 45, 0.6);
+            color: #00ffff;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        body.touch-device #pauseTouchBtn { display: block; }
+
+        #rotateHint {
+            position: absolute;
+            left: 50%;
+            top: 12px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ffcc00;
+            color: #ffcc00;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 9;
+            display: none;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        @media (orientation: portrait) and (pointer: coarse) {
+            body.touch-device #rotateHint { display: block; }
+        }
+
+        #twoPlayersNote {
+            color: #ff8080;
+            font-size: 13px;
+            margin: 4px 20px 8px;
+            text-align: center;
+            display: none;
+            line-height: 1.5;
+        }
+
+        #btnStart2P:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+
+        /* En táctil el :hover se queda pegado tras tocar */
+        @media (hover: none) {
+            .menu-button:hover,
+            .difficulty-btn:hover,
+            .modal-close:hover {
+                transform: none;
+            }
+        }
+
+        /* Pantallas pequeñas: el menú y los diálogos viven dentro del tablero,
+           que aquí puede quedarse en 390 px de ancho. */
+        @media (max-width: 720px), (max-height: 460px) {
+            .menu-button { font-size: 13px; padding: 7px 16px; margin: 3px; }
+            .difficulty-btn { font-size: 11px; padding: 6px 10px; min-width: 0; }
+            .difficulty-label { font-size: 11px; margin-bottom: 4px; }
+            .difficulty-selector { margin: 6px 0 8px 0; }
+            .menu-title { margin-bottom: 6px; margin-top: 4px; }
+            #menu { padding: 8px 0; }
+
+            .touch-btn { width: 46px; height: 46px; font-size: 16px; }
+            .touch-btn.fire { width: 68px; height: 68px; font-size: 11px; }
+            .touch-pad .spacer { width: 46px; }
+        }
+
         @keyframes fallingConfeti {
             to { transform: translateY(70vh) rotate(720deg);}
         }
@@ -326,6 +490,39 @@
 <body>
     <div id="gameContainer">
         <canvas id="gameCanvas" width="960" height="600"></canvas>
+
+        <div id="rotateHint">↻ Gira el móvil a horizontal</div>
+        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
+
+        <div id="touchControls">
+            <div class="touch-pad" id="padP1">
+                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-player="1" data-key="ArrowUp" aria-label="Subir">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-player="1" data-key="ArrowLeft" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-player="1" data-key="ArrowDown" aria-label="Bajar">▼</button>
+                <button class="touch-btn" type="button" data-player="1" data-key="ArrowRight" aria-label="Derecha">▶</button>
+            </div>
+
+            <div class="touch-pad" id="padP2" style="display:none;">
+                <div class="pad-label">J2</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-player="2" data-key="w" aria-label="Subir J2">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-player="2" data-key="a" aria-label="Izquierda J2">◀</button>
+                <button class="touch-btn" type="button" data-player="2" data-key="s" aria-label="Bajar J2">▼</button>
+                <button class="touch-btn" type="button" data-player="2" data-key="d" aria-label="Derecha J2">▶</button>
+            </div>
+
+            <div class="touch-pad" id="padFire">
+                <button class="touch-btn fire" type="button" data-shoot="1" aria-label="Disparar">ARPÓN</button>
+            </div>
+
+            <div class="touch-pad" id="padFire2" style="display:none;">
+                <button class="touch-btn fire" type="button" data-shoot="2" aria-label="Disparar J2">ARPÓN J2</button>
+            </div>
+        </div>
         
         <div id="menu">
             <div class="menu-title">SUPER PANG</div>
@@ -341,6 +538,7 @@
             
             <button class="menu-button" id="btnStart1P">1 Jugador</button>
             <button class="menu-button" id="btnStart2P">2 Jugadores</button>
+            <div id="twoPlayersNote"></div>
             <button class="menu-button" id="btnTop10">Ver Top 10</button>
             <button class="menu-button" id="btnInstructions">Instrucciones</button>
             <div class="volume-control">
@@ -2497,13 +2695,39 @@
             }
         }
         
+        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
+        // iframe con sandbox) o el contenido está corrupto, el JSON.parse sin
+        // protección tiraba el juego al abrir el Top 10.
+        let top10Memory = [];
+        const storageOK = (() => {
+            try {
+                localStorage.setItem('__t', '1');
+                localStorage.removeItem('__t');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        })();
+
         function loadTop10() {
-            const data = localStorage.getItem('superPangTop10');
-            return data ? JSON.parse(data) : [];
+            if (!storageOK) return top10Memory.slice();
+            try {
+                const data = localStorage.getItem('superPangTop10');
+                const parsed = data ? JSON.parse(data) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
         }
         
         function saveTop10(top10) {
-            localStorage.setItem('superPangTop10', JSON.stringify(top10));
+            top10Memory = top10.slice();
+            if (!storageOK) return;
+            try {
+                localStorage.setItem('superPangTop10', JSON.stringify(top10));
+            } catch (e) {
+                console.warn('No se pudo guardar el Top 10:', e);
+            }
         }
         
         function addToTop10(name, scoreToAdd, level, difficulty) {
@@ -2725,7 +2949,48 @@
             }
         }
         
+        // Todo el movimiento va por FRAME (jugador 4 px, arpón 12, gravedad 0,35)
+        // y el bucle no calculaba ningún delta. En un móvil de 120 Hz —que son
+        // muchos hoy— el juego iba literalmente al doble de velocidad. El
+        // acumulador mantiene 60 pasos por segundo en cualquier pantalla, así
+        // que todas las constantes originales siguen siendo válidas.
+        const STEP_MS = 1000 / 60;
+        const MAX_FRAME_MS = 250;   // techo tras volver de segundo plano
+        const MAX_STEPS = 5;        // evita la espiral de la muerte
+        let lastFrameTime = 0;
+        let frameAccumulator = 0;
+
+        function frameDriver(now) {
+            if (gameState !== 'playing') return;
+
+            animationId = requestAnimationFrame(frameDriver);
+
+            let delta = now - lastFrameTime;
+            lastFrameTime = now;
+            if (delta > MAX_FRAME_MS) delta = MAX_FRAME_MS;
+
+            frameAccumulator += delta;
+
+            let steps = 0;
+            while (frameAccumulator >= STEP_MS && steps < MAX_STEPS) {
+                stepAndDraw();
+                frameAccumulator -= STEP_MS;
+                steps++;
+                if (gameState !== 'playing') { frameAccumulator = 0; break; }
+            }
+        }
+
+        // Arranca o reanuda el bucle. Conserva el nombre para no tocar las
+        // siete llamadas repartidas por el resto del archivo.
         function gameLoop() {
+            if (gameState !== 'playing') return;
+            cancelAnimationFrame(animationId);
+            lastFrameTime = performance.now();
+            frameAccumulator = 0;
+            animationId = requestAnimationFrame(frameDriver);
+        }
+
+        function stepAndDraw() {
             if (gameState !== 'playing') return;
             
             const environmentIndex = currentLevel % levelEnvironments.length;
@@ -2917,7 +3182,6 @@
             }
             
             drawHUD();
-            animationId = requestAnimationFrame(gameLoop);
         }
         function showSuperPangWinScreen(finalScore) {
             globalFinalScore = finalScore;
@@ -3205,6 +3469,7 @@
             });
             
             document.getElementById('btnStart1P').addEventListener('click', () => {
+                showTouchPadsFor(1);
                 document.getElementById('menu').style.display = 'none';
                 gameState = 'playing';
                 playSound('confirm');
@@ -3213,6 +3478,8 @@
             });
             
             document.getElementById('btnStart2P').addEventListener('click', () => {
+                if (!twoPlayersFits()) return;
+                showTouchPadsFor(2);
                 document.getElementById('menu').style.display = 'none';
                 gameState = 'playing';
                 playSound('confirm');
@@ -3250,6 +3517,7 @@
             });
             
             document.getElementById('btnMenu').addEventListener('click', () => {
+                updateTwoPlayersAvailability();
                 document.getElementById('gameOver').classList.remove('active');
                 document.getElementById('menu').style.display = 'flex';
                 gameState = 'menu';
@@ -3264,6 +3532,7 @@
             });
             
             document.getElementById('btnPauseToMenu').addEventListener('click', () => {
+                updateTwoPlayersAvailability();
                 document.getElementById('pauseMenu').classList.remove('active');
                 document.getElementById('menu').style.display = 'flex';
                 gameState = 'menu';
@@ -3295,8 +3564,116 @@
                 sfxVolume = e.target.value / 100;
             });
             
+            // ============================
+            // CONTROL TÁCTIL
+            // ============================
+            // Los botones escriben en el MISMO objeto `keys` que usa el teclado,
+            // así que la lógica del jugador no se entera de la diferencia.
+            function pauseGame() {
+                if (gameState !== 'playing') return;
+                gameState = 'paused';
+                cancelAnimationFrame(animationId);
+                keys = {};
+                document.getElementById('pauseMenu').classList.add('active');
+            }
+
+            function initTouchControls() {
+                if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+                    document.body.classList.add('touch-device');
+                }
+
+                document.querySelectorAll('#touchControls [data-key]').forEach(btn => {
+                    const key = btn.dataset.key;
+
+                    const press = (e) => {
+                        e.preventDefault();
+                        if (gameState !== 'playing') return;
+                        keys[key] = true;
+                        if (key.length === 1) keys[key.toUpperCase()] = true;
+                    };
+                    const release = (e) => {
+                        e.preventDefault();
+                        keys[key] = false;
+                        if (key.length === 1) keys[key.toUpperCase()] = false;
+                    };
+
+                    btn.addEventListener('pointerdown', press);
+                    btn.addEventListener('pointerup', release);
+                    btn.addEventListener('pointercancel', release);
+                    btn.addEventListener('pointerleave', release);
+                });
+
+                document.querySelectorAll('#touchControls [data-shoot]').forEach(btn => {
+                    const player = parseInt(btn.dataset.shoot, 10);
+                    btn.addEventListener('pointerdown', (e) => {
+                        e.preventDefault();
+                        if (gameState === 'playing') shoot(player);
+                    });
+                });
+
+                document.getElementById('pauseTouchBtn').addEventListener('click', () => {
+                    if (gameState === 'playing') {
+                        pauseGame();
+                    } else if (gameState === 'paused') {
+                        document.getElementById('pauseMenu').classList.remove('active');
+                        gameState = 'playing';
+                        gameLoop();
+                    }
+                });
+            }
+
+            function showTouchPadsFor(players) {
+                document.getElementById('padP2').style.display = players === 2 ? 'grid' : 'none';
+                document.getElementById('padFire2').style.display = players === 2 ? 'grid' : 'none';
+                document.getElementById('labelP1').style.display = players === 2 ? 'block' : 'none';
+            }
+
+            // ============================
+            // DISPONIBILIDAD DE 2 JUGADORES
+            // ============================
+            // Dos jugadores comparten pantalla y necesitan cuatro botoneras a la
+            // vez. Se decide midiendo el hueco real, no adivinando el aparato por
+            // el user-agent: un móvil apaisado y una tablet vertical se confunden,
+            // y el user-agent además miente.
+            const TWO_P_MIN_WIDTH = 720;
+            const TWO_P_MIN_HEIGHT = 480;
+
+            function twoPlayersFits() {
+                if (!document.body.classList.contains('touch-device')) return true;
+                return window.innerWidth >= TWO_P_MIN_WIDTH && window.innerHeight >= TWO_P_MIN_HEIGHT;
+            }
+
+            function updateTwoPlayersAvailability() {
+                const btn = document.getElementById('btnStart2P');
+                const note = document.getElementById('twoPlayersNote');
+                if (!btn || !note) return;
+
+                if (twoPlayersFits()) {
+                    btn.disabled = false;
+                    note.style.display = 'none';
+                } else {
+                    btn.disabled = true;
+                    note.style.display = 'block';
+                    note.textContent = window.innerHeight > window.innerWidth
+                        ? 'Dos jugadores necesita más ancho: gira el dispositivo o usa una tablet.'
+                        : 'Dos jugadores necesita una pantalla mayor (tablet u ordenador).';
+                }
+            }
+
+            window.addEventListener('resize', updateTwoPlayersAvailability);
+            window.addEventListener('orientationchange', () => setTimeout(updateTwoPlayersAvailability, 200));
+
+            initTouchControls();
+            updateTwoPlayersAvailability();
+
             document.addEventListener('keydown', (e) => {
                 keys[e.key] = true;
+
+                // Sin esto las flechas y el espacio hacen scroll de la página
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key) &&
+                    !(e.target instanceof HTMLInputElement)) {
+                    e.preventDefault();
+                }
                 
                 if (gameState === 'playing') {
                     if (e.key === 'Enter') {
@@ -3342,6 +3719,7 @@
         });
         
         window.addEventListener('blur', () => {
+            keys = {};
             if (gameState === 'playing') {
                 gameState = 'paused';
                 cancelAnimationFrame(animationId);
