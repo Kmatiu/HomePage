@@ -127,22 +127,65 @@
 
         body.touch-device .pad-col.usada { display: flex; }
 
-        .touch-pad {
+        /* Zona de arrastre: se camina y se suben escaleras empujando el dedo
+           en la dirección deseada, como el mando de Pac-Man. El arpón queda en
+           un botón aparte porque hay que poder disparar SIN dejar de moverse. */
+        .stick {
+            position: relative;
+            width: 128px;
+            height: 128px;
+            border-radius: 50%;
+            border: 2px dashed rgba(0, 255, 255, 0.4);
+            background: rgba(0, 40, 60, 0.35);
             display: grid;
-            grid-template-columns: repeat(3, auto);
-            gap: 6px;
-            align-items: end;
+            place-items: center;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
+        .stick-knob {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(0, 200, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.85);
+            pointer-events: none;
+            transition: transform 0.09s ease-out;
+        }
+
+        .stick.p2 .stick-knob { background: rgba(255, 150, 0, 0.5); }
+        .stick.activo .stick-knob { transition: none; }
+
+        .stick-label {
+            position: absolute;
+            bottom: -16px;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+        }
+
+        /* Vertical: mando abajo a la izquierda, arpón abajo a la derecha.
+           Antes quedaban en dos filas apiladas y no se llegaba con los pulgares. */
         @media (max-aspect-ratio: 1/1) {
-            #playArea { flex-direction: column; gap: 10px; }
-            #stageWrap { order: -1; }
-            .pad-col {
-                flex-direction: row;
-                width: 100%;
-                justify-content: space-around;
-                gap: 16px;
+            #playArea {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr auto;
+                grid-template-areas: "campo campo" "izq der";
+                gap: 8px;
             }
+            #stageWrap { grid-area: campo; min-width: 0; }
+            #colIzq { grid-area: izq; }
+            #colDer { grid-area: der; }
+            .pad-col { flex-direction: row; justify-content: center; }
+        }
+
+        @media (max-height: 420px) {
+            .stick { width: 100px; height: 100px; }
+            .stick-knob { width: 44px; height: 44px; }
         }
 
         .touch-pad .spacer { width: 56px; }
@@ -540,26 +583,18 @@
 <div id="playArea">
 
     <!-- Columna izquierda: jugador 1, y jugador 2 cuando hay dos -->
+    <!-- Columna izquierda: movimiento. En dos jugadores, el segundo se sienta
+         a este lado y tiene aquí su mando y su arpón. -->
     <div class="pad-col" id="colIzq">
-        <div class="touch-pad" id="padP2" style="display:none;">
-            <div class="pad-label">J2</div>
-            <div class="spacer"></div>
-            <button class="touch-btn" type="button" data-player="2" data-key="w" aria-label="Subir J2">▲</button>
-            <div class="spacer"></div>
-            <button class="touch-btn" type="button" data-player="2" data-key="a" aria-label="Izquierda J2">◀</button>
-            <button class="touch-btn" type="button" data-player="2" data-key="s" aria-label="Bajar J2">▼</button>
-            <button class="touch-btn" type="button" data-player="2" data-key="d" aria-label="Derecha J2">▶</button>
+        <div class="stick p2" id="stickP2" style="display:none;" role="application" aria-label="Mover al jugador 2">
+            <div class="stick-knob"></div>
+            <div class="stick-label">J2</div>
         </div>
         <button class="touch-btn fire" type="button" data-shoot="2" id="fireP2" style="display:none;" aria-label="Disparar J2">ARPÓN</button>
 
-        <div class="touch-pad" id="padP1">
-            <div class="pad-label" id="labelP1" style="display:none;">J1</div>
-            <div class="spacer"></div>
-            <button class="touch-btn" type="button" data-player="1" data-key="ArrowUp" aria-label="Subir">▲</button>
-            <div class="spacer"></div>
-            <button class="touch-btn" type="button" data-player="1" data-key="ArrowLeft" aria-label="Izquierda">◀</button>
-            <button class="touch-btn" type="button" data-player="1" data-key="ArrowDown" aria-label="Bajar">▼</button>
-            <button class="touch-btn" type="button" data-player="1" data-key="ArrowRight" aria-label="Derecha">▶</button>
+        <div class="stick" id="stickP1" role="application" aria-label="Mover al jugador">
+            <div class="stick-knob"></div>
+            <div class="stick-label" id="labelP1" style="display:none;">J1</div>
         </div>
     </div>
 
@@ -3620,8 +3655,100 @@
             // ============================
             // CONTROL TÁCTIL
             // ============================
-            // Los botones escriben en el MISMO objeto `keys` que usa el teclado,
+            // El mando escribe en el MISMO objeto `keys` que usa el teclado,
             // así que la lógica del jugador no se entera de la diferencia.
+
+            /* Teclas que escribe cada mando de arrastre. */
+            const TECLAS_STICK = [
+                { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' },
+                { left: 'a', right: 'd', up: 'w', down: 's' }
+            ];
+
+            const RADIO_STICK = 46;   // hasta dónde llega la bola del mando
+            const ZONA_MUERTA = 14;   // por debajo de esto no se mueve: evita
+                                      // desplazamientos al apoyar el pulgar
+
+            function aplicarVector(idx, dx, dy) {
+                const t = TECLAS_STICK[idx];
+                if (!t) return;
+
+                function poner(tecla, valor) {
+                    keys[tecla] = valor;
+                    if (tecla.length === 1) keys[tecla.toUpperCase()] = valor;
+                }
+
+                poner(t.left,  dx < 0);
+                poner(t.right, dx > 0);
+                poner(t.up,    dy < 0);
+                poner(t.down,  dy > 0);
+            }
+
+            /* Zona de arrastre: la dirección sale del vector entre el punto
+               donde aterrizó el dedo y donde está ahora, como el mando de
+               Pac-Man, pero encerrada en su propio círculo para que el pulgar
+               derecho quede libre para el arpón. */
+            function crearStick(el, idx) {
+                if (!el) return;
+
+                const knob = el.querySelector('.stick-knob');
+                let punteroActivo = null;
+                let ox = 0, oy = 0;
+
+                function soltar() {
+                    aplicarVector(idx, 0, 0);
+                    knob.style.transform = 'translate(0px, 0px)';
+                    el.classList.remove('activo');
+                    punteroActivo = null;
+                }
+
+                el.addEventListener('pointerdown', (e) => {
+                    e.preventDefault();
+                    if (gameState !== 'playing') return;
+                    punteroActivo = e.pointerId;
+                    ox = e.clientX;
+                    oy = e.clientY;
+                    el.classList.add('activo');
+                    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+                });
+
+                el.addEventListener('pointermove', (e) => {
+                    if (e.pointerId !== punteroActivo) return;
+                    e.preventDefault();
+
+                    let dx = e.clientX - ox;
+                    let dy = e.clientY - oy;
+
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > RADIO_STICK) {
+                        dx = dx / dist * RADIO_STICK;
+                        dy = dy / dist * RADIO_STICK;
+                    }
+
+                    knob.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+                    aplicarVector(idx,
+                        Math.abs(dx) > ZONA_MUERTA ? dx : 0,
+                        Math.abs(dy) > ZONA_MUERTA ? dy : 0);
+                });
+
+                ['pointerup', 'pointercancel'].forEach((tipo) => {
+                    el.addEventListener(tipo, (e) => {
+                        if (e.pointerId !== punteroActivo) return;
+                        e.preventDefault();
+                        soltar();
+                    });
+                });
+
+                el._soltar = soltar;
+            }
+
+            function soltarTodosLosSticks() {
+                ['stickP1', 'stickP2'].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el && el._soltar) el._soltar();
+                });
+            }
+
             function pauseGame() {
                 if (gameState !== 'playing') return;
                 gameState = 'paused';
@@ -3635,26 +3762,8 @@
                     document.body.classList.add('touch-device');
                 }
 
-                document.querySelectorAll('[data-key]').forEach(btn => {
-                    const key = btn.dataset.key;
-
-                    const press = (e) => {
-                        e.preventDefault();
-                        if (gameState !== 'playing') return;
-                        keys[key] = true;
-                        if (key.length === 1) keys[key.toUpperCase()] = true;
-                    };
-                    const release = (e) => {
-                        e.preventDefault();
-                        keys[key] = false;
-                        if (key.length === 1) keys[key.toUpperCase()] = false;
-                    };
-
-                    btn.addEventListener('pointerdown', press);
-                    btn.addEventListener('pointerup', release);
-                    btn.addEventListener('pointercancel', release);
-                    btn.addEventListener('pointerleave', release);
-                });
+                crearStick(document.getElementById('stickP1'), 0);
+                crearStick(document.getElementById('stickP2'), 1);
 
                 document.querySelectorAll('[data-shoot]').forEach(btn => {
                     const player = parseInt(btn.dataset.shoot, 10);
@@ -3681,9 +3790,10 @@
                    columna en vez de tener que cruzar el brazo. */
                 document.getElementById('colIzq').classList.add('usada');
                 document.getElementById('colDer').classList.add('usada');
-                document.getElementById('padP2').style.display = players === 2 ? 'grid' : 'none';
+                document.getElementById('stickP2').style.display = players === 2 ? 'grid' : 'none';
                 document.getElementById('fireP2').style.display = players === 2 ? 'block' : 'none';
                 document.getElementById('labelP1').style.display = players === 2 ? 'block' : 'none';
+                soltarTodosLosSticks();
             }
 
             // ============================
@@ -3778,6 +3888,7 @@
         
         window.addEventListener('blur', () => {
             keys = {};
+            if (typeof soltarTodosLosSticks === 'function') soltarTodosLosSticks();
             if (gameState === 'playing') {
                 gameState = 'paused';
                 cancelAnimationFrame(animationId);
@@ -3790,3 +3901,12 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
