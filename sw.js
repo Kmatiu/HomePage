@@ -8,7 +8,7 @@
    propia carpeta, así que si se sube dentro de webs/ no vería ni images/ ni la
    portada, y la descarga sin conexión no serviría de nada. */
 
-var VERSION = 'v4';
+var VERSION = 'v5';
 var CACHE = 'juegos-' + VERSION;
 
 /* Lo mínimo para que la portada abra sin conexión. Se cachea solo al instalar,
