@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>PINBALL RETRO</title>
 
-    <!-- El @import estaba dentro del <style>, lo que bloquea el renderizado y
-         encadena dos descargas en serie. Como <link> con preconnect va antes. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         /* === RESET Y CONFIGURACIÓN GLOBAL === */
         * {
@@ -18,10 +13,22 @@
             box-sizing: border-box;
         }
 
+        /* Se retira Press Start 2P. Es una fuente de píxeles preciosa en un
+           monitor grande, pero a 10 px en un móvil cuesta leerla, y sobre todo
+           su reserva era `cursive`: cuando la descarga fallaba (sin cobertura,
+           o antes de que llegue) iOS la sustituía por una letra MANUSCRITA,
+           que es lo que se veía en pantalla. Una tipografía monoespaciada del
+           sistema se lee siempre, no depende de la red y mantiene el aire
+           retro, que aquí lo dan los colores y los bordes de neón. */
+        :root {
+            --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                      "Liberation Mono", "Courier New", monospace;
+        }
+
         html, body { height: 100%; }
 
         body {
-            font-family: 'Press Start 2P', cursive;
+            font-family: var(--fuente);
             background: linear-gradient(135deg, #0A0A0A 0%, #1a1a2e 100%);
             color: #fff;
             overflow: hidden;
@@ -42,8 +49,13 @@
            física de Matter.js no cambian ni un píxel. */
         #game-container {
             position: relative;
-            display: flex;
-            max-width: 100%;
+            /* Dimensionado explícito: nada de depender de cómo resuelve flexbox
+               los porcentajes. El ancho es el menor entre el que hay disponible
+               y el que permite la altura conservando la proporción 450:800.
+               Con box-sizing: border-box los 5 px de borde ya van incluidos. */
+            width: min(100%, calc((100vh - 4px) * 450 / 800));
+            width: min(100%, calc((100dvh - 4px) * 450 / 800));
+            aspect-ratio: 450 / 800;
             max-height: 100%;
             touch-action: none;
         }
@@ -56,8 +68,9 @@
             0 0 60px rgba(0, 102, 255, 0.3);
             display: block;
             image-rendering: crisp-edges;
-            max-width: 100%;
-            max-height: 100%;
+            /* El contenedor ya tiene la proporción correcta: el canvas lo llena */
+            width: 100%;
+            height: 100%;
             touch-action: none;
         }
         
@@ -111,7 +124,7 @@
             border: 3px solid #FFCC00;
             padding: 15px 30px;
             margin: 10px;
-            font-family: 'Press Start 2P', cursive;
+            font-family: var(--fuente);
             font-size: 14px;
             cursor: pointer;
             text-transform: uppercase;
@@ -237,7 +250,7 @@
             background: #0D1B2A;
             border: 3px solid #FFCC00;
             color: #fff;
-            font-family: 'Press Start 2P', cursive;
+            font-family: var(--fuente);
             font-size: 16px;
             padding: 15px;
             margin: 20px 0;
@@ -505,48 +518,84 @@
 
         .flipper-zone.pulsada {
             background: radial-gradient(circle at center,
-                        rgba(255, 204, 0, 0.16) 0%, rgba(255, 204, 0, 0) 70%);
+                        rgba(255, 204, 0, 0.18) 0%, rgba(255, 204, 0, 0) 70%);
         }
 
-        /* Marca discreta al pie de cada mitad para que se entienda de un vistazo */
-        .flipper-zone::after {
-            content: '';
+        /* Botón visible al pie de cada mitad. Toda la mitad sigue siendo
+           pulsable, pero hace falta algo que SE VEA para saber que existe:
+           antes solo había una rayita de 5 px y no se distinguía.
+           Va sobre la zona de drenaje, que es espacio muerto de la mesa. */
+        .flipper-tag {
             position: absolute;
-            bottom: 14px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 46px;
-            height: 5px;
-            border-radius: 3px;
-            background: rgba(255, 204, 0, 0.35);
+            bottom: 10px;
+            width: 88px;
+            height: 74px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255, 204, 0, 0.85);
+            border-radius: 12px;
+            background: rgba(255, 204, 0, 0.13);
+            color: #FFCC00;
+            font-size: 26px;
+            font-weight: bold;
+            line-height: 1;
+            pointer-events: none;
+            text-shadow: 0 0 8px rgba(255, 204, 0, 0.8);
         }
 
-        .flipper-zone.pulsada::after { background: rgba(255, 204, 0, 0.9); }
+        #flipperLeft  .flipper-tag { left: 12px; }
+        #flipperRight .flipper-tag { right: 12px; }
+
+        .flipper-zone.pulsada .flipper-tag {
+            background: rgba(255, 204, 0, 0.55);
+            color: #0D1B2A;
+            transform: scale(0.94);
+        }
 
         /* Lanzador: solo aparece mientras la bola espera en el carril */
+        /* Lanzador: bien visible, centrado y por encima de las zonas de
+           flipper, porque mientras la bola espera es la única acción posible. */
         #plungerBtn {
             position: absolute;
             left: 50%;
-            bottom: 18px;
+            bottom: 26%;
             transform: translateX(-50%);
-            z-index: 40;
+            z-index: 60;
             display: none;
-            padding: 14px 26px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 12px;
+            width: 74%;
+            max-width: 300px;
+            padding: 16px 12px;
+            font-family: var(--fuente);
+            font-size: 15px;
+            font-weight: bold;
             color: #0D1B2A;
             background: linear-gradient(180deg, #FFCC00 0%, #FF9900 100%);
             border: 3px solid #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 0 #995C00;
+            border-radius: 10px;
+            box-shadow: 0 5px 0 #995C00, 0 0 24px rgba(255, 204, 0, 0.6);
             touch-action: none;
             -webkit-user-select: none;
             user-select: none;
             cursor: pointer;
+            animation: latido 1.4s ease-in-out infinite;
+        }
+
+        @keyframes latido {
+            0%, 100% { box-shadow: 0 5px 0 #995C00, 0 0 20px rgba(255, 204, 0, 0.5); }
+            50%      { box-shadow: 0 5px 0 #995C00, 0 0 34px rgba(255, 204, 0, 0.95); }
         }
 
         #plungerBtn.visible { display: block; }
-        #plungerBtn:active { transform: translateX(-50%) translateY(3px); box-shadow: none; }
+        #plungerBtn:active {
+            transform: translateX(-50%) translateY(3px);
+            box-shadow: none;
+            animation: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #plungerBtn { animation: none; }
+        }
 
         #plungerBtn .carga {
             display: block;
@@ -572,7 +621,7 @@
             border: 2px solid #FFCC00;
             background: rgba(0, 0, 0, 0.55);
             color: #FFCC00;
-            font-family: 'Press Start 2P', cursive;
+            font-family: var(--fuente);
             font-size: 12px;
             cursor: pointer;
             touch-action: manipulation;
@@ -583,16 +632,17 @@
         #touchHint {
             position: absolute;
             left: 50%;
-            top: 42%;
+            top: 52%;
             transform: translateX(-50%);
             z-index: 35;
             display: none;
             background: rgba(0, 0, 0, 0.82);
             border: 2px solid #FFCC00;
             border-radius: 8px;
-            padding: 12px 16px;
-            font-size: 10px;
-            line-height: 1.9;
+            padding: 14px 16px;
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.7;
             text-align: center;
             color: #FFCC00;
             pointer-events: none;
@@ -625,7 +675,12 @@
             .highscore-table { font-size: 8px; }
             .highscore-table th, .highscore-table td { padding: 4px 2px; }
             .name-input { font-size: 16px; }  /* menos de 16px hace zoom en iOS */
-            #hud { font-size: 9px; }
+
+            #hud { font-size: 11px; top: 6px; left: 8px; right: 8px; }
+            .score-display { font-size: 17px; }
+            .highscore-display { font-size: 13px; }
+            .hud-info { font-size: 10px; gap: 6px; }
+            .combo-display { font-size: 20px; }
         }
 
         /* La tabla de récords tiene cinco columnas: en un móvil sobran dos */
@@ -642,19 +697,26 @@
         <!-- Canvas del juego -->
         <canvas id="gameCanvas"></canvas>
 
-        <!-- Zonas de flipper: mitad izquierda y mitad derecha de la mesa -->
-        <div class="flipper-zone" id="flipperLeft" aria-hidden="true"></div>
-        <div class="flipper-zone" id="flipperRight" aria-hidden="true"></div>
+        <!-- Zonas de flipper: toda la mitad izquierda y toda la derecha son
+             pulsables; el recuadro es solo la marca visible. -->
+        <div class="flipper-zone" id="flipperLeft" aria-hidden="true">
+            <div class="flipper-tag">◀</div>
+        </div>
+        <div class="flipper-zone" id="flipperRight" aria-hidden="true">
+            <div class="flipper-tag">▶</div>
+        </div>
 
         <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
 
         <button id="plungerBtn" type="button" aria-label="Lanzar bola">
-            MANTÉN PARA LANZAR
+            MANTÉN PULSADO<br>Y SUELTA PARA LANZAR
             <span class="carga" id="plungerCarga"></span>
         </button>
 
         <div id="touchHint">
-            Toca la mitad izquierda o derecha<br>para mover cada flipper
+            ◀ Toca la mitad izquierda&nbsp;&nbsp;·&nbsp;&nbsp;la derecha ▶<br>
+            para mover cada flipper<br><br>
+            Puedes tocar las dos a la vez
         </div>
         
         <!-- HUD del juego -->
@@ -1864,7 +1926,7 @@
         
         function renderFloatingTexts() {
             ctx.save();
-            ctx.font = '16px "Press Start 2P"';
+            ctx.font = 'bold 15px ui-monospace, Menlo, Consolas, monospace';
             ctx.textAlign = 'center';
             
             floatingTexts.forEach(ft => {
@@ -1929,7 +1991,7 @@
             });
 
             const btn = document.getElementById('plungerBtn');
-            const cargar = (e) => { e.preventDefault(); plungerTouch = true; };
+            const cargar = (e) => { e.preventDefault(); plungerTouch = true; ocultarPista(); };
             const disparar = (e) => { e.preventDefault(); plungerTouch = false; };
 
             btn.addEventListener('pointerdown', cargar);
@@ -1948,9 +2010,11 @@
         }
 
         function mostrarPistaTactil() {
+            /* Antes se ocultaba sola a los 4,5 segundos, justo mientras el
+               jugador todavía estaba mirando la mesa. Ahora espera al primer
+               toque, que es la señal de que ya se ha entendido. */
             document.getElementById('touchHint').classList.add('visible');
             document.getElementById('pauseTouchBtn').classList.add('visible');
-            setTimeout(ocultarPista, 4500);
         }
 
         /* Muestra el botón del lanzador solo mientras la bola espera en su
