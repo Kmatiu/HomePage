@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>El Ahorcado</title>
+<style>
+    /* Tipografía del sistema: se lee siempre, no depende de la red y el juego
+       funciona igual sin conexión. El aire retro lo dan los colores de neón. */
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
+                 max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        /* dvh tiene en cuenta la barra de direcciones del móvil */
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        max-width: 760px;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .pantalla.activa { display: flex; }
+
+    /* ---------- MENÚ Y DIÁLOGOS ---------- */
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 {
+        font-size: clamp(1.5rem, 7vw, 2.4rem);
+        margin: 10px 0 2px;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset {
+        border: 1px solid var(--borde);
+        border-radius: 12px;
+        background: var(--panel);
+        margin: 0 0 12px;
+        padding: 10px 12px 12px;
+    }
+
+    legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    .principal {
+        width: 100%;
+        padding: 15px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario {
+        padding: 11px 16px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .fila-btns > * { flex: 1 1 120px; }
+
+    /* En pantalla táctil el :hover se queda pegado tras tocar */
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+        .tecla:not(:disabled):hover { border-color: var(--acento); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- PARTIDA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 48px; }
+    #barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+    #barra .dato.alerta b { color: var(--rosa); }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 38px;
+        height: 34px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    #zonaDibujo {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 0;
+    }
+
+    #horca { width: auto; height: 100%; max-width: 100%; max-height: 100%; }
+
+    #horca line, #horca circle { stroke-linecap: round; }
+
+    .madera { stroke: var(--amarillo); stroke-width: 6; filter: drop-shadow(0 0 4px rgba(255,204,0,.55)); }
+    .cuerda { stroke: #cfc39a; stroke-width: 3; }
+    .reo    { stroke: var(--rosa); stroke-width: 5; fill: none; filter: drop-shadow(0 0 5px rgba(255,0,110,.6)); }
+
+    .parte { opacity: 0; transition: opacity 0.22s ease-in; }
+    .parte.vista { opacity: 1; }
+
+    #categoria {
+        text-align: center;
+        font-size: 0.7rem;
+        color: var(--amarillo);
+        letter-spacing: 2px;
+        min-height: 1em;
+        flex: 0 0 auto;
+    }
+
+    /* El reto se parte por palabras, nunca por la mitad de una palabra */
+    #reto {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-content: center;
+        gap: 4px 14px;
+        padding: 8px 2px;
+        flex: 0 0 auto;
+    }
+
+    .grupo { display: flex; gap: 4px; }
+
+    .hueco-letra {
+        width: var(--ancho-letra, 26px);
+        font-size: var(--tam-letra, 1.3rem);
+        line-height: 1.25;
+        text-align: center;
+        border-bottom: 3px solid var(--borde);
+        font-weight: bold;
+        color: var(--texto);
+    }
+
+    .hueco-letra.resuelta { border-bottom-color: var(--acento); color: var(--acento); }
+    .hueco-letra.fallada  { border-bottom-color: var(--rosa); color: var(--rosa); }
+
+    /* ---------- TECLADO ---------- */
+    #teclado {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        align-items: center;
+        flex: 0 0 auto;
+        padding-bottom: 2px;
+    }
+
+    .fila-teclas { display: flex; gap: 4px; justify-content: center; width: 100%; }
+
+    .tecla {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 46px;
+        height: 42px;
+        border: 2px solid var(--borde);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.95rem;
+        font-weight: bold;
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        padding: 0;
+    }
+
+    .tecla.acierto {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.22);
+        color: var(--acento);
+    }
+
+    .tecla.fallo {
+        border-color: rgba(255, 0, 110, 0.5);
+        background: rgba(255, 0, 110, 0.12);
+        color: rgba(255, 0, 110, 0.75);
+    }
+
+    .tecla:disabled { cursor: default; opacity: 0.85; }
+
+    /* ---------- APAISADO ----------
+       Con poca altura, el dibujo pasa al lado y deja sitio al teclado. */
+    @media (orientation: landscape) and (max-height: 560px) {
+        .pantalla { max-width: 980px; }
+
+        #zonaPartida {
+            display: grid;
+            grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+            grid-template-areas: "dibujo reto" "dibujo teclado";
+            gap: 4px 12px;
+            flex: 1 1 auto;
+            min-height: 0;
+            align-items: center;
+        }
+
+        #zonaDibujo { grid-area: dibujo; height: 100%; }
+        #bloqueReto { grid-area: reto; }
+        #teclado { grid-area: teclado; }
+
+        .tecla { height: 36px; font-size: 0.85rem; }
+        h1 { font-size: 1.3rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+    }
+
+    /* ---------- MENSAJES Y RANKING ---------- */
+    #aviso {
+        position: fixed;
+        left: 50%;
+        top: 14%;
+        transform: translateX(-50%);
+        z-index: 50;
+        display: none;
+        padding: 12px 18px;
+        border-radius: 10px;
+        border: 2px solid var(--acento);
+        background: rgba(0, 0, 0, 0.9);
+        color: var(--acento);
+        font-size: 0.85rem;
+        font-weight: bold;
+        text-align: center;
+        max-width: 90%;
+        pointer-events: none;
+    }
+
+    #aviso.visible { display: block; }
+    #aviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    .capa {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 14px;
+        background: rgba(5, 3, 20, 0.93);
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 420px;
+        max-height: 100%;
+        overflow-y: auto;
+        padding: 18px;
+        border: 2px solid var(--acento);
+        border-radius: 14px;
+        background: #130f33;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+    .caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); }
+    .caja .solucion { color: var(--amarillo); font-size: 1rem; font-weight: bold; word-break: break-word; }
+    .caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+
+    .lista { text-align: left; font-size: 0.78rem; }
+    .lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+    .lista div.yo { color: var(--acento); font-weight: bold; }
+    .lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    input[type="text"], input[type="password"] {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: #0a0820;
+        color: var(--texto);
+        font: inherit;
+        /* 16px evita que iOS haga zoom al enfocar el campo */
+        font-size: 16px;
+        text-align: center;
+        margin: 8px 0;
+    }
+
+    input:focus { outline: none; border-color: var(--acento); }
+
+    .ayuda-txt { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+    .ayuda-txt b { color: var(--texto); }
+    .ayuda-txt h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+    .ayuda-txt ul { margin: 4px 0; padding-left: 18px; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>EL <span>AHORCADO</span></h1>
+        <p class="lema">Adivina antes de que se complete el dibujo</p>
+
+        <fieldset>
+            <legend>MODO</legend>
+            <div class="opciones" id="grpModo">
+                <button class="opcion" type="button" data-v="solo" aria-pressed="true">1 JUGADOR<span class="sub">contra el banco de palabras</span></button>
+                <button class="opcion" type="button" data-v="duo" aria-pressed="false">2 JUGADORES<span class="sub">uno escribe, otro adivina</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsTipo">
+            <legend>QUÉ SE ADIVINA (puedes marcar varios)</legend>
+            <div class="opciones" id="grpTipo">
+                <button class="opcion" type="button" data-v="palabras" aria-pressed="true">PALABRAS<span class="sub">273 en 9 temas</span></button>
+                <button class="opcion" type="button" data-v="refranes" aria-pressed="false">REFRANES<span class="sub">50 dichos</span></button>
+                <button class="opcion" type="button" data-v="titulos" aria-pressed="false">TÍTULOS<span class="sub">cine, series y música</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>DIFICULTAD</legend>
+            <div class="opciones" id="grpDif">
+                <button class="opcion" type="button" data-v="facil" aria-pressed="false">FÁCIL<span class="sub">8 fallos · con pista</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">NORMAL<span class="sub">6 fallos · con pista</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">4 fallos · sin pista</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsReloj">
+            <legend>CONTRARRELOJ</legend>
+            <div class="opciones" id="grpReloj">
+                <button class="opcion" type="button" data-v="no" aria-pressed="true">SIN RELOJ<span class="sub">sin prisa</span></button>
+                <button class="opcion" type="button" data-v="si" aria-pressed="false">CON RELOJ<span class="sub">2 min · +20 s por acierto</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PALABRA SECRETA (2 JUGADORES) ===================== -->
+<section class="pantalla" id="pSecreto">
+    <div class="scroll">
+        <h1 style="font-size:1.3rem;">PALABRA <span>SECRETA</span></h1>
+        <p class="lema">Que no mire el otro jugador</p>
+
+        <fieldset>
+            <legend>ESCRIBE LA PALABRA O FRASE</legend>
+            <input type="password" id="inpSecreto" maxlength="40" autocomplete="off"
+                   autocorrect="off" autocapitalize="characters" spellcheck="false"
+                   placeholder="Mínimo 3 letras">
+            <div class="fila-btns" style="margin-top:4px;">
+                <button class="secundario" id="btnVerSecreto" type="button">👁 VER LO ESCRITO</button>
+            </div>
+            <p style="font-size:0.7rem; margin:10px 0 0; text-align:left;">
+                Solo letras y espacios. Las tildes se pueden poner o no: dan igual al adivinar.
+            </p>
+        </fieldset>
+
+        <fieldset>
+            <legend>PISTA (OPCIONAL)</legend>
+            <input type="text" id="inpPista" maxlength="24" autocomplete="off"
+                   placeholder="Ej.: un animal, una película…">
+        </fieldset>
+
+        <button class="principal" id="btnEmpezarDuo" type="button">LISTO, A ADIVINAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVolverMenu1" type="button">← MENÚ</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dPuntos"><b>0</b><span>PUNTOS</span></div>
+        <div class="dato" id="dIntentos"><b>6</b><span>FALLOS</span></div>
+        <div class="dato" id="dRacha"><b>0</b><span>RACHA</span></div>
+        <div class="dato" id="dTiempo" style="display:none;"><b>2:00</b><span>TIEMPO</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="zonaPartida" style="display:contents;">
+        <div id="zonaDibujo">
+            <svg id="horca" viewBox="0 0 200 200" role="img" aria-label="Dibujo del ahorcado">
+                <line class="parte madera" data-p="1" x1="20"  y1="190" x2="180" y2="190"/>
+                <line class="parte madera" data-p="2" x1="50"  y1="190" x2="50"  y2="20"/>
+                <line class="parte madera" data-p="3" x1="47"  y1="20"  x2="130" y2="20"/>
+                <line class="parte madera" data-p="4" x1="50"  y1="52"  x2="82"  y2="20"/>
+                <line class="parte cuerda" data-p="5" x1="130" y1="22"  x2="130" y2="45"/>
+                <circle class="parte reo" data-p="6" cx="130" cy="60" r="15"/>
+                <line class="parte reo" data-p="7" x1="130" y1="75"  x2="130" y2="126"/>
+                <line class="parte reo" data-p="8" x1="130" y1="90"  x2="106" y2="112"/>
+                <line class="parte reo" data-p="9" x1="130" y1="90"  x2="154" y2="112"/>
+                <g class="parte reo" data-p="10">
+                    <line x1="130" y1="126" x2="110" y2="162"/>
+                    <line x1="130" y1="126" x2="150" y2="162"/>
+                </g>
+            </svg>
+        </div>
+
+        <div id="bloqueReto">
+            <div id="categoria"></div>
+            <div id="reto"></div>
+        </div>
+
+        <div id="teclado"></div>
+    </div>
+</section>
+
+<div id="aviso"></div>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj está parado.</p>
+        <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRonda">
+    <div class="caja">
+        <h2 id="tRonda"></h2>
+        <p id="sRonda"></p>
+        <button class="principal" id="btnSiguiente" type="button">SIGUIENTE</button>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin">FIN DE LA PARTIDA</h2>
+        <p id="sFin"></p>
+        <div class="marcador" id="mFin">0</div>
+        <p id="detFin"></p>
+        <div id="zonaNombre" style="display:none;">
+            <p style="color:var(--amarillo);">¡Entras en el Top 10!</p>
+            <input type="text" id="inpNombre" maxlength="12" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnVolverMenu2" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="lista" id="listaRanking"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="ayuda-txt">
+            <p>Adivina la palabra letra a letra. Cada fallo añade un trazo al dibujo; si se completa, se acabó.</p>
+
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> toca las letras del teclado en pantalla.</li>
+                <li><b>Ordenador:</b> escribe con el teclado físico. <b>Esc</b> pausa.</li>
+            </ul>
+
+            <h3>TILDES Y Ñ</h3>
+            <ul>
+                <li>Las tildes y la diéresis se ignoran: la <b>A</b> acierta la <b>Á</b>.</li>
+                <li>La <b>Ñ</b> es una letra distinta y tiene su propia tecla.</li>
+            </ul>
+
+            <h3>UN JUGADOR</h3>
+            <ul>
+                <li>Las palabras se encadenan: al acertar, llega otra y los fallos se reponen.</li>
+                <li>La partida acaba cuando se completa el dibujo (o se agota el reloj).</li>
+                <li>Puntúan las letras acertadas, los fallos que te sobran y la racha.</li>
+            </ul>
+
+            <h3>DOS JUGADORES</h3>
+            <ul>
+                <li>Uno escribe la palabra en secreto y el otro adivina.</li>
+                <li>No entra en los récords: la dificultad la elige una persona, así que no es comparable.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+/* ==========================================================
+   BANCO DE CONTENIDOS
+   ========================================================== */
+const BANCO = {"palabras": {"Animales": ["ELEFANTE", "JIRAFA", "COCODRILO", "MURCIÉLAGO", "ARDILLA", "PINGÜINO", "CANGURO", "TIBURÓN", "MARIPOSA", "ERIZO", "LECHUZA", "CAMALEÓN", "DELFÍN", "ORNITORRINCO", "HIPOPÓTAMO", "LIBÉLULA", "SALAMANDRA", "PERDIZ", "JABALÍ", "TORTUGA", "AVESTRUZ", "LUCIÉRNAGA", "ESCARABAJO", "MORSA", "LINCE", "NUTRIA", "GAVIOTA", "CIEMPIÉS", "ORUGA", "RINOCERONTE", "PANTERA", "CIGÜEÑA", "TEJÓN", "GACELA", "ARAÑA", "MUSARAÑA", "PIRAÑA"], "Comida": ["GAZPACHO", "PAELLA", "CROQUETA", "TORTILLA", "CHORIZO", "EMPANADA", "ALCACHOFA", "BERENJENA", "CALABACÍN", "GARBANZO", "LENTEJA", "MEMBRILLO", "TURRÓN", "MAZAPÁN", "CHURRO", "SALMOREJO", "FABADA", "PULPO", "BOQUERÓN", "ACEITUNA", "PIMIENTO", "CEBOLLA", "ZANAHORIA", "ESPINACA", "MELOCOTÓN", "SANDÍA", "AGUACATE", "FRAMBUESA", "ALBARICOQUE", "CALABAZA", "MERLUZA", "BACALAO", "JAMÓN", "MORCILLA", "BIZCOCHO", "PIÑA", "CASTAÑA", "ALIÑO"], "Geografía": ["GRANADA", "ZARAGOZA", "CÓRDOBA", "SANTANDER", "PAMPLONA", "BADAJOZ", "CASTELLÓN", "GUADALAJARA", "PONTEVEDRA", "ALBACETE", "TENERIFE", "MALLORCA", "PIRINEOS", "GUADALQUIVIR", "CANTÁBRICO", "PORTUGAL", "NORUEGA", "MARRUECOS", "ARGENTINA", "AUSTRALIA", "ETIOPÍA", "TAILANDIA", "ISLANDIA", "AMAZONAS", "HIMALAYA", "GIBRALTAR", "DINAMARCA", "FINLANDIA", "VENEZUELA", "MOSCÚ", "ESTAMBUL", "VARSOVIA", "BRUSELAS", "COPENHAGUE", "ESPAÑA", "MONTAÑA", "CAÑÓN"], "Deportes": ["BALONCESTO", "NATACIÓN", "CICLISMO", "ATLETISMO", "BALONMANO", "PIRAGÜISMO", "ESGRIMA", "HALTEROFILIA", "GIMNASIA", "WATERPOLO", "TRIATLÓN", "MARATÓN", "PORTERÍA", "ÁRBITRO", "PENALTI", "RAQUETA", "TATAMI", "VELERO", "PATINAJE", "SENDERISMO", "ESCALADA", "BOXEO", "PETANCA", "REMO", "JABALINA", "TRAMPOLÍN", "PODIO", "MEDALLA", "CAMPEONATO", "CAMPAÑA"], "Objetos": ["PARAGUAS", "DESTORNILLADOR", "CEPILLO", "LINTERNA", "BRÚJULA", "TIJERAS", "MOCHILA", "ALMOHADA", "ESCALERA", "CERRADURA", "MANGUERA", "PERCHA", "ALFOMBRA", "CORTINA", "TALADRO", "MARTILLO", "CARRETILLA", "EMBUDO", "CANDADO", "GRAPADORA", "BOLÍGRAFO", "AURICULARES", "MICROSCOPIO", "TERMÓMETRO", "CALCULADORA", "ESPEJO", "ABANICO", "MALETA", "CARTERA", "MUÑECA", "PESTAÑA"], "Profesiones": ["FONTANERO", "CARPINTERO", "ELECTRICISTA", "PANADERO", "VETERINARIO", "BIBLIOTECARIO", "ARQUITECTO", "PERIODISTA", "FOTÓGRAFO", "JARDINERO", "PESCADOR", "BOMBERO", "ENFERMERO", "CERRAJERO", "RELOJERO", "ZAPATERO", "ALBAÑIL", "SOLDADOR", "TRADUCTOR", "ASTRONAUTA", "ARQUEÓLOGO", "GEÓLOGO", "CARTERO", "PELUQUERO", "MECÁNICO", "COCINERO", "PINTOR", "ESCULTOR", "DISEÑADOR"], "Ciencia": ["GRAVEDAD", "MOLÉCULA", "GALAXIA", "NEURONA", "VOLCÁN", "TERREMOTO", "FOTOSÍNTESIS", "ELECTRÓN", "TELESCOPIO", "VACUNA", "CROMOSOMA", "METEORITO", "ECLIPSE", "IMÁN", "CIRCUITO", "ENZIMA", "BACTERIA", "PLANETA", "SATÉLITE", "ESQUELETO", "PULMÓN", "ARTERIA", "HIDRÓGENO", "OXÍGENO", "CARBONO", "MERCURIO", "URANIO", "FÓSIL", "GLACIAR", "MAREA"], "Música": ["GUITARRA", "TROMPETA", "ACORDEÓN", "VIOLONCHELO", "PANDERETA", "SAXOFÓN", "CLARINETE", "TAMBOR", "ARMÓNICA", "XILÓFONO", "PARTITURA", "ORQUESTA", "SINFONÍA", "MELODÍA", "ESTRIBILLO", "FLAMENCO", "CASTAÑUELAS", "BANDURRIA", "CONCIERTO", "TROMBÓN", "CONTRABAJO", "TECLADO", "MICRÓFONO", "ESCENARIO", "PEÑA"], "Casa y ciudad": ["BUHARDILLA", "CHIMENEA", "PASILLO", "TERRAZA", "SEMÁFORO", "ROTONDA", "FAROLA", "QUIOSCO", "MERCADO", "BIBLIOTECA", "AYUNTAMIENTO", "ACERA", "PORTAL", "ASCENSOR", "BALCÓN", "PERSIANA", "FREGADERO", "NEVERA", "LAVADORA", "ARMARIO", "ESTANTERÍA", "GARAJE", "TRASTERO", "BUZÓN", "FACHADA", "CAÑERÍA"]}, "refranes": ["A CABALLO REGALADO NO LE MIRES EL DIENTE", "MÁS VALE PÁJARO EN MANO QUE CIENTO VOLANDO", "NO POR MUCHO MADRUGAR AMANECE MÁS TEMPRANO", "EN CASA DEL HERRERO CUCHILLO DE PALO", "A QUIEN MADRUGA DIOS LE AYUDA", "PERRO LADRADOR POCO MORDEDOR", "MÁS VALE TARDE QUE NUNCA", "QUIEN MUCHO ABARCA POCO APRIETA", "DONDE FUERES HAZ LO QUE VIERES", "OJOS QUE NO VEN CORAZÓN QUE NO SIENTE", "A FALTA DE PAN BUENAS SON TORTAS", "EL QUE RÍE EL ÚLTIMO RÍE MEJOR", "NO HAY MAL QUE POR BIEN NO VENGA", "CRÍA CUERVOS Y TE SACARÁN LOS OJOS", "DIME CON QUIÉN ANDAS Y TE DIRÉ QUIÉN ERES", "AL MAL TIEMPO BUENA CARA", "CADA OVEJA CON SU PAREJA", "DE TAL PALO TAL ASTILLA", "EN BOCA CERRADA NO ENTRAN MOSCAS", "LA CURIOSIDAD MATÓ AL GATO", "MÁS VALE PREVENIR QUE CURAR", "NO DEJES PARA MAÑANA LO QUE PUEDAS HACER HOY", "QUIEN SIEMBRA VIENTOS RECOGE TEMPESTADES", "AGUA PASADA NO MUEVE MOLINO", "LO BARATO SALE CARO", "A BUEN ENTENDEDOR POCAS PALABRAS BASTAN", "EL HÁBITO NO HACE AL MONJE", "NO ES ORO TODO LO QUE RELUCE", "UNA GOLONDRINA NO HACE VERANO", "QUIEN NO ARRIESGA NO GANA", "A PALABRAS NECIAS OÍDOS SORDOS", "ZAPATERO A TUS ZAPATOS", "AUNQUE LA MONA SE VISTA DE SEDA MONA SE QUEDA", "NO HAY DOS SIN TRES", "EL MUNDO ES UN PAÑUELO", "ESTAR EN LAS NUBES", "TIRAR LA CASA POR LA VENTANA", "BUSCAR UNA AGUJA EN UN PAJAR", "TOMAR EL PELO", "DAR GATO POR LIEBRE", "ECHAR UN CABLE", "MATAR DOS PÁJAROS DE UN TIRO", "PONERSE LAS PILAS", "IRSE POR LAS RAMAS", "NO TENER PELOS EN LA LENGUA", "SER PAN COMIDO", "COSTAR UN OJO DE LA CARA", "METER LA PATA", "ESTAR COMO UNA CABRA", "SER UÑA Y CARNE"], "titulos": {"Película": ["EL PADRINO", "CASABLANCA", "PSICOSIS", "GLADIATOR", "TITANIC", "LOS OTROS", "MAR ADENTRO", "EL LABERINTO DEL FAUNO", "VOLVER", "LA VIDA ES BELLA", "CINEMA PARADISO", "EL SEXTO SENTIDO", "JURASSIC PARK", "REGRESO AL FUTURO", "EN BUSCA DEL ARCA PERDIDA", "EL RESPLANDOR", "BLADE RUNNER", "MATRIX", "FORREST GUMP", "EL REY LEÓN", "LA SIRENITA", "TOY STORY", "BUSCANDO A NEMO", "LOS INCREÍBLES", "SHREK", "EL VIAJE DE CHIHIRO", "MI VECINO TOTORO", "AMÉLIE", "PARÁSITOS", "EL BUENO EL FEO Y EL MALO", "DOCE HOMBRES SIN PIEDAD", "LA GRAN EVASIÓN", "TIBURÓN BLANCO", "CANTANDO BAJO LA LLUVIA", "LO QUE EL VIENTO SE LLEVÓ"], "Serie": ["LOS SERRANO", "CUÉNTAME CÓMO PASÓ", "AQUÍ NO HAY QUIEN VIVA", "LA CASA DE PAPEL", "VERANO AZUL", "FARMACIA DE GUARDIA", "MÉDICO DE FAMILIA", "LOS SIMPSON", "PADRE DE FAMILIA", "FUTURAMA", "FRIENDS", "SEINFELD", "EXPEDIENTE X", "PERDIDOS", "EL ALA OESTE", "BREAKING BAD", "MAD MEN", "STRANGER THINGS", "BLACK MIRROR", "SHERLOCK", "CHERNOBYL", "NARCOS", "PAQUITA SALAS", "EL MINISTERIO DEL TIEMPO", "LA QUE SE AVECINA"], "Canción": ["BAILANDO", "LA BAMBA", "MEDITERRÁNEO", "PALABRAS PARA JULIA", "LIBRE", "UN BESO Y UNA FLOR", "COMO UNA OLA", "LA PUERTA DE ALCALÁ", "HOY NO ME PUEDO LEVANTAR", "CHICA DE AYER", "BAILAR PEGADOS", "SIN DOCUMENTOS", "LA FLACA", "DEVUÉLVEME A MI CHICA", "MI GRAN NOCHE", "EL BREVE ESPACIO", "PONGAMOS QUE HABLO DE MADRID", "ENTRE DOS AGUAS", "VOLVER VOLVER", "CUCURRUCUCÚ PALOMA"]}};
+
+/* ==========================================================
+   CONFIGURACIÓN
+   ========================================================== */
+const DIF = {
+    facil:   { intentos: 8, min: 4,  max: 8,   pista: true,  mult: 1,   etiqueta: 'Fácil' },
+    normal:  { intentos: 6, min: 5,  max: 12,  pista: true,  mult: 1.6, etiqueta: 'Normal' },
+    dificil: { intentos: 4, min: 7,  max: 99,  pista: false, mult: 2.5, etiqueta: 'Difícil' }
+};
+
+const RELOJ_INICIAL = 120;   // segundos
+const RELOJ_BONUS   = 20;    // segundos que suma cada acierto
+const PARTES = 10;           // trazos del dibujo
+
+const FILAS_TECLADO = ['QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM'];
+
+/* ==========================================================
+   NORMALIZACIÓN
+   Las tildes y la diéresis se ignoran al comparar, pero la Ñ es una letra
+   distinta del castellano y debe conservarse. Como la Ñ se descompone en
+   N + tilde combinante, hay que apartarla antes de quitar los diacríticos.
+   ========================================================== */
+const MARCA_ENIE = '\u0001';
+
+function normalizar(texto) {
+    return String(texto)
+        .toUpperCase()
+        .replace(/Ñ/g, MARCA_ENIE)
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(new RegExp(MARCA_ENIE, 'g'), 'Ñ');
+}
+
+function esLetra(c) {
+    return /^[A-ZÑ]$/.test(c);
+}
+
+/* ==========================================================
+   ESTADO
+   ========================================================== */
+const estado = {
+    modo: 'solo',
+    tipos: new Set(['palabras']),
+    dificultad: 'normal',
+    contrarreloj: false,
+
+    reto: '',          // texto tal cual se muestra, con tildes
+    normalizado: '',   // mismo texto sin tildes, para comparar
+    categoria: '',
+    usadas: new Set(),
+    fallos: 0,
+    intentos: 6,
+
+    puntos: 0,
+    racha: 0,
+    palabrasAcertadas: 0,
+    pausado: false,
+    jugando: false,
+    enTransicion: false,
+
+    tiempoRestante: 0,
+    ultimoTick: 0,
+    timerId: null,
+
+    recientes: []      // evita repetir lo mismo en la misma partida
+};
+
+/* ==========================================================
+   ALMACENAMIENTO
+   Respaldo en memoria por si localStorage está bloqueado (modo privado,
+   iframe con sandbox) o el contenido está corrupto: un JSON.parse sin
+   protección tumbaría el juego al abrir los récords.
+   ========================================================== */
+const CLAVE = 'ahorcadoTop10';
+let memoriaRanking = [];
+
+const almacenOK = (() => {
+    try {
+        localStorage.setItem('__t', '1');
+        localStorage.removeItem('__t');
+        return true;
+    } catch (e) {
+        return false;
+    }
+})();
+
+function escaparHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
+function leerRanking() {
+    if (!almacenOK) return memoriaRanking.slice();
+    try {
+        const datos = localStorage.getItem(CLAVE);
+        const r = datos ? JSON.parse(datos) : [];
+        return Array.isArray(r) ? r : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function guardarRanking(lista) {
+    memoriaRanking = lista.slice();
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE, JSON.stringify(lista));
+    } catch (e) {
+        console.warn('No se pudo guardar el récord:', e);
+    }
+}
+
+/* ==========================================================
+   AUDIO
+   Sin archivos: tonos sintetizados, que no añaden peso ni dependencias.
+   ========================================================== */
+let ctxAudio = null;
+
+function sonido(frecuencia, duracion, tipo) {
+    try {
+        if (!ctxAudio) ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctxAudio.state === 'suspended') ctxAudio.resume();
+
+        const osc = ctxAudio.createOscillator();
+        const vol = ctxAudio.createGain();
+        osc.connect(vol);
+        vol.connect(ctxAudio.destination);
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frecuencia, ctxAudio.currentTime);
+        vol.gain.setValueAtTime(0.07, ctxAudio.currentTime);
+        vol.gain.exponentialRampToValueAtTime(0.001, ctxAudio.currentTime + duracion);
+
+        osc.start();
+        osc.stop(ctxAudio.currentTime + duracion);
+    } catch (e) { /* sin audio, el juego sigue igual */ }
+}
+
+const sonAcierto = () => sonido(660, 0.12, 'square');
+const sonFallo   = () => sonido(150, 0.22, 'sawtooth');
+const sonGana    = () => { sonido(523, 0.1); setTimeout(() => sonido(659, 0.1), 90); setTimeout(() => sonido(784, 0.2), 180); };
+const sonPierde  = () => { sonido(300, 0.2, 'triangle'); setTimeout(() => sonido(180, 0.4, 'triangle'), 180); };
+
+/* ==========================================================
+   PANTALLAS Y CAPAS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let avisoTimer = null;
+
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('visible');
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+}
+
+/* ==========================================================
+   SELECCIÓN DEL RETO
+   ========================================================== */
+function construirBolsa() {
+    const d = DIF[estado.dificultad];
+    const bolsa = [];
+
+    if (estado.tipos.has('palabras')) {
+        for (const cat in BANCO.palabras) {
+            for (const p of BANCO.palabras[cat]) {
+                const letras = p.replace(/ /g, '').length;
+                if (letras >= d.min && letras <= d.max) bolsa.push({ texto: p, cat: cat });
+            }
+        }
+    }
+    if (estado.tipos.has('refranes')) {
+        for (const r of BANCO.refranes) bolsa.push({ texto: r, cat: 'Refrán o frase hecha' });
+    }
+    if (estado.tipos.has('titulos')) {
+        for (const cat in BANCO.titulos) {
+            for (const t of BANCO.titulos[cat]) bolsa.push({ texto: t, cat: cat });
+        }
+    }
+    return bolsa;
+}
+
+function elegirReto() {
+    const bolsa = construirBolsa();
+    if (!bolsa.length) return null;
+
+    /* No repetir dentro de la misma partida mientras queden opciones */
+    let libres = bolsa.filter(x => estado.recientes.indexOf(x.texto) === -1);
+    if (!libres.length) {
+        estado.recientes = [];
+        libres = bolsa;
+    }
+
+    const elegido = libres[Math.floor(Math.random() * libres.length)];
+    estado.recientes.push(elegido.texto);
+    return elegido;
+}
+
+/* ==========================================================
+   PINTADO
+   ========================================================== */
+function pintarReto() {
+    const cont = document.getElementById('reto');
+    cont.innerHTML = '';
+
+    const palabras = estado.reto.split(' ');
+    const total = estado.reto.replace(/ /g, '').length;
+
+    /* El tamaño de las casillas se adapta al número de letras: un refrán de
+       45 caracteres no cabe con el mismo cuerpo que una palabra de seis. */
+    let ancho = 26, tam = 1.3;
+    if (total > 34)      { ancho = 15; tam = 0.78; }
+    else if (total > 24) { ancho = 18; tam = 0.95; }
+    else if (total > 16) { ancho = 22; tam = 1.1; }
+    cont.style.setProperty('--ancho-letra', ancho + 'px');
+    cont.style.setProperty('--tam-letra', tam + 'rem');
+
+    let i = 0;
+    for (const palabra of palabras) {
+        const grupo = document.createElement('div');
+        grupo.className = 'grupo';
+
+        for (const ch of palabra) {
+            const casilla = document.createElement('div');
+            casilla.className = 'hueco-letra';
+            const letraNorm = normalizar(ch);
+
+            if (estado.usadas.has(letraNorm)) {
+                casilla.textContent = ch;
+                casilla.classList.add('resuelta');
+            } else {
+                casilla.innerHTML = '&nbsp;';
+            }
+            grupo.appendChild(casilla);
+            i++;
+        }
+        cont.appendChild(grupo);
+    }
+}
+
+function revelarTodo(fallada) {
+    const cont = document.getElementById('reto');
+    cont.innerHTML = '';
+    for (const palabra of estado.reto.split(' ')) {
+        const grupo = document.createElement('div');
+        grupo.className = 'grupo';
+        for (const ch of palabra) {
+            const casilla = document.createElement('div');
+            casilla.className = 'hueco-letra ' + (fallada && !estado.usadas.has(normalizar(ch)) ? 'fallada' : 'resuelta');
+            casilla.textContent = ch;
+            grupo.appendChild(casilla);
+        }
+        cont.appendChild(grupo);
+    }
+}
+
+function pintarHorca() {
+    /* Los trazos se reparten en proporción a los intentos permitidos: en
+       difícil, con 4 fallos, el dibujo se completa al cuarto fallo igual que
+       en fácil al octavo, en vez de quedarse a medias. */
+    const visibles = estado.fallos >= estado.intentos
+        ? PARTES
+        : Math.ceil((estado.fallos / estado.intentos) * PARTES);
+
+    document.querySelectorAll('#horca .parte').forEach(el => {
+        el.classList.toggle('vista', Number(el.dataset.p) <= visibles);
+    });
+}
+
+function pintarTeclado() {
+    const cont = document.getElementById('teclado');
+    cont.innerHTML = '';
+
+    for (const fila of FILAS_TECLADO) {
+        const div = document.createElement('div');
+        div.className = 'fila-teclas';
+        for (const letra of fila) {
+            const b = document.createElement('button');
+            b.className = 'tecla';
+            b.type = 'button';
+            b.textContent = letra;
+            b.dataset.letra = letra;
+            div.appendChild(b);
+        }
+        cont.appendChild(div);
+    }
+}
+
+function actualizarTeclado() {
+    document.querySelectorAll('.tecla').forEach(b => {
+        const l = b.dataset.letra;
+        const usada = estado.usadas.has(l);
+        b.disabled = usada || !estado.jugando || estado.pausado;
+        b.classList.toggle('acierto', usada && estado.normalizado.indexOf(l) !== -1);
+        b.classList.toggle('fallo', usada && estado.normalizado.indexOf(l) === -1);
+    });
+}
+
+function pintarBarra() {
+    const restantes = estado.intentos - estado.fallos;
+    document.querySelector('#dPuntos b').textContent = Math.round(estado.puntos);
+    document.querySelector('#dIntentos b').textContent = restantes;
+    document.getElementById('dIntentos').classList.toggle('alerta', restantes <= 2);
+    document.querySelector('#dRacha b').textContent = estado.racha;
+
+    const dTiempo = document.getElementById('dTiempo');
+    dTiempo.style.display = estado.contrarreloj ? 'flex' : 'none';
+    if (estado.contrarreloj) {
+        const t = Math.max(0, Math.ceil(estado.tiempoRestante));
+        const m = Math.floor(t / 60);
+        const s = t % 60;
+        dTiempo.querySelector('b').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        dTiempo.classList.toggle('alerta', t <= 15);
+    }
+
+    /* En dos jugadores la racha no significa nada: solo hay una palabra */
+    document.getElementById('dRacha').style.display = estado.modo === 'duo' ? 'none' : 'flex';
+}
+
+/* ==========================================================
+   RELOJ
+   Basado en marcas de tiempo reales, no en conteo de frames: así no depende
+   del refresco de la pantalla ni se descuadra al volver de segundo plano.
+   ========================================================== */
+function arrancarReloj() {
+    pararReloj();
+    if (!estado.contrarreloj) return;
+    estado.ultimoTick = Date.now();
+    estado.timerId = setInterval(tictac, 200);
+}
+
+function pararReloj() {
+    if (estado.timerId !== null) {
+        clearInterval(estado.timerId);
+        estado.timerId = null;
+    }
+}
+
+function tictac() {
+    if (!estado.jugando || estado.pausado) {
+        estado.ultimoTick = Date.now();
+        return;
+    }
+    const ahora = Date.now();
+    estado.tiempoRestante -= (ahora - estado.ultimoTick) / 1000;
+    estado.ultimoTick = ahora;
+
+    if (estado.tiempoRestante <= 0) {
+        estado.tiempoRestante = 0;
+        pintarBarra();
+        terminarPartida('tiempo');
+        return;
+    }
+    pintarBarra();
+}
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function nuevaRonda() {
+    let elegido;
+
+    if (estado.modo === 'duo') {
+        elegido = { texto: estado.reto, cat: estado.categoria };
+    } else {
+        elegido = elegirReto();
+        if (!elegido) {
+            avisar('No hay retos para esa combinación', true);
+            volverAlMenu();
+            return;
+        }
+    }
+
+    estado.reto = elegido.texto;
+    estado.normalizado = normalizar(elegido.texto);
+    estado.categoria = elegido.cat || '';
+    estado.usadas = new Set();
+    estado.fallos = 0;
+    estado.intentos = DIF[estado.dificultad].intentos;
+    estado.jugando = true;
+    estado.enTransicion = false;
+
+    const mostrarPista = DIF[estado.dificultad].pista && estado.categoria;
+    document.getElementById('categoria').textContent = mostrarPista ? '· ' + estado.categoria.toUpperCase() + ' ·' : '';
+
+    pintarReto();
+    pintarHorca();
+    actualizarTeclado();
+    pintarBarra();
+}
+
+function empezarPartida() {
+    estado.puntos = 0;
+    estado.racha = 0;
+    estado.palabrasAcertadas = 0;
+    estado.pausado = false;
+    estado.recientes = [];
+    estado.tiempoRestante = estado.contrarreloj ? RELOJ_INICIAL : 0;
+
+    mostrarPantalla('pJuego');
+    cerrarCapa('capaFin');
+    cerrarCapa('capaRonda');
+    cerrarCapa('capaPausa');
+
+    nuevaRonda();
+    arrancarReloj();
+}
+
+function probarLetra(letra) {
+    if (!estado.jugando || estado.pausado || estado.enTransicion) return;
+    if (!esLetra(letra) || estado.usadas.has(letra)) return;
+
+    estado.usadas.add(letra);
+    const mult = DIF[estado.dificultad].mult;
+
+    /* Cuántas veces aparece, contando las versiones acentuadas */
+    let apariciones = 0;
+    for (const ch of estado.normalizado) if (ch === letra) apariciones++;
+
+    if (apariciones > 0) {
+        estado.puntos += 10 * apariciones * mult;
+        sonAcierto();
+        pintarReto();
+    } else {
+        estado.fallos++;
+        estado.puntos = Math.max(0, estado.puntos - 5);
+        sonFallo();
+        pintarHorca();
+    }
+
+    actualizarTeclado();
+    pintarBarra();
+
+    /* ¿Resuelto? Todas las letras del reto están entre las usadas */
+    const resuelto = estado.normalizado
+        .split('')
+        .every(ch => ch === ' ' || estado.usadas.has(ch));
+
+    if (resuelto) {
+        ganarRonda();
+    } else if (estado.fallos >= estado.intentos) {
+        perderRonda();
+    }
+}
+
+function ganarRonda() {
+    estado.jugando = false;
+    estado.enTransicion = true;
+
+    const d = DIF[estado.dificultad];
+    const restantes = estado.intentos - estado.fallos;
+    const bonusIntentos = restantes * 15 * d.mult;
+    const bonusBase = 50 * d.mult;
+    const bonusRacha = estado.racha * 10;
+    const bonusReloj = estado.contrarreloj ? 25 * d.mult : 0;
+
+    estado.puntos += bonusBase + bonusIntentos + bonusRacha + bonusReloj;
+    estado.racha++;
+    estado.palabrasAcertadas++;
+
+    if (estado.contrarreloj) estado.tiempoRestante += RELOJ_BONUS;
+
+    revelarTodo(false);
+    pintarBarra();
+    sonGana();
+
+    if (estado.modo === 'duo') {
+        terminarPartida('ganado-duo');
+        return;
+    }
+
+    document.getElementById('tRonda').textContent = '✅ ¡ACERTADA!';
+    document.getElementById('sRonda').innerHTML =
+        '<span class="solucion">' + escaparHtml(estado.reto) + '</span><br><br>' +
+        '+' + Math.round(bonusBase + bonusIntentos + bonusRacha + bonusReloj) + ' puntos' +
+        (estado.contrarreloj ? ' · +' + RELOJ_BONUS + ' s' : '');
+    document.getElementById('btnSiguiente').textContent = 'SIGUIENTE PALABRA';
+    abrirCapa('capaRonda');
+}
+
+function perderRonda() {
+    estado.jugando = false;
+    estado.enTransicion = true;
+    revelarTodo(true);
+    pintarHorca();
+    sonPierde();
+    terminarPartida('fallado');
+}
+
+function terminarPartida(motivo) {
+    estado.jugando = false;
+    pararReloj();
+    actualizarTeclado();
+
+    const esDuo = estado.modo === 'duo';
+    const t = document.getElementById('tFin');
+    const s = document.getElementById('sFin');
+    const det = document.getElementById('detFin');
+    const marcador = document.getElementById('mFin');
+
+    if (esDuo) {
+        const gano = motivo === 'ganado-duo';
+        t.textContent = gano ? '🎉 ¡ADIVINADA!' : '💀 NO LA SACÓ';
+        s.innerHTML = 'La palabra era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>';
+        marcador.style.display = 'none';
+        det.textContent = gano
+            ? 'Con ' + (estado.intentos - estado.fallos) + ' fallo(s) de margen.'
+            : 'Se completó el dibujo.';
+        document.getElementById('zonaNombre').style.display = 'none';
+        document.getElementById('btnOtra').textContent = '🔄 CAMBIAR ROLES';
+    } else {
+        t.textContent = motivo === 'tiempo' ? '⏰ SE ACABÓ EL TIEMPO' : '💀 FIN DE LA PARTIDA';
+        s.innerHTML = motivo === 'tiempo'
+            ? 'La palabra en juego era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>'
+            : 'La palabra era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>';
+        marcador.style.display = '';
+        marcador.textContent = Math.round(estado.puntos);
+        det.textContent = estado.palabrasAcertadas + ' acertada(s) · ' +
+                          DIF[estado.dificultad].etiqueta +
+                          (estado.contrarreloj ? ' · contrarreloj' : '');
+
+        const puntos = Math.round(estado.puntos);
+        document.getElementById('zonaNombre').style.display = entraEnTop(puntos) ? '' : 'none';
+        document.getElementById('inpNombre').value = '';
+        document.getElementById('btnOtra').textContent = '🔄 OTRA PARTIDA';
+    }
+
+    revelarTodo(motivo !== 'ganado-duo');
+    cerrarCapa('capaRonda');
+    abrirCapa('capaFin');
+}
+
+/* ==========================================================
+   RÉCORDS
+   Solo puntúa el modo de un jugador: en el de dos, la palabra la elige una
+   persona, así que una puntuación alta puede significar que el rival puso
+   una palabra fácil. No sería comparable con el resto de la tabla.
+   ========================================================== */
+function entraEnTop(puntos) {
+    if (estado.modo === 'duo' || puntos <= 0) return false;
+    const r = leerRanking();
+    return r.length < 10 || puntos > r[r.length - 1].puntos;
+}
+
+function guardarPuntuacion() {
+    const campo = document.getElementById('inpNombre');
+    const nombre = campo.value.trim();
+    if (!nombre) {
+        avisar('Escribe tu nombre', true);
+        campo.focus();
+        return;
+    }
+
+    const r = leerRanking();
+    r.push({
+        nombre: nombre,
+        puntos: Math.round(estado.puntos),
+        dif: DIF[estado.dificultad].etiqueta,
+        reloj: estado.contrarreloj,
+        fecha: new Date().toLocaleDateString('es-ES')
+    });
+    r.sort((a, b) => b.puntos - a.puntos);
+    r.splice(10);
+    guardarRanking(r);
+
+    document.getElementById('zonaNombre').style.display = 'none';
+    avisar('¡Guardado!');
+}
+
+function pintarRanking() {
+    const cont = document.getElementById('listaRanking');
+    const r = leerRanking();
+
+    if (!r.length) {
+        cont.innerHTML = '<p style="text-align:center;">Todavía no hay récords.<br>¡Sé el primero!</p>';
+        return;
+    }
+
+    /* El nombre lo escribe el jugador y se inyecta con innerHTML: hay que escaparlo */
+    cont.innerHTML = r.map((e, i) =>
+        '<div><span class="nom">' + (i + 1) + '. ' + escaparHtml(e.nombre) + '</span>' +
+        '<span>' + (Number(e.puntos) || 0) + ' · ' + escaparHtml(e.dif || '') +
+        (e.reloj ? ' ⏱' : '') + '</span></div>'
+    ).join('');
+}
+
+/* ==========================================================
+   PAUSA
+   ========================================================== */
+function pausar() {
+    if (!estado.jugando || estado.pausado) return;
+    estado.pausado = true;
+    actualizarTeclado();
+    abrirCapa('capaPausa');
+}
+
+function reanudar() {
+    if (!estado.pausado) return;
+    estado.pausado = false;
+    estado.ultimoTick = Date.now();
+    actualizarTeclado();
+    cerrarCapa('capaPausa');
+}
+
+function volverAlMenu() {
+    estado.jugando = false;
+    estado.pausado = false;
+    pararReloj();
+    ['capaPausa', 'capaFin', 'capaRonda'].forEach(cerrarCapa);
+    mostrarPantalla('pMenu');
+}
+
+/* ==========================================================
+   GRUPOS DE OPCIONES DEL MENÚ
+   ========================================================== */
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+function grupoMultiple(id, conjunto) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        const v = b.dataset.v;
+
+        if (conjunto.has(v)) {
+            /* Hay que dejar al menos uno marcado o no habría de dónde sacar retos */
+            if (conjunto.size === 1) {
+                avisar('Deja al menos un tipo marcado', true);
+                return;
+            }
+            conjunto.delete(v);
+        } else {
+            conjunto.add(v);
+        }
+        b.setAttribute('aria-pressed', String(conjunto.has(v)));
+    });
+}
+
+grupoSimple('grpModo', (v) => {
+    estado.modo = v;
+    /* En dos jugadores la palabra la pone una persona: sobran tipo y reloj */
+    const duo = v === 'duo';
+    document.getElementById('fsTipo').style.display = duo ? 'none' : '';
+    document.getElementById('fsReloj').style.display = duo ? 'none' : '';
+    document.getElementById('btnJugar').textContent = duo ? 'ESCRIBIR LA PALABRA' : 'JUGAR';
+});
+
+grupoMultiple('grpTipo', estado.tipos);
+grupoSimple('grpDif', (v) => { estado.dificultad = v; });
+grupoSimple('grpReloj', (v) => { estado.contrarreloj = (v === 'si'); });
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+document.getElementById('btnJugar').addEventListener('click', () => {
+    if (estado.modo === 'duo') {
+        document.getElementById('inpSecreto').value = '';
+        document.getElementById('inpPista').value = '';
+        mostrarPantalla('pSecreto');
+        setTimeout(() => document.getElementById('inpSecreto').focus(), 60);
+    } else {
+        estado.contrarreloj = document.querySelector('#grpReloj .opcion[aria-pressed="true"]').dataset.v === 'si';
+        empezarPartida();
+    }
+});
+
+document.getElementById('btnVerSecreto').addEventListener('click', () => {
+    const inp = document.getElementById('inpSecreto');
+    const oculto = inp.type === 'password';
+    inp.type = oculto ? 'text' : 'password';
+    document.getElementById('btnVerSecreto').textContent = oculto ? '🙈 OCULTAR' : '👁 VER LO ESCRITO';
+});
+
+document.getElementById('btnEmpezarDuo').addEventListener('click', () => {
+    const bruto = document.getElementById('inpSecreto').value.trim().replace(/\s+/g, ' ');
+    const limpio = bruto.toUpperCase();
+
+    if (!/^[A-ZÁÉÍÓÚÜÑ ]+$/.test(limpio)) {
+        avisar('Solo letras y espacios', true);
+        return;
+    }
+    if (limpio.replace(/ /g, '').length < 3) {
+        avisar('Mínimo 3 letras', true);
+        return;
+    }
+
+    /* El modo se fija aquí y no solo en el menú: así el manejador no depende
+       de en qué estado quedó una pantalla anterior. Sin esto, llegar a esta
+       pantalla con el modo en 'solo' haría que la partida ignorase la palabra
+       escrita y sacase una del banco al azar. */
+    estado.modo = 'duo';
+    estado.reto = limpio;
+    estado.categoria = document.getElementById('inpPista').value.trim();
+    estado.contrarreloj = false;
+
+    /* Se oculta el campo otra vez por si el otro jugador vuelve atrás */
+    const inp = document.getElementById('inpSecreto');
+    inp.type = 'password';
+    document.getElementById('btnVerSecreto').textContent = '👁 VER LO ESCRITO';
+
+    empezarPartida();
+});
+
+document.getElementById('teclado').addEventListener('click', (e) => {
+    const b = e.target.closest('.tecla');
+    if (!b || b.disabled) return;
+    probarLetra(b.dataset.letra);
+});
+
+document.getElementById('btnPausa').addEventListener('click', () => {
+    if (estado.pausado) reanudar(); else pausar();
+});
+
+document.getElementById('btnSeguir').addEventListener('click', reanudar);
+document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
+
+document.getElementById('btnSiguiente').addEventListener('click', () => {
+    cerrarCapa('capaRonda');
+    nuevaRonda();
+});
+
+document.getElementById('btnGuardar').addEventListener('click', guardarPuntuacion);
+
+document.getElementById('inpNombre').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); guardarPuntuacion(); }
+});
+
+document.getElementById('inpSecreto').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('btnEmpezarDuo').click(); }
+});
+
+document.getElementById('btnOtra').addEventListener('click', () => {
+    cerrarCapa('capaFin');
+    if (estado.modo === 'duo') {
+        document.getElementById('inpSecreto').value = '';
+        document.getElementById('inpPista').value = '';
+        mostrarPantalla('pSecreto');
+        setTimeout(() => document.getElementById('inpSecreto').focus(), 60);
+    } else {
+        empezarPartida();
+    }
+});
+
+document.getElementById('btnVolverMenu1').addEventListener('click', volverAlMenu);
+document.getElementById('btnVolverMenu2').addEventListener('click', volverAlMenu);
+
+document.getElementById('btnRanking').addEventListener('click', () => { pintarRanking(); abrirCapa('capaRanking'); });
+document.getElementById('btnCerrarRanking').addEventListener('click', () => cerrarCapa('capaRanking'));
+
+document.getElementById('btnBorrarRanking').addEventListener('click', () => {
+    if (!confirm('¿Borrar todos los récords?')) return;
+    memoriaRanking = [];
+    if (almacenOK) { try { localStorage.removeItem(CLAVE); } catch (e) {} }
+    pintarRanking();
+});
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+/* ---------- TECLADO FÍSICO ---------- */
+document.addEventListener('keydown', (e) => {
+    /* Mientras se escribe en un campo, las teclas son texto y no jugadas */
+    if (e.target instanceof HTMLInputElement) return;
+
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) {
+            if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
+            else ['capaRanking', 'capaAyuda'].forEach(cerrarCapa);
+        } else if (estado.jugando) {
+            pausar();
+        }
+        return;
+    }
+
+    if (hayCapaAbierta()) {
+        if (e.key === 'Enter' && document.getElementById('capaRonda').classList.contains('activa')) {
+            e.preventDefault();
+            document.getElementById('btnSiguiente').click();
+        }
+        return;
+    }
+
+    if (e.key.length !== 1) return;
+
+    const letra = normalizar(e.key);
+    if (esLetra(letra)) {
+        e.preventDefault();
+        probarLetra(letra);
+    }
+});
+
+/* Al cambiar de pestaña o de aplicación con el reloj corriendo, se pausa
+   sola: si no, el jugador perdería el tiempo sin estar mirando. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && estado.jugando && !estado.pausado) pausar();
+    estado.ultimoTick = Date.now();
+});
+
+window.addEventListener('blur', () => {
+    if (estado.jugando && !estado.pausado && estado.contrarreloj) pausar();
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+pintarTeclado();
+pintarBarra();
+</script>
+</body>
+</html>
