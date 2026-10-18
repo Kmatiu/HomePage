@@ -313,6 +313,51 @@
         .lema { margin-bottom: 8px; }
     }
 
+    /* ---------- DUELO A DOS ---------- */
+    #cabeceraDuelo {
+        border: 1px solid var(--borde);
+        border-radius: 12px;
+        background: var(--panel);
+        padding: 10px;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+
+    .ronda-tit { font-size: 0.7rem; color: var(--acento); letter-spacing: 2px; }
+
+    .marcador-duelo {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 4px 0 2px;
+        display: flex;
+        justify-content: center;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .marcador-duelo .jug { font-size: 0.72rem; color: var(--apagado); }
+    .marcador-duelo .jug b { display: block; font-size: 1.5rem; color: var(--texto); }
+    .marcador-duelo .jug.lidera b { color: var(--acento); }
+    .marcador-duelo .guion { color: var(--apagado); font-size: 1.1rem; }
+
+    .turnos { font-size: 0.72rem; color: var(--apagado); line-height: 1.6; }
+    .turnos b { color: var(--amarillo); }
+
+    #dMarcador b { font-size: 0.9rem; }
+    #dMarcador span { font-size: 0.52rem; }
+
+    .caja .tabla-duelo {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin: 10px 0;
+    }
+
+    .caja .tabla-duelo div { font-size: 0.74rem; color: var(--apagado); }
+    .caja .tabla-duelo div b { display: block; font-size: 1.8rem; color: var(--texto); }
+    .caja .tabla-duelo div.gana b { color: var(--acento); }
+
     /* ---------- MENSAJES Y RANKING ---------- */
     #aviso {
         position: fixed;
@@ -431,6 +476,21 @@
             </div>
         </fieldset>
 
+        <fieldset id="fsDuo" style="display:none;">
+            <legend>JUGADORES</legend>
+            <input type="text" id="inpJ1" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 1">
+            <input type="text" id="inpJ2" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 2">
+        </fieldset>
+
+        <fieldset id="fsRondas" style="display:none;">
+            <legend>RONDAS DEL DUELO</legend>
+            <div class="opciones" id="grpRondas">
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2<span class="sub">una palabra cada uno</span></button>
+                <button class="opcion" type="button" data-v="4" aria-pressed="true">4<span class="sub">dos cada uno</span></button>
+                <button class="opcion" type="button" data-v="6" aria-pressed="false">6<span class="sub">tres cada uno</span></button>
+            </div>
+        </fieldset>
+
         <fieldset id="fsReloj">
             <legend>CONTRARRELOJ</legend>
             <div class="opciones" id="grpReloj">
@@ -453,7 +513,13 @@
 <section class="pantalla" id="pSecreto">
     <div class="scroll">
         <h1 style="font-size:1.3rem;">PALABRA <span>SECRETA</span></h1>
-        <p class="lema">Que no mire el otro jugador</p>
+        <p class="lema" id="lemaSecreto">Que no mire el otro jugador</p>
+
+        <div id="cabeceraDuelo">
+            <div class="ronda-tit" id="tituloRonda">RONDA 1 DE 4</div>
+            <div class="marcador-duelo" id="marcadorSecreto"></div>
+            <div class="turnos" id="turnosSecreto"></div>
+        </div>
 
         <fieldset>
             <legend>ESCRIBE LA PALABRA O FRASE</legend>
@@ -487,6 +553,8 @@
         <div class="dato" id="dPuntos"><b>0</b><span>PUNTOS</span></div>
         <div class="dato" id="dIntentos"><b>6</b><span>FALLOS</span></div>
         <div class="dato" id="dRacha"><b>0</b><span>RACHA</span></div>
+        <div class="dato" id="dRonda" style="display:none;"><b>1/4</b><span>RONDA</span></div>
+        <div class="dato" id="dMarcador" style="display:none;"><b>0 - 0</b><span id="etqMarcador">J1 · J2</span></div>
         <div class="dato" id="dTiempo" style="display:none;"><b>2:00</b><span>TIEMPO</span></div>
         <div class="hueco"></div>
         <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
@@ -596,10 +664,13 @@
                 <li>Puntúan las letras acertadas, los fallos que te sobran y la racha.</li>
             </ul>
 
-            <h3>DOS JUGADORES</h3>
+            <h3>DUELO A DOS</h3>
             <ul>
-                <li>Uno escribe la palabra en secreto y el otro adivina.</li>
-                <li>No entra en los récords: la dificultad la elige una persona, así que no es comparable.</li>
+                <li>Se juegan 2, 4 o 6 rondas <b>alternando los papeles</b>: cada uno pone la misma cantidad de palabras.</li>
+                <li>Puntúa quien adivina: gana <b>tantos puntos como fallos le sobren</b>. Si no la saca, cero.</li>
+                <li>Al final gana quien más haya sumado. Si hay empate, empate.</li>
+                <li>Poner palabras imposibles no sirve de nada: el otro puede hacer lo mismo y acabáis a cero.</li>
+                <li>El duelo no entra en los récords: la dificultad la elige una persona, así que no sería comparable.</li>
             </ul>
         </div>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
@@ -679,6 +750,24 @@ const estado = {
 
     recientes: []      // evita repetir lo mismo en la misma partida
 };
+
+/* El duelo a dos es una serie de rondas con los papeles alternados. Cada uno
+   pone exactamente la misma cantidad de palabras (por eso el número de rondas
+   es siempre par), y puntúa el que adivina: tantos puntos como fallos le
+   sobren. Si no la saca, cero.
+
+   Esa simetría es lo que hace el duelo justo sin necesidad de vigilar a nadie:
+   si uno pone palabras imposibles para que el otro no sume, el otro puede
+   hacer lo mismo y acaban empatados a cero. La trampa se anula sola. */
+const duelo = {
+    nombres: ['Jugador 1', 'Jugador 2'],
+    puntos: [0, 0],
+    rondas: 4,
+    ronda: 1,
+    escribe: 0        // índice del jugador que pone la palabra en esta ronda
+};
+
+function quienAdivina() { return 1 - duelo.escribe; }
 
 /* ==========================================================
    ALMACENAMIENTO
@@ -939,8 +1028,140 @@ function pintarBarra() {
         dTiempo.classList.toggle('alerta', t <= 15);
     }
 
-    /* En dos jugadores la racha no significa nada: solo hay una palabra */
-    document.getElementById('dRacha').style.display = estado.modo === 'duo' ? 'none' : 'flex';
+    /* En el duelo, puntos y racha no dicen nada: lo que importa es el
+       marcador entre los dos y en qué ronda van. */
+    const duo = estado.modo === 'duo';
+    document.getElementById('dRacha').style.display = duo ? 'none' : 'flex';
+    document.getElementById('dPuntos').style.display = duo ? 'none' : 'flex';
+    document.getElementById('dRonda').style.display = duo ? 'flex' : 'none';
+    document.getElementById('dMarcador').style.display = duo ? 'flex' : 'none';
+
+    if (duo) {
+        document.querySelector('#dRonda b').textContent = duelo.ronda + '/' + duelo.rondas;
+        document.querySelector('#dMarcador b').textContent = duelo.puntos[0] + ' - ' + duelo.puntos[1];
+        document.getElementById('etqMarcador').textContent =
+            duelo.nombres[0].slice(0, 6) + ' · ' + duelo.nombres[1].slice(0, 6);
+    }
+}
+
+function pintarCabeceraDuelo() {
+    document.getElementById('tituloRonda').textContent =
+        'RONDA ' + duelo.ronda + ' DE ' + duelo.rondas;
+
+    const [a, b] = duelo.puntos;
+    document.getElementById('marcadorSecreto').innerHTML =
+        '<span class="jug' + (a > b ? ' lidera' : '') + '">' +
+            escaparHtml(duelo.nombres[0]) + '<b>' + a + '</b></span>' +
+        '<span class="guion">—</span>' +
+        '<span class="jug' + (b > a ? ' lidera' : '') + '">' +
+            escaparHtml(duelo.nombres[1]) + '<b>' + b + '</b></span>';
+
+    document.getElementById('turnosSecreto').innerHTML =
+        'Escribe <b>' + escaparHtml(duelo.nombres[duelo.escribe]) + '</b>' +
+        ' · adivina <b>' + escaparHtml(duelo.nombres[quienAdivina()]) + '</b>';
+}
+
+function irAEscribirPalabra() {
+    document.getElementById('inpSecreto').value = '';
+    document.getElementById('inpPista').value = '';
+
+    const inp = document.getElementById('inpSecreto');
+    inp.type = 'password';
+    document.getElementById('btnVerSecreto').textContent = '👁 VER LO ESCRITO';
+
+    document.getElementById('lemaSecreto').textContent =
+        'Que no mire ' + duelo.nombres[quienAdivina()];
+
+    pintarCabeceraDuelo();
+    mostrarPantalla('pSecreto');
+    setTimeout(() => inp.focus(), 60);
+}
+
+function iniciarDuelo() {
+    const n1 = document.getElementById('inpJ1').value.trim();
+    const n2 = document.getElementById('inpJ2').value.trim();
+    duelo.nombres = [n1 || 'Jugador 1', n2 || 'Jugador 2'];
+
+    /* Dos nombres iguales harían ilegible el marcador */
+    if (normalizar(duelo.nombres[0]) === normalizar(duelo.nombres[1])) {
+        duelo.nombres[0] += ' (1)';
+        duelo.nombres[1] += ' (2)';
+    }
+
+    duelo.puntos = [0, 0];
+    duelo.ronda = 1;
+    duelo.escribe = 0;
+    estado.modo = 'duo';
+
+    irAEscribirPalabra();
+}
+
+function finRondaDuelo(acertada) {
+    const adivina = quienAdivina();
+    const margen = estado.intentos - estado.fallos;
+    const ganados = acertada ? margen : 0;
+
+    duelo.puntos[adivina] += ganados;
+
+    revelarTodo(!acertada);
+    pintarBarra();
+
+    const ultima = duelo.ronda >= duelo.rondas;
+
+    document.getElementById('tRonda').textContent = acertada ? '✅ ¡ADIVINADA!' : '💀 NO LA SACÓ';
+    document.getElementById('sRonda').innerHTML =
+        '<span class="solucion">' + escaparHtml(estado.reto) + '</span><br><br>' +
+        escaparHtml(duelo.nombres[adivina]) + ' suma <b>' + ganados + '</b> punto(s)' +
+        (acertada ? ' (le sobraban ' + margen + ' fallo(s))' : '') +
+        '<div class="tabla-duelo">' +
+            '<div' + (duelo.puntos[0] > duelo.puntos[1] ? ' class="gana"' : '') + '>' +
+                escaparHtml(duelo.nombres[0]) + '<b>' + duelo.puntos[0] + '</b></div>' +
+            '<div' + (duelo.puntos[1] > duelo.puntos[0] ? ' class="gana"' : '') + '>' +
+                escaparHtml(duelo.nombres[1]) + '<b>' + duelo.puntos[1] + '</b></div>' +
+        '</div>';
+
+    document.getElementById('btnSiguiente').textContent =
+        ultima ? 'VER RESULTADO' : 'RONDA ' + (duelo.ronda + 1);
+
+    abrirCapa('capaRonda');
+}
+
+function avanzarDuelo() {
+    cerrarCapa('capaRonda');
+
+    if (duelo.ronda >= duelo.rondas) {
+        finDuelo();
+        return;
+    }
+
+    duelo.ronda++;
+    duelo.escribe = quienAdivina();   // se cambian los papeles
+    irAEscribirPalabra();
+}
+
+function finDuelo() {
+    const [a, b] = duelo.puntos;
+    const empate = a === b;
+    const ganador = a > b ? 0 : 1;
+
+    document.getElementById('tFin').textContent = empate ? '🤝 EMPATE' : '🏆 ¡GANA ' + duelo.nombres[ganador].toUpperCase() + '!';
+    document.getElementById('sFin').innerHTML =
+        '<div class="tabla-duelo">' +
+            '<div' + (!empate && ganador === 0 ? ' class="gana"' : '') + '>' +
+                escaparHtml(duelo.nombres[0]) + '<b>' + a + '</b></div>' +
+            '<div' + (!empate && ganador === 1 ? ' class="gana"' : '') + '>' +
+                escaparHtml(duelo.nombres[1]) + '<b>' + b + '</b></div>' +
+        '</div>';
+
+    document.getElementById('mFin').style.display = 'none';
+    document.getElementById('detFin').textContent =
+        duelo.rondas + ' rondas · ' + DIF[estado.dificultad].etiqueta +
+        ' · puntúa el margen de fallos de quien adivina';
+    document.getElementById('zonaNombre').style.display = 'none';
+    document.getElementById('btnOtra').textContent = '🔄 OTRO DUELO';
+
+    if (empate) sonFallo(); else sonGana();
+    abrirCapa('capaFin');
 }
 
 /* ==========================================================
@@ -1080,18 +1301,19 @@ function ganarRonda() {
     const bonusRacha = estado.racha * 10;
     const bonusReloj = estado.contrarreloj ? 25 * d.mult : 0;
 
-    estado.puntos += bonusBase + bonusIntentos + bonusRacha + bonusReloj;
-    estado.racha++;
-    estado.palabrasAcertadas++;
-
-    if (estado.contrarreloj) estado.tiempoRestante += RELOJ_BONUS;
+    if (estado.modo !== 'duo') {
+        estado.puntos += bonusBase + bonusIntentos + bonusRacha + bonusReloj;
+        estado.racha++;
+        estado.palabrasAcertadas++;
+        if (estado.contrarreloj) estado.tiempoRestante += RELOJ_BONUS;
+    }
 
     revelarTodo(false);
     pintarBarra();
     sonGana();
 
     if (estado.modo === 'duo') {
-        terminarPartida('ganado-duo');
+        finRondaDuelo(true);
         return;
     }
 
@@ -1107,9 +1329,15 @@ function ganarRonda() {
 function perderRonda() {
     estado.jugando = false;
     estado.enTransicion = true;
+    pararReloj();
     revelarTodo(true);
     pintarHorca();
     sonPierde();
+
+    if (estado.modo === 'duo') {
+        finRondaDuelo(false);
+        return;
+    }
     terminarPartida('fallado');
 }
 
@@ -1118,40 +1346,28 @@ function terminarPartida(motivo) {
     pararReloj();
     actualizarTeclado();
 
-    const esDuo = estado.modo === 'duo';
+    /* El duelo a dos no pasa por aquí: lo cierra finDuelo(), que es quien
+       conoce el marcador de las rondas. Aquí solo acaba la partida de uno. */
     const t = document.getElementById('tFin');
     const s = document.getElementById('sFin');
     const det = document.getElementById('detFin');
     const marcador = document.getElementById('mFin');
 
-    if (esDuo) {
-        const gano = motivo === 'ganado-duo';
-        t.textContent = gano ? '🎉 ¡ADIVINADA!' : '💀 NO LA SACÓ';
-        s.innerHTML = 'La palabra era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>';
-        marcador.style.display = 'none';
-        det.textContent = gano
-            ? 'Con ' + (estado.intentos - estado.fallos) + ' fallo(s) de margen.'
-            : 'Se completó el dibujo.';
-        document.getElementById('zonaNombre').style.display = 'none';
-        document.getElementById('btnOtra').textContent = '🔄 CAMBIAR ROLES';
-    } else {
-        t.textContent = motivo === 'tiempo' ? '⏰ SE ACABÓ EL TIEMPO' : '💀 FIN DE LA PARTIDA';
-        s.innerHTML = motivo === 'tiempo'
-            ? 'La palabra en juego era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>'
-            : 'La palabra era:<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>';
-        marcador.style.display = '';
-        marcador.textContent = Math.round(estado.puntos);
-        det.textContent = estado.palabrasAcertadas + ' acertada(s) · ' +
-                          DIF[estado.dificultad].etiqueta +
-                          (estado.contrarreloj ? ' · contrarreloj' : '');
+    t.textContent = motivo === 'tiempo' ? '⏰ SE ACABÓ EL TIEMPO' : '💀 FIN DE LA PARTIDA';
+    s.innerHTML = (motivo === 'tiempo' ? 'La palabra en juego era:' : 'La palabra era:') +
+                  '<br><span class="solucion">' + escaparHtml(estado.reto) + '</span>';
 
-        const puntos = Math.round(estado.puntos);
-        document.getElementById('zonaNombre').style.display = entraEnTop(puntos) ? '' : 'none';
-        document.getElementById('inpNombre').value = '';
-        document.getElementById('btnOtra').textContent = '🔄 OTRA PARTIDA';
-    }
+    marcador.style.display = '';
+    marcador.textContent = Math.round(estado.puntos);
+    det.textContent = estado.palabrasAcertadas + ' acertada(s) · ' +
+                      DIF[estado.dificultad].etiqueta +
+                      (estado.contrarreloj ? ' · contrarreloj' : '');
 
-    revelarTodo(motivo !== 'ganado-duo');
+    document.getElementById('zonaNombre').style.display = entraEnTop(Math.round(estado.puntos)) ? '' : 'none';
+    document.getElementById('inpNombre').value = '';
+    document.getElementById('btnOtra').textContent = '🔄 OTRA PARTIDA';
+
+    revelarTodo(true);
     cerrarCapa('capaRonda');
     abrirCapa('capaFin');
 }
@@ -1232,6 +1448,7 @@ function volverAlMenu() {
     estado.jugando = false;
     estado.pausado = false;
     pararReloj();
+    document.getElementById('mFin').style.display = '';
     ['capaPausa', 'capaFin', 'capaRonda'].forEach(cerrarCapa);
     mostrarPantalla('pMenu');
 }
@@ -1276,22 +1493,22 @@ grupoSimple('grpModo', (v) => {
     const duo = v === 'duo';
     document.getElementById('fsTipo').style.display = duo ? 'none' : '';
     document.getElementById('fsReloj').style.display = duo ? 'none' : '';
-    document.getElementById('btnJugar').textContent = duo ? 'ESCRIBIR LA PALABRA' : 'JUGAR';
+    document.getElementById('fsDuo').style.display = duo ? '' : 'none';
+    document.getElementById('fsRondas').style.display = duo ? '' : 'none';
+    document.getElementById('btnJugar').textContent = duo ? 'EMPEZAR EL DUELO' : 'JUGAR';
 });
 
 grupoMultiple('grpTipo', estado.tipos);
 grupoSimple('grpDif', (v) => { estado.dificultad = v; });
 grupoSimple('grpReloj', (v) => { estado.contrarreloj = (v === 'si'); });
+grupoSimple('grpRondas', (v) => { duelo.rondas = Number(v); });
 
 /* ==========================================================
    LISTENERS
    ========================================================== */
 document.getElementById('btnJugar').addEventListener('click', () => {
     if (estado.modo === 'duo') {
-        document.getElementById('inpSecreto').value = '';
-        document.getElementById('inpPista').value = '';
-        mostrarPantalla('pSecreto');
-        setTimeout(() => document.getElementById('inpSecreto').focus(), 60);
+        iniciarDuelo();
     } else {
         estado.contrarreloj = document.querySelector('#grpReloj .opcion[aria-pressed="true"]').dataset.v === 'si';
         empezarPartida();
@@ -1349,6 +1566,10 @@ document.getElementById('btnSeguir').addEventListener('click', reanudar);
 document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
 
 document.getElementById('btnSiguiente').addEventListener('click', () => {
+    if (estado.modo === 'duo') {
+        avanzarDuelo();
+        return;
+    }
     cerrarCapa('capaRonda');
     nuevaRonda();
 });
@@ -1366,10 +1587,12 @@ document.getElementById('inpSecreto').addEventListener('keydown', (e) => {
 document.getElementById('btnOtra').addEventListener('click', () => {
     cerrarCapa('capaFin');
     if (estado.modo === 'duo') {
-        document.getElementById('inpSecreto').value = '';
-        document.getElementById('inpPista').value = '';
-        mostrarPantalla('pSecreto');
-        setTimeout(() => document.getElementById('inpSecreto').focus(), 60);
+        /* Duelo nuevo con los mismos nombres y el mismo número de rondas */
+        duelo.puntos = [0, 0];
+        duelo.ronda = 1;
+        duelo.escribe = 0;
+        document.getElementById('mFin').style.display = '';
+        irAEscribirPalabra();
     } else {
         empezarPartida();
     }
