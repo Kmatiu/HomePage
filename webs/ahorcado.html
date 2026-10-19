@@ -153,6 +153,14 @@
         touch-action: manipulation;
     }
 
+    /* Los interruptores de sonido de la pausa son .secundario: sin esto no se
+       distinguiría el encendido del apagado. */
+    .secundario[aria-pressed="true"] {
+        color: var(--acento);
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.12);
+    }
+
     .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
     .fila-btns > * { flex: 1 1 120px; }
 
@@ -520,6 +528,14 @@
             </div>
         </fieldset>
 
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
         <button class="principal" id="btnJugar" type="button">JUGAR</button>
 
         <div class="fila-btns">
@@ -616,6 +632,10 @@
     <div class="caja">
         <h2>⏸ PAUSA</h2>
         <p>El reloj está parado.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
         <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
         <div class="fila-btns">
             <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
@@ -768,6 +788,7 @@ const estado = {
     tiempoRestante: 0,
     ultimoTick: 0,
     timerId: null,
+    ultimoAvisoSeg: Infinity,   // último segundo con tic, para no repetirlo
 
     recientes: []      // evita repetir lo mismo en la misma partida
 };
@@ -838,35 +859,267 @@ function guardarRanking(lista) {
 
 /* ==========================================================
    AUDIO
-   Sin archivos: tonos sintetizados, que no añaden peso ni dependencias.
+   Todo sintetizado con Web Audio: ni archivos ni dependencias, así que suena
+   igual sin conexión y no añade un byte a la descarga del juego.
+
+   Música y efectos son dos canales independientes, cada uno con su propio
+   nodo de ganancia, y los dos arrancan SILENCIADOS. Eso no es solo una
+   preferencia: el navegador bloquea el audio hasta que la persona toca la
+   página, así que un AudioContext creado al cargar nacería en estado
+   'suspended' y el primer sonido se perdería sin aviso. Creándolo dentro del
+   gesto que activa el sonido, ese problema no llega a existir.
    ========================================================== */
-let ctxAudio = null;
+const CLAVE_AUDIO = 'ahorcadoAudio';
+const VOL_MUSICA  = 0.5;
+const VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15;   // margen, en segundos, con que se programan notas
+const PASOS = 32;             // corcheas del bucle: 4 compases de 4/4
 
-function sonido(frecuencia, duracion, tipo) {
+const audio = {
+    musica: false,
+    efectos: false,
+    ctx: null,
+    busMusica: null,
+    busEfectos: null,
+    proximo: 0,      // instante del reloj de audio en que toca el siguiente paso
+    paso: 0,
+    timerId: null
+};
+
+/* Preferencia de la visita anterior. Si no hay nada guardado, o está
+   corrupto, se queda en silencio: el silencio es el valor por defecto. */
+if (almacenOK) {
     try {
-        if (!ctxAudio) ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
-        if (ctxAudio.state === 'suspended') ctxAudio.resume();
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica  = g.musica  === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
 
-        const osc = ctxAudio.createOscillator();
-        const vol = ctxAudio.createGain();
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({
+            musica: audio.musica, efectos: audio.efectos
+        }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica  = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value  = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+/* Subir o bajar con rampa, nunca de golpe: cortar una onda a mitad de ciclo
+   produce un chasquido muy audible con auriculares. */
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica,  audio.musica  ? VOL_MUSICA  : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+/* Una nota: oscilador + envolvente propia, conectados al canal que toque. */
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
         osc.connect(vol);
-        vol.connect(ctxAudio.destination);
+        vol.connect(bus);
+        /* Desconectar al acabar: con una nota cada 150 ms, dejar los nodos
+           colgados acabaría comiéndose la memoria en una partida larga. */
         osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
 
         osc.type = tipo || 'square';
-        osc.frequency.setValueAtTime(frecuencia, ctxAudio.currentTime);
-        vol.gain.setValueAtTime(0.07, ctxAudio.currentTime);
-        vol.gain.exponentialRampToValueAtTime(0.001, ctxAudio.currentTime + duracion);
+        osc.frequency.setValueAtTime(frec, inicio);
 
-        osc.start();
-        osc.stop(ctxAudio.currentTime + duracion);
-    } catch (e) { /* sin audio, el juego sigue igual */ }
+        /* Ataque corto en lugar de empezar a tope, por el mismo chasquido */
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
 }
 
-const sonAcierto = () => sonido(660, 0.12, 'square');
-const sonFallo   = () => sonido(150, 0.22, 'sawtooth');
-const sonGana    = () => { sonido(523, 0.1); setTimeout(() => sonido(659, 0.1), 90); setTimeout(() => sonido(784, 0.2), 180); };
-const sonPierde  = () => { sonido(300, 0.2, 'triangle'); setTimeout(() => sonido(180, 0.4, 'triangle'), 180); };
+/* ---------- MÚSICA ----------
+   Progresión en La menor, un acorde por compás. Al bucle no se le nota la
+   costura porque Sol resuelve otra vez en La menor. */
+const ACORDES = [
+    { bajo: 110.00, notas: [220.00, 261.63, 329.63] },   // Am
+    { bajo:  87.31, notas: [174.61, 220.00, 261.63] },   // F
+    { bajo: 130.81, notas: [196.00, 261.63, 329.63] },   // C
+    { bajo:  98.00, notas: [196.00, 246.94, 293.66] }    // G
+];
+
+/* La tensión sube con el dibujo: el bucle acelera a medida que se llena la
+   horca y se relaja al acabar la ronda. Es información de juego, no adorno;
+   se nota que queda poco margen sin levantar la vista del teclado. */
+function tension() {
+    if (!estado.jugando || !estado.intentos) return 0;
+    return Math.min(1, Math.max(0, estado.fallos / estado.intentos));
+}
+
+function duracionPaso() {
+    const bpm = 92 + 44 * tension();
+    return 30 / bpm;                 // una corchea = media negra
+}
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    /* Bajo en el primer tiempo de cada compás, y más flojo en el tercero */
+    if (paso % 8 === 0)      voz(audio.busMusica, acorde.bajo, t, dur * 3.2, 'triangle', 0.17);
+    else if (paso % 8 === 4) voz(audio.busMusica, acorde.bajo, t, dur * 2.2, 'triangle', 0.11);
+
+    /* Arpegio subiendo y bajando por las notas del acorde */
+    const escalera = [0, 1, 2, 1];
+    const nota = acorde.notas[escalera[paso % escalera.length]];
+    voz(audio.busMusica, nota, t, dur * 0.9, 'sine', 0.075);
+
+    /* Golpe seco en las negras: marca el pulso sin necesidad de percusión */
+    if (paso % 4 === 0) voz(audio.busMusica, 1760, t, 0.035, 'square', 0.03);
+
+    /* Con la horca casi llena entra una segunda menor por encima del arpegio.
+       Disuena a propósito. */
+    if (paso % 16 === 14 && tension() >= 0.75) {
+        voz(audio.busMusica, nota * 1.06, t, dur * 1.4, 'sawtooth', 0.045);
+    }
+}
+
+/* Programador con vista adelantada. Lo que NO se puede hacer es una nota por
+   cada vuelta de setTimeout: el temporizador de JavaScript se desvía unos
+   milisegundos en cada vuelta y el ritmo se va notando cojo enseguida. Aquí
+   el temporizador solo despierta a mirar, y las notas se encolan con la
+   marca de tiempo exacta del reloj de audio, que no se desvía. */
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    /* Con la pestaña en segundo plano setTimeout se frena a ~1 Hz y el reloj
+       se queda atrás. Recolocarlo evita que al volver suelte de golpe las
+       decenas de notas atrasadas. */
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;          // ya está sonando
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+/* No se reinicia audio.paso: al reanudar, el bucle sigue donde lo dejó. */
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    /* Las notas ya encoladas (hasta 0,15 s) se apagan bajando el canal, en
+       lugar de quedarse sonando solas después del silencio. */
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+/* Los encadenados van con marca de tiempo en el reloj de audio, no con
+   setTimeout: así no se descolocan aunque el navegador vaya cargado. */
+const sonPulsar  = () => efecto(880, 0.035, 'square', 0.05);
+const sonAcierto = () => { efecto(660, 0.10, 'square', 0.07); efecto(990, 0.12, 'square', 0.05, 0.06); };
+const sonFallo   = () => efecto(150, 0.22, 'sawtooth', 0.07);
+const sonTic     = () => efecto(1320, 0.05, 'square', 0.055);
+const sonRonda   = () => { efecto(392, 0.09, 'square', 0.06); efecto(587, 0.16, 'square', 0.06, 0.08); };
+const sonGana    = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.28, 'square', 0.07, 0.27);
+};
+const sonPierde  = () => {
+    efecto(311, 0.18, 'triangle', 0.08);
+    efecto(233, 0.22, 'triangle', 0.08, 0.17);
+    efecto(175, 0.50, 'triangle', 0.08, 0.36);
+};
+
+/* ---------- INTERRUPTORES ----------
+   Los mismos dos botones aparecen en el menú y en la pausa; esta función
+   repinta los que haya en pantalla, sin saber cuántos son. */
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada'     : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();      // confirmación de que ya se oye
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
 
 /* ==========================================================
    PANTALLAS Y CAPAS
@@ -1194,6 +1447,7 @@ function arrancarReloj() {
     pararReloj();
     if (!estado.contrarreloj) return;
     estado.ultimoTick = Date.now();
+    estado.ultimoAvisoSeg = Infinity;
     estado.timerId = setInterval(tictac, 200);
 }
 
@@ -1219,6 +1473,16 @@ function tictac() {
         terminarPartida('tiempo');
         return;
     }
+
+    /* Tic en los diez últimos segundos. El reloj se mira cada 200 ms, así que
+       hay que llevar cuenta del segundo ya avisado o sonarían cinco tics por
+       segundo. */
+    const seg = Math.ceil(estado.tiempoRestante);
+    if (seg <= 10 && seg !== estado.ultimoAvisoSeg) {
+        estado.ultimoAvisoSeg = seg;
+        sonTic();
+    }
+
     pintarBarra();
 }
 
@@ -1255,6 +1519,7 @@ function nuevaRonda() {
     pintarHorca();
     actualizarTeclado();
     pintarBarra();
+    sonRonda();
 }
 
 function empezarPartida() {
@@ -1326,7 +1591,13 @@ function ganarRonda() {
         estado.puntos += bonusBase + bonusIntentos + bonusRacha + bonusReloj;
         estado.racha++;
         estado.palabrasAcertadas++;
-        if (estado.contrarreloj) estado.tiempoRestante += RELOJ_BONUS;
+        if (estado.contrarreloj) {
+            estado.tiempoRestante += RELOJ_BONUS;
+            /* El bonus devuelve el reloj por encima de diez: si no se olvida
+               el segundo ya avisado, al bajar otra vez a ese mismo número el
+               tic se quedaría callado. */
+            estado.ultimoAvisoSeg = Infinity;
+        }
     }
 
     revelarTodo(false);
@@ -1454,6 +1725,7 @@ function pausar() {
     if (!estado.jugando || estado.pausado) return;
     estado.pausado = true;
     actualizarTeclado();
+    pararMusica();
     abrirCapa('capaPausa');
 }
 
@@ -1462,6 +1734,7 @@ function reanudar() {
     estado.pausado = false;
     estado.ultimoTick = Date.now();
     actualizarTeclado();
+    arrancarMusica();
     cerrarCapa('capaPausa');
 }
 
@@ -1527,6 +1800,23 @@ grupoSimple('grpRondas', (v) => { duelo.rondas = Number(v); });
 /* ==========================================================
    LISTENERS
    ========================================================== */
+
+/* Los interruptores de sonido están en dos sitios (menú y pausa) y se
+   atienden delegando en el documento, así que da igual cuántos haya.
+   De paso, el resto de botones de interfaz suenan al pulsarse; las teclas de
+   letra no, porque esas ya responden con el acierto o el fallo. */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) {
+        alternarSonido(interruptor.dataset.son);
+        return;
+    }
+    if (t.closest('.opcion, .principal, .secundario, .icono')) sonPulsar();
+});
+
 document.getElementById('btnJugar').addEventListener('click', () => {
     if (estado.modo === 'duo') {
         iniciarDuelo();
@@ -1673,6 +1963,16 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && estado.jugando && !estado.pausado) pausar();
     estado.ultimoTick = Date.now();
+
+    /* La música se corta aunque no haya partida en marcha (el menú también
+       suena). En segundo plano setTimeout se frena a ~1 Hz, así que dejarla
+       correr no la mantendría sonando: la dejaría sonando mal. */
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else if (!estado.pausado) {
+        arrancarMusica();
+    }
 });
 
 window.addEventListener('blur', () => {
@@ -1684,6 +1984,23 @@ window.addEventListener('blur', () => {
    ========================================================== */
 pintarTeclado();
 pintarBarra();
+pintarBotonesSonido();
+
+/* Si en la visita anterior quedó algo activado, el navegador sigue sin
+   permitir audio hasta el primer toque en la página: se espera a ese gesto y
+   es entonces cuando se crea el contexto y arranca la música. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
 </script>
 </body>
 </html>
