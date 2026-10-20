@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Sopa de Letras</title>
+<style>
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --celda-fondo: #1d1850;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        /* Holgura SUMADA al inset: Chrome en Android devuelve
+           safe-area-inset-bottom = 0 aunque la barra de gestos tape parte de
+           lo que el viewport dice que hay. */
+        padding: calc(env(safe-area-inset-top, 0px) + 14px)
+                 calc(env(safe-area-inset-right, 0px) + 6px)
+                 calc(env(safe-area-inset-bottom, 0px) + 20px)
+                 calc(env(safe-area-inset-left, 0px) + 6px);
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        height: 100vh;
+        height: 100dvh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla { display: none; flex-direction: column; width: 100%; max-width: 640px; height: 100%; min-height: 0; }
+    .pantalla.activa { display: flex; }
+
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 { font-size: clamp(1.4rem, 6.5vw, 2.2rem); margin: 10px 0 2px; text-align: center; letter-spacing: 2px; }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset { border: 1px solid var(--borde); border-radius: 12px; margin: 0 0 12px; padding: 10px; }
+    legend { color: var(--apagado); font-size: 0.64rem; letter-spacing: 2px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    /* Los temas son diez: más estrechos para que no hagan una lista infinita */
+    #grpTema .opcion { min-width: 0; flex: 1 1 30%; font-size: 0.72rem; padding: 9px 4px; }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    .principal {
+        width: 100%;
+        padding: 15px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario {
+        padding: 11px 16px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .fila-btns > * { flex: 1 1 120px; }
+
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- PARTIDA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+    #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.55rem; letter-spacing: 1px; }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 36px;
+        height: 32px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    .icono:disabled { opacity: 0.35; }
+
+    /* En vertical, rejilla y lista cuelgan directamente de la columna de la
+       pantalla. Esto va en la hoja de estilos y NO en un style= del HTML: un
+       estilo en línea gana a la regla del media query y la disposición
+       apaisada no llegaría a aplicarse nunca. */
+    #zonaJuego { display: contents; }
+
+    #zonaSopa {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 0;
+    }
+
+    /* El lado de la casilla lo calcula ajustarSopa() midiendo el hueco libre */
+    #sopa {
+        display: grid;
+        gap: 2px;
+        /* Sin esto, arrastrar el dedo por la rejilla hace scroll de la página
+           en lugar de seleccionar, y el juego es injugable en el móvil. */
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .celda {
+        width: var(--celda);
+        height: var(--celda);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--celda-fondo);
+        border-radius: 4px;
+        font-size: calc(var(--celda) * 0.56);
+        font-weight: bold;
+        line-height: 1;
+        color: var(--texto);
+    }
+
+    /* Palabras ya encontradas: se quedan marcadas para siempre */
+    .celda.hallada {
+        background: rgba(0, 255, 200, 0.28);
+        color: var(--acento);
+    }
+
+    /* Lo que el dedo está señalando ahora mismo */
+    .celda.sel {
+        background: var(--amarillo);
+        color: #0b0922;
+    }
+
+    .celda.pista { animation: pistaParpadeo 0.6s ease-in-out 4; }
+
+    @keyframes pistaParpadeo {
+        0%, 100% { background: var(--celda-fondo); }
+        50%      { background: var(--rosa); color: #0b0922; }
+    }
+
+    @media (prefers-reduced-motion: reduce) { .celda.pista { animation: none; background: var(--rosa); } }
+
+    /* ---------- LISTA DE PALABRAS ---------- */
+    #lista {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+        padding: 6px 2px 0;
+        max-height: 30%;
+        overflow-y: auto;
+    }
+
+    .palabra {
+        padding: 4px 8px;
+        border: 1px solid var(--borde);
+        border-radius: 8px;
+        background: var(--panel);
+        font-size: 0.66rem;
+        letter-spacing: 1px;
+    }
+
+    .palabra.hallada {
+        color: var(--apagado);
+        border-color: transparent;
+        background: transparent;
+        text-decoration: line-through;
+        opacity: 0.55;
+    }
+
+    /* ---------- CAPAS ---------- */
+    .capa {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 6, 26, 0.9);
+        padding: 16px;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 440px;
+        max-height: 100%;
+        overflow-y: auto;
+        border: 2px solid var(--borde);
+        border-radius: 16px;
+        background: #15113a;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: 1px; }
+    .caja p { color: var(--apagado); font-size: 0.78rem; margin: 0 0 12px; line-height: 1.5; }
+    .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
+    .caja .marcador { font-size: 1.5rem; font-weight: bold; color: var(--acento); margin: 6px 0 10px; }
+
+    /* Arriba y no abajo: abajo caía sobre la lista de palabras */
+    #aviso-flotante {
+        position: fixed;
+        left: 50%;
+        top: calc(env(safe-area-inset-top, 0px) + 58px);
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        border: 2px solid var(--acento);
+        border-radius: 10px;
+        background: #15113a;
+        color: var(--acento);
+        font-size: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+        z-index: 20;
+        max-width: 90vw;
+    }
+
+    #aviso-flotante.vista { opacity: 1; }
+    #aviso-flotante.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    @media (orientation: landscape) and (max-height: 560px) {
+        body {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        }
+        .pantalla { max-width: 980px; }
+        h1 { font-size: 1.3rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+        /* Apaisado: rejilla a la izquierda y lista de palabras a la derecha */
+        #zonaJuego {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+            grid-template-areas: "sopa lista";
+            gap: 4px 12px;
+            flex: 1 1 auto;
+            min-height: 0;
+            align-items: center;
+        }
+        #zonaSopa { grid-area: sopa; height: 100%; }
+        #lista { grid-area: lista; max-height: 100%; align-content: center; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>SOPA DE <span>LETRAS</span></h1>
+        <p class="lema">Arrastra el dedo sobre la palabra</p>
+
+        <fieldset>
+            <legend>TEMA</legend>
+            <div class="opciones" id="grpTema"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>DIFICULTAD</legend>
+            <div class="opciones" id="grpNivel">
+                <button class="opcion" type="button" data-v="facil" aria-pressed="false">FÁCIL<span class="sub">10×10 · rectas</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">NORMAL<span class="sub">12×12 · diagonales</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">14×14 · y al revés</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dHalladas"><b>0/0</b><span>PALABRAS</span></div>
+        <div class="dato" id="dTiempo"><b>0:00</b><span>TIEMPO</span></div>
+        <div class="dato" id="dPistas"><b>3</b><span>PISTAS</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnPista" type="button" aria-label="Pista">💡</button>
+        <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="zonaJuego">
+        <div id="zonaSopa"><div id="sopa" role="grid" aria-label="Sopa de letras"></div></div>
+        <div id="lista"></div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj está parado y la sopa, tapada.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtraDesdePausa" type="button">OTRA SOPA</button>
+            <button class="secundario" id="btnAbandonar" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin">🏆 ¡SOPA RESUELTA!</h2>
+        <div class="marcador" id="mFin"></div>
+        <p id="sFin"></p>
+        <button class="principal" id="btnOtra" type="button">OTRA SOPA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <ul>
+            <li>Pon el dedo en la primera letra, arrástralo hasta la última y suelta. La selección se endereza sola a la línea recta más cercana, así que no hace falta puntería.</li>
+            <li>También vale tocar la primera letra, levantar el dedo y tocar después la última.</li>
+            <li>Da igual el sentido: si la palabra está escrita al revés, puedes marcarla de principio a fin o de fin a principio.</li>
+            <li>En <b>fácil</b> las palabras solo van en horizontal y en vertical. En <b>normal</b> aparecen las diagonales, y en <b>difícil</b> también se escriben al revés.</li>
+            <li>El botón <b>💡</b> hace parpadear la primera letra de una palabra que te falte, a costa de una pista.</li>
+            <li>Con teclado: <b>←→↑↓</b> mueven, <b>Enter</b> fija el principio y el final de la palabra.</li>
+        </ul>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="aviso-flotante"></div>
+
+<script>
+/* ==========================================================
+   BANCO DE PALABRAS POR TEMAS
+   Sin tildes, porque en la sopa cada casilla es una letra suelta y no hay
+   forma de escribir una É. La Ñ sí es letra propia.
+   ========================================================== */
+const BANCO = {
+  "Animales": ["ARAÑA","ARDILLA","AVESTRUZ","CAMALEON","CANGURO","CIEMPIES","CIGUEÑA","COCODRILO","CORZO","DELFIN","ELEFANTE","ERIZO","ESCARABAJO","FOCA","GACELA","GAVIOTA","HIPOPOTAMO","JABALI","JIRAFA","LECHUZA","LIBELULA","LINCE","LOBO","LUCIERNAGA","MARIPOSA","MEDUSA","MIRLO","MORSA","MURCIELAGO","MUSARAÑA","NUTRIA","ORNITORRINCO","ORUGA","PANTERA","PERDIZ","PINGUINO","PIRAÑA","RINOCERONTE","SALAMANDRA","SALMON","TEJON","TIBURON","TOPO","TORTUGA","URRACA","ZORRO"],
+  "Casa y ciudad": ["ACERA","ALJIBE","ARMARIO","ASCENSOR","AYUNTAMIENTO","AZOTEA","BALCON","BIBLIOTECA","BUHARDILLA","BUZON","CAÑERIA","CELOSIA","CHIMENEA","CLAUSTRO","DESPENSA","ESTANTERIA","FACHADA","FAROLA","FREGADERO","GARAJE","LAVADORA","MERCADO","NEVERA","PASILLO","PERSIANA","PLAZA","PORTAL","PORTICO","PUENTE","QUIOSCO","ROTONDA","SEMAFORO","TERRAZA","TRASTERO","TUNEL","ZAGUAN"],
+  "Ciencia": ["ARTERIA","ATOMO","BACTERIA","CARBONO","CIRCUITO","COMETA","CROMOSOMA","ECLIPSE","ELECTRON","ENZIMA","EROSION","ESQUELETO","ESTRATO","FOSIL","FOTOSINTESIS","GALAXIA","GLACIAR","GRAVEDAD","HIDROGENO","IMAN","INERCIA","ISOTOPO","MAREA","MERCURIO","METEORITO","MICROBIO","MOLECULA","NEBULOSA","NEURONA","NEUTRON","ORBITA","OXIGENO","PLANETA","PRISMA","PROTON","PULMON","SATELITE","TELESCOPIO","TERREMOTO","URANIO","VACUNA","VOLCAN"],
+  "Comida": ["ACEITUNA","AGUACATE","ALBARICOQUE","ALCACHOFA","ALIÑO","AZAFRAN","BACALAO","BERENJENA","BESUGO","BIZCOCHO","BOQUERON","CALABACIN","CALABAZA","CANELA","CASTAÑA","CEBOLLA","CHORIZO","CHURRO","CROQUETA","EMPANADA","ESPINACA","FABADA","FRAMBUESA","GARBANZO","GAZPACHO","JAMON","LENTEJA","MANTEQUILLA","MAZAPAN","MELOCOTON","MEMBRILLO","MERLUZA","MORCILLA","OREGANO","PAELLA","PIMIENTO","PIÑA","PULPO","SALMOREJO","SANDIA","TORTILLA","TURRON","VINAGRE","ZANAHORIA"],
+  "Deportes": ["ARBITRO","ATLETISMO","BALONCESTO","BALONMANO","BOXEO","CAMPAÑA","CAMPEONATO","CANASTA","CICLISMO","ESCALADA","ESGRIMA","GIMNASIA","HALTEROFILIA","JABALINA","JUDO","KARATE","MARATON","MEDALLA","NATACION","PATINAJE","PELOTA","PENALTI","PERTIGA","PETANCA","PIRAGUA","PIRAGUISMO","PODIO","PORTERIA","PORTERO","RAQUETA","RELEVO","REMO","SENDERISMO","TATAMI","TRAMPOLIN","TRIATLON","VELERO","WATERPOLO"],
+  "Geografía": ["ACANTILADO","ALBACETE","AMAZONAS","ARGENTINA","ARRECIFE","ATOLON","AUSTRALIA","BADAJOZ","BRUSELAS","CANTABRICO","CASTELLON","CAÑON","COPENHAGUE","CORDILLERA","CORDOBA","CRATER","DINAMARCA","DUNA","ESPAÑA","ESTAMBUL","ESTEPA","ESTUARIO","ETIOPIA","FINLANDIA","FIORDO","GEISER","GIBRALTAR","GRANADA","GUADALAJARA","GUADALQUIVIR","HIMALAYA","ISLANDIA","ISTMO","LAGUNA","LLANURA","MALLORCA","MARRUECOS","MESETA","MONTAÑA","MOSCU","NORUEGA","OASIS","PAMPLONA","PANTANO","PENINSULA","PIRINEOS","PONTEVEDRA","PORTUGAL","SABANA","SANTANDER","TAILANDIA","TENERIFE","TUNDRA","VARSOVIA","VENEZUELA","ZARAGOZA"],
+  "Música": ["ACORDEON","ARMONICA","ARPA","BANDURRIA","BATERIA","CASTAÑUELAS","CLARINETE","CONCIERTO","CONTRABAJO","CORCHEA","ESCENARIO","ESTRIBILLO","ESTROFA","FLAMENCO","GUITARRA","LAUD","MELODIA","MICROFONO","OBOE","ORGANO","ORQUESTA","PANDERETA","PARTITURA","PEÑA","SAXOFON","SINFONIA","SOLFEO","TAMBOR","TECLADO","TIMBAL","TROMBON","TROMPETA","VIOLA","VIOLIN","VIOLONCHELO","XILOFONO"],
+  "Objetos": ["ABANICO","ALFOMBRA","ALICATE","ALMOHADA","AURICULARES","BOLIGRAFO","BOTIJO","BRUJULA","CALCULADORA","CANDADO","CARRETILLA","CARTERA","CATALEJO","CEPILLO","CERRADURA","COLADOR","CORTINA","DESTORNILLADOR","EMBUDO","ESCALERA","ESPEJO","GRAPADORA","LINTERNA","MALETA","MANGUERA","MARTILLO","MICROSCOPIO","MOCHILA","MORTERO","MUÑECA","PARAGUAS","PEINE","PENDULO","PERCHA","PESTAÑA","TALADRO","TERMOMETRO","TIJERAS"],
+  "Profesiones": ["ABOGADO","ALBAÑIL","ALFARERO","ARQUEOLOGO","ARQUITECTO","ASTRONAUTA","BIBLIOTECARIO","BOMBERO","CANTERO","CARNICERO","CARPINTERO","CARTERO","CERRAJERO","COCINERO","DISEÑADOR","EBANISTA","ELECTRICISTA","ENFERMERO","ESCULTOR","FONTANERO","FOTOGRAFO","GEOLOGO","HERRERO","JARDINERO","LIBRERO","MARINERO","MECANICO","NOTARIO","ORFEBRE","PANADERO","PELUQUERO","PERIODISTA","PESCADOR","PILOTO","PINTOR","RELOJERO","SOLDADOR","TONELERO","TRADUCTOR","VETERINARIO","ZAPATERO"]
+};
+
+/* ==========================================================
+   MOTOR DE LA SOPA DE LETRAS
+   Coloca las palabras en la rejilla y rellena los huecos. Se mantiene aparte
+   del HTML para poder ejercitarlo en Node sin DOM; el script de empaquetado
+   lo mete dentro del juego.
+   ========================================================== */
+
+/* Las ocho direcciones, como [dfila, dcolumna].
+   Las cuatro primeras van "hacia delante" (de izquierda a derecha o de
+   arriba abajo) y las cuatro últimas son sus contrarias, que es lo que hace
+   que una palabra se lea al revés. Por eso el nivel fácil solo usa las dos
+   primeras: sin diagonales y sin invertir. */
+const DIRECCIONES = [
+    [0, 1],    // →  horizontal
+    [1, 0],    // ↓  vertical
+    [1, 1],    // ↘  diagonal bajando
+    [-1, 1],   // ↗  diagonal subiendo
+    [0, -1],   // ←  horizontal al revés
+    [-1, 0],   // ↑  vertical al revés
+    [-1, -1],  // ↖
+    [1, -1]    // ↙
+];
+
+/* Frecuencia aproximada de las letras en español. Rellenar con letras al
+   azar uniformes delata las palabras: la rejilla se llena de K, W y X y lo
+   escrito de verdad canta a la legua. Con estos pesos el relleno se parece a
+   un texto y hay que buscar de verdad. */
+const PESOS = [
+    ['A', 125], ['E', 137], ['O', 87], ['S', 80], ['R', 69], ['N', 67],
+    ['I', 63], ['D', 59], ['L', 50], ['C', 47], ['T', 46], ['U', 39],
+    ['M', 32], ['P', 25], ['B', 14], ['G', 10], ['V', 9], ['Y', 9],
+    ['Q', 9], ['H', 7], ['F', 7], ['Z', 5], ['J', 4], ['X', 2],
+    ['Ñ', 3], ['K', 1], ['W', 1]
+];
+
+const PESO_TOTAL = PESOS.reduce((a, p) => a + p[1], 0);
+
+function letraDeRelleno(azar) {
+    let r = azar() * PESO_TOTAL;
+    for (const [letra, peso] of PESOS) {
+        r -= peso;
+        if (r <= 0) return letra;
+    }
+    return 'E';
+}
+
+function barajar(lista, azar) {
+    const copia = lista.slice();
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    }
+    return copia;
+}
+
+/* ¿Cabe la palabra empezando en (fila, col) y tirando por [df, dc]?
+   Devuelve el número de letras que aprovecha de las que ya estaban (solapes)
+   o -1 si no cabe. Un solape solo vale si la letra coincide. */
+function medirHueco(letras, lado, palabra, fila, col, df, dc) {
+    const finF = fila + df * (palabra.length - 1);
+    const finC = col + dc * (palabra.length - 1);
+    if (fila < 0 || col < 0 || fila >= lado || col >= lado) return -1;
+    if (finF < 0 || finC < 0 || finF >= lado || finC >= lado) return -1;
+
+    let solapes = 0;
+    for (let i = 0; i < palabra.length; i++) {
+        const f = fila + df * i;
+        const c = col + dc * i;
+        const actual = letras[f * lado + c];
+        if (!actual) continue;
+        if (actual !== palabra[i]) return -1;
+        solapes++;
+    }
+    return solapes;
+}
+
+function escribirPalabra(letras, lado, palabra, fila, col, df, dc) {
+    for (let i = 0; i < palabra.length; i++) {
+        letras[(fila + df * i) * lado + (col + dc * i)] = palabra[i];
+    }
+}
+
+/* Coloca una palabra probando sitios al azar. Entre los que valen prefiere
+   los que aprovechan letras ya puestas: los cruces aprietan la sopa y la
+   hacen más difícil, que es justo la gracia. */
+function colocar(letras, lado, palabra, direcciones, azar, intentos) {
+    let mejor = null;
+
+    for (let n = 0; n < intentos; n++) {
+        const [df, dc] = direcciones[Math.floor(azar() * direcciones.length)];
+        const fila = Math.floor(azar() * lado);
+        const col = Math.floor(azar() * lado);
+
+        const solapes = medirHueco(letras, lado, palabra, fila, col, df, dc);
+        if (solapes < 0) continue;
+        if (!mejor || solapes > mejor.solapes) {
+            mejor = { fila, col, df, dc, solapes };
+            /* Dos letras aprovechadas ya es un buen sitio: no merece la pena
+               seguir probando. */
+            if (solapes >= 2) break;
+        }
+    }
+
+    if (!mejor) return null;
+    escribirPalabra(letras, lado, palabra, mejor.fila, mejor.col, mejor.df, mejor.dc);
+    return mejor;
+}
+
+/* Genera la sopa. `opciones`: { lado, palabras, direcciones, min, max }.
+   Devuelve null si no logra colocarlas todas, para que quien llama vuelva a
+   intentarlo en vez de entregar una sopa con palabras que no están. */
+function generarSopa(banco, opciones, azar) {
+    azar = azar || Math.random;
+
+    const lado = opciones.lado;
+    const cuantas = opciones.palabras;
+    const direcciones = DIRECCIONES.slice(0, opciones.direcciones);
+    const min = opciones.min || 4;
+    /* Una palabra tan larga como el lado solo cabe pegada a un borde y canta
+       demasiado; se deja al menos una casilla de margen. */
+    const max = Math.min(opciones.max || 99, lado - 1);
+
+    const candidatas = barajar(banco.filter(p => p.length >= min && p.length <= max), azar);
+    if (candidatas.length < cuantas) return null;
+
+    const letras = new Array(lado * lado).fill('');
+    const colocadas = [];
+    const usadas = new Set();
+
+    /* Se trabaja por lotes pequeños sacados del montón ya barajado, y dentro
+       de cada lote se colocan de más larga a más corta.
+
+       El orden por longitud importa: las largas tienen menos sitios donde
+       caber y hay que ponerlas mientras la rejilla está vacía. Pero ordenar
+       TODO el banco y quedarse con las primeras daba sopas de doce palabras
+       de diez letras cada una, sin una sola corta. El lote pequeño conserva
+       la mezcla de largos, que es parte de la gracia de una sopa. */
+    const reserva = candidatas.slice();
+
+    while (colocadas.length < cuantas && reserva.length) {
+        const falta = cuantas - colocadas.length;
+        const lote = reserva.splice(0, Math.min(reserva.length, falta + 4))
+            .sort((a, b) => b.length - a.length);
+
+        for (const palabra of lote) {
+            if (colocadas.length >= cuantas) break;
+            if (usadas.has(palabra)) continue;
+
+            /* Una palabra contenida en otra ya puesta se encontraría sola al
+               buscar la grande: GATO dentro de GATOS. */
+            if (colocadas.some(c => c.palabra.indexOf(palabra) !== -1 ||
+                                    palabra.indexOf(c.palabra) !== -1)) continue;
+
+            const sitio = colocar(letras, lado, palabra, direcciones, azar, 160);
+            if (!sitio) continue;
+
+            usadas.add(palabra);
+            colocadas.push({ palabra, fila: sitio.fila, col: sitio.col, df: sitio.df, dc: sitio.dc });
+        }
+    }
+
+    if (colocadas.length < cuantas) return null;
+
+    for (let i = 0; i < letras.length; i++) {
+        if (!letras[i]) letras[i] = letraDeRelleno(azar);
+    }
+
+    return { letras, lado, colocadas };
+}
+
+/* Busca una palabra por toda la rejilla y devuelve TODAS las apariciones.
+   El juego la usa para dar por buena cualquier lectura correcta, no solo la
+   que colocó el generador: si el relleno forma la palabra por casualidad en
+   otro sitio, encontrarla ahí también cuenta. */
+function buscarEnSopa(letras, lado, palabra) {
+    const encontradas = [];
+
+    for (let fila = 0; fila < lado; fila++) {
+        for (let col = 0; col < lado; col++) {
+            if (letras[fila * lado + col] !== palabra[0]) continue;
+
+            for (const [df, dc] of DIRECCIONES) {
+                const finF = fila + df * (palabra.length - 1);
+                const finC = col + dc * (palabra.length - 1);
+                if (finF < 0 || finC < 0 || finF >= lado || finC >= lado) continue;
+
+                let vale = true;
+                for (let i = 1; i < palabra.length && vale; i++) {
+                    if (letras[(fila + df * i) * lado + (col + dc * i)] !== palabra[i]) vale = false;
+                }
+                if (vale) encontradas.push({ fila, col, df, dc });
+            }
+        }
+    }
+    return encontradas;
+}
+
+/* Casillas que ocupa una colocación, en orden */
+function casillasDeColocacion(c, lado) {
+    const lista = [];
+    for (let i = 0; i < c.palabra.length; i++) {
+        lista.push((c.fila + c.df * i) * lado + (c.col + c.dc * i));
+    }
+    return lista;
+}
+
+/* Dado un arrastre de (f1,c1) a (f2,c2), decide qué línea recta quiso hacer
+   la persona. El dedo nunca va exactamente recto, así que se ajusta a la más
+   cercana de las ocho direcciones en lugar de exigir puntería. */
+function ajustarSeleccion(f1, c1, f2, c2) {
+    const df = f2 - f1, dc = c2 - c1;
+    const af = Math.abs(df), ac = Math.abs(dc);
+    if (!af && !ac) return { df: 0, dc: 0, largo: 1 };
+
+    const signo = (x) => (x > 0 ? 1 : x < 0 ? -1 : 0);
+    let pf, pc;
+
+    if (ac > af * 2) { pf = 0; pc = signo(dc); }            // casi horizontal
+    else if (af > ac * 2) { pf = signo(df); pc = 0; }       // casi vertical
+    else { pf = signo(df); pc = signo(dc); }                // diagonal
+
+    return { df: pf, dc: pc, largo: Math.max(af, ac) + 1 };
+}
+
+/* ==========================================================
+   ALMACENAMIENTO
+   ========================================================== */
+const almacenOK = (() => {
+    try {
+        const p = '__sopa__';
+        localStorage.setItem(p, '1');
+        localStorage.removeItem(p);
+        return true;
+    } catch (e) { return false; }
+})();
+
+function escaparHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
+/* ==========================================================
+   AUDIO
+   Sintetizado con Web Audio: sin archivos ni dependencias, suena igual sin
+   conexión. Música y efectos arrancan SILENCIADOS; además de ser lo educado,
+   el navegador bloquea el audio hasta que la persona toca la página, así que
+   un contexto creado al cargar nacería suspendido y el primer sonido se
+   perdería.
+   ========================================================== */
+const CLAVE_AUDIO = 'sopaAudio';
+const VOL_MUSICA = 0.5, VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15, PASOS = 32;
+
+const audio = {
+    musica: false, efectos: false,
+    ctx: null, busMusica: null, busEfectos: null,
+    proximo: 0, paso: 0, timerId: null
+};
+
+if (almacenOK) {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica = g.musica === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
+
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({ musica: audio.musica, efectos: audio.efectos }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
+        osc.connect(vol);
+        vol.connect(bus);
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frec, inicio);
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
+}
+
+/* ---------- MÚSICA ----------
+   Buscar palabras es tarea de mirar despacio: el bucle va lento y sin
+   percusión marcada, para acompañar sin meter prisa. */
+const ACORDES = [
+    { bajo: 65.41, notas: [130.81, 164.81, 196.00] },   // Do
+    { bajo: 87.31, notas: [174.61, 220.00, 261.63] },   // Fa
+    { bajo: 73.42, notas: [146.83, 174.61, 220.00] },   // Re menor
+    { bajo: 98.00, notas: [196.00, 246.94, 293.66] }    // Sol
+];
+
+function duracionPaso() { return 30 / 72; }
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    if (paso % 8 === 0) voz(audio.busMusica, acorde.bajo, t, dur * 3.6, 'triangle', 0.18);
+    if (paso % 4 === 0) {
+        const nota = acorde.notas[[0, 2, 1][(paso >> 2) % 3]];
+        voz(audio.busMusica, nota, t, dur * 2.6, 'sine', 0.065);
+    }
+}
+
+/* Programador con vista adelantada: el temporizador solo despierta a mirar y
+   las notas se encolan con la marca de tiempo exacta del reloj de audio. Una
+   nota por vuelta de setTimeout sonaría coja. */
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+const sonPulsar   = () => efecto(880, 0.03, 'square', 0.045);
+const sonArrastre = () => efecto(640, 0.02, 'square', 0.025);
+const sonHallada  = () => { efecto(659, 0.09, 'square', 0.06); efecto(988, 0.15, 'square', 0.055, 0.08); };
+const sonNada     = () => efecto(160, 0.12, 'sawtooth', 0.05);
+const sonPista    = () => { efecto(784, 0.08, 'triangle', 0.06); efecto(1175, 0.12, 'triangle', 0.05, 0.07); };
+const sonFin      = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.32, 'square', 0.07, 0.27);
+};
+
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada' : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
+
+/* ==========================================================
+   ESTADO
+   ========================================================== */
+const NIVELES = {
+    facil:   { lado: 10, palabras: 8,  direcciones: 2, max: 9,  etiqueta: 'Fácil' },
+    normal:  { lado: 12, palabras: 10, direcciones: 4, max: 11, etiqueta: 'Normal' },
+    dificil: { lado: 14, palabras: 12, direcciones: 8, max: 13, etiqueta: 'Difícil' }
+};
+
+const MEZCLA = 'Mezcla';
+
+const partida = {
+    tema: MEZCLA,
+    nivel: 'normal',
+    sopa: null,              // {letras, lado, colocadas}
+    halladas: new Set(),     // palabras encontradas
+    casillasHalladas: new Set(),
+    pistas: 3,
+    pistasUsadas: 0,
+    jugando: false,
+    pausado: false,
+    segundos: 0,
+    timerId: null,
+    ladoCelda: 24,
+    /* Selección en curso */
+    ancla: null,             // primera casilla fijada con un toque suelto
+    inicio: null,
+    arrastrando: false,
+    seleccion: []
+};
+
+/* ==========================================================
+   PANTALLAS Y AVISOS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let temporizadorAviso = null;
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso-flotante');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('vista');
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => el.classList.remove('vista'), 1600);
+}
+
+/* ==========================================================
+   PINTADO
+   ========================================================== */
+let celdas = [];
+
+function construirSopa() {
+    const cont = document.getElementById('sopa');
+    const s = partida.sopa;
+    cont.innerHTML = '';
+    celdas = [];
+    cont.style.gridTemplateColumns = 'repeat(' + s.lado + ', var(--celda))';
+
+    for (let i = 0; i < s.letras.length; i++) {
+        const d = document.createElement('div');
+        d.className = 'celda';
+        d.textContent = s.letras[i];
+        d.dataset.i = String(i);
+        d.setAttribute('role', 'gridcell');
+        cont.appendChild(d);
+        celdas.push(d);
+    }
+    ajustarSopa();
+}
+
+/* El lado de la casilla se mide, no se calcula restando a ojo lo que ocupan
+   barra y lista: ese número deja de valer al girar la pantalla o al aparecer
+   la barra de direcciones del móvil. */
+function ajustarSopa() {
+    const zona = document.getElementById('zonaSopa');
+    const s = partida.sopa;
+    if (!zona || !s) return;
+    const ancho = zona.clientWidth, alto = zona.clientHeight;
+    if (!ancho || !alto) return;
+
+    const hueco = 2;
+    const porAncho = (ancho - hueco * (s.lado - 1)) / s.lado;
+    const porAlto = (alto - hueco * (s.lado - 1)) / s.lado;
+    const lado = Math.max(12, Math.floor(Math.min(porAncho, porAlto)));
+    partida.ladoCelda = lado;
+    document.getElementById('sopa').style.setProperty('--celda', lado + 'px');
+}
+
+function pintarSopa() {
+    const sel = new Set(partida.seleccion);
+    for (let i = 0; i < celdas.length; i++) {
+        celdas[i].classList.toggle('hallada', partida.casillasHalladas.has(i));
+        celdas[i].classList.toggle('sel', sel.has(i));
+    }
+}
+
+function pintarLista() {
+    const cont = document.getElementById('lista');
+    cont.innerHTML = '';
+    partida.sopa.colocadas.forEach(c => {
+        const d = document.createElement('div');
+        d.className = 'palabra' + (partida.halladas.has(c.palabra) ? ' hallada' : '');
+        d.textContent = c.palabra;
+        cont.appendChild(d);
+    });
+}
+
+function pintarBarra() {
+    document.querySelector('#dHalladas b').textContent =
+        partida.halladas.size + '/' + partida.sopa.colocadas.length;
+    document.querySelector('#dPistas b').textContent = String(partida.pistas);
+    document.getElementById('btnPista').disabled = partida.pistas <= 0 || !partida.jugando;
+    pintarReloj();
+}
+
+function pintarReloj() {
+    const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
+    document.querySelector('#dTiempo b').textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+/* ==========================================================
+   SELECCIÓN CON EL DEDO
+   ========================================================== */
+
+/* Casilla bajo un punto de la pantalla. Se calcula con la geometría y no con
+   elementFromPoint porque entre casilla y casilla hay dos píxeles de hueco:
+   con el dedo justo ahí, elementFromPoint devuelve la rejilla y se perdería
+   el rastro a mitad del arrastre. */
+function celdaEn(x, y) {
+    const cont = document.getElementById('sopa');
+    const r = cont.getBoundingClientRect();
+    const s = partida.sopa;
+    if (!s || !r.width) return -1;
+
+    const paso = partida.ladoCelda + 2;
+    let col = Math.floor((x - r.left) / paso);
+    let fila = Math.floor((y - r.top) / paso);
+    if (col < 0 || fila < 0 || col >= s.lado || fila >= s.lado) return -1;
+    return fila * s.lado + col;
+}
+
+function caminoEntre(a, b) {
+    const s = partida.sopa;
+    const f1 = Math.floor(a / s.lado), c1 = a % s.lado;
+    const f2 = Math.floor(b / s.lado), c2 = b % s.lado;
+    const { df, dc, largo } = ajustarSeleccion(f1, c1, f2, c2);
+
+    const camino = [];
+    for (let i = 0; i < largo; i++) {
+        const f = f1 + df * i, c = c1 + dc * i;
+        if (f < 0 || c < 0 || f >= s.lado || c >= s.lado) break;
+        camino.push(f * s.lado + c);
+    }
+    return camino;
+}
+
+function textoDe(camino) {
+    return camino.map(i => partida.sopa.letras[i]).join('');
+}
+
+function alPulsar(e) {
+    if (!partida.jugando || partida.pausado) return;
+    const i = celdaEn(e.clientX, e.clientY);
+    if (i === -1) return;
+
+    /* Si había una casilla fijada con un toque suelto, el arrastre empieza
+       allí: eso es lo que hace que tocar-y-tocar funcione igual que
+       arrastrar, sin código aparte. */
+    partida.inicio = (partida.ancla !== null) ? partida.ancla : i;
+    partida.arrastrando = true;
+    partida.seleccion = caminoEntre(partida.inicio, i);
+    pintarSopa();
+    try { document.getElementById('sopa').setPointerCapture(e.pointerId); } catch (err) {}
+}
+
+function alArrastrar(e) {
+    if (!partida.arrastrando) return;
+    const i = celdaEn(e.clientX, e.clientY);
+    if (i === -1) return;
+    const camino = caminoEntre(partida.inicio, i);
+    if (camino.length !== partida.seleccion.length) sonArrastre();
+    partida.seleccion = camino;
+    pintarSopa();
+}
+
+function alSoltar(e) {
+    if (!partida.arrastrando) return;
+    partida.arrastrando = false;
+    try { document.getElementById('sopa').releasePointerCapture(e.pointerId); } catch (err) {}
+
+    const camino = partida.seleccion;
+
+    /* Un toque suelto fija el principio y espera al segundo toque */
+    if (camino.length <= 1 && partida.ancla === null) {
+        partida.ancla = camino[0] !== undefined ? camino[0] : null;
+        pintarSopa();
+        return;
+    }
+
+    partida.ancla = null;
+    comprobarSeleccion(camino);
+    partida.seleccion = [];
+    pintarSopa();
+}
+
+function alCancelar() {
+    partida.arrastrando = false;
+    partida.seleccion = [];
+    partida.ancla = null;
+    pintarSopa();
+}
+
+/* Da por buena cualquier lectura correcta, en un sentido o en el otro: si la
+   palabra está escrita al revés da igual marcarla de principio a fin que de
+   fin a principio. */
+function comprobarSeleccion(camino) {
+    /* La pausa se vigila también aquí y no solo en el manejador del dedo:
+       al teclado y a cualquier otra vía de entrada les vale la misma regla,
+       y así la invariante es de la función, no de quien la llama. */
+    if (!partida.jugando || partida.pausado) return;
+    if (camino.length < 2) return;
+
+    const texto = textoDe(camino);
+    const alReves = texto.split('').reverse().join('');
+
+    const encaje = partida.sopa.colocadas.find(c =>
+        !partida.halladas.has(c.palabra) &&
+        (c.palabra === texto || c.palabra === alReves));
+
+    if (!encaje) {
+        sonNada();
+        return;
+    }
+
+    partida.halladas.add(encaje.palabra);
+    camino.forEach(i => partida.casillasHalladas.add(i));
+    sonHallada();
+    /* Sin aviso flotante al acertar: taparía las letras justo cuando estás
+       mirándolas, y la palabra ya se tacha en la lista y se queda marcada en
+       la rejilla. El aviso se reserva para lo que no se ve solo. */
+    pintarLista();
+    pintarBarra();
+
+    if (partida.halladas.size === partida.sopa.colocadas.length) terminar();
+}
+
+/* ==========================================================
+   PISTA
+   ========================================================== */
+let temporizadorPista = null;
+
+function darPista() {
+    if (!partida.jugando || partida.pausado) return;
+    if (partida.pistas <= 0) { avisar('No te quedan pistas', true); sonNada(); return; }
+
+    const quedan = partida.sopa.colocadas.filter(c => !partida.halladas.has(c.palabra));
+    if (!quedan.length) return;
+
+    const elegida = quedan[Math.floor(Math.random() * quedan.length)];
+    const primera = elegida.fila * partida.sopa.lado + elegida.col;
+
+    partida.pistas--;
+    partida.pistasUsadas++;
+    sonPista();
+    avisar(elegida.palabra + ' empieza aquí');
+
+    /* Parpadea solo la PRIMERA letra: enseñar la palabra entera sería
+       resolverla, no ayudar. */
+    const celda = celdas[primera];
+    celda.classList.remove('pista');
+    void celda.offsetWidth;
+    celda.classList.add('pista');
+    clearTimeout(temporizadorPista);
+    temporizadorPista = setTimeout(() => celda.classList.remove('pista'), 2600);
+
+    pintarBarra();
+}
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function arrancarReloj() {
+    pararReloj();
+    partida.timerId = setInterval(() => {
+        if (!partida.jugando || partida.pausado) return;
+        partida.segundos++;
+        pintarReloj();
+    }, 1000);
+}
+
+function pararReloj() {
+    if (partida.timerId !== null) { clearInterval(partida.timerId); partida.timerId = null; }
+}
+
+function listaDelTema() {
+    if (partida.tema === MEZCLA) {
+        const todas = [];
+        Object.values(BANCO).forEach(l => l.forEach(p => todas.push(p)));
+        return todas;
+    }
+    return BANCO[partida.tema] || [];
+}
+
+function nuevaPartida() {
+    const conf = NIVELES[partida.nivel];
+    const palabras = listaDelTema();
+
+    /* Generar cuesta poco, pero puede no cuajar: se reintenta antes de
+       rendirse en lugar de entregar una sopa con palabras que no están. */
+    let sopa = null;
+    for (let intento = 0; intento < 15 && !sopa; intento++) {
+        sopa = generarSopa(palabras, conf);
+    }
+    if (!sopa) {
+        avisar('No se ha podido armar la sopa', true);
+        volverAlMenu();
+        return;
+    }
+
+    partida.sopa = sopa;
+    partida.halladas = new Set();
+    partida.casillasHalladas = new Set();
+    partida.seleccion = [];
+    partida.ancla = null;
+    partida.arrastrando = false;
+    partida.pistas = 3;
+    partida.pistasUsadas = 0;
+    partida.segundos = 0;
+    partida.jugando = true;
+    partida.pausado = false;
+
+    cerrarCapa('capaFin');
+    cerrarCapa('capaPausa');
+    construirSopa();
+    pintarSopa();
+    pintarLista();
+    pintarBarra();
+    arrancarReloj();
+}
+
+function terminar() {
+    partida.jugando = false;
+    pararReloj();
+    pintarSopa();
+    pintarBarra();
+    sonFin();
+
+    const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
+    document.getElementById('mFin').textContent = m + ':' + String(s).padStart(2, '0');
+
+    const conf = NIVELES[partida.nivel];
+    let texto = partida.tema.toLowerCase() + ', ' + conf.etiqueta.toLowerCase() + ', ' +
+                partida.sopa.colocadas.length + ' palabras. ';
+    if (partida.pistasUsadas === 0) texto += 'Sin gastar una sola pista.';
+    else if (partida.pistasUsadas === 1) texto += 'Con una pista gastada.';
+    else texto += 'Con ' + partida.pistasUsadas + ' pistas gastadas.';
+    document.getElementById('sFin').textContent = texto;
+
+    setTimeout(() => abrirCapa('capaFin'), 600);
+}
+
+function pausar() {
+    if (!partida.jugando || partida.pausado) return;
+    partida.pausado = true;
+    partida.arrastrando = false;
+    partida.seleccion = [];
+    pararMusica();
+    document.getElementById('zonaJuego').style.visibility = 'hidden';
+    abrirCapa('capaPausa');
+}
+
+function reanudar() {
+    if (!partida.pausado) return;
+    partida.pausado = false;
+    document.getElementById('zonaJuego').style.visibility = '';
+    arrancarMusica();
+    cerrarCapa('capaPausa');
+}
+
+function volverAlMenu() {
+    partida.jugando = false;
+    partida.pausado = false;
+    pararReloj();
+    document.getElementById('zonaJuego').style.visibility = '';
+    ['capaPausa', 'capaFin'].forEach(cerrarCapa);
+    mostrarPantalla('pMenu');
+}
+
+/* ==========================================================
+   MENÚ
+   ========================================================== */
+function pintarTemas() {
+    const cont = document.getElementById('grpTema');
+    cont.innerHTML = '';
+    const temas = [MEZCLA].concat(Object.keys(BANCO));
+
+    temas.forEach(t => {
+        const b = document.createElement('button');
+        b.className = 'opcion';
+        b.type = 'button';
+        b.dataset.v = t;
+        b.setAttribute('aria-pressed', String(t === partida.tema));
+        b.textContent = t === MEZCLA ? 'MEZCLA' : t.toUpperCase();
+        cont.appendChild(b);
+    });
+}
+
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+grupoSimple('grpTema', (v) => { partida.tema = v; });
+grupoSimple('grpNivel', (v) => { partida.nivel = v; });
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+    if (t.closest('.opcion, .principal, .secundario, .icono')) sonPulsar();
+});
+
+document.getElementById('btnJugar').addEventListener('click', () => {
+    mostrarPantalla('pJuego');
+    nuevaPartida();
+});
+
+const malla = document.getElementById('sopa');
+malla.addEventListener('pointerdown', alPulsar);
+malla.addEventListener('pointermove', alArrastrar);
+malla.addEventListener('pointerup', alSoltar);
+malla.addEventListener('pointercancel', alCancelar);
+
+document.getElementById('btnPista').addEventListener('click', darPista);
+
+document.getElementById('btnPausa').addEventListener('click', () => {
+    if (partida.pausado) reanudar(); else pausar();
+});
+
+document.getElementById('btnSeguir').addEventListener('click', reanudar);
+document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
+document.getElementById('btnOtraDesdePausa').addEventListener('click', () => {
+    document.getElementById('zonaJuego').style.visibility = '';
+    nuevaPartida();
+});
+document.getElementById('btnOtra').addEventListener('click', nuevaPartida);
+document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+/* ---------- TECLADO FÍSICO ----------
+   El cursor se mueve con las flechas y Enter fija primero el principio y
+   después el final, que es el mismo gesto de tocar dos veces. */
+let cursorTeclado = 0;
+
+function moverCursor(df, dc) {
+    const s = partida.sopa;
+    if (!s) return;
+    let f = Math.floor(cursorTeclado / s.lado) + df;
+    let c = (cursorTeclado % s.lado) + dc;
+    f = Math.min(s.lado - 1, Math.max(0, f));
+    c = Math.min(s.lado - 1, Math.max(0, c));
+    cursorTeclado = f * s.lado + c;
+    partida.seleccion = partida.ancla !== null
+        ? caminoEntre(partida.ancla, cursorTeclado)
+        : [cursorTeclado];
+    pintarSopa();
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) {
+            if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
+            else cerrarCapa('capaAyuda');
+        } else if (partida.jugando) pausar();
+        return;
+    }
+    if (hayCapaAbierta()) return;
+    if (!partida.jugando || partida.pausado) return;
+
+    if (e.key === 'ArrowUp')    { e.preventDefault(); moverCursor(-1, 0); return; }
+    if (e.key === 'ArrowDown')  { e.preventDefault(); moverCursor(1, 0);  return; }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); moverCursor(0, -1); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); moverCursor(0, 1);  return; }
+
+    if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (partida.ancla === null) {
+            partida.ancla = cursorTeclado;
+            partida.seleccion = [cursorTeclado];
+        } else {
+            comprobarSeleccion(caminoEntre(partida.ancla, cursorTeclado));
+            partida.ancla = null;
+            partida.seleccion = [];
+        }
+        pintarSopa();
+    }
+});
+
+/* La música se corta al irse a otra pestaña: en segundo plano setTimeout se
+   frena a ~1 Hz, así que dejarla correr no la mantendría sonando, la
+   mantendría sonando mal. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else if (!partida.pausado) {
+        arrancarMusica();
+    }
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+pintarTemas();
+pintarBotonesSonido();
+
+if (typeof ResizeObserver === 'function') {
+    try { new ResizeObserver(ajustarSopa).observe(document.getElementById('zonaSopa')); }
+    catch (e) { window.addEventListener('resize', ajustarSopa); }
+} else {
+    window.addEventListener('resize', ajustarSopa);
+}
+window.addEventListener('orientationchange', () => setTimeout(ajustarSopa, 120));
+
+/* Si en la visita anterior quedó algo encendido, el navegador sigue sin
+   permitir audio hasta el primer toque: se espera a ese gesto. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
+</script>
+</body>
+</html>
