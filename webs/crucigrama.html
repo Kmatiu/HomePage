@@ -1,0 +1,2241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Crucigrama</title>
+<style>
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --casilla: #1d1850;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        /* Holgura SUMADA al inset: Chrome en Android devuelve
+           safe-area-inset-bottom = 0 aunque la barra de gestos tape parte de
+           lo que el viewport dice que hay. */
+        padding: calc(env(safe-area-inset-top, 0px) + 14px)
+                 calc(env(safe-area-inset-right, 0px) + 6px)
+                 calc(env(safe-area-inset-bottom, 0px) + 20px)
+                 calc(env(safe-area-inset-left, 0px) + 6px);
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        height: 100vh;
+        height: 100dvh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        max-width: 640px;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .pantalla.activa { display: flex; }
+
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 { font-size: clamp(1.4rem, 6.5vw, 2.2rem); margin: 10px 0 2px; text-align: center; letter-spacing: 2px; }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset { border: 1px solid var(--borde); border-radius: 12px; margin: 0 0 12px; padding: 10px; }
+    legend { color: var(--apagado); font-size: 0.64rem; letter-spacing: 2px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    .principal {
+        width: 100%;
+        padding: 15px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario {
+        padding: 11px 16px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .fila-btns > * { flex: 1 1 120px; }
+
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+        .tecla:not(:disabled):hover { border-color: var(--acento); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- PARTIDA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+    #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.55rem; letter-spacing: 1px; }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 36px;
+        height: 32px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    .icono:disabled { opacity: 0.35; }
+
+    /* En vertical, los tres bloques del juego cuelgan directamente de la
+       columna de la pantalla. Esto va en la hoja de estilos y NO en un
+       style= del HTML: un estilo en línea gana a la regla del media query y
+       la disposición apaisada no llegaría a aplicarse nunca. */
+    #zonaJuego { display: contents; }
+
+    #zonaRejilla {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 0;
+    }
+
+    /* El lado de la casilla lo calcula ajustarRejilla() midiendo el hueco
+       disponible; de ahí cuelgan el tamaño de letra y el del número. */
+    #rejilla {
+        display: grid;
+        gap: 2px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .casilla {
+        width: var(--celda);
+        height: var(--celda);
+        position: relative;
+        background: var(--casilla);
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--celda) * 0.56);
+        font-weight: bold;
+        line-height: 1;
+        color: var(--texto);
+        cursor: pointer;
+    }
+
+    .casilla.vacia { background: transparent; cursor: default; }
+
+    .casilla .num {
+        position: absolute;
+        top: 1px;
+        left: 2px;
+        font-size: calc(var(--celda) * 0.3);
+        font-weight: normal;
+        color: var(--apagado);
+        line-height: 1;
+        pointer-events: none;
+    }
+
+    /* Palabra en la que se está escribiendo */
+    .casilla.enfoque { background: #3b3194; }
+    /* Casilla concreta donde caerá la letra */
+    .casilla.cursor { background: var(--acento); color: #0b0922; }
+    .casilla.cursor .num { color: rgba(0, 0, 0, 0.55); }
+
+    .casilla.resuelta { color: var(--acento); }
+    .casilla.resuelta.cursor { color: #0b0922; }
+
+    .casilla.error { animation: fallo 0.4s; }
+
+    @keyframes fallo {
+        0%, 100% { background: var(--casilla); }
+        30%      { background: rgba(255, 0, 110, 0.55); }
+    }
+
+    .casilla.enfoque.error { animation: falloEnfoque 0.4s; }
+    @keyframes falloEnfoque {
+        0%, 100% { background: #2e2676; }
+        30%      { background: rgba(255, 0, 110, 0.55); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .casilla.error, .casilla.enfoque.error { animation: none; }
+    }
+
+    /* ---------- PISTA ---------- */
+    #zonaPista {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: stretch;
+        gap: 6px;
+        width: 100%;
+        margin: 4px 0 6px;
+    }
+
+    #pista {
+        flex: 1 1 auto;
+        min-width: 0;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        padding: 7px 10px;
+        font-size: 0.72rem;
+        line-height: 1.35;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 3.4em;
+        cursor: pointer;
+    }
+
+    #pista .ref { color: var(--amarillo); font-size: 0.6rem; letter-spacing: 1px; margin-bottom: 2px; }
+    #pista .texto { color: var(--texto); }
+
+    .flecha {
+        flex: 0 0 auto;
+        width: 34px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.9rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    /* ---------- TECLADO ---------- */
+    #teclado { display: flex; flex-direction: column; gap: 5px; align-items: center; flex: 0 0 auto; width: 100%; }
+
+    .fila-teclas { display: flex; gap: 4px; justify-content: center; width: 100%; }
+
+    .tecla {
+        flex: 1 1 0;
+        min-width: 0;
+        max-width: 46px;
+        height: clamp(34px, 5.4svh, 42px);
+        border: 2px solid var(--borde);
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.95rem;
+        font-weight: bold;
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        padding: 0;
+    }
+
+    .tecla.ancha { flex: 1.8 1 0; max-width: 78px; font-size: 0.78rem; }
+
+    /* ---------- CAPAS ---------- */
+    .capa {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 6, 26, 0.9);
+        padding: 16px;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 440px;
+        max-height: 100%;
+        overflow-y: auto;
+        border: 2px solid var(--borde);
+        border-radius: 16px;
+        background: #15113a;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: 1px; }
+    .caja p { color: var(--apagado); font-size: 0.78rem; margin: 0 0 12px; line-height: 1.5; }
+    .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
+    .caja .marcador { font-size: 1.5rem; font-weight: bold; color: var(--acento); margin: 6px 0 10px; }
+
+    /* Lista de definiciones */
+    #listaDefs { text-align: left; }
+    #listaDefs h3 { font-size: 0.7rem; color: var(--amarillo); letter-spacing: 2px; margin: 10px 0 6px; }
+
+    .def {
+        display: flex;
+        gap: 8px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        font-size: 0.72rem;
+        line-height: 1.35;
+        cursor: pointer;
+        border: 1px solid transparent;
+    }
+
+    .def b { color: var(--acento); flex: 0 0 auto; min-width: 1.6em; }
+    .def.hecha { opacity: 0.45; }
+    .def.hecha b { color: var(--apagado); }
+    .def:active { border-color: var(--acento); }
+
+    #aviso-flotante {
+        position: fixed;
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        border: 2px solid var(--acento);
+        border-radius: 10px;
+        background: #15113a;
+        color: var(--acento);
+        font-size: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+        z-index: 20;
+        max-width: 90vw;
+    }
+
+    #aviso-flotante.vista { opacity: 1; }
+    #aviso-flotante.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    @media (orientation: landscape) and (max-height: 560px) {
+        body {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        }
+        .pantalla { max-width: 980px; }
+        h1 { font-size: 1.3rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+        /* Apaisado: rejilla a la izquierda, pista y teclado a la derecha */
+        #zonaJuego {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+            grid-template-areas: "rejilla pista" "rejilla teclado";
+            gap: 4px 12px;
+            flex: 1 1 auto;
+            min-height: 0;
+            align-items: center;
+        }
+        #zonaRejilla { grid-area: rejilla; height: 100%; }
+        #zonaPista { grid-area: pista; margin: 0; }
+        #teclado { grid-area: teclado; }
+        .tecla { height: clamp(28px, 7.5svh, 34px); font-size: 0.82rem; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>CRUCI<span>GRAMA</span></h1>
+        <p class="lema">Rejilla nueva cada partida</p>
+
+        <fieldset>
+            <legend>TAMAÑO</legend>
+            <div class="opciones" id="grpTamaño">
+                <button class="opcion" type="button" data-v="pequeño" aria-pressed="false">PEQUEÑO<span class="sub">9 palabras</span></button>
+                <button class="opcion" type="button" data-v="mediano" aria-pressed="true">MEDIANO<span class="sub">13 palabras</span></button>
+                <button class="opcion" type="button" data-v="grande" aria-pressed="false">GRANDE<span class="sub">17 palabras</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>PISTAS DE AYUDA</legend>
+            <div class="opciones" id="grpAyudas">
+                <button class="opcion" type="button" data-v="5" aria-pressed="false">CINCO<span class="sub">para ir sobrado</span></button>
+                <button class="opcion" type="button" data-v="3" aria-pressed="true">TRES<span class="sub">lo justo</span></button>
+                <button class="opcion" type="button" data-v="0" aria-pressed="false">NINGUNA<span class="sub">a pelo</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dHechas"><b>0/0</b><span>PALABRAS</span></div>
+        <div class="dato" id="dTiempo"><b>0:00</b><span>TIEMPO</span></div>
+        <div class="dato" id="dAyudas"><b>3</b><span>PISTAS</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnRevelar" type="button" aria-label="Revelar la letra del cursor">💡</button>
+        <button class="icono" id="btnLista" type="button" aria-label="Ver todas las definiciones">☰</button>
+        <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="zonaJuego">
+        <div id="zonaRejilla"><div id="rejilla" role="grid" aria-label="Rejilla del crucigrama"></div></div>
+
+        <div id="zonaPista">
+            <button class="flecha" id="btnAnterior" type="button" aria-label="Definición anterior">◀</button>
+            <div id="pista" role="button" tabindex="0">
+                <div class="ref" id="pistaRef"></div>
+                <div class="texto" id="pistaTexto"></div>
+            </div>
+            <button class="flecha" id="btnSiguiente" type="button" aria-label="Definición siguiente">▶</button>
+        </div>
+
+        <div id="teclado"></div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj está parado y la rejilla, tapada.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtroDesdePausa" type="button">OTRO CRUCIGRAMA</button>
+            <button class="secundario" id="btnAbandonar" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaLista">
+    <div class="caja">
+        <h2>☰ DEFINICIONES</h2>
+        <div id="listaDefs"></div>
+        <button class="principal" id="btnCerrarLista" type="button">VOLVER</button>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin">🏆 ¡CRUCIGRAMA RESUELTO!</h2>
+        <div class="marcador" id="mFin"></div>
+        <p id="sFin"></p>
+        <button class="principal" id="btnOtro" type="button">OTRO CRUCIGRAMA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <ul>
+            <li>Toca una casilla para escribir en ella. Si tocas la misma otra vez, cambias de horizontal a vertical.</li>
+            <li>La definición de la palabra en la que estás sale siempre en la barra de abajo; con <b>◀ ▶</b> pasas a la siguiente.</li>
+            <li>El botón <b>☰</b> abre la lista completa de definiciones, y tocando una vas directo a su casilla.</li>
+            <li>Cuando una palabra queda bien escrita se pone en verde ella sola. No hay que comprobar nada.</li>
+            <li>El botón <b>💡</b> descubre la letra donde tengas el cursor, a costa de una de tus pistas.</li>
+            <li>Con teclado físico: las letras escriben, <b>←→↑↓</b> mueven, <b>Retroceso</b> borra, <b>Tabulador</b> salta a la siguiente definición y <b>Espacio</b> cambia de dirección.</li>
+        </ul>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="aviso-flotante"></div>
+
+<script>
+/* ==========================================================
+   BANCO DE PALABRAS Y DEFINICIONES
+   Cada entrada es [SOLUCION, "definición"]. La solución va sin tildes,
+   porque en la rejilla no se escriben: MURCIELAGO, no MURCIÉLAGO. La Ñ sí
+   es una letra propia y tiene su tecla.
+   ========================================================== */
+const BANCO = [
+["ALA", "Extremo del avión y del equipo"],
+["ASA", "Por donde se agarra la taza"],
+["OCA", "Ave del juego de mesa"],
+["RED", "Malla para pescar, o para conectarse"],
+["MAR", "Separa y a la vez comunica"],
+["SOL", "Astro rey"],
+["OSO", "Plantígrado que duerme el invierno"],
+["RIO", "Según Manrique, va a dar en la mar"],
+["PEZ", "Nada y calla"],
+["LUZ", "Lo primero que se hizo, según el Génesis"],
+["TOS", "Delata al fumador"],
+["UVA", "Fruto de las campanadas"],
+["ORO", "Metal de la medalla mayor"],
+["EJE", "Línea sobre la que todo gira"],
+["HOZ", "Herramienta curva de la siega"],
+["VID", "Planta que da el vino"],
+["SED", "No la quita el agua del mar"],
+["TEZ", "Color del cutis"],
+["HAZ", "Manojo de mies, o conjunto de rayos"],
+["ARO", "Círculo de metal al que se encesta"],
+["AVE", "Vuela, o lleva a Sevilla en dos horas"],
+["CAL", "Una de ella y otra de arena"],
+["DIA", "Lo que dura una vuelta de la Tierra"],
+["FIN", "Lo que ponía el cine al apagarse"],
+["GAS", "Estado de la materia que lo llena todo"],
+["IRA", "Uno de los siete capitales"],
+["LEY", "No se discute, se acata"],
+["MES", "Doceava parte del año"],
+["OLA", "Viene y va sin salir del mar"],
+["PIE", "Medida anglosajona, y lo que calza"],
+["SUR", "Hacia donde huyen las aves del frío"],
+["VOZ", "Se alza para protestar"],
+["ZAR", "Emperador de todas las Rusias"],
+["RES", "Cabeza de ganado"],
+["SIEN", "Donde late el pulso de la cabeza"],
+["NAO", "Embarcación de Colón"],
+["EBRO", "El más caudaloso de España"],
+["ASNO", "Rebuzna, y el tópico lo llama tonto"],
+["ALBA", "Primera luz, y nombre de mujer"],
+["ATUN", "Rey de la almadraba"],
+["OIDO", "Sentido que no se puede cerrar"],
+["TOGA", "Lo que viste el juez"],
+["LAVA", "Baja del volcán sin prisa"],
+["NUEZ", "Fruto seco con forma de cerebro"],
+["RAIZ", "Parte oculta del árbol, y de la palabra"],
+["ALUD", "Avalancha de nieve"],
+["EDEN", "Jardín del que fuimos expulsados"],
+["OBOE", "Madera del viento en la orquesta"],
+["ARPA", "Cuerda de los ángeles"],
+["LIRA", "Instrumento antiguo, y moneda italiana"],
+["MIEL", "Lo que cobra la abeja"],
+["CERA", "Lo que se derrite en la vela"],
+["SETA", "Sombrero del bosque, a veces mortal"],
+["HIEL", "Lo contrario de la miel"],
+["CENA", "Última comida, y la hubo famosa"],
+["DUNA", "Monte de arena que camina"],
+["ECO", "Devuelve la montaña lo que le gritas"],
+["OASIS", "Respiro verde en el desierto"],
+["NADIR", "Punto opuesto al cenit"],
+["CENIT", "Lo más alto que alcanza el sol"],
+["OCASO", "Final del día, y de las carreras"],
+["ALBOR", "Comienzo, principio de algo"],
+["ETNA", "Volcán que vigila Sicilia"],
+["NILO", "Río que riega el desierto"],
+["DELTA", "Donde el río se abre en abanico"],
+["ISLA", "Tierra rodeada de agua"],
+["CABO", "Punta de tierra que entra en el mar"],
+["GOLFO", "Entrante de mar, y sinvergüenza"],
+["ISTMO", "Cuello estrecho entre dos tierras"],
+["ESTE", "Por donde sale el sol"],
+["OESTE", "Género de cine con sombreros"],
+["NORTE", "Lo que se pierde cuando uno se despista"],
+["POLO", "Extremo del eje, y helado de palo"],
+["SELVA", "Bosque donde no entra la luz"],
+["ESTEPA", "Llanura sin árboles"],
+["MESETA", "Lo que ocupa el centro de España"],
+["LLANO", "Terreno sin cuestas"],
+["RISCO", "Peña alta y escarpada"],
+["CIMA", "Donde ya no se puede subir más"],
+["LADERA", "Costado de la montaña"],
+["CAUCE", "Por donde va el río"],
+["CRECIDA", "Lo que trae el río cuando se desborda"],
+["NIEBLA", "Nube que se ha quedado abajo"],
+["ESCARCHA", "Rocío que amanece helado"],
+["GRANIZO", "Lluvia que hace daño"],
+["ROCIO", "Lo que moja la hierba al amanecer"],
+["SEQUIA", "Lo que trae el cielo cuando no trae nada"],
+["TEMPORAL", "Mal tiempo que dura días"],
+["BRISA", "Viento que se agradece"],
+["CIERZO", "Viento frío del valle del Ebro"],
+["ABEJA", "Obrera que cobra en miel"],
+["AVISPA", "Pica y no da miel"],
+["HORMIGA", "La que trabajó mientras la cigarra cantaba"],
+["CIGARRA", "Cantó todo el verano"],
+["GRILLO", "Músico de la noche de verano"],
+["LUCIERNAGA", "Lleva la luz puesta"],
+["MARIPOSA", "Fue oruga y nadie lo diría"],
+["ORUGA", "Promesa de mariposa"],
+["LIBELULA", "Helicóptero del estanque"],
+["ARAÑA", "Teje sin telar"],
+["TOPO", "Vive a oscuras por gusto, o infiltrado"],
+["ERIZO", "Bola de púas"],
+["ZORRO", "El tópico lo hace astuto"],
+["LOBO", "De él viene el perro"],
+["LINCE", "Felino ibérico de orejas con pincel"],
+["NUTRIA", "Juega en el río y abre erizos"],
+["TEJON", "Pariente nocturno del hurón"],
+["JABALI", "Cerdo que no se dejó domesticar"],
+["CIERVO", "Luce cuerna y brama en otoño"],
+["CORZO", "Ciervo pequeño de los bosques"],
+["BUITRE", "Limpia el campo sin cazar"],
+["AGUILA", "Reina de las rapaces"],
+["LECHUZA", "Rapaz de cara de corazón"],
+["CIGUEÑA", "Vuelve al campanario cada año"],
+["GOLONDRINA", "Una sola no hace verano"],
+["GORRION", "Vecino gris de las ciudades"],
+["URRACA", "Ladrona de cosas que brillan"],
+["PALOMA", "Llevó el ramo de olivo al arca"],
+["GAVIOTA", "Chilla en el puerto"],
+["CUERVO", "Negro de mal agüero"],
+["MIRLO", "Pájaro negro de pico naranja"],
+["RUISEÑOR", "Canta de noche como nadie"],
+["PINGUINO", "Va de frac y no vuela"],
+["BALLENA", "El mayor animal que existe"],
+["DELFIN", "Listo del mar, y heredero al trono"],
+["PULPO", "Ocho brazos y tres corazones"],
+["MEDUSA", "Quema sin fuego"],
+["CANGREJO", "Anda de lado"],
+["SALMON", "Nada río arriba para morir donde nació"],
+["TRUCHA", "Pez de río que busca aguas limpias"],
+["ANGUILA", "Pez que parece serpiente"],
+["TIBURON", "Depredador del mar, y de las finanzas"],
+["CAMELLO", "Lleva la despensa a la espalda"],
+["ELEFANTE", "Memoria proverbial y trompa"],
+["JIRAFA", "Cuello para alcanzar lo alto"],
+["COCODRILO", "Llora lágrimas falsas"],
+["SERPIENTE", "Tentó a Eva"],
+["TORTUGA", "Ganó la carrera por constancia"],
+["CABALLO", "Pieza que salta en el ajedrez"],
+["POTRO", "Caballo joven, y aparato de gimnasia"],
+["YEGUA", "Madre del potro"],
+["GANADO", "Conjunto de reses"],
+["REBAÑO", "Lo que guía el pastor"],
+["COLMENA", "Edificio de cera"],
+["ESTABLO", "Casa de las vacas"],
+["PESEBRE", "Comedero del ganado, y cuna famosa"],
+["ARADO", "Abre el surco"],
+["SURCO", "Herida que el arado deja en la tierra"],
+["SIEMBRA", "Lo que se hace en otoño para recoger en junio"],
+["COSECHA", "Premio del labrador, y año del vino"],
+["TRIGO", "De él sale la harina"],
+["CENTENO", "Cereal del pan oscuro"],
+["AVENA", "Cereal del desayuno y del caballo"],
+["CEBADA", "Cereal con el que se hace la cerveza"],
+["VIÑEDO", "Campo de cepas"],
+["OLIVAR", "Campo de donde sale el aceite"],
+["ENCINA", "Árbol del que vive el cerdo ibérico"],
+["ALCORNOQUE", "De su corteza salen los tapones"],
+["CASTAÑO", "Árbol del erizo comestible"],
+["ABEDUL", "Árbol de corteza blanca"],
+["ALAMO", "Tiembla su hoja al menor viento"],
+["SAUCE", "Llora junto al río"],
+["CIPRES", "Vigila los cementerios"],
+["PALMERA", "Da dátiles y sombra escasa"],
+["HELECHO", "Planta de sombra sin flor"],
+["MUSGO", "Alfombra verde de la piedra húmeda"],
+["LIQUEN", "Alianza de hongo y alga"],
+["SEMILLA", "Promesa guardada"],
+["ESPIGA", "Lo que corona el trigo"],
+["RAMA", "Brazo del árbol"],
+["CORTEZA", "Piel del árbol, y del pan"],
+["SAVIA", "Sangre del árbol"],
+["POLEN", "Culpable de la primavera para el alérgico"],
+["NECTAR", "Dulce que busca la abeja"],
+["CAPULLO", "Flor sin abrir"],
+["PETALO", "Hoja de la flor"],
+["ESPINA", "Defensa de la rosa"],
+["ORTIGA", "Planta que escuece al rozarla"],
+["ROMERO", "Arbusto aromático, y peregrino"],
+["TOMILLO", "Hierba del monte que aroma el guiso"],
+["LAVANDA", "Morada y olorosa"],
+["AZAFRAN", "La especia más cara del mundo"],
+["CANELA", "Corteza dulce en rama"],
+["PIMIENTA", "Grano que pica en el molinillo"],
+["COMINO", "Especia que no vale nada en la frase hecha"],
+["OREGANO", "No todo el monte lo es"],
+["VINAGRE", "Lo que fue vino y se torció"],
+["ACEITE", "Oro líquido del olivar"],
+["HARINA", "De otro costal"],
+["LEVADURA", "Hace crecer la masa"],
+["MASA", "Lo que se amasa, y el público"],
+["HORNO", "No está para bollos"],
+["BRASA", "Lo que queda cuando se apaga la llama"],
+["SARTEN", "Le dijo al cazo"],
+["CALDERO", "Olla grande de hierro"],
+["PUCHERO", "Guiso de siempre, y gesto de llorar"],
+["POTAJE", "Guiso de legumbres de Cuaresma"],
+["GAZPACHO", "Sopa fría del verano andaluz"],
+["COCIDO", "Garbanzos con todo lo demás"],
+["TORTILLA", "La de patatas, con o sin cebolla"],
+["PAELLA", "Arroz con nombre de sartén"],
+["CHORIZO", "Embutido, y el que roba"],
+["JAMON", "Lo que cuelga en el techo del bar"],
+["QUESO", "Leche con tiempo"],
+["YOGUR", "Leche con fermento"],
+["NATA", "Lo que sube en la leche"],
+["MANTEQUILLA", "Grasa del desayuno"],
+["SIDRA", "Se escancia desde lo alto"],
+["ANIS", "Licor de la copa labrada"],
+["VERMUT", "Lo que se toma antes de comer"],
+["CERVEZA", "Rubia o tostada, con espuma"],
+["COSECHERO", "Vino joven del año"],
+["BODEGA", "Donde el vino espera"],
+["TONEL", "Barril grande"],
+["CORCHO", "Tapón que suena al saltar"],
+["COPA", "Vaso con pie, y trofeo"],
+["BRINDIS", "Choque de copas con deseo"],
+["SOBREMESA", "Lo mejor de la comida, según algunos"],
+["MANTEL", "Viste la mesa"],
+["CUBIERTO", "Tenedor, cuchillo y cuchara"],
+["BANDEJA", "Se sirve en ella"],
+["TETERA", "Recipiente con pico para la infusión"],
+["COLADOR", "Separa el caldo de lo demás"],
+["EMBUDO", "Ancho arriba, estrecho abajo"],
+["CRIBA", "Separa el grano de la paja"],
+["MORTERO", "Donde se maja el ajo"],
+["ALMIREZ", "Mortero de metal"],
+["CANTARO", "Tanto va a la fuente"],
+["BOTIJO", "Nevera de barro"],
+["CUENCO", "Vasija honda sin asas"],
+["TINAJA", "Vasija enorme de barro"],
+["ANFORA", "Vasija de dos asas del fondo del mar"],
+["ONIRICO", "Propio de lo que se sueña"],
+["EFIMERO", "Que dura un suspiro"],
+["ADUSTO", "De gesto seco y poco amable"],
+["AFABLE", "De trato agradable"],
+["HURAÑO", "Que rehúye la compañía"],
+["PARCO", "Corto en palabras o en gasto"],
+["PROLIJO", "Que se alarga más de la cuenta"],
+["CONCISO", "Que dice mucho en poco"],
+["SUCINTO", "Breve y al grano"],
+["AUSTERO", "Sin adornos ni excesos"],
+["SOBRIO", "Ni bebido ni recargado"],
+["FRUGAL", "De comer poco y sencillo"],
+["TENAZ", "Que no suelta la presa"],
+["INSIGNE", "Célebre por sus méritos"],
+["EGREGIO", "Ilustre, de los que salen en los libros"],
+["ALEVOSO", "Que ataca sobre seguro"],
+["ARTERO", "Mañoso para el engaño"],
+["ALEDAÑO", "Que linda con algo"],
+["ALLENDE", "Más allá de, en lenguaje antiguo"],
+["ACERBO", "Áspero al gusto o al oído"],
+["EXIGUO", "Tan escaso que casi no es"],
+["UBERRIMO", "Abundantísimo, muy fértil"],
+["ESQUIVO", "Que se aparta y no se deja"],
+["DIAFANO", "Tan claro que se ve a través"],
+["OPACO", "Que no deja pasar la luz"],
+["TRASLUCIDO", "Deja pasar la luz pero no la forma"],
+["ETEREO", "Sutil, como del aire"],
+["GELIDO", "Frío que corta"],
+["TORRIDO", "Calor que no deja respirar"],
+["UMBRIO", "Que está a la sombra"],
+["ALBINO", "Sin pigmento alguno"],
+["BERMEJO", "De color rojizo"],
+["AZABACHE", "Negro muy brillante"],
+["CARMESI", "Rojo encendido"],
+["ESCARLATA", "Rojo vivo de telas nobles"],
+["AÑIL", "Azul oscuro del arcoíris"],
+["OCRE", "Amarillo de tierra"],
+["GRANATE", "Rojo oscuro, y piedra"],
+["TURQUESA", "Azul verdoso con nombre de piedra"],
+["ESMERALDA", "Verde de la joya"],
+["AMBAR", "Resina fósil, y color del semáforo"],
+["MARFIL", "Blanco del colmillo"],
+["NACAR", "Interior brillante de la concha"],
+["AZOGUE", "Nombre antiguo del mercurio"],
+["ESTAÑO", "Metal con el que se suelda"],
+["PLOMO", "Metal pesado, y persona cargante"],
+["LATON", "Aleación de cobre y cinc"],
+["BRONCE", "Dio nombre a una edad"],
+["ACERO", "Hierro con carbono, duro de pelar"],
+["YUNQUE", "Sobre él golpea el herrero"],
+["FRAGUA", "Taller donde se ablanda el hierro"],
+["FUELLE", "Da aire a la fragua y al acordeón"],
+["CINCEL", "Talla la piedra a golpes"],
+["BURIL", "Punta que graba el metal"],
+["TORNO", "Da vueltas a la pieza, y al barro"],
+["SIERRA", "Corta madera, y monte alargado"],
+["ESCOPLO", "Formón grueso de carpintero"],
+["GARLOPA", "Cepillo largo de carpintero"],
+["ANDAMIO", "Esqueleto provisional de la obra"],
+["CIMIENTO", "Lo que no se ve y lo sostiene todo"],
+["DINTEL", "Viga que corona la puerta"],
+["UMBRAL", "Se cruza al entrar"],
+["ZAGUAN", "Entrada de la casa antigua"],
+["PATIO", "Corazón al aire de la casa andaluza"],
+["ALJIBE", "Depósito de agua de lluvia"],
+["BROCAL", "Borde del pozo"],
+["ALERO", "Borde del tejado que da sombra"],
+["BUHARDILLA", "Vivienda bajo el tejado"],
+["CELOSIA", "Reja de madera para mirar sin ser visto"],
+["BALCON", "Asomadero con barandilla"],
+["PORTICO", "Entrada con columnas"],
+["ABSIDE", "Fondo curvo de la iglesia"],
+["CRIPTA", "Lo que hay debajo del templo"],
+["CLAUSTRO", "Patio del monasterio, y junta de profesores"],
+["ATRIO", "Espacio ante la puerta del templo"],
+["CAMPANARIO", "Torre con voz de bronce"],
+["VITRAL", "Vidriera de colores"],
+["BOVEDA", "Techo curvo de piedra"],
+["ARCADA", "Serie de arcos seguidos"],
+["COLUMNA", "Sostiene, y también se publica en el diario"],
+["CAPITEL", "Lo que remata la columna"],
+["PEDESTAL", "Donde se pone a quien se admira"],
+["FRISO", "Franja decorada del edificio"],
+["MURAL", "Pintura hecha en la pared"],
+["FRESCO", "Pintura sobre el yeso húmedo"],
+["BOCETO", "Primer apunte de la obra"],
+["LIENZO", "Tela del pintor, y tramo de muralla"],
+["PALETA", "Donde el pintor mezcla"],
+["CABALLETE", "Sostiene el lienzo"],
+["RETRATO", "Cuadro con alguien dentro"],
+["BODEGON", "Cuadro de frutas y cacharros"],
+["PAISAJE", "Cuadro sin gente"],
+["GRABADO", "Estampa sacada de una plancha"],
+["ACUARELA", "Pintura que se diluye en agua"],
+["ESCULTOR", "Trabaja quitando materia"],
+["ORFEBRE", "Artesano de los metales nobles"],
+["ALFARERO", "Saca cacharros del barro"],
+["EBANISTA", "Carpintero de maderas finas"],
+["RELOJERO", "Vive de la precisión diminuta"],
+["CURTIDOR", "Convierte la piel en cuero"],
+["TONELERO", "Hace barriles"],
+["HERRERO", "En su casa, cuchillo de palo"],
+["CANTERO", "Saca y labra la piedra"],
+["SOGA", "Cuerda gruesa, y lo que no se nombra en casa del ahorcado"],
+["AMARRA", "Cabo que sujeta el barco al muelle"],
+["ANCLA", "Muerde el fondo y sujeta"],
+["TIMON", "Con él se gobierna el rumbo"],
+["QUILLA", "Espina dorsal del barco"],
+["PROA", "Donde el barco rompe el agua"],
+["POPA", "Lo contrario de la proa"],
+["BABOR", "Izquierda mirando a proa"],
+["ESTRIBOR", "Derecha mirando a proa"],
+["BITACORA", "Cuaderno del barco, y hoy del que escribe en la red"],
+["SEXTANTE", "Medía la altura de los astros"],
+["BRUJULA", "Siempre mira al norte"],
+["ASTROLABIO", "Antiguo instrumento para medir el cielo"],
+["CATALEJO", "Tubo para ver de lejos"],
+["TELESCOPIO", "Acerca lo que está lejísimos"],
+["MICROSCOPIO", "Agranda lo que no se ve"],
+["PRISMA", "Descompone la luz en colores"],
+["LENTE", "Cristal que corrige la vista"],
+["ESPEJO", "Devuelve lo que se le pone delante"],
+["PENDULO", "Va y viene marcando el tiempo"],
+["ENGRANAJE", "Rueda dentada que mueve a otra"],
+["MANIVELA", "Se gira para poner en marcha"],
+["POLEA", "Rueda que ahorra esfuerzo"],
+["PALANCA", "Dame un punto de apoyo"],
+["TORNILLO", "Entra girando"],
+["REMACHE", "Une chapas sin soldar"],
+["BISAGRA", "Permite que la puerta gire"],
+["CERROJO", "Cierra por dentro"],
+["ALDABA", "Llama a la puerta sin timbre"],
+["PICAPORTE", "Se baja para abrir"],
+["MIRILLA", "Agujero para ver quién llama"],
+["PESTILLO", "Cierre pequeño de la puerta"],
+["TRANCA", "Palo que atranca la puerta"],
+["CANDADO", "Cierra con llave lo que no tiene puerta"],
+["LLAVERO", "Donde se guarda lo que abre"],
+["ARCHIVO", "Donde duermen los papeles"],
+["LEGAJO", "Atado de papeles"],
+["PERGAMINO", "Piel preparada para escribir"],
+["PAPIRO", "Antes que el papel, en Egipto"],
+["TINTERO", "Donde mojaba la pluma"],
+["PLUMA", "Escribía antes del bolígrafo"],
+["RENGLON", "Línea de escritura"],
+["MARGEN", "Blanco del borde de la página"],
+["PROLOGO", "Lo que casi nadie lee del libro"],
+["EPILOGO", "Lo que se dice al final"],
+["INDICE", "Dedo que señala, y lista del libro"],
+["ERRATA", "Lo que se cuela en la imprenta"],
+["TOMO", "Cada volumen de la obra"],
+["EJEMPLAR", "Cada copia del libro, y de conducta"],
+["EDITORIAL", "Publica libros, y opina en el diario"],
+["IMPRENTA", "Invento de Gutenberg"],
+["CRONICA", "Relato de los hechos por orden"],
+["RESEÑA", "Lo que escribe el crítico"],
+["TITULAR", "Lo que se lee aunque no se lea más"],
+["PORTADA", "Cara del libro o del diario"],
+["TERTULIA", "Reunión para hablar de todo"],
+["CAFE", "Excusa para la tertulia"],
+["ATENEO", "Casa de la cultura y el debate"],
+["ANTOLOGIA", "Selección de lo mejor"],
+["PARODIA", "Imitación burlona"],
+["SATIRA", "Burla con intención"],
+["IRONIA", "Decir lo contrario de lo que se piensa"],
+["SARCASMO", "Ironía que hace sangre"],
+["METAFORA", "Llamar perlas a los dientes"],
+["RIMA", "Lo que hace sonar igual los versos"],
+["ESTROFA", "Grupo de versos"],
+["SONETO", "Catorce versos y una ley"],
+["ODA", "Poema que alaba"],
+["ELEGIA", "Poema que llora una pérdida"],
+["FABULA", "Cuento con animales y moraleja"],
+["MORALEJA", "Lo que el cuento quería decir"],
+["LEYENDA", "Relato que creció al contarse"],
+["EPOPEYA", "Relato de grandes hazañas"],
+["ODISEA", "Viaje larguísimo y accidentado"],
+["QUIMERA", "Ilusión imposible"],
+["UTOPIA", "El sitio que no existe"],
+["ENIGMA", "Lo que pide ser descifrado"],
+["ACERTIJO", "Pregunta con trampa"],
+["CHARADA", "Pasatiempo de adivinar palabras"],
+["JEROGLIFICO", "Escritura de dibujos, y pasatiempo"],
+["LABERINTO", "Fácil de entrar, difícil de salir"],
+["BRUMA", "Niebla ligera sobre el mar"],
+["CELAJE", "Aspecto del cielo con nubes de color"],
+["AURORA", "Luz que precede al sol"],
+["CREPUSCULO", "Luz que queda cuando el sol se ha ido"],
+["PENUMBRA", "Ni sombra del todo ni luz"],
+["ECLIPSE", "Cuando uno se pone delante del otro"],
+["ORBITA", "Camino que no se abandona"],
+["COMETA", "Viaja con cola, y también se remonta"],
+["METEORITO", "Piedra que llega del cielo"],
+["GALAXIA", "Isla de estrellas"],
+["NEBULOSA", "Nube donde nacen estrellas"],
+["CONSTELACION", "Dibujo que hicimos uniendo estrellas"],
+["SATELITE", "Da vueltas alrededor de otro"],
+["COSMOS", "Todo, ordenado"],
+["GRAVEDAD", "Lo que nos tiene pegados al suelo"],
+["INERCIA", "Lo que cuesta cambiar de estado"],
+["FRICCION", "Lo que frena al rozar"],
+["IMAN", "Atrae sin tocar"],
+["ATOMO", "Se creyó indivisible"],
+["MOLECULA", "Unión estable de átomos"],
+["ELECTRON", "Gira con carga negativa"],
+["ISOTOPO", "Mismo elemento, distinto peso"],
+["CATALIZADOR", "Acelera sin gastarse"],
+["ALEACION", "Mezcla de metales"],
+["CRISOL", "Donde se funden los metales, y las culturas"],
+["DESTILAR", "Separar por evaporación"],
+["EVAPORAR", "Pasar de líquido a gas sin hervir"],
+["CONDENSAR", "Volver a líquido lo que era vapor"],
+["SOLIDIFICAR", "Pasar a estado firme"],
+["DILATAR", "Lo que hace el metal con el calor"],
+["EROSION", "Lo que el agua le hace a la piedra con siglos"],
+["SEDIMENTO", "Lo que se posa en el fondo"],
+["ESTRATO", "Capa de terreno"],
+["FOSIL", "Huella de lo que vivió hace millones de años"],
+["AMBITO", "Terreno en el que algo se mueve"],
+["INDOLE", "Naturaleza propia de algo"],
+["TALANTE", "Disposición de ánimo"],
+["ARRAIGO", "Lo que ata a un sitio"],
+["DESARRAIGO", "Lo que siente quien perdió su sitio"],
+["NOSTALGIA", "Pena por lo que ya no vuelve"],
+["MORRIÑA", "Nostalgia de la tierra, en gallego"],
+["SAUDADE", "Melancolía portuguesa por lo ausente"],
+["ANHELO", "Deseo hondo y sostenido"],
+["DESIDIA", "Dejadez de quien no tiene ganas"],
+["AHINCO", "Empeño con el que se hace algo"],
+["DENUEDO", "Valor con el que se afronta algo"],
+["ARROJO", "Valentía que no mide el peligro"],
+["CAUTELA", "Prudencia de quien va con pies de plomo"],
+["RECELO", "Desconfianza que no se dice"],
+["SOSIEGO", "Calma después del ruido"],
+["ZOZOBRA", "Inquietud de quien teme lo peor"],
+["DESVELO", "Noche sin sueño por preocupación"],
+["LETARGO", "Sueño largo y profundo"],
+["MODORRA", "Sopor pesado de después de comer"],
+["VIGILIA", "Estar despierto cuando tocaba dormir"],
+["ALBERGUE", "Techo para el caminante"],
+["POSADA", "Donde paraba el viajero antiguo"],
+["ZAHORI", "Dice encontrar agua con una vara"],
+["BUHONERO", "Vendedor ambulante de baratijas"],
+["TRASHUMANTE", "Que cambia de pastos con la estación"],
+["NOMADA", "Que no se queda en ningún sitio"],
+["PEREGRINO", "Camina hacia un lugar sagrado"],
+["ROMERIA", "Fiesta con caminata hasta una ermita"],
+["ERMITA", "Iglesia pequeña y apartada"],
+["CAMPANA", "Llama a misa y avisa del fuego"],
+["BADAJO", "Lo que hace sonar la campana"],
+["INCIENSO", "Humo que perfuma el templo"],
+["CANDIL", "Lámpara de aceite"],
+["FAROL", "Luz de la calle, y mentira en el juego"],
+["ANTORCHA", "Fuego que se lleva en la mano"],
+["HOGUERA", "Fuego grande al aire libre"],
+["RESCOLDO", "Lo que todavía arde bajo la ceniza"],
+["CENIZA", "Lo que queda del fuego"],
+["HUMAREDA", "Humo abundante"],
+["PAVESA", "Chispa que vuela del fuego"],
+["CHISPA", "Pequeña luz que salta, y gracia de alguien"],
+["LUMBRE", "Fuego del hogar"]
+];
+
+/* ==========================================================
+   GENERADOR DE CRUCIGRAMAS
+   Rejilla de palabras cruzadas: se parte de una palabra en el centro y cada
+   nueva se engancha cruzando una letra de las ya puestas. No es el crucigrama
+   denso de periódico (donde cada casilla pertenece a una horizontal Y a una
+   vertical): ese necesita un diccionario de decenas de miles de entradas y
+   rejillas prefabricadas. Este es el de palabras cruzadas con huecos, que es
+   el que se puede generar infinito con un banco de unos cientos.
+
+   Este archivo se inserta tal cual dentro del HTML del juego; se mantiene
+   aparte para poder ejercitarlo en Node sin arrastrar el DOM.
+   ========================================================== */
+
+/* Una colocación es válida si:
+   - cabe en la rejilla y dentro del tamaño máximo pedido
+   - la casilla de antes del principio y la de después del final están vacías
+     (si no, la palabra se pegaría a otra y se leerían juntas)
+   - cada letra o cae en hueco libre o coincide con la que ya hay (cruce)
+   - una letra que NO es cruce no puede tener vecinos a los lados, porque eso
+     crearía de rebote una palabra de dos letras que nadie ha definido
+
+   Devuelve el número de cruces, o -1 si no vale. */
+function validarColocacion(rejilla, lado, palabra, fila, col, horizontal, caja, maxLado) {
+    const largo = palabra.length;
+    const finF = horizontal ? fila : fila + largo - 1;
+    const finC = horizontal ? col + largo - 1 : col;
+
+    if (fila < 0 || col < 0 || finF >= lado || finC >= lado) return -1;
+
+    /* El rectángulo ocupado no puede crecer más de lo que cabe en pantalla */
+    if (caja) {
+        const alto = Math.max(caja.f2, finF) - Math.min(caja.f1, fila) + 1;
+        const ancho = Math.max(caja.c2, finC) - Math.min(caja.c1, col) + 1;
+        if (alto > maxLado || ancho > maxLado) return -1;
+    }
+
+    /* Tapones: antes del principio y después del final */
+    const antes = horizontal ? [fila, col - 1] : [fila - 1, col];
+    const despues = horizontal ? [fila, col + largo] : [fila + largo, col];
+    for (const [f, c] of [antes, despues]) {
+        if (f >= 0 && f < lado && c >= 0 && c < lado && rejilla[f * lado + c]) return -1;
+    }
+
+    let cruces = 0;
+    let anteriorOcupada = false;
+
+    for (let i = 0; i < largo; i++) {
+        const f = horizontal ? fila : fila + i;
+        const c = horizontal ? col + i : col;
+        const actual = rejilla[f * lado + c];
+
+        if (actual) {
+            if (actual !== palabra[i]) return -1;
+
+            /* Dos casillas ocupadas seguidas EN LA MISMA DIRECCIÓN en la que
+               se coloca significan que ahí ya hay una palabra tumbada igual, y
+               la nueva se le montaría encima. Pasó de verdad: OCA ya estaba en
+               la fila 0 y OCASO se colocó sobre ella cruzando sus tres letras,
+               una a una válidas. La rejilla quedaba con dos definiciones para
+               el mismo hueco y el crucigrama no se podía terminar.
+
+               Un cruce legítimo siempre está aislado en la dirección de la
+               palabra nueva, porque la que cruza va en perpendicular y solo
+               aporta una letra. */
+            if (anteriorOcupada) return -1;
+
+            anteriorOcupada = true;
+            cruces++;
+            continue;
+        }
+        anteriorOcupada = false;
+
+        /* Casilla nueva: sus vecinos perpendiculares tienen que estar vacíos */
+        const vecinos = horizontal ? [[f - 1, c], [f + 1, c]] : [[f, c - 1], [f, c + 1]];
+        for (const [vf, vc] of vecinos) {
+            if (vf >= 0 && vf < lado && vc >= 0 && vc < lado && rejilla[vf * lado + vc]) return -1;
+        }
+    }
+    return cruces;
+}
+
+function escribir(rejilla, lado, palabra, fila, col, horizontal) {
+    for (let i = 0; i < palabra.length; i++) {
+        const f = horizontal ? fila : fila + i;
+        const c = horizontal ? col + i : col;
+        rejilla[f * lado + c] = palabra[i];
+    }
+}
+
+function barajar(lista, azar) {
+    const copia = lista.slice();
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    }
+    return copia;
+}
+
+/* Busca el mejor sitio para una palabra cruzando lo ya colocado. Se recorren
+   las casillas ocupadas y, por cada letra de la palabra que coincida, se
+   prueba a cruzarla ahí en la dirección contraria a la que ya ocupa esa
+   casilla. */
+function buscarSitio(rejilla, lado, palabra, puestas, caja, maxLado) {
+    let mejor = null;
+
+    for (const p of puestas) {
+        for (let i = 0; i < p.palabra.length; i++) {
+            const letra = p.palabra[i];
+            const pf = p.horizontal ? p.fila : p.fila + i;
+            const pc = p.horizontal ? p.col + i : p.col;
+
+            for (let j = 0; j < palabra.length; j++) {
+                if (palabra[j] !== letra) continue;
+
+                /* Si la de abajo es horizontal, la nueva va vertical */
+                const horizontal = !p.horizontal;
+                const fila = horizontal ? pf : pf - j;
+                const col = horizontal ? pc - j : pc;
+
+                const cruces = validarColocacion(rejilla, lado, palabra, fila, col,
+                                                 horizontal, caja, maxLado);
+                if (cruces < 1) continue;
+
+                /* Más cruces es mejor rejilla: cada letra compartida es una
+                   pista que ayuda a resolver otra. A igualdad, la que quede
+                   más centrada.
+
+                   Probé a castigar además lo que la palabra ensancha el
+                   rectángulo ocupado, buscando rejillas más compactas: la
+                   densidad se quedó igual (47% frente a 48%) y en cambio un
+                   5% de las partidas no llegaba a generarse, porque el
+                   criterio compacto se encierra solo y se queda sin sitios.
+                   No compensaba. */
+                const centro = lado / 2;
+                const distancia = Math.abs(fila - centro) + Math.abs(col - centro);
+                const nota = cruces * 100 - distancia;
+
+                if (!mejor || nota > mejor.nota) {
+                    mejor = { palabra, fila, col, horizontal, cruces, nota };
+                }
+            }
+        }
+    }
+    return mejor;
+}
+
+/* Genera una rejilla. `banco` es una lista de [PALABRA, pista].
+   Devuelve null si no consigue colocar el mínimo pedido. */
+function generarRejilla(banco, opciones, azar) {
+    azar = azar || Math.random;
+    const objetivo = opciones.palabras;
+    const minimo = opciones.minimo || Math.ceil(objetivo * 0.6);
+    const maxLado = opciones.maxLado;
+    const lado = maxLado * 2 + 2;            // espacio de trabajo, luego se recorta
+
+    /* El tope de longitud no es solo el que se pida: una palabra más larga
+       que el lado máximo no cabe ni siendo la primera. Sin este filtro, al
+       tocarle el turno de semilla a una de diez letras en una rejilla de
+       nueve, la partida entera se quedaba sin generar. */
+    const tope = Math.min(opciones.max || 99, maxLado);
+    const candidatas = barajar(banco, azar)
+        .filter(e => e[0].length >= (opciones.min || 3) && e[0].length <= tope);
+    if (!candidatas.length) return null;
+
+    const rejilla = new Array(lado * lado).fill('');
+    const puestas = [];
+    const usadas = new Set();
+
+    /* La primera, de las más largas que haya, en el centro y horizontal */
+    const porLargo = candidatas.slice().sort((a, b) => b[0].length - a[0].length);
+    const semilla = porLargo[Math.floor(azar() * Math.min(8, porLargo.length))];
+    const filaIni = Math.floor(lado / 2);
+    const colIni = Math.floor((lado - semilla[0].length) / 2);
+
+    escribir(rejilla, lado, semilla[0], filaIni, colIni, true);
+    puestas.push({ palabra: semilla[0], pista: semilla[1], fila: filaIni, col: colIni, horizontal: true });
+    usadas.add(semilla[0]);
+
+    let caja = { f1: filaIni, f2: filaIni, c1: colIni, c2: colIni + semilla[0].length - 1 };
+
+    /* En cada ronda se prueban muchas candidatas y se coloca la MEJOR de
+       todas, no la primera que encaje. Quedarse con la primera daba rejillas
+       largas y flacas, enganchadas siempre por una sola letra; eligiendo la
+       de más cruces salen compactas, que es lo que hace que resolver una
+       palabra ayude a resolver las de al lado.
+       El tope por ronda es para que generar siga costando milisegundos. */
+    const PRUEBAS_POR_RONDA = 150;
+
+    while (puestas.length < objetivo) {
+        let mejor = null;
+        let probadas = 0;
+
+        for (const entrada of candidatas) {
+            if (usadas.has(entrada[0])) continue;
+            if (++probadas > PRUEBAS_POR_RONDA) break;
+
+            const sitio = buscarSitio(rejilla, lado, entrada[0], puestas, caja, maxLado);
+            if (!sitio) continue;
+            /* Pizca de azar para que dos rejillas con las mismas palabras
+               disponibles no salgan calcadas */
+            sitio.nota += azar() * 5;
+            if (!mejor || sitio.nota > mejor.sitio.nota) mejor = { sitio, entrada };
+        }
+
+        if (!mejor) break;                 // ya no cabe nada más
+
+        const { sitio, entrada } = mejor;
+        escribir(rejilla, lado, entrada[0], sitio.fila, sitio.col, sitio.horizontal);
+        puestas.push({
+            palabra: entrada[0], pista: entrada[1],
+            fila: sitio.fila, col: sitio.col, horizontal: sitio.horizontal
+        });
+        usadas.add(entrada[0]);
+
+        const finF = sitio.horizontal ? sitio.fila : sitio.fila + entrada[0].length - 1;
+        const finC = sitio.horizontal ? sitio.col + entrada[0].length - 1 : sitio.col;
+        caja = {
+            f1: Math.min(caja.f1, sitio.fila), f2: Math.max(caja.f2, finF),
+            c1: Math.min(caja.c1, sitio.col), c2: Math.max(caja.c2, finC)
+        };
+    }
+
+    if (puestas.length < minimo) return null;
+    return recortar(rejilla, lado, puestas, caja);
+}
+
+/* Recorta la rejilla al rectángulo que de verdad ocupa y renumera todo
+   respecto a la esquina nueva. */
+function recortar(rejilla, lado, puestas, caja) {
+    const alto = caja.f2 - caja.f1 + 1;
+    const ancho = caja.c2 - caja.c1 + 1;
+    const celdas = new Array(ancho * alto).fill('');
+
+    for (let f = 0; f < alto; f++) {
+        for (let c = 0; c < ancho; c++) {
+            celdas[f * ancho + c] = rejilla[(f + caja.f1) * lado + (c + caja.c1)];
+        }
+    }
+
+    const palabras = puestas.map(p => ({
+        palabra: p.palabra, pista: p.pista,
+        fila: p.fila - caja.f1, col: p.col - caja.c1,
+        horizontal: p.horizontal
+    }));
+
+    return { celdas, ancho, alto, palabras };
+}
+
+/* Numeración de crucigrama: se recorre en orden de lectura y se numera toda
+   casilla que empiece una palabra, hacia la derecha o hacia abajo. Una misma
+   casilla puede empezar las dos y entonces comparten número. */
+function numerar(rejilla) {
+    const { celdas, ancho, alto } = rejilla;
+    const numeros = new Array(ancho * alto).fill(0);
+    const definiciones = [];
+    let n = 0;
+
+    const hay = (f, c) => f >= 0 && f < alto && c >= 0 && c < ancho && !!celdas[f * ancho + c];
+
+    for (let f = 0; f < alto; f++) {
+        for (let c = 0; c < ancho; c++) {
+            if (!hay(f, c)) continue;
+
+            const empiezaH = !hay(f, c - 1) && hay(f, c + 1);
+            const empiezaV = !hay(f - 1, c) && hay(f + 1, c);
+            if (!empiezaH && !empiezaV) continue;
+
+            n++;
+            numeros[f * ancho + c] = n;
+
+            if (empiezaH) {
+                let largo = 0;
+                while (hay(f, c + largo)) largo++;
+                definiciones.push({ num: n, horizontal: true, fila: f, col: c, largo });
+            }
+            if (empiezaV) {
+                let largo = 0;
+                while (hay(f + largo, c)) largo++;
+                definiciones.push({ num: n, horizontal: false, fila: f, col: c, largo });
+            }
+        }
+    }
+
+    /* Se le pega a cada definición su palabra y su pista. La búsqueda se hace
+       por posición y dirección, no por el orden en que se colocaron. */
+    for (const d of definiciones) {
+        const encaje = rejilla.palabras.find(p =>
+            p.fila === d.fila && p.col === d.col && p.horizontal === d.horizontal);
+        if (encaje) { d.palabra = encaje.palabra; d.pista = encaje.pista; }
+        else {
+            /* No debería pasar nunca: significaría que la rejilla tiene una
+               tirada de letras que ninguna palabra colocada explica. */
+            let texto = '';
+            for (let i = 0; i < d.largo; i++) {
+                texto += d.horizontal ? celdas[d.fila * ancho + d.col + i]
+                                      : celdas[(d.fila + i) * ancho + d.col];
+            }
+            d.palabra = texto;
+            d.pista = '(sin definición)';
+            d.huerfana = true;
+        }
+    }
+
+    definiciones.sort((a, b) => (a.num - b.num) || (a.horizontal ? -1 : 1));
+    return { numeros, definiciones };
+}
+
+/* ==========================================================
+   ALMACENAMIENTO
+   ========================================================== */
+const almacenOK = (() => {
+    try {
+        const p = '__cr__';
+        localStorage.setItem(p, '1');
+        localStorage.removeItem(p);
+        return true;
+    } catch (e) { return false; }
+})();
+
+function escaparHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
+/* ==========================================================
+   AUDIO
+   Sintetizado con Web Audio: sin archivos ni dependencias, suena igual sin
+   conexión. Música y efectos son canales independientes y los dos arrancan
+   SILENCIADOS; además de ser lo educado, el navegador bloquea el audio hasta
+   que la persona toca la página, así que un contexto creado al cargar
+   nacería suspendido y el primer sonido se perdería.
+   ========================================================== */
+const CLAVE_AUDIO = 'crucigramaAudio';
+const VOL_MUSICA = 0.5, VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15, PASOS = 32;
+
+const audio = {
+    musica: false, efectos: false,
+    ctx: null, busMusica: null, busEfectos: null,
+    proximo: 0, paso: 0, timerId: null
+};
+
+if (almacenOK) {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica = g.musica === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
+
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({ musica: audio.musica, efectos: audio.efectos }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
+        osc.connect(vol);
+        vol.connect(bus);
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frec, inicio);
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
+}
+
+/* ---------- MÚSICA ----------
+   Un crucigrama se resuelve pensando y puede durar veinte minutos: el bucle
+   va lento, sin percusión marcada y sin acelerar nunca. Lo que no puede
+   hacer una música de fondo que dura tanto es meter prisa. */
+const ACORDES = [
+    { bajo: 65.41, notas: [130.81, 164.81, 196.00] },   // Do
+    { bajo: 87.31, notas: [174.61, 220.00, 261.63] },   // Fa
+    { bajo: 73.42, notas: [146.83, 174.61, 220.00] },   // Re menor
+    { bajo: 98.00, notas: [196.00, 246.94, 293.66] }    // Sol
+];
+
+function duracionPaso() { return 30 / 68; }   // 68 negras por minuto
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    if (paso % 8 === 0) voz(audio.busMusica, acorde.bajo, t, dur * 3.6, 'triangle', 0.18);
+
+    /* Una nota de cada cuatro corcheas: queda aire de sobra entre ellas */
+    if (paso % 4 === 0) {
+        const nota = acorde.notas[[0, 2, 1][(paso >> 2) % 3]];
+        voz(audio.busMusica, nota, t, dur * 2.8, 'sine', 0.065);
+    }
+}
+
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    /* En segundo plano setTimeout se frena a ~1 Hz y el reloj se queda atrás;
+       recolocarlo evita soltar de golpe las notas atrasadas al volver. */
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+const sonPulsar  = () => efecto(880, 0.03, 'square', 0.045);
+const sonLetra   = () => efecto(1046, 0.028, 'square', 0.04);
+const sonBorrar  = () => efecto(330, 0.045, 'triangle', 0.05);
+const sonPalabra = () => { efecto(659, 0.09, 'square', 0.06); efecto(988, 0.14, 'square', 0.055, 0.08); };
+const sonRevelar = () => { efecto(784, 0.08, 'triangle', 0.06); efecto(1175, 0.12, 'triangle', 0.05, 0.07); };
+const sonNada    = () => efecto(160, 0.12, 'sawtooth', 0.05);
+const sonFin     = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.32, 'square', 0.07, 0.27);
+};
+
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada' : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
+
+/* ==========================================================
+   ESTADO
+   ========================================================== */
+const TAMAÑOS = {
+    pequeño: { palabras: 9,  maxLado: 9,  etiqueta: 'Pequeño' },
+    mediano: { palabras: 13, maxLado: 11, etiqueta: 'Mediano' },
+    grande:  { palabras: 17, maxLado: 13, etiqueta: 'Grande' }
+};
+
+const FILAS_TECLADO = ['QWERTYUIOP', 'ASDFGHJKLÑ', 'ZXCVBNM'];
+
+const partida = {
+    tamaño: 'mediano',
+    ayudasIniciales: 3,
+    ayudas: 3,
+    rejilla: null,          // {celdas, ancho, alto, palabras}
+    numeros: [],
+    definiciones: [],
+    escrito: [],            // lo que ha tecleado el jugador, por casilla
+    resueltas: new Set(),   // índices de definiciones ya correctas
+    activa: 0,              // definición seleccionada
+    cursor: 0,              // casilla donde caerá la siguiente letra
+    jugando: false,
+    pausado: false,
+    segundos: 0,
+    timerId: null,
+    reveladas: 0
+};
+
+/* ==========================================================
+   PANTALLAS Y AVISOS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let temporizadorAviso = null;
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso-flotante');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('vista');
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => el.classList.remove('vista'), 1700);
+}
+
+/* ==========================================================
+   REJILLA EN PANTALLA
+   ========================================================== */
+let casillas = [];
+
+function construirRejilla() {
+    const cont = document.getElementById('rejilla');
+    const r = partida.rejilla;
+    cont.innerHTML = '';
+    casillas = [];
+    cont.style.gridTemplateColumns = 'repeat(' + r.ancho + ', var(--celda))';
+
+    for (let i = 0; i < r.ancho * r.alto; i++) {
+        const d = document.createElement('div');
+        if (!r.celdas[i]) {
+            d.className = 'casilla vacia';
+        } else {
+            d.className = 'casilla';
+            d.dataset.i = String(i);
+            d.setAttribute('role', 'gridcell');
+            if (partida.numeros[i]) {
+                const n = document.createElement('span');
+                n.className = 'num';
+                n.textContent = String(partida.numeros[i]);
+                d.appendChild(n);
+            }
+            const letra = document.createElement('span');
+            letra.className = 'letra';
+            d.appendChild(letra);
+        }
+        cont.appendChild(d);
+        casillas.push(d);
+    }
+    ajustarRejilla();
+}
+
+/* El lado de la casilla se mide, no se calcula restando a ojo lo que ocupan
+   barra, pista y teclado: ese número deja de valer al girar la pantalla o al
+   aparecer la barra de direcciones. */
+function ajustarRejilla() {
+    const zona = document.getElementById('zonaRejilla');
+    const r = partida.rejilla;
+    if (!zona || !r) return;
+    const ancho = zona.clientWidth, alto = zona.clientHeight;
+    if (!ancho || !alto) return;
+
+    const hueco = 2;
+    const porAncho = (ancho - hueco * (r.ancho - 1)) / r.ancho;
+    const porAlto = (alto - hueco * (r.alto - 1)) / r.alto;
+    /* El suelo es una red de seguridad para pantallas absurdas, no un tamaño
+       de trabajo: ponerlo alto hace que la rejilla se salga del hueco y
+       overflow:hidden la recorte sin avisar. */
+    const lado = Math.max(12, Math.floor(Math.min(porAncho, porAlto)));
+    document.getElementById('rejilla').style.setProperty('--celda', lado + 'px');
+}
+
+/* Casillas que ocupa una definición, en orden de escritura */
+function casillasDe(def) {
+    const r = partida.rejilla;
+    const lista = [];
+    for (let k = 0; k < def.largo; k++) {
+        lista.push(def.horizontal ? def.fila * r.ancho + def.col + k
+                                  : (def.fila + k) * r.ancho + def.col);
+    }
+    return lista;
+}
+
+function definicionResuelta(idx) {
+    const def = partida.definiciones[idx];
+    const casillasDef = casillasDe(def);
+    for (let k = 0; k < casillasDef.length; k++) {
+        if (partida.escrito[casillasDef[k]] !== def.palabra[k]) return false;
+    }
+    return true;
+}
+
+function pintarRejilla() {
+    const r = partida.rejilla;
+    const def = partida.definiciones[partida.activa];
+    const enfocadas = new Set(def ? casillasDe(def) : []);
+
+    /* Una casilla está resuelta si alguna de las palabras que pasan por ella
+       lo está: por eso se marca a partir de las definiciones y no letra a
+       letra, que daría verde a aciertos por casualidad. */
+    const resueltas = new Set();
+    partida.resueltas.forEach(idx => casillasDe(partida.definiciones[idx]).forEach(i => resueltas.add(i)));
+
+    for (let i = 0; i < r.ancho * r.alto; i++) {
+        const d = casillas[i];
+        if (!r.celdas[i]) continue;
+        const letra = d.querySelector('.letra');
+        if (letra) letra.textContent = partida.escrito[i] || '';
+        d.classList.toggle('enfoque', enfocadas.has(i) && i !== partida.cursor);
+        d.classList.toggle('cursor', i === partida.cursor);
+        d.classList.toggle('resuelta', resueltas.has(i));
+    }
+    pintarPista();
+    pintarBarra();
+}
+
+function pintarPista() {
+    const def = partida.definiciones[partida.activa];
+    if (!def) return;
+    document.getElementById('pistaRef').textContent =
+        def.num + (def.horizontal ? ' HORIZONTAL' : ' VERTICAL') + ' · ' + def.largo + ' LETRAS';
+    document.getElementById('pistaTexto').textContent = def.pista;
+}
+
+function pintarBarra() {
+    document.querySelector('#dHechas b').textContent =
+        partida.resueltas.size + '/' + partida.definiciones.length;
+    document.querySelector('#dAyudas b').textContent = String(partida.ayudas);
+    document.getElementById('btnRevelar').disabled = partida.ayudas <= 0 || !partida.jugando;
+    pintarReloj();
+}
+
+function pintarReloj() {
+    const m = Math.floor(partida.segundos / 60);
+    const s = partida.segundos % 60;
+    document.querySelector('#dTiempo b').textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+/* ==========================================================
+   SELECCIÓN Y ESCRITURA
+   ========================================================== */
+function definicionesEn(i) {
+    const lista = [];
+    partida.definiciones.forEach((def, idx) => {
+        if (casillasDe(def).indexOf(i) !== -1) lista.push(idx);
+    });
+    return lista;
+}
+
+function seleccionarCasilla(i, alternar) {
+    const enEsta = definicionesEn(i);
+    if (!enEsta.length) return;
+
+    if (alternar && enEsta.length > 1 && enEsta.indexOf(partida.activa) !== -1) {
+        /* Segundo toque en la misma casilla: cambia de dirección */
+        const otra = enEsta.find(idx => idx !== partida.activa);
+        if (otra !== undefined) partida.activa = otra;
+    } else if (enEsta.indexOf(partida.activa) === -1) {
+        /* Al entrar en una casilla nueva se prefiere una palabra sin
+           terminar: saltar a una ya resuelta obligaría a cambiar a mano. */
+        const pendiente = enEsta.find(idx => !partida.resueltas.has(idx));
+        partida.activa = pendiente !== undefined ? pendiente : enEsta[0];
+    }
+
+    partida.cursor = i;
+    pintarRejilla();
+}
+
+function irADefinicion(idx, alPrimerHueco) {
+    if (idx < 0 || idx >= partida.definiciones.length) return;
+    partida.activa = idx;
+    const lista = casillasDe(partida.definiciones[idx]);
+    const hueco = lista.find(i => !partida.escrito[i]);
+    partida.cursor = (alPrimerHueco && hueco !== undefined) ? hueco : lista[0];
+    pintarRejilla();
+}
+
+/* Siguiente definición sin resolver; si están todas, la de al lado */
+function saltarDefinicion(paso) {
+    const total = partida.definiciones.length;
+    for (let k = 1; k <= total; k++) {
+        const idx = (partida.activa + paso * k + total * k) % total;
+        if (!partida.resueltas.has(idx)) { irADefinicion(idx, true); return; }
+    }
+    irADefinicion((partida.activa + paso + total) % total, true);
+}
+
+function avanzarCursor() {
+    const lista = casillasDe(partida.definiciones[partida.activa]);
+    const pos = lista.indexOf(partida.cursor);
+
+    /* Primero se busca hueco por delante; si no queda, se vuelve a mirar
+       desde el principio de la palabra, que es lo que uno espera cuando
+       rellena los huecos sueltos que le quedaban. */
+    for (let k = pos + 1; k < lista.length; k++) {
+        if (!partida.escrito[lista[k]]) { partida.cursor = lista[k]; return true; }
+    }
+    for (let k = 0; k < pos; k++) {
+        if (!partida.escrito[lista[k]]) { partida.cursor = lista[k]; return true; }
+    }
+    if (pos < lista.length - 1) { partida.cursor = lista[pos + 1]; return true; }
+    return false;
+}
+
+function escribirLetra(letra) {
+    if (!partida.jugando || partida.pausado) return;
+    const i = partida.cursor;
+    if (!partida.rejilla.celdas[i]) return;
+
+    /* Una casilla de palabra ya resuelta no se toca: si no, al cruzarla se
+       destrozaría una palabra que ya estaba bien. */
+    if (definicionesEn(i).some(idx => partida.resueltas.has(idx))) {
+        avanzarCursor();
+        pintarRejilla();
+        return;
+    }
+
+    partida.escrito[i] = letra;
+    sonLetra();
+
+    const nuevas = comprobarResueltas();
+    if (!nuevas.length) avanzarCursor();
+    pintarRejilla();
+
+    if (nuevas.length) {
+        sonPalabra();
+        if (partida.resueltas.size === partida.definiciones.length) { terminar(); return; }
+        /* Palabra terminada: se salta sola a la siguiente que quede */
+        setTimeout(() => { if (partida.jugando) saltarDefinicion(1); }, 380);
+    }
+}
+
+function borrarLetra() {
+    if (!partida.jugando || partida.pausado) return;
+    const lista = casillasDe(partida.definiciones[partida.activa]);
+    const pos = lista.indexOf(partida.cursor);
+    const bloqueada = (i) => definicionesEn(i).some(idx => partida.resueltas.has(idx));
+
+    if (partida.escrito[partida.cursor] && !bloqueada(partida.cursor)) {
+        partida.escrito[partida.cursor] = '';
+    } else {
+        for (let k = pos - 1; k >= 0; k--) {
+            if (bloqueada(lista[k])) continue;
+            partida.cursor = lista[k];
+            partida.escrito[lista[k]] = '';
+            break;
+        }
+    }
+    sonBorrar();
+    pintarRejilla();
+}
+
+/* Devuelve las definiciones que acaban de quedar resueltas */
+function comprobarResueltas() {
+    const nuevas = [];
+    partida.definiciones.forEach((def, idx) => {
+        if (partida.resueltas.has(idx)) return;
+        if (definicionResuelta(idx)) { partida.resueltas.add(idx); nuevas.push(idx); }
+    });
+    return nuevas;
+}
+
+function revelarLetra() {
+    if (!partida.jugando || partida.pausado) return;
+    if (partida.ayudas <= 0) { avisar('No te quedan pistas', true); sonNada(); return; }
+
+    const i = partida.cursor;
+    const def = partida.definiciones[partida.activa];
+    const pos = casillasDe(def).indexOf(i);
+    if (pos === -1) return;
+
+    if (partida.escrito[i] === def.palabra[pos]) {
+        avisar('Esa letra ya está bien', true);
+        sonNada();
+        return;
+    }
+
+    partida.escrito[i] = def.palabra[pos];
+    partida.ayudas--;
+    partida.reveladas++;
+    sonRevelar();
+
+    const nuevas = comprobarResueltas();
+    if (!nuevas.length) avanzarCursor();
+    pintarRejilla();
+
+    if (nuevas.length) {
+        sonPalabra();
+        if (partida.resueltas.size === partida.definiciones.length) terminar();
+    }
+}
+
+/* ==========================================================
+   LISTA DE DEFINICIONES
+   ========================================================== */
+function pintarLista() {
+    const cont = document.getElementById('listaDefs');
+    cont.innerHTML = '';
+
+    for (const horizontal of [true, false]) {
+        const titulo = document.createElement('h3');
+        titulo.textContent = horizontal ? 'HORIZONTALES' : 'VERTICALES';
+        cont.appendChild(titulo);
+
+        partida.definiciones.forEach((def, idx) => {
+            if (def.horizontal !== horizontal) return;
+            const fila = document.createElement('div');
+            fila.className = 'def' + (partida.resueltas.has(idx) ? ' hecha' : '');
+            fila.dataset.def = String(idx);
+            fila.innerHTML = '<b>' + def.num + '</b><span>' + escaparHtml(def.pista) +
+                             ' <span style="color:var(--apagado)">(' + def.largo + ')</span></span>';
+            cont.appendChild(fila);
+        });
+    }
+}
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function arrancarReloj() {
+    pararReloj();
+    partida.timerId = setInterval(() => {
+        if (!partida.jugando || partida.pausado) return;
+        partida.segundos++;
+        pintarReloj();
+    }, 1000);
+}
+
+function pararReloj() {
+    if (partida.timerId !== null) { clearInterval(partida.timerId); partida.timerId = null; }
+}
+
+function nuevaPartida() {
+    const conf = TAMAÑOS[partida.tamaño];
+
+    /* Generar cuesta unos milisegundos, pero si el banco se quedara corto
+       podría devolver null: se reintenta antes de rendirse. */
+    let rejilla = null;
+    for (let intento = 0; intento < 12 && !rejilla; intento++) {
+        rejilla = generarRejilla(BANCO, { palabras: conf.palabras, maxLado: conf.maxLado });
+    }
+    if (!rejilla) {
+        avisar('No se ha podido armar la rejilla', true);
+        volverAlMenu();
+        return;
+    }
+
+    const numeracion = numerar(rejilla);
+    partida.rejilla = rejilla;
+    partida.numeros = numeracion.numeros;
+    partida.definiciones = numeracion.definiciones;
+    partida.escrito = new Array(rejilla.ancho * rejilla.alto).fill('');
+    partida.resueltas = new Set();
+    partida.activa = 0;
+    partida.cursor = casillasDe(partida.definiciones[0])[0];
+    partida.ayudas = partida.ayudasIniciales;
+    partida.reveladas = 0;
+    partida.segundos = 0;
+    partida.jugando = true;
+    partida.pausado = false;
+
+    cerrarCapa('capaFin');
+    cerrarCapa('capaPausa');
+    cerrarCapa('capaLista');
+    construirRejilla();
+    pintarRejilla();
+    arrancarReloj();
+}
+
+function terminar() {
+    partida.jugando = false;
+    pararReloj();
+    pintarRejilla();
+    sonFin();
+
+    const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
+    document.getElementById('mFin').textContent = m + ':' + String(s).padStart(2, '0');
+
+    const conf = TAMAÑOS[partida.tamaño];
+    let texto = conf.etiqueta.toLowerCase() + ', ' + partida.definiciones.length + ' palabras. ';
+    if (partida.reveladas === 0) texto += 'Y sin gastar una sola pista.';
+    else if (partida.reveladas === 1) texto += 'Con una pista gastada.';
+    else texto += 'Con ' + partida.reveladas + ' pistas gastadas.';
+    document.getElementById('sFin').textContent = texto;
+
+    setTimeout(() => abrirCapa('capaFin'), 500);
+}
+
+function pausar() {
+    if (!partida.jugando || partida.pausado) return;
+    partida.pausado = true;
+    pararMusica();
+    document.getElementById('zonaJuego').style.visibility = 'hidden';
+    abrirCapa('capaPausa');
+}
+
+function reanudar() {
+    if (!partida.pausado) return;
+    partida.pausado = false;
+    document.getElementById('zonaJuego').style.visibility = '';
+    arrancarMusica();
+    cerrarCapa('capaPausa');
+}
+
+function volverAlMenu() {
+    partida.jugando = false;
+    partida.pausado = false;
+    pararReloj();
+    document.getElementById('zonaJuego').style.visibility = '';
+    ['capaPausa', 'capaFin', 'capaLista'].forEach(cerrarCapa);
+    mostrarPantalla('pMenu');
+}
+
+/* ==========================================================
+   TECLADO EN PANTALLA
+   ========================================================== */
+function pintarTeclado() {
+    const cont = document.getElementById('teclado');
+    cont.innerHTML = '';
+
+    FILAS_TECLADO.forEach((fila, n) => {
+        const divFila = document.createElement('div');
+        divFila.className = 'fila-teclas';
+
+        for (const letra of fila) {
+            const b = document.createElement('button');
+            b.className = 'tecla';
+            b.type = 'button';
+            b.dataset.letra = letra;
+            b.textContent = letra;
+            divFila.appendChild(b);
+        }
+        /* El borrador va en la última fila, que es la más corta */
+        if (n === FILAS_TECLADO.length - 1) {
+            const b = document.createElement('button');
+            b.className = 'tecla ancha';
+            b.type = 'button';
+            b.dataset.borrar = '1';
+            b.textContent = '⌫';
+            divFila.appendChild(b);
+        }
+        cont.appendChild(divFila);
+    });
+}
+
+/* ==========================================================
+   GRUPOS DE OPCIONES
+   ========================================================== */
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+grupoSimple('grpTamaño', (v) => { partida.tamaño = v; });
+grupoSimple('grpAyudas', (v) => { partida.ayudasIniciales = Number(v); });
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+    if (t.closest('.opcion, .principal, .secundario, .icono, .flecha')) sonPulsar();
+});
+
+document.getElementById('btnJugar').addEventListener('click', () => {
+    mostrarPantalla('pJuego');
+    nuevaPartida();
+});
+
+document.getElementById('rejilla').addEventListener('click', (e) => {
+    if (!partida.jugando || partida.pausado) return;
+    const d = e.target.closest('.casilla');
+    if (!d || d.dataset.i === undefined) return;
+    const i = Number(d.dataset.i);
+    seleccionarCasilla(i, i === partida.cursor);
+});
+
+document.getElementById('teclado').addEventListener('click', (e) => {
+    const b = e.target.closest('.tecla');
+    if (!b) return;
+    if (b.dataset.borrar) borrarLetra();
+    else if (b.dataset.letra) escribirLetra(b.dataset.letra);
+});
+
+document.getElementById('btnAnterior').addEventListener('click', () => saltarDefinicion(-1));
+document.getElementById('btnSiguiente').addEventListener('click', () => saltarDefinicion(1));
+
+/* Tocar la propia pista también cambia de dirección si la casilla del cursor
+   pertenece a dos palabras: es el gesto que más se busca sin pensarlo. */
+document.getElementById('pista').addEventListener('click', () => {
+    if (!partida.jugando || partida.pausado) return;
+    seleccionarCasilla(partida.cursor, true);
+});
+
+document.getElementById('btnRevelar').addEventListener('click', revelarLetra);
+
+document.getElementById('btnLista').addEventListener('click', () => {
+    if (!partida.jugando) return;
+    pintarLista();
+    abrirCapa('capaLista');
+});
+
+document.getElementById('btnCerrarLista').addEventListener('click', () => cerrarCapa('capaLista'));
+
+document.getElementById('listaDefs').addEventListener('click', (e) => {
+    const d = e.target.closest('.def');
+    if (!d) return;
+    cerrarCapa('capaLista');
+    irADefinicion(Number(d.dataset.def), true);
+});
+
+document.getElementById('btnPausa').addEventListener('click', () => {
+    if (partida.pausado) reanudar(); else pausar();
+});
+
+document.getElementById('btnSeguir').addEventListener('click', reanudar);
+document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
+document.getElementById('btnOtroDesdePausa').addEventListener('click', () => {
+    document.getElementById('zonaJuego').style.visibility = '';
+    nuevaPartida();
+});
+document.getElementById('btnOtro').addEventListener('click', nuevaPartida);
+document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+/* ---------- TECLADO FÍSICO ---------- */
+const NORMALIZAR = { 'Á': 'A', 'É': 'E', 'Í': 'I', 'Ó': 'O', 'Ú': 'U', 'Ü': 'U' };
+
+document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) {
+            if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
+            else ['capaLista', 'capaAyuda'].forEach(cerrarCapa);
+        } else if (partida.jugando) pausar();
+        return;
+    }
+    if (hayCapaAbierta()) return;
+    if (!partida.jugando || partida.pausado) return;
+
+    const r = partida.rejilla;
+
+    if (e.key === 'Backspace') { e.preventDefault(); borrarLetra(); return; }
+    if (e.key === 'Tab') { e.preventDefault(); saltarDefinicion(e.shiftKey ? -1 : 1); return; }
+    if (e.key === ' ') { e.preventDefault(); seleccionarCasilla(partida.cursor, true); return; }
+
+    if (e.key.indexOf('Arrow') === 0) {
+        e.preventDefault();
+        const df = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+        const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+        let f = Math.floor(partida.cursor / r.ancho) + df;
+        let c = (partida.cursor % r.ancho) + dc;
+        /* Se salta por encima de los huecos hasta dar con otra casilla */
+        while (f >= 0 && f < r.alto && c >= 0 && c < r.ancho) {
+            const i = f * r.ancho + c;
+            if (r.celdas[i]) { seleccionarCasilla(i, false); return; }
+            f += df; c += dc;
+        }
+        return;
+    }
+
+    if (e.key.length !== 1) return;
+    let letra = e.key.toUpperCase();
+    if (NORMALIZAR[letra]) letra = NORMALIZAR[letra];
+    if (/^[A-ZÑ]$/.test(letra)) { e.preventDefault(); escribirLetra(letra); }
+});
+
+/* La música se corta al irse a otra pestaña: en segundo plano setTimeout se
+   frena a ~1 Hz, así que dejarla correr no la mantendría sonando, la
+   mantendría sonando mal. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else if (!partida.pausado) {
+        arrancarMusica();
+    }
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+pintarTeclado();
+pintarBotonesSonido();
+
+if (typeof ResizeObserver === 'function') {
+    try { new ResizeObserver(ajustarRejilla).observe(document.getElementById('zonaRejilla')); }
+    catch (e) { window.addEventListener('resize', ajustarRejilla); }
+} else {
+    window.addEventListener('resize', ajustarRejilla);
+}
+window.addEventListener('orientationchange', () => setTimeout(ajustarRejilla, 120));
+
+/* Si en la visita anterior quedó algo encendido, el navegador sigue sin
+   permitir audio hasta el primer toque: se espera a ese gesto. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
+</script>
+</body>
+</html>
