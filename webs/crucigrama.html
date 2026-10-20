@@ -242,8 +242,18 @@
     .casilla.cursor { background: var(--acento); color: #0b0922; }
     .casilla.cursor .num { color: rgba(0, 0, 0, 0.55); }
 
-    .casilla.resuelta { color: var(--acento); }
-    .casilla.resuelta.cursor { color: #0b0922; }
+    /* Resultado de la última comprobación. No se pinta mientras se escribe:
+       sale al pulsar ✓ y se borra en cuanto se toca una letra, para que lo
+       que se ve en pantalla sea siempre una comprobación de verdad y no el
+       recuerdo de otra anterior. */
+    .casilla.bien { color: var(--acento); }
+    .casilla.bien.cursor { color: #0b0922; }
+
+    .casilla.mal {
+        color: var(--rosa);
+        box-shadow: inset 0 0 0 2px var(--rosa);
+    }
+    .casilla.mal.cursor { color: #0b0922; background: var(--rosa); }
 
     .casilla.error { animation: fallo 0.4s; }
 
@@ -380,10 +390,13 @@
     .def.hecha b { color: var(--apagado); }
     .def:active { border-color: var(--acento); }
 
+    /* Arriba y no abajo: abajo caía justo encima del teclado y tapaba la fila
+       de la A mientras duraba el aviso, que es cuando más ganas tienes de
+       seguir escribiendo. */
     #aviso-flotante {
         position: fixed;
         left: 50%;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 56px);
+        top: calc(env(safe-area-inset-top, 0px) + 58px);
         transform: translateX(-50%);
         padding: 9px 16px;
         border: 2px solid var(--acento);
@@ -476,6 +489,7 @@
         <div class="dato" id="dTiempo"><b>0:00</b><span>TIEMPO</span></div>
         <div class="dato" id="dAyudas"><b>3</b><span>PISTAS</span></div>
         <div class="hueco"></div>
+        <button class="icono" id="btnComprobar" type="button" aria-label="Comprobar lo escrito">✓</button>
         <button class="icono" id="btnRevelar" type="button" aria-label="Revelar la letra del cursor">💡</button>
         <button class="icono" id="btnLista" type="button" aria-label="Ver todas las definiciones">☰</button>
         <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
@@ -541,8 +555,10 @@
             <li>Toca una casilla para escribir en ella. Si tocas la misma otra vez, cambias de horizontal a vertical.</li>
             <li>La definición de la palabra en la que estás sale siempre en la barra de abajo; con <b>◀ ▶</b> pasas a la siguiente.</li>
             <li>El botón <b>☰</b> abre la lista completa de definiciones, y tocando una vas directo a su casilla.</li>
-            <li>Cuando una palabra queda bien escrita se pone en verde ella sola. No hay que comprobar nada.</li>
-            <li>El botón <b>💡</b> descubre la letra donde tengas el cursor, a costa de una de tus pistas.</li>
+            <li>El juego no te dice nada mientras resuelves. Cuando quieras saber cómo vas, pulsa <b>✓</b>: las letras acertadas se ponen verdes y las equivocadas, rojas.</li>
+            <li>Esas marcas desaparecen en cuanto tocas una letra, para que lo que ves sea siempre una comprobación de verdad y no el recuerdo de otra.</li>
+            <li>Si rellenas la rejilla entera, se comprueba sola.</li>
+            <li>El botón <b>💡</b> descubre la letra donde tengas el cursor, a costa de una de tus pistas. Cuesta igual si ya la tenías bien.</li>
             <li>Con teclado físico: las letras escriben, <b>←→↑↓</b> mueven, <b>Retroceso</b> borra, <b>Tabulador</b> salta a la siguiente definición y <b>Espacio</b> cambia de dirección.</li>
         </ul>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
@@ -1602,7 +1618,11 @@ const partida = {
     numeros: [],
     definiciones: [],
     escrito: [],            // lo que ha tecleado el jugador, por casilla
-    resueltas: new Set(),   // índices de definiciones ya correctas
+    /* Casillas marcadas por la última comprobación. Mientras estén vacías,
+       el juego no sabe (ni dice) si lo escrito está bien. */
+    bien: new Set(),
+    mal: new Set(),
+    comprobaciones: 0,
     activa: 0,              // definición seleccionada
     cursor: 0,              // casilla donde caerá la siguiente letra
     jugando: false,
@@ -1709,16 +1729,33 @@ function definicionResuelta(idx) {
     return true;
 }
 
+/* Rellena no es lo mismo que acertada. Todo lo que el juego enseña mientras
+   se resuelve (el contador, la lista, los saltos) mira si la palabra está
+   RELLENA, nunca si está bien: lo contrario sería ir cantando la solución por
+   la puerta de atrás. */
+function definicionLlena(idx) {
+    return casillasDe(partida.definiciones[idx]).every(i => !!partida.escrito[i]);
+}
+
+function rejillaLlena() {
+    const r = partida.rejilla;
+    for (let i = 0; i < r.celdas.length; i++) {
+        if (r.celdas[i] && !partida.escrito[i]) return false;
+    }
+    return true;
+}
+
+/* Cualquier cambio invalida la comprobación anterior */
+function olvidarComprobacion() {
+    if (!partida.bien.size && !partida.mal.size) return;
+    partida.bien = new Set();
+    partida.mal = new Set();
+}
+
 function pintarRejilla() {
     const r = partida.rejilla;
     const def = partida.definiciones[partida.activa];
     const enfocadas = new Set(def ? casillasDe(def) : []);
-
-    /* Una casilla está resuelta si alguna de las palabras que pasan por ella
-       lo está: por eso se marca a partir de las definiciones y no letra a
-       letra, que daría verde a aciertos por casualidad. */
-    const resueltas = new Set();
-    partida.resueltas.forEach(idx => casillasDe(partida.definiciones[idx]).forEach(i => resueltas.add(i)));
 
     for (let i = 0; i < r.ancho * r.alto; i++) {
         const d = casillas[i];
@@ -1727,7 +1764,8 @@ function pintarRejilla() {
         if (letra) letra.textContent = partida.escrito[i] || '';
         d.classList.toggle('enfoque', enfocadas.has(i) && i !== partida.cursor);
         d.classList.toggle('cursor', i === partida.cursor);
-        d.classList.toggle('resuelta', resueltas.has(i));
+        d.classList.toggle('bien', partida.bien.has(i));
+        d.classList.toggle('mal', partida.mal.has(i));
     }
     pintarPista();
     pintarBarra();
@@ -1742,10 +1780,14 @@ function pintarPista() {
 }
 
 function pintarBarra() {
+    let llenas = 0;
+    partida.definiciones.forEach((d, idx) => { if (definicionLlena(idx)) llenas++; });
     document.querySelector('#dHechas b').textContent =
-        partida.resueltas.size + '/' + partida.definiciones.length;
+        llenas + '/' + partida.definiciones.length;
+
     document.querySelector('#dAyudas b').textContent = String(partida.ayudas);
     document.getElementById('btnRevelar').disabled = partida.ayudas <= 0 || !partida.jugando;
+    document.getElementById('btnComprobar').disabled = !partida.jugando;
     pintarReloj();
 }
 
@@ -1775,9 +1817,9 @@ function seleccionarCasilla(i, alternar) {
         const otra = enEsta.find(idx => idx !== partida.activa);
         if (otra !== undefined) partida.activa = otra;
     } else if (enEsta.indexOf(partida.activa) === -1) {
-        /* Al entrar en una casilla nueva se prefiere una palabra sin
-           terminar: saltar a una ya resuelta obligaría a cambiar a mano. */
-        const pendiente = enEsta.find(idx => !partida.resueltas.has(idx));
+        /* Al entrar en una casilla nueva se prefiere una palabra a medio
+           rellenar: saltar a una ya completa obligaría a cambiar a mano. */
+        const pendiente = enEsta.find(idx => !definicionLlena(idx));
         partida.activa = pendiente !== undefined ? pendiente : enEsta[0];
     }
 
@@ -1794,12 +1836,12 @@ function irADefinicion(idx, alPrimerHueco) {
     pintarRejilla();
 }
 
-/* Siguiente definición sin resolver; si están todas, la de al lado */
+/* Siguiente definición a medio rellenar; si están todas llenas, la de al lado */
 function saltarDefinicion(paso) {
     const total = partida.definiciones.length;
     for (let k = 1; k <= total; k++) {
         const idx = (partida.activa + paso * k + total * k) % total;
-        if (!partida.resueltas.has(idx)) { irADefinicion(idx, true); return; }
+        if (!definicionLlena(idx)) { irADefinicion(idx, true); return; }
     }
     irADefinicion((partida.activa + paso + total) % total, true);
 }
@@ -1826,26 +1868,27 @@ function escribirLetra(letra) {
     const i = partida.cursor;
     if (!partida.rejilla.celdas[i]) return;
 
-    /* Una casilla de palabra ya resuelta no se toca: si no, al cruzarla se
-       destrozaría una palabra que ya estaba bien. */
-    if (definicionesEn(i).some(idx => partida.resueltas.has(idx))) {
-        avanzarCursor();
-        pintarRejilla();
-        return;
-    }
-
+    /* Nada está bloqueado: cualquier letra se puede cambiar en cualquier
+       momento. Bloquear las palabras acertadas sería delatarlas. */
+    const eraLlena = definicionLlena(partida.activa);
     partida.escrito[i] = letra;
+    olvidarComprobacion();
     sonLetra();
 
-    const nuevas = comprobarResueltas();
-    if (!nuevas.length) avanzarCursor();
+    const ahoraLlena = definicionLlena(partida.activa);
+    if (!ahoraLlena) avanzarCursor();
     pintarRejilla();
 
-    if (nuevas.length) {
+    if (ahoraLlena && !eraLlena) {
         sonPalabra();
-        if (partida.resueltas.size === partida.definiciones.length) { terminar(); return; }
-        /* Palabra terminada: se salta sola a la siguiente que quede */
+        /* Rejilla entera rellena: se comprueba sola. No es un chivatazo,
+           porque solo pasa cuando ya no queda nada que escribir, y la
+           alternativa sería dejar a alguien mirando una rejilla terminada
+           sin que ocurra nada. */
+        if (rejillaLlena()) { setTimeout(() => comprobarTodo(true), 320); return; }
         setTimeout(() => { if (partida.jugando) saltarDefinicion(1); }, 380);
+    } else if (ahoraLlena && rejillaLlena()) {
+        setTimeout(() => comprobarTodo(true), 320);
     }
 }
 
@@ -1853,30 +1896,54 @@ function borrarLetra() {
     if (!partida.jugando || partida.pausado) return;
     const lista = casillasDe(partida.definiciones[partida.activa]);
     const pos = lista.indexOf(partida.cursor);
-    const bloqueada = (i) => definicionesEn(i).some(idx => partida.resueltas.has(idx));
 
-    if (partida.escrito[partida.cursor] && !bloqueada(partida.cursor)) {
+    if (partida.escrito[partida.cursor]) {
         partida.escrito[partida.cursor] = '';
-    } else {
-        for (let k = pos - 1; k >= 0; k--) {
-            if (bloqueada(lista[k])) continue;
-            partida.cursor = lista[k];
-            partida.escrito[lista[k]] = '';
-            break;
-        }
+    } else if (pos > 0) {
+        partida.cursor = lista[pos - 1];
+        partida.escrito[partida.cursor] = '';
     }
+    olvidarComprobacion();
     sonBorrar();
     pintarRejilla();
 }
 
-/* Devuelve las definiciones que acaban de quedar resueltas */
-function comprobarResueltas() {
-    const nuevas = [];
-    partida.definiciones.forEach((def, idx) => {
-        if (partida.resueltas.has(idx)) return;
-        if (definicionResuelta(idx)) { partida.resueltas.add(idx); nuevas.push(idx); }
-    });
-    return nuevas;
+/* ==========================================================
+   COMPROBAR
+   El juego no dice nada por su cuenta mientras se resuelve: esto solo pasa
+   cuando se pulsa ✓ (o cuando la rejilla queda llena del todo).
+   `automatica` distingue las dos para no contarla como comprobación pedida.
+   ========================================================== */
+function comprobarTodo(automatica) {
+    if (!partida.jugando || partida.pausado) return;
+
+    const r = partida.rejilla;
+    partida.bien = new Set();
+    partida.mal = new Set();
+    let vacias = 0;
+
+    for (let i = 0; i < r.celdas.length; i++) {
+        if (!r.celdas[i]) continue;
+        const puesto = partida.escrito[i];
+        if (!puesto) { vacias++; continue; }
+        if (puesto === r.celdas[i]) partida.bien.add(i);
+        else partida.mal.add(i);
+    }
+
+    if (!automatica) partida.comprobaciones++;
+    pintarRejilla();
+
+    if (!partida.mal.size && !vacias) { terminar(); return; }
+
+    if (partida.mal.size) {
+        sonNada();
+        avisar(partida.mal.size === 1 ? 'Hay 1 letra mal'
+                                      : 'Hay ' + partida.mal.size + ' letras mal', true);
+    } else {
+        sonPalabra();
+        avisar(vacias === 1 ? 'Todo bien, te falta 1 casilla'
+                            : 'Todo bien, te faltan ' + vacias + ' casillas');
+    }
 }
 
 function revelarLetra() {
@@ -1888,25 +1955,22 @@ function revelarLetra() {
     const pos = casillasDe(def).indexOf(i);
     if (pos === -1) return;
 
-    if (partida.escrito[i] === def.palabra[pos]) {
-        avisar('Esa letra ya está bien', true);
-        sonNada();
-        return;
-    }
-
+    /* Antes, si la letra ya era correcta, la bombilla avisaba y no gastaba
+       pista. Eso era una comprobación gratis: pulsando sobre cada casilla se
+       sabía cuáles estaban bien sin pagar nada. Ahora cuesta siempre, se
+       acierte o no, y no dice si hacía falta. */
     partida.escrito[i] = def.palabra[pos];
     partida.ayudas--;
     partida.reveladas++;
+    /* La letra revelada se da por buena sin esperar a una comprobación */
+    partida.mal.delete(i);
+    partida.bien.add(i);
     sonRevelar();
 
-    const nuevas = comprobarResueltas();
-    if (!nuevas.length) avanzarCursor();
+    if (!definicionLlena(partida.activa)) avanzarCursor();
     pintarRejilla();
 
-    if (nuevas.length) {
-        sonPalabra();
-        if (partida.resueltas.size === partida.definiciones.length) terminar();
-    }
+    if (rejillaLlena()) setTimeout(() => comprobarTodo(true), 320);
 }
 
 /* ==========================================================
@@ -1924,7 +1988,9 @@ function pintarLista() {
         partida.definiciones.forEach((def, idx) => {
             if (def.horizontal !== horizontal) return;
             const fila = document.createElement('div');
-            fila.className = 'def' + (partida.resueltas.has(idx) ? ' hecha' : '');
+            /* Atenuadas las RELLENAS, no las acertadas: la lista tampoco
+               puede ir diciendo cuáles están bien. */
+            fila.className = 'def' + (definicionLlena(idx) ? ' hecha' : '');
             fila.dataset.def = String(idx);
             fila.innerHTML = '<b>' + def.num + '</b><span>' + escaparHtml(def.pista) +
                              ' <span style="color:var(--apagado)">(' + def.largo + ')</span></span>';
@@ -1969,7 +2035,9 @@ function nuevaPartida() {
     partida.numeros = numeracion.numeros;
     partida.definiciones = numeracion.definiciones;
     partida.escrito = new Array(rejilla.ancho * rejilla.alto).fill('');
-    partida.resueltas = new Set();
+    partida.bien = new Set();
+    partida.mal = new Set();
+    partida.comprobaciones = 0;
     partida.activa = 0;
     partida.cursor = casillasDe(partida.definiciones[0])[0];
     partida.ayudas = partida.ayudasIniciales;
@@ -1997,9 +2065,13 @@ function terminar() {
 
     const conf = TAMAÑOS[partida.tamaño];
     let texto = conf.etiqueta.toLowerCase() + ', ' + partida.definiciones.length + ' palabras. ';
-    if (partida.reveladas === 0) texto += 'Y sin gastar una sola pista.';
-    else if (partida.reveladas === 1) texto += 'Con una pista gastada.';
-    else texto += 'Con ' + partida.reveladas + ' pistas gastadas.';
+    if (partida.reveladas === 0) texto += 'Sin gastar una sola pista';
+    else if (partida.reveladas === 1) texto += 'Con una pista gastada';
+    else texto += 'Con ' + partida.reveladas + ' pistas gastadas';
+
+    if (partida.comprobaciones === 0) texto += ' y sin comprobar ni una vez.';
+    else if (partida.comprobaciones === 1) texto += ' y una comprobación.';
+    else texto += ' y ' + partida.comprobaciones + ' comprobaciones.';
     document.getElementById('sFin').textContent = texto;
 
     setTimeout(() => abrirCapa('capaFin'), 500);
@@ -2119,6 +2191,7 @@ document.getElementById('pista').addEventListener('click', () => {
     seleccionarCasilla(partida.cursor, true);
 });
 
+document.getElementById('btnComprobar').addEventListener('click', () => comprobarTodo(false));
 document.getElementById('btnRevelar').addEventListener('click', revelarLetra);
 
 document.getElementById('btnLista').addEventListener('click', () => {
