@@ -95,7 +95,42 @@
         -webkit-tap-highlight-color: transparent;
     }
 
-    .juego .icono { font-size: 2rem; line-height: 1; }
+    .seccion {
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        color: var(--apagado);
+        margin: 4px 0 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Raya que se come el ancho sobrante: separa sin cargar la página de
+       marcos ni de cajas. */
+    .seccion::after {
+        content: '';
+        flex: 1 1 auto;
+        height: 1px;
+        background: var(--borde);
+    }
+
+    /* Caja de alto fijo: cada glifo tiene sus propias métricas y, sin esto,
+       el nombre de un juego queda unos píxeles más bajo que el de al lado. */
+    .juego .icono {
+        font-size: 2rem;
+        line-height: 1;
+        height: 2.4rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Un icono que no es emoji sale en el gris del sistema y parece que no ha
+       cargado. Pintándolo con el color de acento queda claro que es a
+       propósito. */
+    .juego .icono.glifo { color: var(--acento); font-size: 2.3rem; }
     .juego .nombre { font-weight: 600; font-size: 0.95rem; }
 
     /* En una pantalla táctil el :hover se queda pegado tras tocar */
@@ -228,7 +263,7 @@
 </div>
 
 <main>
-    <div class="rejilla" id="rejilla"></div>
+    <div id="secciones"></div>
 
     <section class="panel">
         <h2>📶 Jugar sin conexión</h2>
@@ -249,7 +284,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v9</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v10</div>
 </footer>
 
 <script>
@@ -263,26 +298,46 @@
        nuevo es añadir una línea aquí y nada más.
        "extras" son los archivos que ese juego necesita aparte de su HTML.
        ------------------------------------------------------------------ */
+    /* "grupo" es la sección en la que sale la tarjeta. El orden de las
+       secciones es el de su primera aparición en esta lista, así que para
+       mover un juego de sección basta con cambiarle la palabra. */
     var JUEGOS = [
-        { archivo: 'webs/SpaceInvaders.html',  nombre: 'Space Invaders', icono: '👾' },
-        { archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱',
-          extras: ['https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
-        { archivo: 'webs/PacMan.html',         nombre: 'PacMan',         icono: '🟡' },
-        { archivo: 'webs/quiz.html',           nombre: 'Quiz',           icono: '❓',
-          extras: ['https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js',
-                   'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
-        { archivo: 'webs/super-pang.html',     nombre: 'Súper Pang',     icono: '🎯',
+        { grupo: 'Arcade',
+          archivo: 'webs/SpaceInvaders.html',  nombre: 'Space Invaders', icono: '👾' },
+        { grupo: 'Arcade',
+          archivo: 'webs/PacMan.html',         nombre: 'PacMan',         icono: '🟡' },
+        { grupo: 'Arcade',
+          archivo: 'webs/arkanoid.html',       nombre: 'Arkanoid',       icono: '🧩' },
+        { grupo: 'Arcade',
+          archivo: 'webs/super-pang.html',     nombre: 'Súper Pang',     icono: '🎯',
           extras: ['images/world-map.png'] },
-        { archivo: 'webs/arkanoid.html',       nombre: 'Arkanoid',       icono: '🧩' },
-        { archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥' },
-        { archivo: 'webs/carreraCoches.html',  nombre: 'Ruta 66',        icono: '🏎️' },
-        { archivo: 'webs/penaltis.html',       nombre: 'Penaltis',       icono: '⚽' },
-        { archivo: 'webs/pinball.html',        nombre: 'Pinball',        icono: '🎰',
+        { grupo: 'Arcade',
+          archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥' },
+        { grupo: 'Arcade',
+          archivo: 'webs/pinball.html',        nombre: 'Pinball',        icono: '🎰',
           extras: ['https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js'] },
-        { archivo: 'webs/ahorcado.html',       nombre: 'El Ahorcado',    icono: '🔤' },
-        { archivo: 'webs/conecta4.html',       nombre: 'Conecta 4',      icono: '🔴' },
-        { archivo: 'webs/crucigrama.html',     nombre: 'Crucigrama',     icono: '🔡' },
-        { archivo: 'webs/sopa.html',           nombre: 'Sopa de Letras', icono: '🔠' }
+
+        { grupo: 'Deporte y motor',
+          archivo: 'webs/carreraCoches.html',  nombre: 'Ruta 66',        icono: '🏎️' },
+        { grupo: 'Deporte y motor',
+          archivo: 'webs/penaltis.html',       nombre: 'Penaltis',       icono: '⚽' },
+
+        { grupo: 'Palabras',
+          archivo: 'webs/ahorcado.html',       nombre: 'El Ahorcado',    icono: '🧍' },
+        { grupo: 'Palabras',
+          archivo: 'webs/crucigrama.html',     nombre: 'Crucigrama',     icono: '▦' },
+        { grupo: 'Palabras',
+          archivo: 'webs/sopa.html',           nombre: 'Sopa de Letras', icono: '🔠' },
+
+        { grupo: 'Ingenio',
+          archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱',
+          extras: ['https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
+        { grupo: 'Ingenio',
+          archivo: 'webs/conecta4.html',       nombre: 'Conecta 4',      icono: '🔴' },
+        { grupo: 'Ingenio',
+          archivo: 'webs/quiz.html',           nombre: 'Quiz',           icono: '❓',
+          extras: ['https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js',
+                   'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] }
     ];
 
     /* La portada se identifica sola en lugar de llevar su nombre escrito a
@@ -318,7 +373,29 @@
     /* ------------------------------------------------------------------
        TARJETAS
        ------------------------------------------------------------------ */
-    var rejilla = document.getElementById('rejilla');
+    var contenedor = document.getElementById('secciones');
+
+    /* Las secciones salen en el orden en que aparecen por primera vez en
+       JUEGOS, no por orden alfabético ni por una lista aparte: así el
+       catálogo sigue siendo una sola fuente y no hay dos sitios que puedan
+       acabar diciendo cosas distintas. */
+    var rejillasPorGrupo = {};
+
+    function rejillaDe(grupo) {
+        if (rejillasPorGrupo[grupo]) return rejillasPorGrupo[grupo];
+
+        var titulo = document.createElement('h2');
+        titulo.className = 'seccion';
+        titulo.textContent = grupo;
+        contenedor.appendChild(titulo);
+
+        var r = document.createElement('div');
+        r.className = 'rejilla';
+        contenedor.appendChild(r);
+
+        rejillasPorGrupo[grupo] = r;
+        return r;
+    }
 
     JUEGOS.forEach(function (j) {
         /* Enlaces reales en lugar de window.open: se pueden abrir con el
@@ -334,6 +411,16 @@
         ico.className = 'icono';
         ico.textContent = j.icono;
 
+        /* Los iconos que no son emoji (como el ▦ del crucigrama) se pintan
+           con el color de acento. La comprobación va envuelta porque
+           \p{...} necesita soporte de propiedades Unicode en las expresiones
+           regulares, y un navegador viejo lanzaría al compilarla. */
+        try {
+            if (!new RegExp('\\p{Extended_Pictographic}', 'u').test(j.icono)) {
+                ico.classList.add('glifo');
+            }
+        } catch (e) { /* sin soporte: se queda con el estilo normal */ }
+
         var nom = document.createElement('div');
         nom.className = 'nombre';
         nom.textContent = j.nombre;
@@ -341,7 +428,7 @@
         a.appendChild(ico);
         a.appendChild(nom);
 
-        rejilla.appendChild(a);
+        rejillaDe(j.grupo || 'Juegos').appendChild(a);
     });
 
     /* ------------------------------------------------------------------
