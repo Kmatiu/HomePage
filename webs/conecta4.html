@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Conecta 4</title>
+<style>
+    /* Tipografía del sistema: se lee siempre, no depende de la red y el juego
+       funciona igual sin conexión. El aire retro lo dan los colores de neón. */
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --tablero: #1b1650;
+        --hueco: #0c0a24;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        /* Holgura SUMADA al inset, no max(): Chrome en Android devuelve
+           safe-area-inset-bottom = 0 en casi todos los móviles aunque la barra
+           de gestos sí tape parte de lo que el viewport dice que hay. */
+        padding: calc(env(safe-area-inset-top, 0px) + 16px)
+                 calc(env(safe-area-inset-right, 0px) + 6px)
+                 calc(env(safe-area-inset-bottom, 0px) + 22px)
+                 calc(env(safe-area-inset-left, 0px) + 6px);
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        /* svh es la altura con la UI del navegador DESPLEGADA: la más pequeña
+           de las tres, así que lo que entre ahí entra siempre. */
+        height: 100vh;
+        height: 100dvh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla {
+        display: none;
+        flex-direction: column;
+        width: 100%;
+        max-width: 620px;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .pantalla.activa { display: flex; }
+
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 {
+        font-size: clamp(1.5rem, 7vw, 2.4rem);
+        margin: 10px 0 2px;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset {
+        border: 1px solid var(--borde);
+        border-radius: 12px;
+        margin: 0 0 12px;
+        padding: 10px;
+    }
+
+    legend { color: var(--apagado); font-size: 0.64rem; letter-spacing: 2px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 11px;
+        margin-bottom: 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.85rem;
+    }
+
+    input[type="text"]:focus { outline: none; border-color: var(--acento); }
+
+    .principal {
+        width: 100%;
+        padding: 15px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario {
+        padding: 11px 16px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario[aria-pressed="true"] {
+        color: var(--acento);
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.12);
+    }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .fila-btns > * { flex: 1 1 120px; }
+
+    /* En pantalla táctil el :hover se queda pegado tras tocar */
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- PARTIDA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+    #barra .dato b { font-size: 0.95rem; font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.56rem; letter-spacing: 1px; }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 38px;
+        height: 34px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.85rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    /* El turno es la información más importante de la pantalla: ocupa su
+       propia línea y lleva el color del jugador al que le toca. */
+    #turno {
+        flex: 0 0 auto;
+        text-align: center;
+        font-size: 0.82rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 7px 4px 5px;
+        min-height: 2.1em;
+    }
+
+    #turno .pastilla {
+        display: inline-block;
+        width: 0.8em;
+        height: 0.8em;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: -1px;
+    }
+
+    #zonaTablero {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 0;
+    }
+
+    /* El tamaño lo manda el ancho disponible, salvo que la altura sea más
+       estrecha: entonces lo limita la pantalla menos lo que ocupan barra,
+       turno y pie.
+
+       Las casillas son cuadradas porque cada una lo declara, NO porque las
+       cuentas de porcentajes salgan redondas: con filas de 1fr dentro de un
+       alto impuesto, los huecos salían ovalados en cuanto el ancho y el alto
+       no encajaban exactamente. Dejando las filas en auto, el alto del
+       tablero sale solo de lo que miden las casillas. */
+    #marco {
+        width: 100%;                    /* lo ajusta ajustarTablero() midiendo */
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #aviso {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1.6%;
+        padding: 0 1.6% 1.2%;
+    }
+
+    .marca {
+        justify-self: center;
+        width: 62%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.12s linear;
+    }
+
+    .marca.vista { opacity: 0.55; }
+
+    #tablero {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1.6%;
+        padding: 1.6%;
+        background: var(--tablero);
+        border: 2px solid rgba(255, 255, 255, 0.12);
+        border-radius: 12px;
+        box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
+        position: relative;
+        touch-action: manipulation;
+    }
+
+    .casilla {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--hueco);
+        border-radius: 50%;
+        box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+        overflow: hidden;
+    }
+
+    .ficha {
+        width: 86%;
+        height: 86%;
+        border-radius: 50%;
+        background: var(--color);
+        box-shadow: 0 0 10px var(--color), inset 0 -3px 6px rgba(0, 0, 0, 0.35);
+    }
+
+    .ficha.cae { animation: caer var(--tiempo, 0.3s) forwards; }
+
+    /* La ficha entra desde fuera del tablero, acelerando como caería de
+       verdad, y rebota un poco al tocar fondo. */
+    @keyframes caer {
+        0%   { transform: translateY(var(--desde)); animation-timing-function: cubic-bezier(0.45, 0, 1, 1); }
+        70%  { transform: translateY(0); animation-timing-function: ease-out; }
+        82%  { transform: translateY(-9%); }
+        100% { transform: translateY(0); }
+    }
+
+    /* Línea ganadora: laten las cuatro fichas */
+    .ficha.gana { animation: latir 0.75s ease-in-out infinite; }
+
+    @keyframes latir {
+        0%, 100% { transform: scale(1);    box-shadow: 0 0 10px var(--color); }
+        50%      { transform: scale(1.12); box-shadow: 0 0 22px var(--color), 0 0 34px var(--color); }
+    }
+
+    /* Columna llena: se marca al intentarla en lugar de no responder */
+    #tablero.rechaza { animation: negar 0.3s; }
+
+    @keyframes negar {
+        0%, 100% { transform: translateX(0); }
+        25%      { transform: translateX(-5px); }
+        75%      { transform: translateX(5px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .ficha.cae, .ficha.gana, #tablero.rechaza { animation: none; }
+    }
+
+    #pie {
+        flex: 0 0 auto;
+        text-align: center;
+        color: var(--apagado);
+        font-size: 0.6rem;
+        letter-spacing: 1px;
+        padding-top: 5px;
+        min-height: 1.4em;
+    }
+
+    /* ---------- CAPAS ---------- */
+    .capa {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 6, 26, 0.88);
+        padding: 16px;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 420px;
+        max-height: 100%;
+        overflow-y: auto;
+        border: 2px solid var(--borde);
+        border-radius: 16px;
+        background: #15113a;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 8px; font-size: 1.2rem; letter-spacing: 1px; }
+    .caja p { color: var(--apagado); font-size: 0.78rem; margin: 0 0 12px; line-height: 1.5; }
+    .caja .marcador { font-size: 1.6rem; font-weight: bold; margin: 6px 0 10px; }
+
+    .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
+
+    #aviso-flotante {
+        position: fixed;
+        left: 50%;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        border: 2px solid var(--acento);
+        border-radius: 10px;
+        background: #15113a;
+        color: var(--acento);
+        font-size: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+        z-index: 20;
+        max-width: 90vw;
+    }
+
+    #aviso-flotante.vista { opacity: 1; }
+    #aviso-flotante.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    /* ---------- APAISADO ----------
+       Con poca altura el tablero se encoge solo (manda la altura), así que
+       basta con recortar los márgenes y encoger los textos. */
+    @media (orientation: landscape) and (max-height: 560px) {
+        body {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+        }
+        .pantalla { max-width: 820px; }
+        h1 { font-size: 1.3rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+        #turno { font-size: 0.74rem; padding: 4px 4px 3px; min-height: 1.7em; }
+        #pie { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>CONECTA <span>4</span></h1>
+        <p class="lema">Cuatro en raya antes que el otro</p>
+
+        <fieldset>
+            <legend>MODO</legend>
+            <div class="opciones" id="grpModo">
+                <button class="opcion" type="button" data-v="maquina" aria-pressed="true">CONTRA LA MÁQUINA<span class="sub">tú contra el ordenador</span></button>
+                <button class="opcion" type="button" data-v="dos" aria-pressed="false">2 JUGADORES<span class="sub">por turnos en este aparato</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsNivel">
+            <legend>NIVEL DE LA MÁQUINA</legend>
+            <div class="opciones" id="grpNivel">
+                <button class="opcion" type="button" data-v="facil" aria-pressed="false">FÁCIL<span class="sub">se despista a menudo</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">NORMAL<span class="sub">mira 4 jugadas</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">mira hasta 9</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsEmpieza">
+            <legend>QUIÉN EMPIEZA</legend>
+            <div class="opciones" id="grpEmpieza">
+                <button class="opcion" type="button" data-v="yo" aria-pressed="true">YO<span class="sub">empezar da ventaja</span></button>
+                <button class="opcion" type="button" data-v="maquina" aria-pressed="false">LA MÁQUINA<span class="sub">más difícil</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsNombres" style="display:none;">
+            <legend>JUGADORES</legend>
+            <input type="text" id="inpJ1" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 1">
+            <input type="text" id="inpJ2" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 2">
+        </fieldset>
+
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dUno"><b>0</b><span>J1</span></div>
+        <div class="dato" id="dTablas"><b>0</b><span>TABLAS</span></div>
+        <div class="dato" id="dDos"><b>0</b><span>J2</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnMenu" type="button" aria-label="Volver al menú">☰</button>
+    </div>
+
+    <div id="turno" aria-live="polite"></div>
+
+    <div id="zonaTablero">
+        <div id="marco">
+            <div id="aviso"></div>
+            <div id="tablero" role="grid" aria-label="Tablero de Conecta 4"></div>
+        </div>
+    </div>
+
+    <div id="pie">TOCA UNA COLUMNA · ◀ ▶ Y ENTER CON TECLADO</div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin"></h2>
+        <div class="marcador" id="mFin"></div>
+        <p id="sFin"></p>
+        <button class="principal" id="btnRevancha" type="button">REVANCHA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVolverMenu1" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <ul>
+            <li>Las fichas caen hasta el fondo de la columna que elijas.</li>
+            <li>Gana quien alinee <b>cuatro</b> en horizontal, vertical o diagonal.</li>
+            <li>Si se llenan las 42 casillas sin línea, son tablas.</li>
+            <li>En el móvil, mantén el dedo y deslízalo para cambiar de columna antes de soltar: la ficha no cae hasta que levantas el dedo.</li>
+            <li>Con teclado: <b>◀ ▶</b> mueven, <b>Enter</b> o <b>Espacio</b> sueltan, y las teclas <b>1</b> a <b>7</b> van directas a una columna.</li>
+            <li>Empezar es una ventaja real, así que en la revancha se alterna el turno de salida.</li>
+        </ul>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="aviso-flotante"></div>
+
+<script>
+/* ==========================================================
+   TABLERO
+   Las filas se numeran desde ABAJO (fila 0 es el fondo), que es como cae la
+   ficha: alturas[c] es a la vez cuántas fichas hay en la columna c y la fila
+   libre siguiente. Así soltar una ficha es una suma, no una búsqueda.
+   ========================================================== */
+const COLS = 7, FILAS = 6, CASILLAS = COLS * FILAS;
+const VACIO = 0, UNO = 1, DOS = 2;
+
+const indice = (c, f) => f * COLS + c;
+
+function tableroNuevo() { return new Int8Array(CASILLAS); }
+
+/* Las cuatro direcciones a mirar. No hacen falta las ocho: cada línea se
+   recorre hacia los dos lados desde la ficha recién puesta. */
+const DIRECCIONES = [[1, 0], [0, 1], [1, 1], [1, -1]];
+
+/* Devuelve las cuatro casillas en raya que acaba de formar la ficha de
+   (c, f), o null. Mirar solo alrededor de la última ficha en vez de repasar
+   el tablero entero es lo que hace que la IA pueda explorar miles de
+   posiciones sin ponerse lenta. */
+function lineaGanadora(tab, c, f, jugador) {
+    for (const [dc, df] of DIRECCIONES) {
+        const casillas = [indice(c, f)];
+
+        for (const signo of [1, -1]) {
+            let cc = c + dc * signo, ff = f + df * signo;
+            while (cc >= 0 && cc < COLS && ff >= 0 && ff < FILAS &&
+                   tab[indice(cc, ff)] === jugador) {
+                casillas.push(indice(cc, ff));
+                cc += dc * signo;
+                ff += df * signo;
+            }
+        }
+        if (casillas.length >= 4) return casillas;
+    }
+    return null;
+}
+
+const hayLinea = (tab, c, f, jugador) => lineaGanadora(tab, c, f, jugador) !== null;
+
+/* ==========================================================
+   EVALUACIÓN
+   Las 69 ventanas de cuatro casillas en raya que existen en un 7x6. Se
+   calculan una vez al cargar: dentro de la búsqueda solo se leen.
+   ========================================================== */
+const VENTANAS = (() => {
+    const v = [];
+    for (let f = 0; f < FILAS; f++) {
+        for (let c = 0; c < COLS; c++) {
+            if (c + 3 < COLS) v.push([indice(c, f), indice(c + 1, f), indice(c + 2, f), indice(c + 3, f)]);
+            if (f + 3 < FILAS) v.push([indice(c, f), indice(c, f + 1), indice(c, f + 2), indice(c, f + 3)]);
+            if (c + 3 < COLS && f + 3 < FILAS) v.push([indice(c, f), indice(c + 1, f + 1), indice(c + 2, f + 2), indice(c + 3, f + 3)]);
+            if (c + 3 < COLS && f - 3 >= 0) v.push([indice(c, f), indice(c + 1, f - 1), indice(c + 2, f - 2), indice(c + 3, f - 3)]);
+        }
+    }
+    return v;
+})();
+
+const rivalDe = (j) => (j === UNO ? DOS : UNO);
+
+/* Puntuación estática desde el punto de vista de `yo`. Tres en raya con el
+   cuarto hueco libre vale mucho; dos, poco. Las amenazas del rival pesan algo
+   más que las propias para que la máquina prefiera tapar antes que atacar a
+   ciegas y acabar perdiendo por un tempo. */
+function evaluar(tab, yo) {
+    const rival = rivalDe(yo);
+    let total = 0;
+
+    for (let i = 0; i < VENTANAS.length; i++) {
+        const v = VENTANAS[i];
+        let mias = 0, suyas = 0;
+        for (let k = 0; k < 4; k++) {
+            const x = tab[v[k]];
+            if (x === yo) mias++;
+            else if (x === rival) suyas++;
+        }
+        /* Una ventana con fichas de los dos ya no la puede completar nadie */
+        if (mias && suyas) continue;
+        if (mias === 3) total += 50;
+        else if (mias === 2) total += 10;
+        else if (mias === 1) total += 1;
+        else if (suyas === 3) total -= 60;
+        else if (suyas === 2) total -= 12;
+        else if (suyas === 1) total -= 1;
+    }
+
+    /* La columna central entra en más líneas que ninguna otra */
+    for (let f = 0; f < FILAS; f++) {
+        const x = tab[indice(3, f)];
+        if (x === yo) total += 4;
+        else if (x === rivalDe(yo)) total -= 4;
+    }
+    return total;
+}
+
+/* ==========================================================
+   BÚSQUEDA
+   Negamax con poda alfa-beta. El valor que devuelve siempre está en el punto
+   de vista de QUIEN MUEVE en ese nodo; por eso el resultado del rival entra
+   cambiado de signo.
+   ========================================================== */
+const VICTORIA = 1000000;
+/* Probar antes las columnas centrales hace que la poda corte mucho más
+   pronto: son las que más veces resultan ser la mejor jugada. */
+const ORDEN = [3, 2, 4, 1, 5, 0, 6];
+
+let nodosVisitados = 0;
+
+function negamax(tab, alturas, fichas, jugador, prof, alfa, beta, ply) {
+    let mejor = -Infinity;
+
+    for (let i = 0; i < COLS; i++) {
+        const c = ORDEN[i];
+        if (alturas[c] >= FILAS) continue;
+
+        const f = alturas[c];
+        tab[indice(c, f)] = jugador;
+        alturas[c]++;
+        nodosVisitados++;
+
+        let valor;
+        if (hayLinea(tab, c, f, jugador)) {
+            /* Restar la profundidad hace que una victoria en dos jugadas valga
+               más que la misma victoria en seis. Sin esto la máquina ve todas
+               las victorias igual de buenas y puede dar vueltas sin rematar. */
+            valor = VICTORIA - ply;
+        } else if (fichas + 1 === CASILLAS) {
+            valor = 0;                                  // tablas
+        } else if (prof <= 1) {
+            valor = evaluar(tab, jugador);
+        } else {
+            valor = -negamax(tab, alturas, fichas + 1, rivalDe(jugador),
+                             prof - 1, -beta, -alfa, ply + 1);
+        }
+
+        tab[indice(c, f)] = VACIO;
+        alturas[c]--;
+
+        if (valor > mejor) mejor = valor;
+        if (mejor > alfa) alfa = mejor;
+        if (alfa >= beta) break;                        // poda
+    }
+
+    /* Sin columnas libres el tablero estaba lleno: tablas */
+    return mejor === -Infinity ? 0 : mejor;
+}
+
+/* Columna en la que `jugador` gana ahora mismo, o -1 */
+function jugadaGanadora(tab, alturas, jugador) {
+    for (let c = 0; c < COLS; c++) {
+        if (alturas[c] >= FILAS) continue;
+        const f = alturas[c];
+        tab[indice(c, f)] = jugador;
+        const gana = hayLinea(tab, c, f, jugador);
+        tab[indice(c, f)] = VACIO;
+        if (gana) return c;
+    }
+    return -1;
+}
+
+function columnasLibres(alturas) {
+    const libres = [];
+    for (let c = 0; c < COLS; c++) if (alturas[c] < FILAS) libres.push(c);
+    return libres;
+}
+
+/* Raíz de la búsqueda: aquí sí hace falta saber QUÉ columna es la mejor, no
+   solo cuánto vale la posición. */
+function mejorJugada(tab, alturas, fichas, yo, prof) {
+    let mejorCol = -1, mejorValor = -Infinity;
+    let alfa = -Infinity;
+
+    for (let i = 0; i < COLS; i++) {
+        const c = ORDEN[i];
+        if (alturas[c] >= FILAS) continue;
+
+        const f = alturas[c];
+        tab[indice(c, f)] = yo;
+        alturas[c]++;
+        nodosVisitados++;
+
+        let valor;
+        if (hayLinea(tab, c, f, yo)) valor = VICTORIA;
+        else if (fichas + 1 === CASILLAS) valor = 0;
+        else if (prof <= 1) valor = evaluar(tab, yo);
+        else valor = -negamax(tab, alturas, fichas + 1, rivalDe(yo),
+                              prof - 1, -Infinity, -alfa, 1);
+
+        tab[indice(c, f)] = VACIO;
+        alturas[c]--;
+
+        if (valor > mejorValor) { mejorValor = valor; mejorCol = c; }
+        if (mejorValor > alfa) alfa = mejorValor;
+    }
+    return { columna: mejorCol, valor: mejorValor };
+}
+
+/* ---------- LOS TRES NIVELES ---------- */
+const PRESUPUESTO_MS = 250;   // tope de reflexión del nivel difícil
+
+/* Fácil: gana si puede y tapa solo la mitad de las veces. No es una IA
+   tonta por accidente, es tonta a propósito y de forma predecible. */
+function jugadaFacil(tab, alturas, yo, azar) {
+    const ganar = jugadaGanadora(tab, alturas, yo);
+    if (ganar !== -1) return ganar;
+
+    const tapar = jugadaGanadora(tab, alturas, rivalDe(yo));
+    if (tapar !== -1 && azar() < 0.5) return tapar;
+
+    /* Al azar, pero tirando al centro: deja partidas con algo de sentido */
+    const libres = columnasLibres(alturas);
+    const pesos = libres.map(c => 4 - Math.abs(3 - c));
+    const suma = pesos.reduce((a, b) => a + b, 0);
+    let r = azar() * suma;
+    for (let i = 0; i < libres.length; i++) {
+        r -= pesos[i];
+        if (r <= 0) return libres[i];
+    }
+    return libres[libres.length - 1];
+}
+
+function jugadaMaquina(tab, alturas, fichas, yo, nivel, azar, ahora) {
+    azar = azar || Math.random;
+    ahora = ahora || Date.now;
+
+    if (!columnasLibres(alturas).length) return -1;
+    if (nivel === 'facil') return jugadaFacil(tab, alturas, yo, azar);
+
+    if (nivel === 'normal') return mejorJugada(tab, alturas, fichas, yo, 4).columna;
+
+    /* Difícil: profundización iterativa con tope de tiempo. Un nivel fijo
+       sería rápido en un móvil potente y dejaría el dedo esperando en uno
+       modesto; así cada aparato llega hasta donde le da en el mismo rato. */
+    const t0 = ahora();
+    let elegida = mejorJugada(tab, alturas, fichas, yo, 4).columna;
+    let ultima = Math.max(1, ahora() - t0);
+
+    for (let prof = 5; prof <= 9; prof++) {
+        /* No basta con mirar el tiempo YA gastado: cada nivel cuesta del
+           orden de siete veces el anterior, así que quedando diez
+           milisegundos todavía se colaba una pasada de medio segundo y la
+           interfaz se quedaba clavada. Se estima antes de empezarla y, si no
+           cabe, no se empieza. La estimación sale de lo que ha tardado este
+           aparato, así que un móvil modesto corta antes él solo. */
+        const previsto = ultima * 7;
+        if (ahora() - t0 + previsto > PRESUPUESTO_MS) break;
+
+        const t1 = ahora();
+        const r = mejorJugada(tab, alturas, fichas, yo, prof);
+        ultima = Math.max(1, ahora() - t1);
+
+        if (r.columna !== -1) elegida = r.columna;
+        /* Victoria o derrota forzada encontrada: buscar más hondo no cambia
+           nada */
+        if (Math.abs(r.valor) >= VICTORIA - 100) break;
+    }
+    return elegida;
+}
+
+/* ==========================================================
+   ALMACENAMIENTO
+   Respaldo en memoria por si localStorage está bloqueado (modo privado,
+   iframe con sandbox) o el contenido está corrupto.
+   ========================================================== */
+const almacenOK = (() => {
+    try {
+        const p = '__c4__';
+        localStorage.setItem(p, '1');
+        localStorage.removeItem(p);
+        return true;
+    } catch (e) { return false; }
+})();
+
+function escaparHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
+/* ==========================================================
+   AUDIO
+   Todo sintetizado con Web Audio: ni archivos ni dependencias, así que suena
+   igual sin conexión. Música y efectos son dos canales independientes y los
+   dos arrancan SILENCIADOS: además de ser lo educado, el navegador bloquea
+   el audio hasta que la persona toca la página, así que un contexto creado
+   al cargar nacería suspendido y el primer sonido se perdería.
+   ========================================================== */
+const CLAVE_AUDIO = 'conecta4Audio';
+const VOL_MUSICA = 0.5, VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15, PASOS = 32;
+
+const audio = {
+    musica: false, efectos: false,
+    ctx: null, busMusica: null, busEfectos: null,
+    proximo: 0, paso: 0, timerId: null
+};
+
+if (almacenOK) {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica = g.musica === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
+
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({ musica: audio.musica, efectos: audio.efectos }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+/* Subir o bajar con rampa: cortar una onda a mitad de ciclo chasquea. */
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
+        osc.connect(vol);
+        vol.connect(bus);
+        /* Desconectar al acabar o los nodos se acumulan en una partida larga */
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frec, inicio);
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
+}
+
+/* ---------- MÚSICA ----------
+   Este juego es de pensar, no de reflejos: el bucle va lento y sin sobresaltos
+   para no meter prisa. Acelera un poco a medida que el tablero se llena,
+   que es la única urgencia real que tiene la partida. */
+const ACORDES = [
+    { bajo: 73.42, notas: [146.83, 174.61, 220.00] },   // Dm
+    { bajo: 58.27, notas: [116.54, 146.83, 174.61] },   // Bb
+    { bajo: 87.31, notas: [174.61, 220.00, 261.63] },   // F
+    { bajo: 65.41, notas: [130.81, 164.81, 196.00] }    // C
+];
+
+function llenado() {
+    return Math.min(1, Math.max(0, partida.fichas / CASILLAS));
+}
+
+function duracionPaso() {
+    const bpm = 76 + 20 * llenado();
+    return 30 / bpm;                 // una corchea
+}
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    if (paso % 8 === 0) voz(audio.busMusica, acorde.bajo, t, dur * 3.4, 'triangle', 0.19);
+    else if (paso % 8 === 4) voz(audio.busMusica, acorde.bajo, t, dur * 2.4, 'triangle', 0.12);
+
+    /* El arpegio solo entra en las corcheas pares: deja aire entre notas */
+    if (paso % 2 === 0) {
+        const nota = acorde.notas[[0, 1, 2, 1][(paso >> 1) % 4]];
+        voz(audio.busMusica, nota, t, dur * 1.6, 'sine', 0.07);
+    }
+}
+
+/* Programador con vista adelantada. Una nota por vuelta de setTimeout no
+   vale: el temporizador se desvía unos milisegundos cada vez y el ritmo se
+   oye cojo. Aquí el temporizador solo despierta a mirar, y las notas se
+   encolan con la marca de tiempo exacta del reloj de audio. */
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    /* En segundo plano setTimeout se frena a ~1 Hz y el reloj se queda atrás;
+       recolocarlo evita soltar de golpe las notas atrasadas al volver. */
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+const sonPulsar = () => efecto(880, 0.035, 'square', 0.05);
+const sonMover  = () => efecto(520, 0.025, 'square', 0.035);
+const sonCaer   = () => { efecto(420, 0.07, 'triangle', 0.08); efecto(190, 0.14, 'triangle', 0.09, 0.05); };
+const sonLleno  = () => efecto(110, 0.16, 'sawtooth', 0.06);
+const sonGana   = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.30, 'square', 0.07, 0.27);
+};
+const sonPierde = () => {
+    efecto(311, 0.18, 'triangle', 0.08);
+    efecto(233, 0.22, 'triangle', 0.08, 0.17);
+    efecto(175, 0.50, 'triangle', 0.08, 0.36);
+};
+const sonTablas = () => { efecto(392, 0.18, 'triangle', 0.07); efecto(392, 0.26, 'triangle', 0.07, 0.2); };
+
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada' : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
+
+/* ==========================================================
+   ESTADO DE LA PARTIDA
+   ========================================================== */
+const partida = {
+    modo: 'maquina',          // 'maquina' | 'dos'
+    nivel: 'normal',
+    tablero: tableroNuevo(),
+    alturas: new Int8Array(COLS),
+    fichas: 0,
+    turno: UNO,
+    empieza: UNO,             // quién sale esta partida
+    humano: UNO,              // en modo máquina, color de la persona
+    jugando: false,
+    bloqueado: false,         // mientras cae una ficha o piensa la máquina
+    columna: 3,               // columna señalada por el cursor
+    nombres: ['Jugador 1', 'Jugador 2'],
+    marcador: [0, 0],
+    tablas: 0
+};
+
+const COLORES = { 1: 'var(--acento)', 2: 'var(--rosa)' };
+
+function nombreDe(jugador) {
+    if (partida.modo === 'dos') return partida.nombres[jugador - 1];
+    return jugador === partida.humano ? 'Tú' : 'La máquina';
+}
+
+/* ==========================================================
+   PANTALLAS Y AVISOS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let temporizadorAviso = null;
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso-flotante');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('vista');
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => el.classList.remove('vista'), 1600);
+}
+
+/* ==========================================================
+   PINTADO
+   ========================================================== */
+let casillas = [];      // 42 divs, indexados igual que el tablero lógico
+let marcas = [];        // 7 marcas de la fila de aviso
+
+function construirTablero() {
+    const cont = document.getElementById('tablero');
+    const aviso = document.getElementById('aviso');
+    cont.innerHTML = '';
+    aviso.innerHTML = '';
+    casillas = [];
+    marcas = [];
+
+    for (let c = 0; c < COLS; c++) {
+        const m = document.createElement('div');
+        m.className = 'marca';
+        aviso.appendChild(m);
+        marcas.push(m);
+    }
+
+    /* El HTML se escribe de arriba abajo y las filas se cuentan desde abajo,
+       así que la fila de pantalla 0 es la lógica 5. */
+    for (let pantalla = 0; pantalla < FILAS; pantalla++) {
+        const f = FILAS - 1 - pantalla;
+        for (let c = 0; c < COLS; c++) {
+            const d = document.createElement('div');
+            d.className = 'casilla';
+            d.dataset.col = String(c);
+            d.setAttribute('role', 'gridcell');
+            cont.appendChild(d);
+            casillas[indice(c, f)] = d;
+        }
+    }
+}
+
+function pintarMarcas() {
+    const visible = partida.jugando && !partida.bloqueado &&
+                    (partida.modo === 'dos' || partida.turno === partida.humano);
+    marcas.forEach((m, c) => {
+        m.style.setProperty('--color', COLORES[partida.turno]);
+        m.style.background = COLORES[partida.turno];
+        m.classList.toggle('vista', visible && c === partida.columna && partida.alturas[c] < FILAS);
+    });
+}
+
+function pintarBarra() {
+    const dos = partida.modo === 'dos';
+    document.querySelector('#dUno b').textContent = String(partida.marcador[0]);
+    document.querySelector('#dUno b').style.color = COLORES[UNO];
+    document.querySelector('#dDos b').textContent = String(partida.marcador[1]);
+    document.querySelector('#dDos b').style.color = COLORES[DOS];
+    document.querySelector('#dTablas b').textContent = String(partida.tablas);
+
+    document.querySelector('#dUno span').textContent = dos
+        ? partida.nombres[0].toUpperCase().slice(0, 8)
+        : (partida.humano === UNO ? 'TÚ' : 'MÁQUINA');
+    document.querySelector('#dDos span').textContent = dos
+        ? partida.nombres[1].toUpperCase().slice(0, 8)
+        : (partida.humano === DOS ? 'TÚ' : 'MÁQUINA');
+}
+
+function pintarTurno(texto) {
+    const el = document.getElementById('turno');
+    if (texto) { el.innerHTML = texto; return; }
+    const color = COLORES[partida.turno];
+    el.innerHTML = '<span class="pastilla" style="background:' + color + '"></span>' +
+                   '<span style="color:' + color + '">' +
+                   escaparHtml(nombreDe(partida.turno).toUpperCase()) + '</span>';
+}
+
+function ponerFicha(c, f, jugador, animar) {
+    const casilla = casillas[indice(c, f)];
+    const ficha = document.createElement('div');
+    ficha.className = 'ficha';
+    ficha.style.setProperty('--color', COLORES[jugador]);
+
+    if (animar) {
+        /* Cae desde fuera del tablero: cuantas más casillas recorre, más
+           tarda, que es lo que hace que parezca peso y no un teletransporte. */
+        const recorrido = FILAS - f;
+        ficha.style.setProperty('--desde', (-recorrido * 112) + '%');
+        ficha.style.setProperty('--tiempo', (90 + 38 * recorrido) + 'ms');
+        ficha.classList.add('cae');
+    }
+    casilla.appendChild(ficha);
+    return ficha;
+}
+
+function duracionCaida(f) { return 90 + 38 * (FILAS - f); }
+
+/* El tablero es cuadrado contando la fila de aviso, así que su lado es el
+   menor entre el ancho y el alto que le quedan. Se mide en lugar de restar a
+   ojo lo que ocupan barra, turno y pie: ese número deja de valer en cuanto
+   cambia cualquiera de los tres, al girar la pantalla o al aparecer la barra
+   de direcciones del móvil. */
+function ajustarTablero() {
+    const zona = document.getElementById('zonaTablero');
+    const marco = document.getElementById('marco');
+    if (!zona || !marco) return;
+    const ancho = zona.clientWidth, alto = zona.clientHeight;
+    if (!ancho || !alto) return;
+    marco.style.width = Math.floor(Math.min(ancho, alto)) + 'px';
+}
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function nuevaPartida(alternarSalida) {
+    partida.tablero = tableroNuevo();
+    partida.alturas = new Int8Array(COLS);
+    partida.fichas = 0;
+    if (alternarSalida) partida.empieza = rivalDe(partida.empieza);
+    partida.turno = partida.empieza;
+    partida.jugando = true;
+    partida.bloqueado = false;
+    partida.columna = 3;
+
+    construirTablero();
+    ajustarTablero();
+    pintarBarra();
+    pintarTurno();
+    pintarMarcas();
+    cerrarCapa('capaFin');
+
+    /* Si sale la máquina, mueve ella sin esperar a que toques nada */
+    if (partida.modo === 'maquina' && partida.turno !== partida.humano) turnoMaquina();
+}
+
+/* Suelta una ficha en la columna c. Devuelve false si no cabe. */
+function soltar(c) {
+    if (!partida.jugando || partida.bloqueado) return false;
+    if (c < 0 || c >= COLS) return false;
+
+    if (partida.alturas[c] >= FILAS) {
+        const t = document.getElementById('tablero');
+        t.classList.remove('rechaza');
+        void t.offsetWidth;                  // reinicia la animación
+        t.classList.add('rechaza');
+        sonLleno();
+        avisar('Esa columna está llena', true);
+        return false;
+    }
+
+    const jugador = partida.turno;
+    const f = partida.alturas[c];
+    partida.tablero[indice(c, f)] = jugador;
+    partida.alturas[c]++;
+    partida.fichas++;
+
+    ponerFicha(c, f, jugador, true);
+    sonCaer();
+
+    const linea = lineaGanadora(partida.tablero, c, f, jugador);
+    const tablas = !linea && partida.fichas === CASILLAS;
+
+    partida.bloqueado = true;
+    pintarMarcas();
+
+    /* El desenlace se resuelve cuando la ficha ha terminado de caer: anunciar
+       la victoria con la ficha todavía en el aire se ve raro. */
+    setTimeout(() => {
+        if (linea) { terminar(jugador, linea); return; }
+        if (tablas) { terminar(null, null); return; }
+
+        partida.turno = rivalDe(jugador);
+        partida.bloqueado = false;
+        pintarTurno();
+        pintarMarcas();
+
+        if (partida.modo === 'maquina' && partida.turno !== partida.humano) turnoMaquina();
+    }, duracionCaida(f));
+
+    return true;
+}
+
+function turnoMaquina() {
+    partida.bloqueado = true;
+    pintarMarcas();
+    pintarTurno('<span class="pastilla" style="background:' + COLORES[partida.turno] + '"></span>' +
+                '<span style="color:' + COLORES[partida.turno] + '">PENSANDO…</span>');
+
+    const t0 = Date.now();
+
+    /* Dos tiempos a propósito: primero se pinta "pensando", y solo después
+       arranca la búsqueda, que bloquea el hilo mientras dura. Si se llamara
+       directamente, el navegador no llegaría a pintar nada. */
+    setTimeout(() => {
+        const col = jugadaMaquina(partida.tablero, partida.alturas, partida.fichas,
+                                  partida.turno, partida.nivel);
+
+        /* Una respuesta instantánea se lee como que no ha pensado; se deja un
+           mínimo para que la jugada se vea llegar. */
+        const espera = Math.max(0, 420 - (Date.now() - t0));
+        setTimeout(() => {
+            partida.bloqueado = false;
+            if (col === -1) { terminar(null, null); return; }
+            soltar(col);
+        }, espera);
+    }, 30);
+}
+
+function terminar(ganador, linea) {
+    partida.jugando = false;
+    partida.bloqueado = true;
+    pintarMarcas();
+
+    if (linea) {
+        linea.forEach(i => {
+            const f = casillas[i].firstChild;
+            if (f) f.classList.add('gana');
+        });
+        partida.marcador[ganador - 1]++;
+    } else {
+        partida.tablas++;
+    }
+    pintarBarra();
+
+    const tFin = document.getElementById('tFin');
+    const sFin = document.getElementById('sFin');
+    const mFin = document.getElementById('mFin');
+
+    if (!ganador) {
+        tFin.textContent = '🤝 TABLAS';
+        tFin.style.color = 'var(--amarillo)';
+        sFin.textContent = 'Las 42 casillas llenas sin cuatro en raya.';
+        sonTablas();
+    } else {
+        const esHumano = partida.modo === 'dos' || ganador === partida.humano;
+        tFin.textContent = esHumano ? '🏆 ¡GANA ' + nombreDe(ganador).toUpperCase() + '!' : '💀 GANA LA MÁQUINA';
+        tFin.style.color = COLORES[ganador];
+        sFin.textContent = partida.modo === 'dos'
+            ? 'En la revancha sale el otro: empezar es ventaja.'
+            : (esHumano ? 'Bien jugado. ¿Otra?' : 'Prueba a controlar la columna del centro.');
+        if (esHumano) sonGana(); else sonPierde();
+    }
+
+    mFin.innerHTML = '<span style="color:' + COLORES[UNO] + '">' + partida.marcador[0] + '</span>' +
+                     ' <span style="color:var(--apagado)">·</span> ' +
+                     '<span style="color:' + COLORES[DOS] + '">' + partida.marcador[1] + '</span>';
+
+    setTimeout(() => abrirCapa('capaFin'), linea ? 900 : 400);
+}
+
+function volverAlMenu() {
+    partida.jugando = false;
+    partida.bloqueado = false;
+    cerrarCapa('capaFin');
+    mostrarPantalla('pMenu');
+}
+
+/* ==========================================================
+   CONTROLES
+   ========================================================== */
+function moverCursor(delta) {
+    if (!partida.jugando || partida.bloqueado) return;
+    let c = partida.columna;
+    for (let i = 0; i < COLS; i++) {
+        c = (c + delta + COLS) % COLS;
+        if (partida.alturas[c] < FILAS) break;
+    }
+    if (c !== partida.columna) { partida.columna = c; sonMover(); }
+    pintarMarcas();
+}
+
+function columnaDesdeEvento(e) {
+    const t = document.getElementById('tablero');
+    const r = t.getBoundingClientRect();
+    if (!r.width) return -1;
+    /* Se calcula por posición y no por el elemento tocado: así el dedo puede
+       estar encima de la junta entre dos casillas y seguir valiendo. */
+    const x = (e.clientX - r.left) / r.width;
+    if (x < 0 || x > 1) return -1;
+    return Math.min(COLS - 1, Math.max(0, Math.floor(x * COLS)));
+}
+
+/* Mantener y deslizar antes de soltar: en una pantalla de 7 columnas el dedo
+   tapa casi dos, así que confirmar al levantar evita la jugada equivocada. */
+let punteroActivo = null;
+
+function alPulsar(e) {
+    if (!partida.jugando || partida.bloqueado) return;
+    if (partida.modo === 'maquina' && partida.turno !== partida.humano) return;
+    const c = columnaDesdeEvento(e);
+    if (c === -1) return;
+
+    punteroActivo = e.pointerId;
+    partida.columna = c;
+    pintarMarcas();
+    try { document.getElementById('tablero').setPointerCapture(e.pointerId); } catch (err) {}
+}
+
+function alArrastrar(e) {
+    if (punteroActivo !== e.pointerId) return;
+    const c = columnaDesdeEvento(e);
+    if (c === -1 || c === partida.columna) return;
+    partida.columna = c;
+    sonMover();
+    pintarMarcas();
+}
+
+function alLevantar(e) {
+    if (punteroActivo !== e.pointerId) return;
+    punteroActivo = null;
+    try { document.getElementById('tablero').releasePointerCapture(e.pointerId); } catch (err) {}
+    const c = columnaDesdeEvento(e);
+    if (c !== -1) soltar(c);
+}
+
+function alCancelar(e) {
+    if (punteroActivo !== e.pointerId) return;
+    punteroActivo = null;
+}
+
+/* ==========================================================
+   GRUPOS DE OPCIONES DEL MENÚ
+   ========================================================== */
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+grupoSimple('grpModo', (v) => {
+    partida.modo = v;
+    const dos = v === 'dos';
+    document.getElementById('fsNivel').style.display = dos ? 'none' : '';
+    document.getElementById('fsEmpieza').style.display = dos ? 'none' : '';
+    document.getElementById('fsNombres').style.display = dos ? '' : 'none';
+    document.getElementById('btnJugar').textContent = dos ? 'EMPEZAR LA PARTIDA' : 'JUGAR';
+});
+
+grupoSimple('grpNivel', (v) => { partida.nivel = v; });
+grupoSimple('grpEmpieza', (v) => {
+    /* La persona es siempre UNO; lo que cambia es quién sale */
+    partida.empieza = (v === 'yo') ? UNO : DOS;
+});
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+
+/* Los interruptores de sonido se atienden delegando en el documento. El
+   resto de botones de interfaz suenan al pulsarse. */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+    if (t.closest('.opcion, .principal, .secundario, .icono')) sonPulsar();
+});
+
+document.getElementById('btnJugar').addEventListener('click', () => {
+    if (partida.modo === 'dos') {
+        const n1 = document.getElementById('inpJ1').value.trim().slice(0, 10);
+        const n2 = document.getElementById('inpJ2').value.trim().slice(0, 10);
+        partida.nombres = [n1 || 'Jugador 1', n2 || 'Jugador 2'];
+        /* Dos nombres iguales harían ilegible el marcador */
+        if (partida.nombres[0].toLowerCase() === partida.nombres[1].toLowerCase()) {
+            partida.nombres[1] += ' (2)';
+        }
+        partida.humano = UNO;
+        partida.empieza = UNO;
+    } else {
+        partida.nombres = ['Tú', 'La máquina'];
+        partida.humano = UNO;
+    }
+
+    partida.marcador = [0, 0];
+    partida.tablas = 0;
+    mostrarPantalla('pJuego');
+    nuevaPartida(false);
+});
+
+document.getElementById('btnMenu').addEventListener('click', volverAlMenu);
+document.getElementById('btnVolverMenu1').addEventListener('click', volverAlMenu);
+document.getElementById('btnRevancha').addEventListener('click', () => nuevaPartida(true));
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+const tablero = document.getElementById('tablero');
+tablero.addEventListener('pointerdown', alPulsar);
+tablero.addEventListener('pointermove', alArrastrar);
+tablero.addEventListener('pointerup', alLevantar);
+tablero.addEventListener('pointercancel', alCancelar);
+
+/* ---------- TECLADO FÍSICO ---------- */
+document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) cerrarCapa('capaAyuda');
+        else if (partida.jugando) volverAlMenu();
+        return;
+    }
+    if (hayCapaAbierta()) return;
+    if (!partida.jugando || partida.bloqueado) return;
+    if (partida.modo === 'maquina' && partida.turno !== partida.humano) return;
+
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); moverCursor(-1); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); moverCursor(1);  return; }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); soltar(partida.columna); return; }
+
+    if (e.key >= '1' && e.key <= '7') {
+        e.preventDefault();
+        const c = Number(e.key) - 1;
+        partida.columna = c;
+        pintarMarcas();
+        soltar(c);
+    }
+});
+
+/* La música se corta al irse a otra pestaña: en segundo plano setTimeout se
+   frena a ~1 Hz, así que dejarla correr no la mantendría sonando, la
+   mantendría sonando mal. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else {
+        arrancarMusica();
+    }
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+construirTablero();
+pintarBarra();
+pintarBotonesSonido();
+
+/* Un ResizeObserver se entera también de los cambios que no disparan resize,
+   como el teclado del móvil al abrirse o la barra de direcciones al
+   retraerse. Si el navegador no lo tiene, queda el evento de siempre. */
+if (typeof ResizeObserver === 'function') {
+    try { new ResizeObserver(ajustarTablero).observe(document.getElementById('zonaTablero')); }
+    catch (e) { window.addEventListener('resize', ajustarTablero); }
+} else {
+    window.addEventListener('resize', ajustarTablero);
+}
+window.addEventListener('orientationchange', () => setTimeout(ajustarTablero, 120));
+ajustarTablero();
+
+/* Si en la visita anterior quedó algo encendido, el navegador sigue sin
+   permitir audio hasta el primer toque: se espera a ese gesto. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
+</script>
+</body>
+</html>
