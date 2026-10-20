@@ -133,6 +133,17 @@
         touch-action: manipulation;
     }
 
+    /* Un botón principal rebajado: cuando hay dos seguidos, el segundo no
+       puede pedir la misma atención que el primero. */
+    .principal.suave {
+        margin-top: 8px;
+        border-color: var(--borde);
+        background: transparent;
+        color: var(--apagado);
+        font-size: 0.85rem;
+        padding: 12px;
+    }
+
     .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
 
     .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -151,7 +162,10 @@
     #barra {
         display: flex;
         align-items: center;
-        gap: 6px;
+        /* Medidas apretadas a propósito: con cinco botones, a 360 px de
+           pantalla la barra se partía en dos líneas y se comía 40 px de
+           rejilla. */
+        gap: 4px;
         width: 100%;
         padding: 5px 6px;
         border: 1px solid var(--borde);
@@ -159,15 +173,18 @@
         background: var(--panel);
         font-size: 0.68rem;
         flex: 0 0 auto;
+        /* Red de seguridad: con cinco botones, en una pantalla muy estrecha
+           vale más que la barra pase a dos líneas a que se salga. */
+        flex-wrap: wrap;
     }
 
-    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 46px; }
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 40px; }
     #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
-    #barra .dato span { color: var(--apagado); font-size: 0.55rem; letter-spacing: 1px; }
+    #barra .dato span { color: var(--apagado); font-size: 0.52rem; letter-spacing: 0.5px; }
     #barra .hueco { flex: 1 1 auto; }
 
     .icono {
-        width: 36px;
+        width: 34px;
         height: 32px;
         border: 2px solid var(--borde);
         border-radius: 8px;
@@ -181,6 +198,18 @@
     }
 
     .icono:disabled { opacity: 0.35; }
+
+    /* El de FIN lleva palabra en lugar de símbolo: se entiende sin tener que
+       adivinar qué significa el dibujo, que para una acción que acaba la
+       partida es lo mínimo. */
+    .icono.texto {
+        width: auto;
+        min-width: 36px;
+        padding: 0 5px;
+        font-size: 0.62rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
 
     /* En vertical, los tres bloques del juego cuelgan directamente de la
        columna de la pantalla. Esto va en la hoja de estilos y NO en un
@@ -255,6 +284,12 @@
     }
     .casilla.mal.cursor { color: #0b0922; background: var(--rosa); }
 
+    /* Letras que puso el juego al dar la partida por terminada. En amarillo y
+       no en verde: lo que tenías bien y lo que te han resuelto no pueden
+       verse igual, o el repaso no sirve de nada. */
+    .casilla.revelada { color: var(--amarillo); }
+    .casilla.revelada.cursor { color: #0b0922; }
+
     .casilla.error { animation: fallo 0.4s; }
 
     @keyframes fallo {
@@ -300,6 +335,7 @@
 
     #pista .ref { color: var(--amarillo); font-size: 0.6rem; letter-spacing: 1px; margin-bottom: 2px; }
     #pista .texto { color: var(--texto); }
+    #pista .solucion { color: var(--acento); font-weight: bold; letter-spacing: 2px; margin-top: 3px; }
 
     .flecha {
         flex: 0 0 auto;
@@ -316,6 +352,10 @@
 
     /* ---------- TECLADO ---------- */
     #teclado { display: flex; flex-direction: column; gap: 5px; align-items: center; flex: 0 0 auto; width: 100%; }
+
+    /* En repaso ya no se escribe: el teclado sobra y esos 130 px los
+       aprovecha la rejilla, que es lo que se ha venido a mirar. */
+    .pantalla.repaso #teclado { display: none; }
 
     .fila-teclas { display: flex; gap: 4px; justify-content: center; width: 100%; }
 
@@ -485,12 +525,13 @@
 <!-- ===================== PARTIDA ===================== -->
 <section class="pantalla" id="pJuego">
     <div id="barra">
-        <div class="dato" id="dHechas"><b>0/0</b><span>PALABRAS</span></div>
+        <div class="dato" id="dHechas"><b>0/0</b><span>LLENAS</span></div>
         <div class="dato" id="dTiempo"><b>0:00</b><span>TIEMPO</span></div>
         <div class="dato" id="dAyudas"><b>3</b><span>PISTAS</span></div>
         <div class="hueco"></div>
         <button class="icono" id="btnComprobar" type="button" aria-label="Comprobar lo escrito">✓</button>
         <button class="icono" id="btnRevelar" type="button" aria-label="Revelar la letra del cursor">💡</button>
+        <button class="icono texto" id="btnFin" type="button" aria-label="Terminar y ver las soluciones">FIN</button>
         <button class="icono" id="btnLista" type="button" aria-label="Ver todas las definiciones">☰</button>
         <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
     </div>
@@ -503,6 +544,7 @@
             <div id="pista" role="button" tabindex="0">
                 <div class="ref" id="pistaRef"></div>
                 <div class="texto" id="pistaTexto"></div>
+                <div class="solucion" id="pistaSolucion" style="display:none;"></div>
             </div>
             <button class="flecha" id="btnSiguiente" type="button" aria-label="Definición siguiente">▶</button>
         </div>
@@ -528,6 +570,20 @@
     </div>
 </div>
 
+<div class="capa" id="capaRendirse">
+    <div class="caja">
+        <h2>🏳 ¿LO DEJAMOS AQUÍ?</h2>
+        <p>
+            Se acaba la partida y se descubren todas las soluciones. Después podrás
+            repasar cada definición con su palabra, sin prisa.
+        </p>
+        <button class="principal" id="btnSeguirJugando" type="button">SEGUIR JUGANDO</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnConfirmarFin" type="button">VER LAS SOLUCIONES</button>
+        </div>
+    </div>
+</div>
+
 <div class="capa" id="capaLista">
     <div class="caja">
         <h2>☰ DEFINICIONES</h2>
@@ -541,6 +597,7 @@
         <h2 id="tFin">🏆 ¡CRUCIGRAMA RESUELTO!</h2>
         <div class="marcador" id="mFin"></div>
         <p id="sFin"></p>
+        <button class="principal" id="btnRepasar" type="button" style="display:none;">REPASAR LAS PALABRAS</button>
         <button class="principal" id="btnOtro" type="button">OTRO CRUCIGRAMA</button>
         <div class="fila-btns">
             <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
@@ -558,6 +615,7 @@
             <li>El juego no te dice nada mientras resuelves. Cuando quieras saber cómo vas, pulsa <b>✓</b>: las letras acertadas se ponen verdes y las equivocadas, rojas.</li>
             <li>Esas marcas desaparecen en cuanto tocas una letra, para que lo que ves sea siempre una comprobación de verdad y no el recuerdo de otra.</li>
             <li>Si rellenas la rejilla entera, se comprueba sola.</li>
+            <li>El botón <b>FIN</b> da la partida por terminada y descubre todas las soluciones. Las letras que ya tenías bien se quedan en verde y las que pone el juego salen en amarillo, así que de un vistazo ves qué te faltaba. Después puedes pasear por las definiciones leyendo cada palabra; te lo pregunta antes, que no tiene vuelta atrás.</li>
             <li>El botón <b>💡</b> descubre la letra donde tengas el cursor, a costa de una de tus pistas. Cuesta igual si ya la tenías bien.</li>
             <li>Con teclado físico: las letras escriben, <b>←→↑↓</b> mueven, <b>Retroceso</b> borra, <b>Tabulador</b> salta a la siguiente definición y <b>Espacio</b> cambia de dirección.</li>
         </ul>
@@ -1623,6 +1681,13 @@ const partida = {
     bien: new Set(),
     mal: new Set(),
     comprobaciones: 0,
+
+    /* Modo repaso: la partida se ha dado por terminada con el botón FIN y la
+       rejilla enseña las soluciones. Se puede pasear por las definiciones
+       pero ya no se escribe. */
+    rendido: false,
+    casillasReveladas: new Set(),
+    acertadasAlRendirse: 0,
     activa: 0,              // definición seleccionada
     cursor: 0,              // casilla donde caerá la siguiente letra
     jugando: false,
@@ -1766,6 +1831,7 @@ function pintarRejilla() {
         d.classList.toggle('cursor', i === partida.cursor);
         d.classList.toggle('bien', partida.bien.has(i));
         d.classList.toggle('mal', partida.mal.has(i));
+        d.classList.toggle('revelada', partida.casillasReveladas.has(i));
     }
     pintarPista();
     pintarBarra();
@@ -1776,7 +1842,22 @@ function pintarPista() {
     if (!def) return;
     document.getElementById('pistaRef').textContent =
         def.num + (def.horizontal ? ' HORIZONTAL' : ' VERTICAL') + ' · ' + def.largo + ' LETRAS';
-    document.getElementById('pistaTexto').textContent = def.pista;
+
+    const texto = document.getElementById('pistaTexto');
+    texto.textContent = def.pista;
+
+    /* Terminada la partida, cada definición enseña su palabra aquí mismo:
+       es justo lo que uno quiere saber al dejarlo, sin tener que buscarla
+       letra a letra en la rejilla. */
+    const sol = document.getElementById('pistaSolucion');
+    if (!sol) return;
+    if (partida.rendido) {
+        sol.textContent = '→ ' + def.palabra;
+        sol.style.display = '';
+    } else {
+        sol.textContent = '';
+        sol.style.display = 'none';
+    }
 }
 
 function pintarBarra() {
@@ -1788,7 +1869,16 @@ function pintarBarra() {
     document.querySelector('#dAyudas b').textContent = String(partida.ayudas);
     document.getElementById('btnRevelar').disabled = partida.ayudas <= 0 || !partida.jugando;
     document.getElementById('btnComprobar').disabled = !partida.jugando;
+    document.getElementById('btnFin').disabled = !partida.jugando;
     pintarReloj();
+}
+
+/* Terminada la partida con FIN se sigue pudiendo pasear por la rejilla y por
+   las definiciones, que es el sentido del repaso; lo que ya no se puede es
+   escribir. Por eso la navegación tiene su propia condición y no reutiliza
+   `jugando`. */
+function puedeNavegar() {
+    return (partida.jugando || partida.rendido) && !partida.pausado;
 }
 
 function pintarReloj() {
@@ -1992,8 +2082,12 @@ function pintarLista() {
                puede ir diciendo cuáles están bien. */
             fila.className = 'def' + (definicionLlena(idx) ? ' hecha' : '');
             fila.dataset.def = String(idx);
-            fila.innerHTML = '<b>' + def.num + '</b><span>' + escaparHtml(def.pista) +
-                             ' <span style="color:var(--apagado)">(' + def.largo + ')</span></span>';
+            /* En modo repaso la lista lleva también la solución, para poder
+               leerlas todas seguidas sin ir saltando de una en una. */
+            const cola = partida.rendido
+                ? ' <span style="color:var(--acento);font-weight:bold">' + escaparHtml(def.palabra) + '</span>'
+                : ' <span style="color:var(--apagado)">(' + def.largo + ')</span>';
+            fila.innerHTML = '<b>' + def.num + '</b><span>' + escaparHtml(def.pista) + cola + '</span>';
             cont.appendChild(fila);
         });
     }
@@ -2038,6 +2132,9 @@ function nuevaPartida() {
     partida.bien = new Set();
     partida.mal = new Set();
     partida.comprobaciones = 0;
+    partida.rendido = false;
+    partida.casillasReveladas = new Set();
+    partida.acertadasAlRendirse = 0;
     partida.activa = 0;
     partida.cursor = casillasDe(partida.definiciones[0])[0];
     partida.ayudas = partida.ayudasIniciales;
@@ -2049,9 +2146,70 @@ function nuevaPartida() {
     cerrarCapa('capaFin');
     cerrarCapa('capaPausa');
     cerrarCapa('capaLista');
+    cerrarCapa('capaRendirse');
+    document.getElementById('btnRepasar').style.display = 'none';
+    document.getElementById('btnOtro').classList.remove('suave');
+    document.getElementById('pJuego').classList.remove('repaso');
     construirRejilla();
     pintarRejilla();
     arrancarReloj();
+}
+
+/* ==========================================================
+   DEJARLO Y VER LAS SOLUCIONES
+   ========================================================== */
+function rendirse() {
+    if (!partida.jugando) return;
+
+    /* Lo que llevabas acertado se cuenta ANTES de descubrir nada: después,
+       la rejilla está entera y ya no habría forma de saberlo. */
+    let acertadas = 0;
+    partida.definiciones.forEach((d, idx) => { if (definicionResuelta(idx)) acertadas++; });
+    partida.acertadasAlRendirse = acertadas;
+
+    partida.jugando = false;
+    partida.rendido = true;
+    partida.pausado = false;
+    pararReloj();
+
+    const r = partida.rejilla;
+    partida.bien = new Set();
+    partida.mal = new Set();
+    partida.casillasReveladas = new Set();
+
+    for (let i = 0; i < r.celdas.length; i++) {
+        if (!r.celdas[i]) continue;
+        if (partida.escrito[i] === r.celdas[i]) {
+            partida.bien.add(i);
+        } else {
+            partida.escrito[i] = r.celdas[i];
+            partida.casillasReveladas.add(i);
+        }
+    }
+
+    /* Se empieza el repaso por la primera definición, que es por donde uno
+       lee */
+    document.getElementById('pJuego').classList.add('repaso');
+    irADefinicion(0, false);
+    ajustarRejilla();
+    pintarRejilla();
+    pintarBarra();
+    sonNada();
+
+    const total = partida.definiciones.length;
+    document.getElementById('tFin').textContent = '🏳 PARTIDA TERMINADA';
+    document.getElementById('tFin').style.color = 'var(--amarillo)';
+    document.getElementById('mFin').textContent = acertadas + ' / ' + total;
+    document.getElementById('sFin').textContent = acertadas === 0
+        ? 'Sin ninguna completa. Las soluciones ya están en la rejilla.'
+        : acertadas === total
+            ? 'Las tenías todas, solo faltaba comprobar.'
+            : 'Llevabas ' + acertadas + (acertadas === 1 ? ' palabra' : ' palabras') +
+              ' de ' + total + '. El resto ya están puestas.';
+
+    document.getElementById('btnRepasar').style.display = '';
+    document.getElementById('btnOtro').classList.add('suave');
+    abrirCapa('capaFin');
 }
 
 function terminar() {
@@ -2059,6 +2217,11 @@ function terminar() {
     pararReloj();
     pintarRejilla();
     sonFin();
+
+    document.getElementById('tFin').textContent = '🏆 ¡CRUCIGRAMA RESUELTO!';
+    document.getElementById('tFin').style.color = '';
+    document.getElementById('btnRepasar').style.display = 'none';
+    document.getElementById('btnOtro').classList.remove('suave');
 
     const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
     document.getElementById('mFin').textContent = m + ':' + String(s).padStart(2, '0');
@@ -2096,9 +2259,11 @@ function reanudar() {
 function volverAlMenu() {
     partida.jugando = false;
     partida.pausado = false;
+    partida.rendido = false;
     pararReloj();
+    document.getElementById('pJuego').classList.remove('repaso');
     document.getElementById('zonaJuego').style.visibility = '';
-    ['capaPausa', 'capaFin', 'capaLista'].forEach(cerrarCapa);
+    ['capaPausa', 'capaFin', 'capaLista', 'capaRendirse'].forEach(cerrarCapa);
     mostrarPantalla('pMenu');
 }
 
@@ -2167,7 +2332,7 @@ document.getElementById('btnJugar').addEventListener('click', () => {
 });
 
 document.getElementById('rejilla').addEventListener('click', (e) => {
-    if (!partida.jugando || partida.pausado) return;
+    if (!puedeNavegar()) return;
     const d = e.target.closest('.casilla');
     if (!d || d.dataset.i === undefined) return;
     const i = Number(d.dataset.i);
@@ -2187,15 +2352,37 @@ document.getElementById('btnSiguiente').addEventListener('click', () => saltarDe
 /* Tocar la propia pista también cambia de dirección si la casilla del cursor
    pertenece a dos palabras: es el gesto que más se busca sin pensarlo. */
 document.getElementById('pista').addEventListener('click', () => {
-    if (!partida.jugando || partida.pausado) return;
+    if (!puedeNavegar()) return;
     seleccionarCasilla(partida.cursor, true);
 });
 
 document.getElementById('btnComprobar').addEventListener('click', () => comprobarTodo(false));
 document.getElementById('btnRevelar').addEventListener('click', revelarLetra);
 
-document.getElementById('btnLista').addEventListener('click', () => {
+/* Acabar la partida se pregunta antes: es lo único del juego que no tiene
+   vuelta atrás, y un dedo torpe no puede tirar veinte minutos de crucigrama.
+   El botón grande es el de seguir jugando, no el de rendirse. */
+document.getElementById('btnFin').addEventListener('click', () => {
     if (!partida.jugando) return;
+    abrirCapa('capaRendirse');
+});
+
+document.getElementById('btnSeguirJugando').addEventListener('click', () => cerrarCapa('capaRendirse'));
+
+document.getElementById('btnConfirmarFin').addEventListener('click', () => {
+    cerrarCapa('capaRendirse');
+    rendirse();
+});
+
+document.getElementById('btnRepasar').addEventListener('click', () => {
+    cerrarCapa('capaFin');
+    /* Corto a propósito: el aviso sale sobre la rejilla y uno de tres líneas
+       tapa media docena de casillas justo al empezar a repasarlas. */
+    avisar('Pásalas con ◀ ▶ o con ☰');
+});
+
+document.getElementById('btnLista').addEventListener('click', () => {
+    if (!partida.jugando && !partida.rendido) return;
     pintarLista();
     abrirCapa('capaLista');
 });
@@ -2210,6 +2397,9 @@ document.getElementById('listaDefs').addEventListener('click', (e) => {
 });
 
 document.getElementById('btnPausa').addEventListener('click', () => {
+    /* Terminada la partida ya no hay nada que pausar: el mismo botón
+       devuelve el resumen, que es desde donde se sale. */
+    if (partida.rendido) { abrirCapa('capaFin'); return; }
     if (partida.pausado) reanudar(); else pausar();
 });
 
@@ -2240,7 +2430,7 @@ document.addEventListener('keydown', (e) => {
         return;
     }
     if (hayCapaAbierta()) return;
-    if (!partida.jugando || partida.pausado) return;
+    if (!puedeNavegar()) return;
 
     const r = partida.rejilla;
 
