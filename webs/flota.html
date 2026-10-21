@@ -251,7 +251,7 @@
     /* ---------- DIBUJO DE LOS BARCOS ----------
        Cada barco es UN elemento que abarca sus casillas en la propia rejilla
        (grid-column / grid-row con span), así que mide exactamente lo que
-       ocupa: cuatro casillas un portaaviones, una un submarino.
+       ocupa: cinco casillas un portaaviones, dos un destructor.
 
        El contorno del casco va del color del fondo a propósito: desde que
        los barcos pueden ir pegados, sin esa línea dos cascos juntos se verían
@@ -272,10 +272,12 @@
        si se pinta debajo, las equis lo tapan y dos barcos hundidos uno al
        lado del otro parecen una sola mancha. Así se ve dónde acaba cada uno
        sin esconder los impactos. */
-    .dibujo.hundido { z-index: 3; }
+    .dibujo.hundido,
+    .dibujo.tocado { z-index: 3; }
     .dibujo.hundido .casco { fill: none; stroke: #ffd98a; stroke-width: 1.9; }
-    .dibujo.hundido .torre,
-    .dibujo.hundido .ojo { display: none; }
+    .dibujo.tocado  .casco { fill: none; stroke: #ced8f2; stroke-width: 1.9; }
+    .dibujo.hundido .torre, .dibujo.hundido .ojo,
+    .dibujo.tocado  .torre, .dibujo.tocado  .ojo { display: none; }
 
     /* Casilla donde apunta el dedo al colocar */
     .casilla.previa { background: rgba(0, 255, 200, 0.45); }
@@ -443,8 +445,8 @@
 <!-- ===================== PARTIDA ===================== -->
 <section class="pantalla" id="pJuego">
     <div id="barra">
-        <div class="dato" id="dMios"><b>10</b><span>MI FLOTA</span></div>
-        <div class="dato" id="dSuyos"><b>10</b><span>ENEMIGO</span></div>
+        <div class="dato" id="dMios"><b></b><span>MI FLOTA</span></div>
+        <div class="dato" id="dSuyos"><b></b><span>ENEMIGO</span></div>
         <div class="dato" id="dDisparos"><b>0</b><span>DISPAROS</span></div>
         <div class="hueco"></div>
         <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
@@ -503,12 +505,12 @@
     <div class="caja">
         <h2>📖 CÓMO SE JUEGA</h2>
         <ul>
-            <li>Primero colocas tu flota: diez barcos, de cuatro, tres, dos y una casilla. <b>Pueden ir pegados unos a otros</b>, lo único que no vale es montarlos.</li>
+            <li id="ayudaFlota">Primero colocas tu flota. <b>Pueden ir pegados unos a otros</b>, lo único que no vale es montarlos.</li>
             <li>Toca un barco de la lista y luego la casilla donde quieres la popa. Con <b>↻ GIRAR</b> lo pones de pie o tumbado, y tocando un barco ya puesto lo quitas.</li>
             <li>Luego se dispara por turnos tocando una casilla del tablero enemigo.</li>
             <li><b>Si aciertas, vuelves a disparar.</b> Solo pasa el turno cuando das en agua.</li>
             <li>Al hundir un barco <b>no se descarta el agua de alrededor</b>: como los barcos pueden ir pegados, justo al lado puede haber otro esperando.</li>
-            <li>Gana quien hunda antes los diez barcos del otro.</li>
+            <li id="ayudaGana">Gana quien hunda antes todos los barcos del otro.</li>
         </ul>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
     </div>
@@ -532,10 +534,10 @@ const CASILLAS = LADO * LADO;
 /* La flota clásica: 1 de cuatro, 2 de tres, 3 de dos y 4 de uno.
    Veinte casillas ocupadas de cien. */
 const FLOTA = [
-    { nombre: 'Portaaviones', largo: 4, cuantos: 1 },
-    { nombre: 'Acorazado',    largo: 3, cuantos: 2 },
-    { nombre: 'Crucero',      largo: 2, cuantos: 3 },
-    { nombre: 'Submarino',    largo: 1, cuantos: 4 }
+    { nombre: 'Portaaviones', largo: 5, cuantos: 1 },
+    { nombre: 'Acorazado',    largo: 4, cuantos: 2 },
+    { nombre: 'Crucero',      largo: 3, cuantos: 2 },
+    { nombre: 'Destructor',   largo: 2, cuantos: 1 }
 ];
 
 const TOTAL_BARCOS = FLOTA.reduce((a, t) => a + t.cuantos, 0);
@@ -787,14 +789,19 @@ function libres(con) {
 }
 
 /* Cuántas veces persigue la máquina un barco tocado.
-   Es la única palanca de dificultad que de verdad se nota, y desde que los
-   barcos pueden ir pegados lo es todavía más. Lo medí sobre 400 partidas:
-   67 de los 84 disparos de una partida son de búsqueda a ciegas, con un 14%
-   de acierto, y ahí ninguna estrategia ayuda porque hay que dar con cuatro
-   submarinos de una sola casilla. Buscar mejor (mapa de probabilidad frente
-   a damero) vale menos de dos disparos; perseguir o no perseguir vale doce.
-   De ahí que el escalón esté aquí y no en la calidad de la búsqueda. */
-const REMATE = { facil: 0, normal: 0.1, dificil: 1 };
+   Es la única palanca de dificultad que de verdad se nota, y hay que
+   recalibrarla cada vez que cambia la flota. Medido sobre 1.200 partidas por
+   punto, con la flota actual (5, 4, 4, 3, 3, 2):
+
+     0 (fácil) 96,4 · 0,1 → 91,1 · 0,2 → 80,7 · 0,3 → 70,0
+     0,4 → 63,0 · 0,5 → 59,2 · 0,7 → 56,5 · 1 (difícil) 49,7
+
+   Con la flota anterior, que tenía cuatro barcos de una sola casilla, la
+   curva era casi plana (96,4 → 86,1) porque la mayor parte de la partida era
+   búsqueda a ciegas y perseguir apenas servía. Al desaparecer los barcos de
+   uno, cada acierto arrastra tres o cuatro casillas más, así que perseguir
+   pasa a valer 47 disparos y el escalón se abre solo. */
+const REMATE = { facil: 0, normal: 0.3, dificil: 1 };
 
 /* Elige dónde dispara la máquina.
    facil:   nunca persigue un tocado, dispara a ciegas
@@ -1259,7 +1266,12 @@ function pintarBarcos(flota, soloHundidos) {
         const horizontal = b.largo === 1 || filaDe(b.celdas[0]) === filaDe(b.celdas[1]);
 
         const d = document.createElement('div');
-        d.className = 'dibujo' + (b.hundido ? ' hundido' : '');
+        /* Un barco con impactos se pinta como silueta por encima: el amarillo
+           de las casillas tocadas es casi opaco y, si el casco va debajo, el
+           barco sale partido en trozos justo donde más interesa verlo entero
+           (al revelar el tablero al acabar la partida, por ejemplo). */
+        d.className = 'dibujo' +
+            (b.hundido ? ' hundido' : (b.tocadas.length ? ' tocado' : ''));
         d.style.gridRow = horizontal ? String(f + 2) : (f + 2) + ' / span ' + b.largo;
         d.style.gridColumn = horizontal ? (c + 2) + ' / span ' + b.largo : String(c + 2);
         d.innerHTML = svgBarco(b.largo, horizontal);
@@ -1334,9 +1346,9 @@ function pintarBarra() {
 
     document.querySelector('#dMios span').textContent = 'MI FLOTA';
     document.querySelector('#dMios b').textContent =
-        partida.miFlota ? String(barcosAFlote(partida.miFlota).length) : '10';
+        partida.miFlota ? String(barcosAFlote(partida.miFlota).length) : String(TOTAL_BARCOS);
     document.querySelector('#dSuyos b').textContent =
-        partida.suFlota ? String(barcosAFlote(partida.suFlota).length) : '10';
+        partida.suFlota ? String(barcosAFlote(partida.suFlota).length) : String(TOTAL_BARCOS);
     document.querySelector('#dDisparos b').textContent = String(partida.disparos);
 }
 
@@ -1650,7 +1662,7 @@ function terminar(quien) {
                            (suyos === 1 ? ' barco.' : ' barcos.') + ' Disparaste ' + partida.disparos + ' veces.';
         sonPierde();
     }
-    mFin.textContent = (10 - suyos) + ' · ' + (10 - mios);
+    mFin.textContent = (TOTAL_BARCOS - suyos) + ' · ' + (TOTAL_BARCOS - mios);
 
     pintarTodo();
     setTimeout(() => abrirCapa('capaFin'), 650);
@@ -1803,6 +1815,28 @@ if (typeof ResizeObserver === 'function') {
     window.addEventListener('resize', ajustarTablero);
 }
 window.addEventListener('orientationchange', () => setTimeout(ajustarTablero, 120));
+
+/* ==========================================================
+   TEXTOS QUE DEPENDEN DE LA FLOTA
+   Se escriben desde FLOTA en lugar de a mano: la primera versión los tenía
+   escritos en el HTML y al cambiar los barcos la ayuda seguía prometiendo
+   diez barcos de cuatro, tres, dos y una casilla.
+   ========================================================== */
+const PALABRAS = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco',
+                  'seis', 'siete', 'ocho', 'nueve', 'diez'];
+const enLetra = n => PALABRAS[n] || String(n);
+
+function textoFlota() {
+    const trozos = FLOTA.map(t => enLetra(t.cuantos) + ' de ' + enLetra(t.largo));
+    const ultimo = trozos.pop();
+    return trozos.length ? trozos.join(', ') + ' y ' + ultimo : ultimo;
+}
+
+document.getElementById('ayudaFlota').innerHTML =
+    'Primero colocas tu flota: ' + enLetra(TOTAL_BARCOS) + ' barcos, ' + textoFlota() +
+    ' casillas. <b>Pueden ir pegados unos a otros</b>, lo único que no vale es montarlos.';
+document.getElementById('ayudaGana').textContent =
+    'Gana quien hunda antes los ' + enLetra(TOTAL_BARCOS) + ' barcos del otro.';
 
 /* Si en la visita anterior quedó algo encendido, el navegador sigue sin
    permitir audio hasta el primer toque: se espera a ese gesto. */
