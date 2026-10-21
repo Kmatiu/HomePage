@@ -239,14 +239,43 @@
         cursor: pointer;
     }
 
-    /* Mi flota: los barcos se ven */
-    .casilla.barco { background: var(--barco); }
-    .casilla.barco.hundido { background: var(--rosa); }
+    /* Mi flota: una sombra suave debajo del casco marca la huella */
+    .casilla.barco { background: #26305c; }
 
-    /* Disparos */
+    /* Disparos. Van por encima del dibujo del barco y algo transparentes,
+       para que la silueta del casco siga leyéndose debajo del impacto. */
     .casilla.agua { background: var(--agua-tocada); color: rgba(255,255,255,0.3); }
-    .casilla.tocado { background: var(--amarillo); color: #0b0922; }
-    .casilla.hundido { background: var(--rosa); color: #fff; }
+    .casilla.tocado { position: relative; z-index: 2; background: rgba(255, 204, 0, 0.82); color: #0b0922; }
+    .casilla.hundido { position: relative; z-index: 2; background: rgba(255, 0, 110, 0.82); color: #fff; }
+
+    /* ---------- DIBUJO DE LOS BARCOS ----------
+       Cada barco es UN elemento que abarca sus casillas en la propia rejilla
+       (grid-column / grid-row con span), así que mide exactamente lo que
+       ocupa: cuatro casillas un portaaviones, una un submarino.
+
+       El contorno del casco va del color del fondo a propósito: desde que
+       los barcos pueden ir pegados, sin esa línea dos cascos juntos se verían
+       como uno solo de seis casillas. */
+    .dibujo {
+        pointer-events: none;
+        z-index: 1;
+        display: block;
+        align-self: stretch;
+        justify-self: stretch;
+    }
+
+    .dibujo svg { width: 100%; height: 100%; display: block; }
+    .dibujo .casco { fill: #93a1c4; stroke: var(--fondo); stroke-width: 1.4; stroke-linejoin: round; }
+    .dibujo .torre { fill: #e4ebff; }
+    .dibujo .ojo { fill: #2b3557; }
+    /* El hundido va POR ENCIMA de las casillas tocadas y solo como contorno:
+       si se pinta debajo, las equis lo tapan y dos barcos hundidos uno al
+       lado del otro parecen una sola mancha. Así se ve dónde acaba cada uno
+       sin esconder los impactos. */
+    .dibujo.hundido { z-index: 3; }
+    .dibujo.hundido .casco { fill: none; stroke: #ffd98a; stroke-width: 1.9; }
+    .dibujo.hundido .torre,
+    .dibujo.hundido .ojo { display: none; }
 
     /* Casilla donde apunta el dedo al colocar */
     .casilla.previa { background: rgba(0, 255, 200, 0.45); }
@@ -389,7 +418,7 @@
             <legend>NIVEL DE LA MÁQUINA</legend>
             <div class="opciones" id="grpNivel">
                 <button class="opcion" type="button" data-v="facil" aria-pressed="false">GRUMETE<span class="sub">dispara a ciegas</span></button>
-                <button class="opcion" type="button" data-v="normal" aria-pressed="true">OFICIAL<span class="sub">remata a medias</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">OFICIAL<span class="sub">remata a ratos</span></button>
                 <button class="opcion" type="button" data-v="dificil" aria-pressed="false">ALMIRANTE<span class="sub">no perdona una</span></button>
             </div>
         </fieldset>
@@ -474,11 +503,11 @@
     <div class="caja">
         <h2>📖 CÓMO SE JUEGA</h2>
         <ul>
-            <li>Primero colocas tu flota: diez barcos, de cuatro, tres, dos y una casilla. <b>No pueden tocarse entre sí</b>, ni siquiera en diagonal.</li>
-            <li>Toca un barco de la lista y luego la casilla donde quieres la proa. Con <b>↻ GIRAR</b> lo pones de pie o tumbado, y tocando un barco ya puesto lo quitas.</li>
+            <li>Primero colocas tu flota: diez barcos, de cuatro, tres, dos y una casilla. <b>Pueden ir pegados unos a otros</b>, lo único que no vale es montarlos.</li>
+            <li>Toca un barco de la lista y luego la casilla donde quieres la popa. Con <b>↻ GIRAR</b> lo pones de pie o tumbado, y tocando un barco ya puesto lo quitas.</li>
             <li>Luego se dispara por turnos tocando una casilla del tablero enemigo.</li>
             <li><b>Si aciertas, vuelves a disparar.</b> Solo pasa el turno cuando das en agua.</li>
-            <li>Al hundir un barco, el agua de alrededor se marca sola: por la regla de que no se tocan, ahí no puede haber nada.</li>
+            <li>Al hundir un barco <b>no se descarta el agua de alrededor</b>: como los barcos pueden ir pegados, justo al lado puede haber otro esperando.</li>
             <li>Gana quien hunda antes los diez barcos del otro.</li>
         </ul>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
@@ -559,19 +588,17 @@ function vecinas(i) {
 /* ¿Cabe el barco? `ocupadas` es un array de CASILLAS con el id del barco que
    hay en cada una, o 0.
 
-   La regla de que los barcos no se toquen no es un adorno: sin ella, dos
-   barcos pegados se leen como uno solo al recibir disparos y no hay forma de
-   saber cuándo se ha hundido cuál. */
+   Los barcos SÍ pueden ir pegados, incluso en diagonal. Lo único que no se
+   puede es montar uno encima de otro.
+
+   Que se toquen no confunde al juego: cada casilla guarda el id de su barco
+   y un barco se hunde cuando han caído todas LAS SUYAS, así que dos pegados
+   siguen siendo dos cosas distintas. A quien se lo pone difícil es a quien
+   dispara, que ya no puede dar por agua lo que rodea a un hundido. Que es
+   justo de lo que se trata. */
 function cabe(ocupadas, celdas) {
     if (!celdas) return false;
-    for (const i of celdas) {
-        if (ocupadas[i]) return false;
-        for (const v of vecinas(i)) {
-            /* Puede tocar casillas del propio barco que se está colocando */
-            if (ocupadas[v] && celdas.indexOf(v) === -1) return false;
-        }
-    }
-    return true;
+    return celdas.every(i => !ocupadas[i]);
 }
 
 function flotaVacia() {
@@ -643,17 +670,9 @@ function disparar(flota, tiros, i) {
 
     if (barco.tocadas.length === barco.largo) {
         barco.hundido = true;
-        /* Al hundirse, el agua de alrededor se marca sola: por la regla de
-           que los barcos no se tocan, ahí no puede haber nada. Ahorra
-           disparos y es lo que haría cualquiera con lápiz y papel. */
-        const alrededor = [];
-        barco.celdas.forEach(c => vecinas(c).forEach(v => {
-            if (!tiros[v] && alrededor.indexOf(v) === -1) {
-                tiros[v] = 1;
-                alrededor.push(v);
-            }
-        }));
-        return { resultado: HUNDIDO, casilla: i, barco, alrededor };
+        /* Al hundirse NO se descarta el agua de alrededor: como los barcos
+           pueden ir pegados, al lado de un hundido puede haber otro. */
+        return { resultado: HUNDIDO, casilla: i, barco };
     }
     return { resultado: TOCADO, casilla: i, barco };
 }
@@ -687,13 +706,14 @@ function apuntarResultado(con, i, resultado, barco) {
     if (resultado === TOCADO) {
         con.tocadasVivas.push(i);
     } else if (resultado === HUNDIDO && barco) {
-        /* Las casillas del barco hundido salen de la lista de pistas, y el
-           agua de alrededor se da por sabida. */
+        /* Las casillas del hundido salen de la lista de pistas, pero sus
+           vecinas NO se dan por agua: con los barcos pegados, al lado de un
+           hundido puede haber otro esperando.
+
+           Ojo con el filtro: si un barco de al lado también tenía impactos,
+           esos tienen que QUEDARSE en la lista, o la máquina se olvidaría de
+           rematarlo. Por eso se quitan por casilla y no se vacía entera. */
         con.tocadasVivas = con.tocadasVivas.filter(x => barco.celdas.indexOf(x) === -1);
-        barco.celdas.forEach(c => {
-            con.tiros[c] = 2;
-            vecinas(c).forEach(v => { if (!con.tiros[v]) con.tiros[v] = 1; });
-        });
         const pos = con.largosRestantes.indexOf(barco.largo);
         if (pos !== -1) con.largosRestantes.splice(pos, 1);
     }
@@ -767,13 +787,14 @@ function libres(con) {
 }
 
 /* Cuántas veces persigue la máquina un barco tocado.
-   Es la única palanca de dificultad que de verdad se nota. Lo medí: con esta
-   flota, buscar mejor apenas cambia nada (58,4 disparos de media rematando
-   siempre y al azar, frente a 56,2 con mapa de probabilidad), porque los
-   cuatro submarinos de una casilla no dejan ninguna pista que explotar y el
-   final de la partida es registrar el tablero a ciegas. Perseguir o no
-   perseguir, en cambio, va de 75 disparos a 58. */
-const REMATE = { facil: 0, normal: 0.4, dificil: 1 };
+   Es la única palanca de dificultad que de verdad se nota, y desde que los
+   barcos pueden ir pegados lo es todavía más. Lo medí sobre 400 partidas:
+   67 de los 84 disparos de una partida son de búsqueda a ciegas, con un 14%
+   de acierto, y ahí ninguna estrategia ayuda porque hay que dar con cuatro
+   submarinos de una sola casilla. Buscar mejor (mapa de probabilidad frente
+   a damero) vale menos de dos disparos; perseguir o no perseguir vale doce.
+   De ahí que el escalón esté aquí y no en la calidad de la búsqueda. */
+const REMATE = { facil: 0, normal: 0.1, dificil: 1 };
 
 /* Elige dónde dispara la máquina.
    facil:   nunca persigue un tocado, dispara a ciegas
@@ -1104,12 +1125,22 @@ function construirTablero() {
     cont.innerHTML = '';
     casillas = [];
 
-    /* Esquina vacía + letras de columna */
-    cont.appendChild(document.createElement('div'));
+    /* TODO lleva su fila y su columna puestas a mano. Es imprescindible:
+       los dibujos de los barcos sí van colocados a propósito (abarcan varias
+       casillas), y en una rejilla CSS los elementos sin posición se recolocan
+       ESQUIVANDO a los que sí la tienen. Con los rótulos y las casillas al
+       aire, aparecer un barco descuadraba el tablero entero. */
+    const esquina = document.createElement('div');
+    esquina.style.gridRow = '1';
+    esquina.style.gridColumn = '1';
+    cont.appendChild(esquina);
+
     for (let c = 0; c < LADO; c++) {
         const d = document.createElement('div');
         d.className = 'rotulo';
         d.textContent = LETRAS[c];
+        d.style.gridRow = '1';
+        d.style.gridColumn = String(c + 2);
         cont.appendChild(d);
     }
 
@@ -1117,6 +1148,8 @@ function construirTablero() {
         const r = document.createElement('div');
         r.className = 'rotulo';
         r.textContent = String(f + 1);
+        r.style.gridRow = String(f + 2);
+        r.style.gridColumn = '1';
         cont.appendChild(r);
 
         for (let c = 0; c < LADO; c++) {
@@ -1124,6 +1157,8 @@ function construirTablero() {
             d.className = 'casilla';
             d.dataset.i = String(indice(f, c));
             d.setAttribute('role', 'gridcell');
+            d.style.gridRow = String(f + 2);
+            d.style.gridColumn = String(c + 2);
             cont.appendChild(d);
             casillas[indice(f, c)] = d;
         }
@@ -1155,6 +1190,81 @@ function ajustarTablero() {
 
 function nombreCasilla(i) {
     return LETRAS[colDe(i)] + (filaDe(i) + 1);
+}
+
+/* ==========================================================
+   DIBUJAR UN BARCO
+   El casco se dibuja siempre tumbado, en un lienzo de 20 por casilla, y para
+   los verticales se gira el grupo entero 90 grados. Rotar la figura es más
+   fiable que mantener dos dibujos: no hay forma de que uno se quede desfasado
+   respecto al otro.
+   ========================================================== */
+/* Recorta decimales: un SVG lleno de 6.400000000000001 pesa el doble */
+function num(v) { return String(Math.round(v * 10) / 10); }
+
+function svgBarco(largo, horizontal) {
+    const U = 20;                 // lienzo por casilla
+    const W = largo * U, H = U;
+
+    /* Vista cenital, no de perfil. Es lo que permite usar el MISMO dibujo en
+       horizontal y en vertical: la silueta es simétrica respecto a su eje
+       largo, así que al girarla 90° sigue leyéndose como un barco. Un perfil
+       girado se convierte en una cuña sin sentido. */
+    const proa = Math.min(9, W * 0.38);          // cuánto ocupa la punta
+    const casco = '<path class="casco" d="M 2.6,4.6 L ' + num(W - proa) + ',4.6 L ' +
+                  num(W - 1.6) + ',10 L ' + num(W - proa) + ',15.4 L 2.6,15.4 Z"/>';
+
+    /* Puente, centrado en el tramo recto del casco (no en el barco entero,
+       o en los largos se iría hacia la proa) */
+    const anchoPuente = Math.min(7, W * 0.3);
+    const xPuente = (W - proa + 2.6) / 2 - anchoPuente / 2;
+    const puente = '<rect class="torre" x="' + num(xPuente) + '" y="6.8" width="' +
+                   num(anchoPuente) + '" height="6.4" rx="1.4"/>';
+
+    /* Torretas a proa y popa del puente, según el sitio que haya */
+    let torretas = '';
+    if (largo >= 3) {
+        torretas = '<circle class="ojo" cx="' + num(xPuente - 3.4) + '" cy="10" r="1.9"/>' +
+                   '<circle class="ojo" cx="' + num(xPuente + anchoPuente + 3.4) + '" cy="10" r="1.9"/>';
+    } else if (largo === 2) {
+        torretas = '<circle class="ojo" cx="' + num(xPuente + anchoPuente + 3) + '" cy="10" r="1.7"/>';
+    }
+
+    const contenido = casco + puente + torretas;
+
+    if (horizontal) {
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none">' +
+               contenido + '</svg>';
+    }
+    /* rotate(90) lleva (x,y) a (-y,x); con el translate previo, la figura
+       tumbada cae justo dentro del lienzo de pie. */
+    return '<svg viewBox="0 0 ' + H + ' ' + W + '" preserveAspectRatio="none">' +
+           '<g transform="rotate(90) translate(0,-' + H + ')">' + contenido + '</g></svg>';
+}
+
+/* Pinta los cascos encima de la rejilla. Se borran y se vuelven a crear en
+   cada repintado: son pocos y así no hay estado que mantener. */
+function pintarBarcos(flota, soloHundidos) {
+    const cont = document.getElementById('tablero');
+    cont.querySelectorAll('.dibujo').forEach(d => d.remove());
+    if (!flota) return;
+
+    flota.barcos.forEach(b => {
+        if (soloHundidos && !b.hundido) return;
+
+        const primera = Math.min(...b.celdas);
+        const f = filaDe(primera), c = colDe(primera);
+        /* La rejilla lleva una fila y una columna de rótulos, así que la
+           casilla lógica (f,c) empieza en la línea f+2 / c+2. */
+        const horizontal = b.largo === 1 || filaDe(b.celdas[0]) === filaDe(b.celdas[1]);
+
+        const d = document.createElement('div');
+        d.className = 'dibujo' + (b.hundido ? ' hundido' : '');
+        d.style.gridRow = horizontal ? String(f + 2) : (f + 2) + ' / span ' + b.largo;
+        d.style.gridColumn = horizontal ? (c + 2) + ' / span ' + b.largo : String(c + 2);
+        d.innerHTML = svgBarco(b.largo, horizontal);
+        cont.appendChild(d);
+    });
 }
 
 /* ==========================================================
@@ -1190,6 +1300,10 @@ function pintarTablero() {
     if (partida.ultima >= 0 && casillas[partida.ultima]) {
         casillas[partida.ultima].classList.add('ultima');
     }
+
+    /* En mi tablero se ven todos mis barcos; en el enemigo, solo los que ya
+       he hundido, y al acabar la partida se destapan todos. */
+    pintarBarcos(flota, !mia && partida.fase !== 'fin');
 }
 
 function pintarColocacion() {
@@ -1200,6 +1314,7 @@ function pintarColocacion() {
         d.textContent = '';
         if (partida.miFlota.ocupadas[i]) d.classList.add('barco');
     }
+    pintarBarcos(partida.miFlota, false);
 }
 
 function pintarBarra() {
@@ -1327,7 +1442,7 @@ function colocarEnCasilla(i) {
 
     if (!cabe(partida.miFlota.ocupadas, celdas)) {
         rechazar();
-        avisar(celdas ? 'Ahí no cabe o toca otro barco' : 'Se sale del tablero', true);
+        avisar(celdas ? 'Ahí ya hay otro barco' : 'Se sale del tablero', true);
         return;
     }
 
