@@ -1,0 +1,1708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hundir la Flota</title>
+<style>
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --agua: #16205c;
+        --agua-tocada: #0d1338;
+        --barco: #4a5578;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        /* Holgura SUMADA al inset: Chrome en Android devuelve
+           safe-area-inset-bottom = 0 aunque la barra de gestos tape parte de
+           lo que el viewport dice que hay. */
+        padding: calc(env(safe-area-inset-top, 0px) + 14px)
+                 calc(env(safe-area-inset-right, 0px) + 6px)
+                 calc(env(safe-area-inset-bottom, 0px) + 20px)
+                 calc(env(safe-area-inset-left, 0px) + 6px);
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        height: 100vh;
+        height: 100dvh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla { display: none; flex-direction: column; width: 100%; max-width: 620px; height: 100%; min-height: 0; }
+    .pantalla.activa { display: flex; }
+
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 { font-size: clamp(1.3rem, 6vw, 2rem); margin: 10px 0 2px; text-align: center; letter-spacing: 2px; }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset { border: 1px solid var(--borde); border-radius: 12px; margin: 0 0 12px; padding: 10px; }
+    legend { color: var(--apagado); font-size: 0.64rem; letter-spacing: 2px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    .principal {
+        width: 100%;
+        padding: 14px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .principal:disabled { opacity: 0.35; cursor: default; }
+
+    .secundario {
+        padding: 10px 14px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.76rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .fila-btns > * { flex: 1 1 100px; }
+
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:not(:disabled):hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- BARRA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+    #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.52rem; letter-spacing: 0.5px; }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 34px;
+        height: 32px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    /* ---------- PESTAÑAS ---------- */
+    #pestanas { display: flex; gap: 6px; width: 100%; flex: 0 0 auto; margin: 6px 0 4px; }
+
+    .pestana {
+        flex: 1 1 0;
+        padding: 9px 6px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.72rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .pestana[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+
+    /* ---------- TABLERO ---------- */
+    #zonaTablero {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 0;
+    }
+
+    /* Una rejilla de 11x11: la primera fila y la primera columna llevan las
+       coordenadas, que es como se canta un disparo de toda la vida. */
+    #tablero {
+        display: grid;
+        grid-template-columns: var(--rotulo) repeat(10, var(--celda));
+        grid-template-rows: var(--rotulo) repeat(10, var(--celda));
+        gap: 1px;
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .rotulo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--apagado);
+        font-size: calc(var(--celda) * 0.38);
+        line-height: 1;
+    }
+
+    .casilla {
+        background: var(--agua);
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: calc(var(--celda) * 0.62);
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    /* Mi flota: los barcos se ven */
+    .casilla.barco { background: var(--barco); }
+    .casilla.barco.hundido { background: var(--rosa); }
+
+    /* Disparos */
+    .casilla.agua { background: var(--agua-tocada); color: rgba(255,255,255,0.3); }
+    .casilla.tocado { background: var(--amarillo); color: #0b0922; }
+    .casilla.hundido { background: var(--rosa); color: #fff; }
+
+    /* Casilla donde apunta el dedo al colocar */
+    .casilla.previa { background: rgba(0, 255, 200, 0.45); }
+    .casilla.previa-mal { background: rgba(255, 0, 110, 0.45); }
+
+    .casilla.ultima { box-shadow: inset 0 0 0 2px var(--acento); }
+
+    #tablero.rechaza { animation: negar 0.3s; }
+
+    @keyframes negar {
+        0%, 100% { transform: translateX(0); }
+        25%      { transform: translateX(-5px); }
+        75%      { transform: translateX(5px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) { #tablero.rechaza { animation: none; } }
+
+    /* ---------- ESTADO Y FLOTA ---------- */
+    #estado {
+        flex: 0 0 auto;
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 6px 4px 2px;
+        min-height: 2.1em;
+    }
+
+    #flotas { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 4px 0 0; }
+
+    .barquito {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        padding: 3px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 7px;
+        font-size: 0.6rem;
+        letter-spacing: 1px;
+        color: var(--apagado);
+    }
+
+    .barquito .casco { display: inline-block; width: 7px; height: 7px; border-radius: 2px; background: var(--barco); }
+    .barquito.hundido { opacity: 0.45; text-decoration: line-through; border-color: transparent; }
+    .barquito.hundido .casco { background: var(--rosa); }
+
+    /* ---------- COLOCAR ---------- */
+    #porColocar { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 4px 0; }
+
+    .porPoner {
+        padding: 5px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.64rem;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .porPoner[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); background: rgba(0,255,200,0.14); font-weight: bold; }
+    .porPoner:disabled { opacity: 0.3; }
+
+    /* ---------- CAPAS ---------- */
+    .capa {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 6, 26, 0.9);
+        padding: 16px;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 420px;
+        max-height: 100%;
+        overflow-y: auto;
+        border: 2px solid var(--borde);
+        border-radius: 16px;
+        background: #15113a;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: 1px; }
+    .caja p { color: var(--apagado); font-size: 0.78rem; margin: 0 0 12px; line-height: 1.5; }
+    .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
+    .caja .marcador { font-size: 1.5rem; font-weight: bold; color: var(--acento); margin: 6px 0 10px; }
+
+    #aviso-flotante {
+        position: fixed;
+        left: 50%;
+        top: calc(env(safe-area-inset-top, 0px) + 58px);
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        border: 2px solid var(--acento);
+        border-radius: 10px;
+        background: #15113a;
+        color: var(--acento);
+        font-size: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+        z-index: 20;
+        max-width: 90vw;
+    }
+
+    #aviso-flotante.vista { opacity: 1; }
+    #aviso-flotante.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    @media (orientation: landscape) and (max-height: 560px) {
+        body {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        }
+        .pantalla { max-width: 980px; }
+        h1 { font-size: 1.2rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+        #estado { font-size: 0.7rem; padding: 3px; min-height: 1.7em; }
+        #flotas { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>HUNDIR LA <span>FLOTA</span></h1>
+        <p class="lema">Diez barcos escondidos en cien casillas</p>
+
+        <fieldset>
+            <legend>NIVEL DE LA MÁQUINA</legend>
+            <div class="opciones" id="grpNivel">
+                <button class="opcion" type="button" data-v="facil" aria-pressed="false">GRUMETE<span class="sub">dispara a ciegas</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">OFICIAL<span class="sub">remata a medias</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">ALMIRANTE<span class="sub">no perdona una</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">COLOCAR LA FLOTA</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dMios"><b>10</b><span>MI FLOTA</span></div>
+        <div class="dato" id="dSuyos"><b>10</b><span>ENEMIGO</span></div>
+        <div class="dato" id="dDisparos"><b>0</b><span>DISPAROS</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="pestanas">
+        <button class="pestana" id="pestEnemigo" type="button" aria-pressed="true">🎯 ENEMIGO</button>
+        <button class="pestana" id="pestMia" type="button" aria-pressed="false">⚓ MI FLOTA</button>
+    </div>
+
+    <div id="estado"></div>
+
+    <div id="zonaTablero"><div id="tablero" role="grid" aria-label="Tablero"></div></div>
+
+    <div id="porColocar"></div>
+    <div id="flotas"></div>
+
+    <div class="fila-btns" id="btnsColocar" style="display:none;">
+        <button class="secundario" id="btnGirar" type="button">↻ GIRAR</button>
+        <button class="secundario" id="btnAzar" type="button">🎲 AL AZAR</button>
+        <button class="secundario" id="btnBorrar" type="button">✕ VACIAR</button>
+    </div>
+    <button class="principal" id="btnAtacar" type="button" style="display:none;" disabled>¡AL ATAQUE!</button>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El tablero está tapado.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin"></h2>
+        <div class="marcador" id="mFin"></div>
+        <p id="sFin"></p>
+        <button class="principal" id="btnOtra" type="button">OTRA PARTIDA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVerTablero" type="button">VER EL TABLERO</button>
+            <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <ul>
+            <li>Primero colocas tu flota: diez barcos, de cuatro, tres, dos y una casilla. <b>No pueden tocarse entre sí</b>, ni siquiera en diagonal.</li>
+            <li>Toca un barco de la lista y luego la casilla donde quieres la proa. Con <b>↻ GIRAR</b> lo pones de pie o tumbado, y tocando un barco ya puesto lo quitas.</li>
+            <li>Luego se dispara por turnos tocando una casilla del tablero enemigo.</li>
+            <li><b>Si aciertas, vuelves a disparar.</b> Solo pasa el turno cuando das en agua.</li>
+            <li>Al hundir un barco, el agua de alrededor se marca sola: por la regla de que no se tocan, ahí no puede haber nada.</li>
+            <li>Gana quien hunda antes los diez barcos del otro.</li>
+        </ul>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="aviso-flotante"></div>
+
+<script>
+/* ==========================================================
+   MOTOR DE HUNDIR LA FLOTA
+   Reglas españolas: tablero de 10x10, diez barcos que NO pueden tocarse
+   entre sí (ni siquiera en diagonal), y si aciertas vuelves a disparar.
+
+   Se mantiene aparte del HTML para poder ejercitarlo en Node sin DOM; el
+   script de empaquetado lo mete dentro del juego.
+   ========================================================== */
+
+const LADO = 10;
+const CASILLAS = LADO * LADO;
+
+/* La flota clásica: 1 de cuatro, 2 de tres, 3 de dos y 4 de uno.
+   Veinte casillas ocupadas de cien. */
+const FLOTA = [
+    { nombre: 'Portaaviones', largo: 4, cuantos: 1 },
+    { nombre: 'Acorazado',    largo: 3, cuantos: 2 },
+    { nombre: 'Crucero',      largo: 2, cuantos: 3 },
+    { nombre: 'Submarino',    largo: 1, cuantos: 4 }
+];
+
+const TOTAL_BARCOS = FLOTA.reduce((a, t) => a + t.cuantos, 0);
+const TOTAL_CASILLAS_BARCO = FLOTA.reduce((a, t) => a + t.cuantos * t.largo, 0);
+
+/* Resultados de un disparo */
+const AGUA = 'agua', TOCADO = 'tocado', HUNDIDO = 'hundido', REPETIDO = 'repetido';
+
+const indice = (f, c) => f * LADO + c;
+const filaDe = (i) => Math.floor(i / LADO);
+const colDe = (i) => i % LADO;
+
+function barajar(lista, azar) {
+    const copia = lista.slice();
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    }
+    return copia;
+}
+
+/* Las casillas que ocuparía un barco puesto ahí, o null si se sale */
+function celdasDe(fila, col, largo, horizontal) {
+    if (fila < 0 || col < 0) return null;
+    if (horizontal && col + largo > LADO) return null;
+    if (!horizontal && fila + largo > LADO) return null;
+
+    const celdas = [];
+    for (let k = 0; k < largo; k++) {
+        celdas.push(horizontal ? indice(fila, col + k) : indice(fila + k, col));
+    }
+    return celdas;
+}
+
+/* Las ocho casillas que rodean a una, sin salirse del tablero */
+function vecinas(i) {
+    const f = filaDe(i), c = colDe(i);
+    const salida = [];
+    for (let df = -1; df <= 1; df++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            if (!df && !dc) continue;
+            const nf = f + df, nc = c + dc;
+            if (nf < 0 || nc < 0 || nf >= LADO || nc >= LADO) continue;
+            salida.push(indice(nf, nc));
+        }
+    }
+    return salida;
+}
+
+/* ¿Cabe el barco? `ocupadas` es un array de CASILLAS con el id del barco que
+   hay en cada una, o 0.
+
+   La regla de que los barcos no se toquen no es un adorno: sin ella, dos
+   barcos pegados se leen como uno solo al recibir disparos y no hay forma de
+   saber cuándo se ha hundido cuál. */
+function cabe(ocupadas, celdas) {
+    if (!celdas) return false;
+    for (const i of celdas) {
+        if (ocupadas[i]) return false;
+        for (const v of vecinas(i)) {
+            /* Puede tocar casillas del propio barco que se está colocando */
+            if (ocupadas[v] && celdas.indexOf(v) === -1) return false;
+        }
+    }
+    return true;
+}
+
+function flotaVacia() {
+    return { ocupadas: new Array(CASILLAS).fill(0), barcos: [] };
+}
+
+function ponerBarco(flota, plantilla, celdas) {
+    const id = flota.barcos.length + 1;
+    flota.barcos.push({
+        id, nombre: plantilla.nombre, largo: plantilla.largo,
+        celdas: celdas.slice(), tocadas: [], hundido: false
+    });
+    celdas.forEach(i => { flota.ocupadas[i] = id; });
+    return id;
+}
+
+/* Reparte la flota entera al azar. Devuelve null si no lo consigue, para
+   que quien llama reintente en lugar de entregar media flota. */
+function colocarAlAzar(azar) {
+    azar = azar || Math.random;
+
+    for (let intentoGlobal = 0; intentoGlobal < 40; intentoGlobal++) {
+        const flota = flotaVacia();
+        let bien = true;
+
+        /* De mayor a menor: los grandes tienen menos sitios donde caber y hay
+           que colocarlos mientras el tablero está despejado. */
+        for (const tipo of FLOTA) {
+            for (let n = 0; n < tipo.cuantos && bien; n++) {
+                let puesto = false;
+
+                for (let intento = 0; intento < 400 && !puesto; intento++) {
+                    const horizontal = azar() < 0.5;
+                    const fila = Math.floor(azar() * LADO);
+                    const col = Math.floor(azar() * LADO);
+                    const celdas = celdasDe(fila, col, tipo.largo, horizontal);
+                    if (!cabe(flota.ocupadas, celdas)) continue;
+                    ponerBarco(flota, tipo, celdas);
+                    puesto = true;
+                }
+                if (!puesto) bien = false;
+            }
+            if (!bien) break;
+        }
+
+        if (bien && flota.barcos.length === TOTAL_BARCOS) return flota;
+    }
+    return null;
+}
+
+/* ==========================================================
+   DISPAROS
+   ========================================================== */
+
+/* `tiros` es un array de CASILLAS: 0 sin disparar, 1 agua, 2 tocado. */
+function disparar(flota, tiros, i) {
+    if (i < 0 || i >= CASILLAS) return { resultado: REPETIDO };
+    if (tiros[i]) return { resultado: REPETIDO };
+
+    const id = flota.ocupadas[i];
+    if (!id) {
+        tiros[i] = 1;
+        return { resultado: AGUA, casilla: i };
+    }
+
+    tiros[i] = 2;
+    const barco = flota.barcos[id - 1];
+    if (barco.tocadas.indexOf(i) === -1) barco.tocadas.push(i);
+
+    if (barco.tocadas.length === barco.largo) {
+        barco.hundido = true;
+        /* Al hundirse, el agua de alrededor se marca sola: por la regla de
+           que los barcos no se tocan, ahí no puede haber nada. Ahorra
+           disparos y es lo que haría cualquiera con lápiz y papel. */
+        const alrededor = [];
+        barco.celdas.forEach(c => vecinas(c).forEach(v => {
+            if (!tiros[v] && alrededor.indexOf(v) === -1) {
+                tiros[v] = 1;
+                alrededor.push(v);
+            }
+        }));
+        return { resultado: HUNDIDO, casilla: i, barco, alrededor };
+    }
+    return { resultado: TOCADO, casilla: i, barco };
+}
+
+function flotaHundida(flota) {
+    return flota.barcos.every(b => b.hundido);
+}
+
+function barcosAFlote(flota) {
+    return flota.barcos.filter(b => !b.hundido);
+}
+
+/* ==========================================================
+   LA MÁQUINA
+   Lo que la máquina sabe es solo lo que vería un rival: dónde ha disparado,
+   qué resultó agua y qué tocado, y qué barcos ha hundido. Nunca mira la
+   flota del contrario.
+   ========================================================== */
+function conocimientoNuevo() {
+    return {
+        tiros: new Array(CASILLAS).fill(0),
+        tocadasVivas: [],        // tocados que todavía no se sabe de qué barco
+        largosRestantes: FLOTA.flatMap(t => new Array(t.cuantos).fill(t.largo))
+    };
+}
+
+/* Se avisa a la máquina del resultado de su propio disparo */
+function apuntarResultado(con, i, resultado, barco) {
+    con.tiros[i] = resultado === AGUA ? 1 : 2;
+
+    if (resultado === TOCADO) {
+        con.tocadasVivas.push(i);
+    } else if (resultado === HUNDIDO && barco) {
+        /* Las casillas del barco hundido salen de la lista de pistas, y el
+           agua de alrededor se da por sabida. */
+        con.tocadasVivas = con.tocadasVivas.filter(x => barco.celdas.indexOf(x) === -1);
+        barco.celdas.forEach(c => {
+            con.tiros[c] = 2;
+            vecinas(c).forEach(v => { if (!con.tiros[v]) con.tiros[v] = 1; });
+        });
+        const pos = con.largosRestantes.indexOf(barco.largo);
+        if (pos !== -1) con.largosRestantes.splice(pos, 1);
+    }
+}
+
+function librePara(con, celdas) {
+    if (!celdas) return false;
+    return celdas.every(i => con.tiros[i] !== 1);
+}
+
+/* Mapa de probabilidad: por cada barco que sigue a flote se prueban todas
+   sus colocaciones posibles que no contradigan lo ya sabido, y cada casilla
+   suma un punto por cada colocación que pasa por ella. Las casillas que
+   tocan un impacto sin hundir valen mucho más, porque ahí hay barco seguro. */
+function mapaProbabilidad(con) {
+    const mapa = new Array(CASILLAS).fill(0);
+    const largos = [...new Set(con.largosRestantes)];
+
+    for (const largo of largos) {
+        for (let f = 0; f < LADO; f++) {
+            for (let c = 0; c < LADO; c++) {
+                for (const horizontal of [true, false]) {
+                    if (largo === 1 && !horizontal) continue;   // no duplicar los de una casilla
+                    const celdas = celdasDe(f, c, largo, horizontal);
+                    if (!librePara(con, celdas)) continue;
+
+                    /* Cuántos impactos sin resolver cubre esta colocación */
+                    const cubre = celdas.filter(i => con.tocadasVivas.indexOf(i) !== -1).length;
+                    const peso = cubre > 0 ? 60 * cubre : 1;
+
+                    celdas.forEach(i => { if (!con.tiros[i]) mapa[i] += peso; });
+                }
+            }
+        }
+    }
+    return mapa;
+}
+
+/* Casillas pegadas a un impacto sin hundir: el modo "rematar" */
+function candidatasDeRemate(con) {
+    const salida = [];
+    for (const t of con.tocadasVivas) {
+        const f = filaDe(t), c = colDe(t);
+        for (const [df, dc] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+            const nf = f + df, nc = c + dc;
+            if (nf < 0 || nc < 0 || nf >= LADO || nc >= LADO) continue;
+            const i = indice(nf, nc);
+            if (con.tiros[i]) continue;
+            if (salida.indexOf(i) === -1) salida.push(i);
+        }
+    }
+
+    /* Con dos o más impactos en línea, el barco va en esa dirección: se
+       prueban solo los dos extremos y no los cuatro costados. */
+    if (con.tocadasVivas.length >= 2) {
+        const enLinea = salida.filter(i => {
+            const f = filaDe(i), c = colDe(i);
+            const mismaFila = con.tocadasVivas.filter(t => filaDe(t) === f).length >= 2;
+            const mismaCol = con.tocadasVivas.filter(t => colDe(t) === c).length >= 2;
+            return mismaFila || mismaCol;
+        });
+        if (enLinea.length) return enLinea;
+    }
+    return salida;
+}
+
+function libres(con) {
+    const salida = [];
+    for (let i = 0; i < CASILLAS; i++) if (!con.tiros[i]) salida.push(i);
+    return salida;
+}
+
+/* Cuántas veces persigue la máquina un barco tocado.
+   Es la única palanca de dificultad que de verdad se nota. Lo medí: con esta
+   flota, buscar mejor apenas cambia nada (58,4 disparos de media rematando
+   siempre y al azar, frente a 56,2 con mapa de probabilidad), porque los
+   cuatro submarinos de una casilla no dejan ninguna pista que explotar y el
+   final de la partida es registrar el tablero a ciegas. Perseguir o no
+   perseguir, en cambio, va de 75 disparos a 58. */
+const REMATE = { facil: 0, normal: 0.4, dificil: 1 };
+
+/* Elige dónde dispara la máquina.
+   facil:   nunca persigue un tocado, dispara a ciegas
+   normal:  lo persigue, pero a veces lo deja a medias
+   dificil: lo persigue siempre y busca por mapa de probabilidad */
+function elegirDisparo(con, nivel, azar) {
+    azar = azar || Math.random;
+    const disponibles = libres(con);
+    if (!disponibles.length) return -1;
+
+    const persigue = REMATE[nivel] === undefined ? 1 : REMATE[nivel];
+    const remate = persigue > 0 ? candidatasDeRemate(con) : [];
+    if (remate.length && azar() < persigue) {
+        return remate[Math.floor(azar() * remate.length)];
+    }
+
+    if (nivel === 'facil') {
+        return disponibles[Math.floor(azar() * disponibles.length)];
+    }
+
+    if (nivel === 'dificil') {
+        const mapa = mapaProbabilidad(con);
+        let mejor = -1, mejorValor = -1;
+        for (const i of disponibles) {
+            if (mapa[i] > mejorValor) { mejorValor = mapa[i]; mejor = i; }
+        }
+        if (mejor !== -1 && mejorValor > 0) return mejor;
+        return disponibles[Math.floor(azar() * disponibles.length)];
+    }
+
+    /* Normal: damero. El barco más pequeño ocupa una casilla, así que el
+       damero no garantiza nada, pero sigue siendo mejor que el azar puro
+       para encontrar los grandes. */
+    const damero = disponibles.filter(i => (filaDe(i) + colDe(i)) % 2 === 0);
+    const bolsa = damero.length ? damero : disponibles;
+    return bolsa[Math.floor(azar() * bolsa.length)];
+}
+
+/* ==========================================================
+   ALMACENAMIENTO
+   ========================================================== */
+const almacenOK = (() => {
+    try {
+        const p = '__flota__';
+        localStorage.setItem(p, '1');
+        localStorage.removeItem(p);
+        return true;
+    } catch (e) { return false; }
+})();
+
+/* ==========================================================
+   AUDIO
+   Sintetizado con Web Audio: sin archivos ni dependencias, suena igual sin
+   conexión. Música y efectos arrancan SILENCIADOS; además de ser lo educado,
+   el navegador bloquea el audio hasta que la persona toca la página, así que
+   un contexto creado al cargar nacería suspendido y el primer sonido se
+   perdería.
+   ========================================================== */
+const CLAVE_AUDIO = 'flotaAudio';
+const VOL_MUSICA = 0.5, VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15, PASOS = 32;
+
+const audio = {
+    musica: false, efectos: false,
+    ctx: null, busMusica: null, busEfectos: null,
+    proximo: 0, paso: 0, timerId: null
+};
+
+if (almacenOK) {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica = g.musica === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
+
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({ musica: audio.musica, efectos: audio.efectos }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
+        osc.connect(vol);
+        vol.connect(bus);
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frec, inicio);
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
+}
+
+/* ---------- MÚSICA ----------
+   Mar de fondo: bucle lento en menor, sin percusión, para acompañar una
+   partida que es de esperar y pensar. */
+const ACORDES = [
+    { bajo: 55.00, notas: [110.00, 130.81, 164.81] },   // La menor
+    { bajo: 73.42, notas: [146.83, 174.61, 220.00] },   // Re menor
+    { bajo: 61.74, notas: [123.47, 146.83, 185.00] },   // Si disminuido
+    { bajo: 82.41, notas: [164.81, 196.00, 246.94] }    // Mi menor
+];
+
+function duracionPaso() { return 30 / 66; }
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    if (paso % 8 === 0) voz(audio.busMusica, acorde.bajo, t, dur * 3.8, 'triangle', 0.19);
+    if (paso % 4 === 0) {
+        const nota = acorde.notas[[0, 2, 1][(paso >> 2) % 3]];
+        voz(audio.busMusica, nota, t, dur * 2.8, 'sine', 0.06);
+    }
+}
+
+/* Programador con vista adelantada: el temporizador solo despierta a mirar y
+   las notas se encolan con la marca de tiempo exacta del reloj de audio. Una
+   nota por vuelta de setTimeout sonaría coja. */
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+const sonPulsar  = () => efecto(880, 0.03, 'square', 0.045);
+const sonColocar = () => efecto(420, 0.05, 'triangle', 0.06);
+const sonAgua    = () => { efecto(300, 0.09, 'sine', 0.06); efecto(180, 0.18, 'sine', 0.05, 0.06); };
+const sonTocado  = () => { efecto(180, 0.10, 'sawtooth', 0.08); efecto(90, 0.22, 'sawtooth', 0.07, 0.05); };
+const sonHundido = () => {
+    efecto(200, 0.12, 'sawtooth', 0.09);
+    efecto(140, 0.16, 'sawtooth', 0.08, 0.10);
+    efecto(80, 0.40, 'sawtooth', 0.08, 0.22);
+};
+const sonNada    = () => efecto(160, 0.12, 'sawtooth', 0.05);
+const sonGana    = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.32, 'square', 0.07, 0.27);
+};
+const sonPierde  = () => {
+    efecto(311, 0.18, 'triangle', 0.08);
+    efecto(233, 0.22, 'triangle', 0.08, 0.17);
+    efecto(175, 0.50, 'triangle', 0.08, 0.36);
+};
+
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada' : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
+
+/* ==========================================================
+   ESTADO
+   ========================================================== */
+const LETRAS = 'ABCDEFGHIJ';
+const ESPERA_MAQUINA = 700;      // lo que "piensa" antes de disparar
+const ESPERA_MIRAR = 1100;       // lo que se queda viendo tu tablero
+
+const partida = {
+    nivel: 'normal',
+    fase: 'colocar',             // 'colocar' | 'jugar' | 'fin'
+    miFlota: null,
+    suFlota: null,
+    misTiros: null,              // mis disparos sobre su flota
+    susTiros: null,              // sus disparos sobre la mía
+    conocimiento: null,          // lo que la máquina sabe de mi flota
+    turno: 'yo',
+    pestana: 'enemigo',
+    disparos: 0,
+    jugando: false,
+    pausado: false,
+    ocupado: false,              // mientras la máquina juega, no se admite nada
+    ladoCelda: 30,
+    ultima: -1,
+
+    /* Colocación */
+    porColocar: [],              // plantillas pendientes
+    eligiendo: 0,                // índice de la que se está colocando
+    horizontal: true
+};
+
+/* ==========================================================
+   PANTALLAS Y AVISOS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let temporizadorAviso = null;
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso-flotante');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('vista');
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => el.classList.remove('vista'), 1500);
+}
+
+function rechazar() {
+    const t = document.getElementById('tablero');
+    t.classList.remove('rechaza');
+    void t.offsetWidth;
+    t.classList.add('rechaza');
+    sonNada();
+}
+
+/* ==========================================================
+   TABLERO EN PANTALLA
+   ========================================================== */
+let casillas = [];
+
+function construirTablero() {
+    const cont = document.getElementById('tablero');
+    cont.innerHTML = '';
+    casillas = [];
+
+    /* Esquina vacía + letras de columna */
+    cont.appendChild(document.createElement('div'));
+    for (let c = 0; c < LADO; c++) {
+        const d = document.createElement('div');
+        d.className = 'rotulo';
+        d.textContent = LETRAS[c];
+        cont.appendChild(d);
+    }
+
+    for (let f = 0; f < LADO; f++) {
+        const r = document.createElement('div');
+        r.className = 'rotulo';
+        r.textContent = String(f + 1);
+        cont.appendChild(r);
+
+        for (let c = 0; c < LADO; c++) {
+            const d = document.createElement('div');
+            d.className = 'casilla';
+            d.dataset.i = String(indice(f, c));
+            d.setAttribute('role', 'gridcell');
+            cont.appendChild(d);
+            casillas[indice(f, c)] = d;
+        }
+    }
+    ajustarTablero();
+}
+
+/* El lado de la casilla se mide, no se calcula restando a ojo lo que ocupan
+   barra, pestañas y listas: ese número deja de valer al girar la pantalla o
+   al aparecer la barra de direcciones del móvil. */
+function ajustarTablero() {
+    const zona = document.getElementById('zonaTablero');
+    if (!zona) return;
+    const ancho = zona.clientWidth, alto = zona.clientHeight;
+    if (!ancho || !alto) return;
+
+    /* 10 casillas + la fila de rótulos, que mide 0,6 de una casilla */
+    const unidades = LADO + 0.6;
+    const hueco = 1;
+    const porAncho = (ancho - hueco * LADO) / unidades;
+    const porAlto = (alto - hueco * LADO) / unidades;
+    const lado = Math.max(16, Math.floor(Math.min(porAncho, porAlto)));
+
+    partida.ladoCelda = lado;
+    const t = document.getElementById('tablero');
+    t.style.setProperty('--celda', lado + 'px');
+    t.style.setProperty('--rotulo', Math.round(lado * 0.6) + 'px');
+}
+
+function nombreCasilla(i) {
+    return LETRAS[colDe(i)] + (filaDe(i) + 1);
+}
+
+/* ==========================================================
+   PINTAR
+   ========================================================== */
+function pintarTablero() {
+    const mia = partida.pestana === 'mia';
+    const flota = mia ? partida.miFlota : partida.suFlota;
+    const tiros = mia ? partida.susTiros : partida.misTiros;
+
+    for (let i = 0; i < CASILLAS; i++) {
+        const d = casillas[i];
+        if (!d) continue;
+        d.className = 'casilla';
+        d.textContent = '';
+
+        /* En mi tablero se ven mis barcos; en el enemigo, solo lo descubierto */
+        if (mia && flota && flota.ocupadas[i]) {
+            const barco = flota.barcos[flota.ocupadas[i] - 1];
+            d.classList.add('barco');
+            if (barco.hundido) d.classList.add('hundido');
+        }
+
+        if (!tiros) continue;
+        if (tiros[i] === 1) { d.classList.add('agua'); d.textContent = '·'; }
+        else if (tiros[i] === 2) {
+            const barco = flota.barcos[flota.ocupadas[i] - 1];
+            if (barco && barco.hundido) { d.classList.add('hundido'); d.textContent = '✖'; }
+            else { d.classList.add('tocado'); d.textContent = '✖'; }
+        }
+    }
+
+    if (partida.ultima >= 0 && casillas[partida.ultima]) {
+        casillas[partida.ultima].classList.add('ultima');
+    }
+}
+
+function pintarColocacion() {
+    for (let i = 0; i < CASILLAS; i++) {
+        const d = casillas[i];
+        if (!d) continue;
+        d.className = 'casilla';
+        d.textContent = '';
+        if (partida.miFlota.ocupadas[i]) d.classList.add('barco');
+    }
+}
+
+function pintarBarra() {
+    const colocando = partida.fase === 'colocar';
+
+    /* Mientras se coloca no hay enemigo ni disparos: enseñar "0 MI FLOTA" y
+       "10 ENEMIGO" ahí no informa de nada y parece una mala noticia. */
+    document.getElementById('dSuyos').style.display = colocando ? 'none' : '';
+    document.getElementById('dDisparos').style.display = colocando ? 'none' : '';
+
+    if (colocando) {
+        const puestos = partida.porColocar.filter(p => p.puesto).length;
+        document.querySelector('#dMios b').textContent = puestos + '/' + partida.porColocar.length;
+        document.querySelector('#dMios span').textContent = 'COLOCADOS';
+        return;
+    }
+
+    document.querySelector('#dMios span').textContent = 'MI FLOTA';
+    document.querySelector('#dMios b').textContent =
+        partida.miFlota ? String(barcosAFlote(partida.miFlota).length) : '10';
+    document.querySelector('#dSuyos b').textContent =
+        partida.suFlota ? String(barcosAFlote(partida.suFlota).length) : '10';
+    document.querySelector('#dDisparos b').textContent = String(partida.disparos);
+}
+
+function pintarFlotas() {
+    const cont = document.getElementById('flotas');
+    cont.innerHTML = '';
+    const mia = partida.pestana === 'mia';
+    const flota = mia ? partida.miFlota : partida.suFlota;
+    if (!flota || partida.fase === 'colocar') return;
+
+    flota.barcos.forEach(b => {
+        const d = document.createElement('div');
+        d.className = 'barquito' + (b.hundido ? ' hundido' : '');
+        const casco = document.createElement('span');
+        casco.className = 'casco';
+        d.appendChild(casco);
+        const txt = document.createElement('span');
+        txt.textContent = b.largo;
+        d.appendChild(txt);
+        cont.appendChild(d);
+    });
+}
+
+function pintarPorColocar() {
+    const cont = document.getElementById('porColocar');
+    cont.innerHTML = '';
+    if (partida.fase !== 'colocar') return;
+
+    partida.porColocar.forEach((p, idx) => {
+        const b = document.createElement('button');
+        b.className = 'porPoner';
+        b.type = 'button';
+        b.dataset.idx = String(idx);
+        b.disabled = p.puesto;
+        b.setAttribute('aria-pressed', String(idx === partida.eligiendo && !p.puesto));
+        b.textContent = '█'.repeat(p.largo);
+        cont.appendChild(b);
+    });
+}
+
+function pintarEstado(texto, color) {
+    const el = document.getElementById('estado');
+    el.textContent = texto || '';
+    el.style.color = color || '';
+}
+
+function pintarPestanas() {
+    document.getElementById('pestEnemigo').setAttribute('aria-pressed', String(partida.pestana === 'enemigo'));
+    document.getElementById('pestMia').setAttribute('aria-pressed', String(partida.pestana === 'mia'));
+}
+
+function pintarTodo() {
+    if (partida.fase === 'colocar') pintarColocacion();
+    else pintarTablero();
+    pintarBarra();
+    pintarFlotas();
+    pintarPorColocar();
+    pintarPestanas();
+}
+
+/* ==========================================================
+   COLOCAR LA FLOTA
+   ========================================================== */
+function empezarColocacion() {
+    partida.fase = 'colocar';
+    partida.miFlota = flotaVacia();
+    partida.horizontal = true;
+    partida.porColocar = [];
+    FLOTA.forEach(t => {
+        for (let n = 0; n < t.cuantos; n++) {
+            partida.porColocar.push({ nombre: t.nombre, largo: t.largo, puesto: false });
+        }
+    });
+    partida.eligiendo = 0;
+    partida.pestana = 'mia';
+    partida.disparos = 0;
+    partida.jugando = false;
+    partida.ultima = -1;
+
+    document.getElementById('pestanas').style.display = 'none';
+    document.getElementById('btnsColocar').style.display = '';
+    document.getElementById('btnAtacar').style.display = '';
+    document.getElementById('btnAtacar').disabled = true;
+
+    mostrarPantalla('pJuego');
+    construirTablero();
+    pintarTodo();
+    pintarEstado('COLOCA TU FLOTA');
+}
+
+function siguientePorColocar() {
+    const idx = partida.porColocar.findIndex(p => !p.puesto);
+    partida.eligiendo = idx;
+    return idx;
+}
+
+function colocarEnCasilla(i) {
+    const idx = partida.eligiendo;
+    if (idx === -1 || !partida.porColocar[idx] || partida.porColocar[idx].puesto) return;
+
+    const p = partida.porColocar[idx];
+    const celdas = celdasDe(filaDe(i), colDe(i), p.largo, partida.horizontal);
+
+    if (!cabe(partida.miFlota.ocupadas, celdas)) {
+        rechazar();
+        avisar(celdas ? 'Ahí no cabe o toca otro barco' : 'Se sale del tablero', true);
+        return;
+    }
+
+    ponerBarco(partida.miFlota, p, celdas);
+    p.puesto = true;
+    p.id = partida.miFlota.barcos.length;
+    sonColocar();
+
+    siguientePorColocar();
+    pintarTodo();
+
+    const faltan = partida.porColocar.filter(x => !x.puesto).length;
+    document.getElementById('btnAtacar').disabled = faltan > 0;
+    pintarEstado(faltan ? 'TE QUEDAN ' + faltan : 'FLOTA LISTA', faltan ? '' : 'var(--acento)');
+}
+
+/* Tocar un barco ya puesto lo devuelve a la lista */
+function quitarDeCasilla(i) {
+    const id = partida.miFlota.ocupadas[i];
+    if (!id) return false;
+
+    const barco = partida.miFlota.barcos.find(b => b.id === id);
+    if (!barco) return false;
+
+    barco.celdas.forEach(c => { partida.miFlota.ocupadas[c] = 0; });
+
+    /* Se quita del array y se renumeran los que venían detrás, porque el id
+       es la posición en `ocupadas` y si no se queda apuntando a otro barco. */
+    const pos = partida.miFlota.barcos.indexOf(barco);
+    partida.miFlota.barcos.splice(pos, 1);
+    partida.miFlota.barcos.forEach((b, n) => {
+        b.id = n + 1;
+        b.celdas.forEach(c => { partida.miFlota.ocupadas[c] = b.id; });
+    });
+
+    /* Y vuelve a la lista de pendientes: el primero de su tamaño que esté
+       puesto. */
+    const dev = partida.porColocar.find(p => p.puesto && p.largo === barco.largo);
+    if (dev) dev.puesto = false;
+
+    sonColocar();
+    siguientePorColocar();
+    pintarTodo();
+    document.getElementById('btnAtacar').disabled = true;
+    pintarEstado('TE QUEDAN ' + partida.porColocar.filter(x => !x.puesto).length);
+    return true;
+}
+
+function colocarTodoAlAzar() {
+    const flota = colocarAlAzar();
+    if (!flota) { avisar('No ha salido, prueba otra vez', true); return; }
+    partida.miFlota = flota;
+    partida.porColocar.forEach(p => { p.puesto = true; });
+    partida.eligiendo = -1;
+    sonColocar();
+    pintarTodo();
+    document.getElementById('btnAtacar').disabled = false;
+    pintarEstado('FLOTA LISTA', 'var(--acento)');
+}
+
+function vaciarTablero() {
+    partida.miFlota = flotaVacia();
+    partida.porColocar.forEach(p => { p.puesto = false; });
+    partida.eligiendo = 0;
+    pintarTodo();
+    document.getElementById('btnAtacar').disabled = true;
+    pintarEstado('COLOCA TU FLOTA');
+}
+
+/* ==========================================================
+   LA PARTIDA
+   ========================================================== */
+function empezarBatalla() {
+    if (partida.porColocar.some(p => !p.puesto)) { rechazar(); return; }
+
+    let suya = null;
+    for (let n = 0; n < 20 && !suya; n++) suya = colocarAlAzar();
+    if (!suya) { avisar('No se ha podido repartir la flota enemiga', true); return; }
+
+    partida.suFlota = suya;
+    partida.misTiros = new Array(CASILLAS).fill(0);
+    partida.susTiros = new Array(CASILLAS).fill(0);
+    partida.conocimiento = conocimientoNuevo();
+    partida.turno = 'yo';
+    partida.fase = 'jugar';
+    partida.jugando = true;
+    partida.pausado = false;
+    partida.ocupado = false;
+    partida.disparos = 0;
+    partida.ultima = -1;
+    partida.pestana = 'enemigo';
+
+    document.getElementById('pestanas').style.display = '';
+    document.getElementById('btnsColocar').style.display = 'none';
+    document.getElementById('btnAtacar').style.display = 'none';
+
+    pintarTodo();
+    pintarEstado('TE TOCA: DISPARA', 'var(--acento)');
+}
+
+function miDisparo(i) {
+    if (!partida.jugando || partida.pausado || partida.ocupado) return;
+    if (partida.turno !== 'yo') return;
+    if (partida.pestana !== 'enemigo') { avisar('Dispara en el tablero enemigo', true); return; }
+    if (partida.misTiros[i]) { rechazar(); return; }
+
+    const r = disparar(partida.suFlota, partida.misTiros, i);
+    partida.disparos++;
+    partida.ultima = i;
+
+    if (r.resultado === AGUA) {
+        sonAgua();
+        pintarTodo();
+        pintarEstado('AGUA EN ' + nombreCasilla(i), 'var(--apagado)');
+        partida.turno = 'maquina';
+        partida.ocupado = true;
+        setTimeout(turnoMaquina, ESPERA_MAQUINA);
+        return;
+    }
+
+    if (r.resultado === HUNDIDO) {
+        sonHundido();
+        pintarTodo();
+        if (flotaHundida(partida.suFlota)) { terminar('yo'); return; }
+        pintarEstado('¡HUNDIDO! REPITES', 'var(--rosa)');
+    } else {
+        sonTocado();
+        pintarTodo();
+        pintarEstado('¡TOCADO! REPITES', 'var(--amarillo)');
+    }
+}
+
+function turnoMaquina() {
+    if (!partida.jugando) return;
+    if (partida.pausado) { setTimeout(turnoMaquina, 400); return; }
+
+    /* Se enseña mi tablero mientras dispara: si no, el jugador no llega a
+       ver dónde le han dado. */
+    partida.pestana = 'mia';
+    pintarTodo();
+
+    const i = elegirDisparo(partida.conocimiento, partida.nivel);
+    if (i === -1) { terminar('yo'); return; }
+
+    const r = disparar(partida.miFlota, partida.susTiros, i);
+    apuntarResultado(partida.conocimiento, i, r.resultado, r.barco);
+    partida.ultima = i;
+    pintarTodo();
+
+    if (r.resultado === AGUA) {
+        sonAgua();
+        pintarEstado('TE DISPARA A ' + nombreCasilla(i) + ': AGUA', 'var(--apagado)');
+        setTimeout(() => {
+            if (!partida.jugando) return;
+            partida.turno = 'yo';
+            partida.ocupado = false;
+            partida.pestana = 'enemigo';
+            partida.ultima = -1;
+            pintarTodo();
+            pintarEstado('TE TOCA: DISPARA', 'var(--acento)');
+        }, ESPERA_MIRAR);
+        return;
+    }
+
+    if (r.resultado === HUNDIDO) {
+        sonHundido();
+        pintarEstado('TE HUNDE UN BARCO EN ' + nombreCasilla(i), 'var(--rosa)');
+        if (flotaHundida(partida.miFlota)) { setTimeout(() => terminar('maquina'), 700); return; }
+    } else {
+        sonTocado();
+        pintarEstado('TE DA EN ' + nombreCasilla(i), 'var(--amarillo)');
+    }
+
+    /* Ha acertado: vuelve a disparar */
+    setTimeout(turnoMaquina, ESPERA_MAQUINA + 300);
+}
+
+function terminar(quien) {
+    partida.jugando = false;
+    partida.fase = 'fin';
+    partida.ocupado = false;
+
+    /* Al acabar se destapa la flota enemiga: se ve dónde estaba todo */
+    partida.suFlota.barcos.forEach(b => {
+        b.celdas.forEach(c => { if (!partida.misTiros[c]) partida.misTiros[c] = 0; });
+    });
+
+    const tFin = document.getElementById('tFin');
+    const mFin = document.getElementById('mFin');
+    const sFin = document.getElementById('sFin');
+
+    const mios = barcosAFlote(partida.miFlota).length;
+    const suyos = barcosAFlote(partida.suFlota).length;
+
+    if (quien === 'yo') {
+        tFin.textContent = '🏆 ¡FLOTA ENEMIGA HUNDIDA!';
+        tFin.style.color = 'var(--acento)';
+        sFin.textContent = 'En ' + partida.disparos + ' disparos, y te quedaban ' +
+                           mios + (mios === 1 ? ' barco a flote.' : ' barcos a flote.');
+        sonGana();
+    } else {
+        tFin.textContent = '💀 TE HAN HUNDIDO';
+        tFin.style.color = 'var(--rosa)';
+        sFin.textContent = 'Le quedaban ' + suyos +
+                           (suyos === 1 ? ' barco.' : ' barcos.') + ' Disparaste ' + partida.disparos + ' veces.';
+        sonPierde();
+    }
+    mFin.textContent = (10 - suyos) + ' · ' + (10 - mios);
+
+    pintarTodo();
+    setTimeout(() => abrirCapa('capaFin'), 650);
+}
+
+function pausar() {
+    if (!partida.jugando || partida.pausado) return;
+    partida.pausado = true;
+    pararMusica();
+    document.getElementById('zonaTablero').style.visibility = 'hidden';
+    abrirCapa('capaPausa');
+}
+
+function reanudar() {
+    if (!partida.pausado) return;
+    partida.pausado = false;
+    document.getElementById('zonaTablero').style.visibility = '';
+    arrancarMusica();
+    cerrarCapa('capaPausa');
+}
+
+function volverAlMenu() {
+    partida.jugando = false;
+    partida.pausado = false;
+    partida.ocupado = false;
+    document.getElementById('zonaTablero').style.visibility = '';
+    ['capaPausa', 'capaFin'].forEach(cerrarCapa);
+    mostrarPantalla('pMenu');
+}
+
+function cambiarPestana(cual) {
+    if (partida.fase !== 'jugar' && partida.fase !== 'fin') return;
+    partida.pestana = cual;
+    partida.ultima = -1;
+    pintarTodo();
+}
+
+/* ==========================================================
+   MENÚ
+   ========================================================== */
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+grupoSimple('grpNivel', (v) => { partida.nivel = v; });
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+    if (t.closest('.opcion, .principal, .secundario, .icono, .pestana, .porPoner')) sonPulsar();
+});
+
+document.getElementById('btnJugar').addEventListener('click', empezarColocacion);
+
+document.getElementById('tablero').addEventListener('click', (e) => {
+    const d = e.target.closest('.casilla');
+    if (!d || d.dataset.i === undefined) return;
+    const i = Number(d.dataset.i);
+
+    if (partida.fase === 'colocar') {
+        /* Si ahí ya hay un barco, el toque lo quita en vez de intentar poner
+           otro encima: es lo que uno espera al tocar algo que ya está. */
+        if (quitarDeCasilla(i)) return;
+        colocarEnCasilla(i);
+        return;
+    }
+    if (partida.fase === 'jugar') miDisparo(i);
+});
+
+document.getElementById('porColocar').addEventListener('click', (e) => {
+    const b = e.target.closest('.porPoner');
+    if (!b || b.disabled) return;
+    partida.eligiendo = Number(b.dataset.idx);
+    pintarPorColocar();
+});
+
+document.getElementById('btnGirar').addEventListener('click', () => {
+    partida.horizontal = !partida.horizontal;
+    document.getElementById('btnGirar').textContent =
+        partida.horizontal ? '↻ TUMBADO' : '↻ DE PIE';
+});
+
+document.getElementById('btnAzar').addEventListener('click', colocarTodoAlAzar);
+document.getElementById('btnBorrar').addEventListener('click', vaciarTablero);
+document.getElementById('btnAtacar').addEventListener('click', empezarBatalla);
+
+document.getElementById('pestEnemigo').addEventListener('click', () => cambiarPestana('enemigo'));
+document.getElementById('pestMia').addEventListener('click', () => cambiarPestana('mia'));
+
+document.getElementById('btnPausa').addEventListener('click', () => {
+    if (partida.pausado) reanudar(); else pausar();
+});
+
+document.getElementById('btnSeguir').addEventListener('click', reanudar);
+document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
+document.getElementById('btnOtra').addEventListener('click', empezarColocacion);
+document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
+document.getElementById('btnVerTablero').addEventListener('click', () => cerrarCapa('capaFin'));
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) {
+            if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
+            else { cerrarCapa('capaAyuda'); cerrarCapa('capaFin'); }
+        } else if (partida.jugando) pausar();
+        return;
+    }
+    if (partida.fase === 'colocar' && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        document.getElementById('btnGirar').click();
+    }
+});
+
+/* La música se corta al irse a otra pestaña: en segundo plano setTimeout se
+   frena a ~1 Hz, así que dejarla correr no la mantendría sonando, la
+   mantendría sonando mal. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else if (!partida.pausado) {
+        arrancarMusica();
+    }
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+pintarBotonesSonido();
+
+if (typeof ResizeObserver === 'function') {
+    try { new ResizeObserver(ajustarTablero).observe(document.getElementById('zonaTablero')); }
+    catch (e) { window.addEventListener('resize', ajustarTablero); }
+} else {
+    window.addEventListener('resize', ajustarTablero);
+}
+window.addEventListener('orientationchange', () => setTimeout(ajustarTablero, 120));
+
+/* Si en la visita anterior quedó algo encendido, el navegador sigue sin
+   permitir audio hasta el primer toque: se espera a ese gesto. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
+</script>
+</body>
+</html>
