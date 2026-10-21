@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Memory</title>
+<style>
+    :root {
+        --fondo: #0f0c2d;
+        --panel: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.16);
+        --acento: #00ffc8;
+        --rosa: #ff006e;
+        --amarillo: #ffcc00;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --dorso: #2a2170;
+        --cara: #16123d;
+        --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                  "Liberation Mono", "Courier New", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { height: 100%; }
+
+    body {
+        margin: 0;
+        /* Holgura SUMADA al inset: Chrome en Android devuelve
+           safe-area-inset-bottom = 0 aunque la barra de gestos tape parte de
+           lo que el viewport dice que hay. */
+        padding: calc(env(safe-area-inset-top, 0px) + 14px)
+                 calc(env(safe-area-inset-right, 0px) + 6px)
+                 calc(env(safe-area-inset-bottom, 0px) + 20px)
+                 calc(env(safe-area-inset-left, 0px) + 6px);
+        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font-family: var(--fuente);
+        height: 100vh;
+        height: 100dvh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .pantalla { display: none; flex-direction: column; width: 100%; max-width: 620px; height: 100%; min-height: 0; }
+    .pantalla.activa { display: flex; }
+
+    .scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    h1 { font-size: clamp(1.4rem, 6.5vw, 2.2rem); margin: 10px 0 2px; text-align: center; letter-spacing: 2px; }
+
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--rosa));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+    }
+
+    .lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+    fieldset { border: 1px solid var(--borde); border-radius: 12px; margin: 0 0 12px; padding: 10px; }
+    legend { color: var(--apagado); font-size: 0.64rem; letter-spacing: 2px; padding: 0 6px; }
+
+    .opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .opcion {
+        flex: 1 1 auto;
+        min-width: 94px;
+        padding: 10px 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    #grpTema .opcion { min-width: 0; flex: 1 1 30%; font-size: 0.72rem; padding: 9px 4px; }
+
+    .opcion[aria-pressed="true"] {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.16);
+        color: var(--acento);
+        font-weight: bold;
+    }
+
+    .opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; }
+    .opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+    input[type="text"] {
+        width: 100%;
+        padding: 11px;
+        margin-bottom: 8px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: rgba(0, 0, 0, 0.25);
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.85rem;
+    }
+
+    input[type="text"]:focus { outline: none; border-color: var(--acento); }
+
+    .principal {
+        width: 100%;
+        padding: 15px;
+        margin-top: 2px;
+        border: 2px solid var(--acento);
+        border-radius: 12px;
+        background: rgba(0, 255, 200, 0.14);
+        color: var(--acento);
+        font: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario {
+        padding: 11px 16px;
+        border: 2px solid var(--borde);
+        border-radius: 10px;
+        background: transparent;
+        color: var(--apagado);
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+        touch-action: manipulation;
+    }
+
+    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+
+    .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .fila-btns > * { flex: 1 1 120px; }
+
+    @media (hover: hover) {
+        .opcion:hover { border-color: var(--acento); }
+        .principal:hover { background: rgba(0, 255, 200, 0.26); }
+        .secundario:hover { color: var(--texto); border-color: var(--texto); }
+    }
+
+    .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+    /* ---------- PARTIDA ---------- */
+    #barra {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        width: 100%;
+        padding: 5px 6px;
+        border: 1px solid var(--borde);
+        border-radius: 10px;
+        background: var(--panel);
+        font-size: 0.68rem;
+        flex: 0 0 auto;
+        flex-wrap: wrap;
+    }
+
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+    #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
+    #barra .dato span { color: var(--apagado); font-size: 0.52rem; letter-spacing: 0.5px; }
+    #barra .hueco { flex: 1 1 auto; }
+
+    .icono {
+        width: 34px;
+        height: 32px;
+        border: 2px solid var(--borde);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--texto);
+        font: inherit;
+        font-size: 0.8rem;
+        cursor: pointer;
+        touch-action: manipulation;
+        flex: 0 0 auto;
+    }
+
+    /* El turno manda en la pantalla cuando se juega a dos */
+    #turno {
+        flex: 0 0 auto;
+        text-align: center;
+        font-size: 0.8rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 6px 4px 4px;
+        min-height: 1.9em;
+    }
+
+    #turno .pastilla {
+        display: inline-block;
+        width: 0.75em;
+        height: 0.75em;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: -1px;
+    }
+
+    #zonaMesa {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 0;
+    }
+
+    #mesa {
+        display: grid;
+        gap: var(--hueco, 8px);
+        /* Sin esto, arrastrar sobre las cartas hace scroll de la página */
+        touch-action: manipulation;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* La carta es un contenedor con perspectiva; lo que gira es .interior */
+    .carta {
+        width: var(--carta);
+        height: var(--carta);
+        perspective: 600px;
+        cursor: pointer;
+        background: none;
+        border: 0;
+        padding: 0;
+        touch-action: manipulation;
+    }
+
+    .carta-interior {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.4s cubic-bezier(0.3, 0, 0.2, 1);
+        transform-style: preserve-3d;
+    }
+
+    .carta.vuelta .carta-interior { transform: rotateY(180deg); }
+
+    .cara, .dorso {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        /* El prefijo -webkit- sigue haciendo falta en Safari, y sin él las dos
+           caras de la carta se ven a la vez. */
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        /* Safari pinta mal las caras traseras si no hay un desplazamiento en Z */
+        transform: translateZ(0);
+    }
+
+    .dorso {
+        background: linear-gradient(145deg, var(--dorso), #1a1450);
+        border: 2px solid rgba(255, 255, 255, 0.14);
+        font-size: calc(var(--carta) * 0.42);
+        color: rgba(255, 255, 255, 0.22);
+    }
+
+    .cara {
+        background: var(--cara);
+        border: 2px solid var(--borde);
+        transform: rotateY(180deg) translateZ(0);
+        font-size: calc(var(--carta) * 0.5);
+        line-height: 1;
+    }
+
+    .carta.pareja .cara {
+        border-color: var(--acento);
+        background: rgba(0, 255, 200, 0.14);
+        box-shadow: 0 0 14px rgba(0, 255, 200, 0.3);
+    }
+
+    .carta.pareja { animation: acierto 0.45s ease-out; }
+
+    @keyframes acierto {
+        0%, 100% { transform: scale(1); }
+        45%      { transform: scale(1.09); }
+    }
+
+    .carta.fallo .carta-interior { animation: negar 0.42s; }
+
+    @keyframes negar {
+        0%, 100% { transform: rotateY(180deg) translateX(0); }
+        25%      { transform: rotateY(180deg) translateX(-5px); }
+        75%      { transform: rotateY(180deg) translateX(5px); }
+    }
+
+    /* Ya emparejadas: siguen visibles pero se apagan para no estorbar */
+    .carta.hecha { cursor: default; }
+    .carta.hecha .cara { opacity: 0.72; box-shadow: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+        .carta-interior { transition: none; }
+        .carta.pareja, .carta.fallo .carta-interior { animation: none; }
+    }
+
+    #pie {
+        flex: 0 0 auto;
+        text-align: center;
+        color: var(--apagado);
+        font-size: 0.6rem;
+        letter-spacing: 1px;
+        padding-top: 5px;
+        min-height: 1.3em;
+    }
+
+    /* ---------- CAPAS ---------- */
+    .capa {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 6, 26, 0.9);
+        padding: 16px;
+        z-index: 10;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .capa.activa { display: flex; }
+
+    .caja {
+        width: 100%;
+        max-width: 420px;
+        max-height: 100%;
+        overflow-y: auto;
+        border: 2px solid var(--borde);
+        border-radius: 16px;
+        background: #15113a;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .caja h2 { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: 1px; }
+    .caja p { color: var(--apagado); font-size: 0.78rem; margin: 0 0 12px; line-height: 1.5; }
+    .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
+    .caja .marcador { font-size: 1.5rem; font-weight: bold; margin: 6px 0 10px; }
+
+    #aviso-flotante {
+        position: fixed;
+        left: 50%;
+        top: calc(env(safe-area-inset-top, 0px) + 58px);
+        transform: translateX(-50%);
+        padding: 9px 16px;
+        border: 2px solid var(--acento);
+        border-radius: 10px;
+        background: #15113a;
+        color: var(--acento);
+        font-size: 0.75rem;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s;
+        z-index: 20;
+        max-width: 90vw;
+    }
+
+    #aviso-flotante.vista { opacity: 1; }
+    #aviso-flotante.malo { border-color: var(--rosa); color: var(--rosa); }
+
+    @media (orientation: landscape) and (max-height: 560px) {
+        body {
+            padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+        }
+        .pantalla { max-width: 900px; }
+        h1 { font-size: 1.3rem; margin: 4px 0 0; }
+        .lema { margin-bottom: 8px; }
+        #turno { font-size: 0.72rem; padding: 3px 4px 2px; min-height: 1.6em; }
+        #pie { display: none; }
+    }
+</style>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa" id="pMenu">
+    <div class="scroll">
+        <h1>ME<span>MORY</span></h1>
+        <p class="lema">Encuentra las parejas</p>
+
+        <fieldset>
+            <legend>JUGADORES</legend>
+            <div class="opciones" id="grpModo">
+                <button class="opcion" type="button" data-v="solo" aria-pressed="true">1 JUGADOR<span class="sub">contra el reloj</span></button>
+                <button class="opcion" type="button" data-v="dos" aria-pressed="false">2 JUGADORES<span class="sub">por turnos</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset id="fsNombres" style="display:none;">
+            <legend>NOMBRES</legend>
+            <input type="text" id="inpJ1" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 1">
+            <input type="text" id="inpJ2" maxlength="10" autocomplete="off" placeholder="Nombre del jugador 2">
+        </fieldset>
+
+        <fieldset>
+            <legend>CUÁNTAS PAREJAS</legend>
+            <div class="opciones" id="grpTamaño">
+                <button class="opcion" type="button" data-v="6" aria-pressed="false">6<span class="sub">para empezar</span></button>
+                <button class="opcion" type="button" data-v="8" aria-pressed="true">8<span class="sub">lo normal</span></button>
+                <button class="opcion" type="button" data-v="10" aria-pressed="false">10<span class="sub">cuesta</span></button>
+                <button class="opcion" type="button" data-v="12" aria-pressed="false">12<span class="sub">de memoria fina</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>DIBUJOS</legend>
+            <div class="opciones" id="grpTema"></div>
+        </fieldset>
+
+        <fieldset>
+            <legend>SONIDO</legend>
+            <div class="opciones">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+        <div style="height: 10px;"></div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="barra">
+        <div class="dato" id="dParejas"><b>0/8</b><span>PAREJAS</span></div>
+        <div class="dato" id="dIntentos"><b>0</b><span>INTENTOS</span></div>
+        <div class="dato" id="dTiempo"><b>0:00</b><span>TIEMPO</span></div>
+        <div class="dato" id="dUno" style="display:none;"><b>0</b><span>J1</span></div>
+        <div class="dato" id="dDos" style="display:none;"><b>0</b><span>J2</span></div>
+        <div class="hueco"></div>
+        <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="turno"></div>
+
+    <div id="zonaMesa"><div id="mesa" role="grid" aria-label="Cartas"></div></div>
+
+    <div id="pie">TOCA DOS CARTAS</div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj está parado y las cartas, tapadas.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtraDesdePausa" type="button">OTRA PARTIDA</button>
+            <button class="secundario" id="btnAbandonar" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="tFin">🏆 ¡TODAS ENCONTRADAS!</h2>
+        <div class="marcador" id="mFin"></div>
+        <p id="sFin"></p>
+        <button class="principal" id="btnOtra" type="button">OTRA PARTIDA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <ul>
+            <li>Toca una carta para darle la vuelta, y después otra.</li>
+            <li>Si las dos son iguales, se quedan descubiertas. Si no, vuelven a taparse.</li>
+            <li>A dos jugadores: cuando aciertas una pareja <b>sigues tú</b>. Si fallas, pasa el turno.</li>
+            <li>Gana quien más parejas junte. A un jugador, lo que cuenta es el tiempo y los intentos.</li>
+            <li>Mientras dos cartas se están comparando no se puede tocar una tercera: hay que esperar a que se tapen.</li>
+        </ul>
+        <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="aviso-flotante"></div>
+
+<script>
+/* ==========================================================
+   DIBUJOS
+   Emoji en lugar de imágenes: no hay archivos que cargar, se ven igual sin
+   conexión y cada aparato los pinta con su propio estilo. Dentro de cada
+   tema están elegidos para que no se confundan entre sí de un vistazo, que
+   es lo que arruina un memory.
+   ========================================================== */
+const TEMAS = {
+    'Animales':  ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🦄','🐔','🐧'],
+    'Comida':    ['🍎','🍌','🍇','🍓','🍉','🍑','🍒','🥝','🍍','🥑','🌽','🥕','🍕','🍔','🍟','🍩','🧀','🥐'],
+    'Naturaleza':['🌸','🌻','🌳','🌵','🍀','🌙','⭐','🌈','⛄','🔥','💧','🌊','🍁','🌹','🦋','🐚','🌴','🍄'],
+    'Cosas':     ['⚽','🎸','🚗','✈️','🚀','⌚','📷','💡','🔑','🎁','🎈','🧸','📚','🎲','🔔','⚓','🪁','🧭'],
+    'Caras':     ['😀','😂','😍','🤔','😎','🥳','😴','🤯','😱','🤠','🥺','😇','🤓','😜','🙃','😤','🤩','😢']
+};
+
+/* ==========================================================
+   ALMACENAMIENTO
+   ========================================================== */
+const almacenOK = (() => {
+    try {
+        const p = '__mem__';
+        localStorage.setItem(p, '1');
+        localStorage.removeItem(p);
+        return true;
+    } catch (e) { return false; }
+})();
+
+function escaparHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+}
+
+/* ==========================================================
+   AUDIO
+   Sintetizado con Web Audio: sin archivos ni dependencias, suena igual sin
+   conexión. Música y efectos arrancan SILENCIADOS; además de ser lo educado,
+   el navegador bloquea el audio hasta que la persona toca la página, así que
+   un contexto creado al cargar nacería suspendido y el primer sonido se
+   perdería.
+   ========================================================== */
+const CLAVE_AUDIO = 'memoryAudio';
+const VOL_MUSICA = 0.5, VOL_EFECTOS = 1;
+const MIRA_ADELANTE = 0.15, PASOS = 32;
+
+const audio = {
+    musica: false, efectos: false,
+    ctx: null, busMusica: null, busEfectos: null,
+    proximo: 0, paso: 0, timerId: null
+};
+
+if (almacenOK) {
+    try {
+        const g = JSON.parse(localStorage.getItem(CLAVE_AUDIO) || '{}');
+        audio.musica = g.musica === true;
+        audio.efectos = g.efectos === true;
+    } catch (e) { /* en silencio */ }
+}
+
+function guardarAudio() {
+    if (!almacenOK) return;
+    try {
+        localStorage.setItem(CLAVE_AUDIO, JSON.stringify({ musica: audio.musica, efectos: audio.efectos }));
+    } catch (e) {}
+}
+
+function crearContexto() {
+    if (audio.ctx) return audio.ctx;
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        audio.ctx = new Ctx();
+        audio.busMusica = audio.ctx.createGain();
+        audio.busEfectos = audio.ctx.createGain();
+        audio.busMusica.gain.value = 0;
+        audio.busEfectos.gain.value = 0;
+        audio.busMusica.connect(audio.ctx.destination);
+        audio.busEfectos.connect(audio.ctx.destination);
+        aplicarVolumenes();
+    } catch (e) { audio.ctx = null; }
+    return audio.ctx;
+}
+
+function reanudarContexto() {
+    if (audio.ctx && audio.ctx.state === 'suspended') {
+        try { audio.ctx.resume(); } catch (e) {}
+    }
+}
+
+function rampa(nodo, destino) {
+    if (!audio.ctx || !nodo) return;
+    const t = audio.ctx.currentTime;
+    try {
+        nodo.gain.cancelScheduledValues(t);
+        nodo.gain.setValueAtTime(nodo.gain.value, t);
+        nodo.gain.linearRampToValueAtTime(destino, t + 0.12);
+    } catch (e) {}
+}
+
+function aplicarVolumenes() {
+    rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+    rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+}
+
+function voz(bus, frec, inicio, dur, tipo, pico) {
+    if (!audio.ctx || !bus) return;
+    try {
+        const osc = audio.ctx.createOscillator();
+        const vol = audio.ctx.createGain();
+        osc.connect(vol);
+        vol.connect(bus);
+        osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+
+        osc.type = tipo || 'square';
+        osc.frequency.setValueAtTime(frec, inicio);
+        vol.gain.setValueAtTime(0.0001, inicio);
+        vol.gain.linearRampToValueAtTime(pico, inicio + 0.012);
+        vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+
+        osc.start(inicio);
+        osc.stop(inicio + dur + 0.02);
+    } catch (e) {}
+}
+
+/* ---------- MÚSICA ----------
+   Juego de mirar y recordar: el bucle va lento y suave, sin percusión que
+   marque el paso, para no romper la concentración. */
+const ACORDES = [
+    { bajo: 65.41, notas: [130.81, 164.81, 196.00] },   // Do
+    { bajo: 87.31, notas: [174.61, 220.00, 261.63] },   // Fa
+    { bajo: 98.00, notas: [196.00, 246.94, 293.66] },   // Sol
+    { bajo: 73.42, notas: [146.83, 174.61, 220.00] }    // Re menor
+];
+
+function duracionPaso() { return 30 / 74; }
+
+function programarPaso(paso, t) {
+    const acorde = ACORDES[Math.floor(paso / 8) % ACORDES.length];
+    const dur = duracionPaso();
+
+    if (paso % 8 === 0) voz(audio.busMusica, acorde.bajo, t, dur * 3.6, 'triangle', 0.17);
+    if (paso % 4 === 0) {
+        const nota = acorde.notas[[0, 2, 1][(paso >> 2) % 3]];
+        voz(audio.busMusica, nota, t, dur * 2.6, 'sine', 0.06);
+    }
+}
+
+/* Programador con vista adelantada: el temporizador solo despierta a mirar y
+   las notas se encolan con la marca de tiempo exacta del reloj de audio. Una
+   nota por vuelta de setTimeout sonaría coja. */
+function programador() {
+    if (!audio.ctx || !audio.musica) { audio.timerId = null; return; }
+
+    const ahora = audio.ctx.currentTime;
+    /* En segundo plano setTimeout se frena a ~1 Hz y el reloj se queda atrás;
+       recolocarlo evita soltar de golpe las notas atrasadas al volver. */
+    if (audio.proximo < ahora) audio.proximo = ahora + 0.05;
+
+    while (audio.proximo < ahora + MIRA_ADELANTE) {
+        programarPaso(audio.paso, audio.proximo);
+        audio.proximo += duracionPaso();
+        audio.paso = (audio.paso + 1) % PASOS;
+    }
+    audio.timerId = setTimeout(programador, 25);
+}
+
+function arrancarMusica() {
+    if (!audio.musica) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    aplicarVolumenes();
+    if (audio.timerId !== null) return;
+    audio.proximo = audio.ctx.currentTime + 0.08;
+    programador();
+}
+
+function pararMusica() {
+    if (audio.timerId !== null) { clearTimeout(audio.timerId); audio.timerId = null; }
+    rampa(audio.busMusica, 0);
+}
+
+/* ---------- EFECTOS ---------- */
+function efecto(frec, dur, tipo, pico, retraso) {
+    if (!audio.efectos) return;
+    if (!crearContexto()) return;
+    reanudarContexto();
+    voz(audio.busEfectos, frec, audio.ctx.currentTime + (retraso || 0),
+        dur, tipo, pico === undefined ? 0.07 : pico);
+}
+
+const sonPulsar = () => efecto(880, 0.03, 'square', 0.045);
+const sonGirar  = () => efecto(520, 0.04, 'triangle', 0.05);
+const sonPareja = () => { efecto(659, 0.09, 'square', 0.06); efecto(988, 0.15, 'square', 0.055, 0.08); };
+const sonFallo  = () => { efecto(260, 0.08, 'triangle', 0.055); efecto(190, 0.14, 'triangle', 0.055, 0.07); };
+const sonTurno  = () => efecto(440, 0.07, 'square', 0.045);
+const sonFin    = () => {
+    efecto(523, 0.10, 'square', 0.07);
+    efecto(659, 0.10, 'square', 0.07, 0.09);
+    efecto(784, 0.10, 'square', 0.07, 0.18);
+    efecto(1047, 0.32, 'square', 0.07, 0.27);
+};
+
+function pintarBotonesSonido() {
+    document.querySelectorAll('[data-son]').forEach(b => {
+        const esMusica = b.dataset.son === 'musica';
+        const on = esMusica ? audio.musica : audio.efectos;
+        b.setAttribute('aria-pressed', String(on));
+
+        const rotulo = b.querySelector('.rotulo');
+        if (rotulo) {
+            rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') +
+                                 ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+        }
+        const sub = b.querySelector('.sub');
+        if (sub) {
+            sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados')
+                                 : (esMusica ? 'silenciada' : 'silenciados');
+        }
+    });
+}
+
+function alternarSonido(cual) {
+    if (cual === 'musica') {
+        audio.musica = !audio.musica;
+        if (audio.musica) arrancarMusica(); else pararMusica();
+    } else {
+        audio.efectos = !audio.efectos;
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.efectos) sonPulsar();
+    }
+    guardarAudio();
+    pintarBotonesSonido();
+}
+
+/* ==========================================================
+   ESTADO
+   ========================================================== */
+const COLUMNAS = 4;              // vertical: cuatro de ancho siempre
+const ESPERA_FALLO = 950;        // ms que se ven las dos cartas antes de taparse
+const ESPERA_ACIERTO = 420;
+const MEZCLA = 'Mezcla';
+
+const partida = {
+    modo: 'solo',
+    parejas: 8,
+    tema: MEZCLA,
+    cartas: [],             // [{dibujo, vuelta, hecha}]
+    primera: -1,            // índice de la primera carta destapada
+    comparando: false,      // mientras se comparan dos, no se admite una tercera
+    hechas: 0,
+    intentos: 0,
+    turno: 0,               // 0 o 1
+    marcador: [0, 0],
+    nombres: ['Jugador 1', 'Jugador 2'],
+    jugando: false,
+    pausado: false,
+    segundos: 0,
+    timerId: null,
+    ladoCarta: 70
+};
+
+const COLORES = ['var(--acento)', 'var(--rosa)'];
+
+/* ==========================================================
+   PANTALLAS Y AVISOS
+   ========================================================== */
+function mostrarPantalla(id) {
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id));
+}
+
+function abrirCapa(id) { document.getElementById(id).classList.add('activa'); }
+function cerrarCapa(id) { document.getElementById(id).classList.remove('activa'); }
+function hayCapaAbierta() { return !!document.querySelector('.capa.activa'); }
+
+let temporizadorAviso = null;
+function avisar(texto, malo) {
+    const el = document.getElementById('aviso-flotante');
+    el.textContent = texto;
+    el.classList.toggle('malo', !!malo);
+    el.classList.add('vista');
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => el.classList.remove('vista'), 1500);
+}
+
+/* ==========================================================
+   BARAJAR Y REPARTIR
+   ========================================================== */
+function barajar(lista, azar) {
+    /* Fisher-Yates. El barajado "ordenar con un comparador al azar" que se ve
+       por ahí no reparte uniforme: deja las cartas más cerca de donde
+       estaban, y en un memory eso se nota. */
+    const copia = lista.slice();
+    for (let i = copia.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+    }
+    return copia;
+}
+
+function dibujosDelTema(tema) {
+    if (tema === MEZCLA) {
+        const todos = [];
+        Object.values(TEMAS).forEach(l => l.forEach(d => todos.push(d)));
+        return todos;
+    }
+    return (TEMAS[tema] || []).slice();
+}
+
+function repartir(parejas, tema, azar) {
+    azar = azar || Math.random;
+    const disponibles = dibujosDelTema(tema);
+    if (disponibles.length < parejas) return null;
+
+    const elegidos = barajar(disponibles, azar).slice(0, parejas);
+    const mazo = [];
+    elegidos.forEach(d => { mazo.push(d); mazo.push(d); });
+
+    return barajar(mazo, azar).map(d => ({ dibujo: d, vuelta: false, hecha: false }));
+}
+
+/* ==========================================================
+   PINTADO
+   ========================================================== */
+let nodos = [];
+
+function construirMesa() {
+    const mesa = document.getElementById('mesa');
+    mesa.innerHTML = '';
+    nodos = [];
+    mesa.style.gridTemplateColumns = 'repeat(' + COLUMNAS + ', var(--carta))';
+
+    partida.cartas.forEach((c, i) => {
+        const b = document.createElement('button');
+        b.className = 'carta';
+        b.type = 'button';
+        b.dataset.i = String(i);
+        b.setAttribute('aria-label', 'Carta ' + (i + 1));
+
+        const interior = document.createElement('div');
+        interior.className = 'carta-interior';
+
+        const dorso = document.createElement('div');
+        dorso.className = 'dorso';
+        dorso.textContent = '?';
+
+        const cara = document.createElement('div');
+        cara.className = 'cara';
+        cara.textContent = c.dibujo;
+
+        interior.appendChild(dorso);
+        interior.appendChild(cara);
+        b.appendChild(interior);
+        mesa.appendChild(b);
+        nodos.push(b);
+    });
+    ajustarMesa();
+}
+
+/* El lado de la carta se mide, no se calcula restando a ojo lo que ocupan
+   barra, turno y pie: ese número deja de valer al girar la pantalla o al
+   aparecer la barra de direcciones del móvil. */
+function ajustarMesa() {
+    const zona = document.getElementById('zonaMesa');
+    if (!zona || !partida.cartas.length) return;
+    const ancho = zona.clientWidth, alto = zona.clientHeight;
+    if (!ancho || !alto) return;
+
+    const filas = Math.ceil(partida.cartas.length / COLUMNAS);
+    const hueco = 8;
+    const porAncho = (ancho - hueco * (COLUMNAS - 1)) / COLUMNAS;
+    const porAlto = (alto - hueco * (filas - 1)) / filas;
+    const lado = Math.max(34, Math.floor(Math.min(porAncho, porAlto)));
+
+    partida.ladoCarta = lado;
+    const mesa = document.getElementById('mesa');
+    mesa.style.setProperty('--carta', lado + 'px');
+    mesa.style.setProperty('--hueco', hueco + 'px');
+}
+
+function pintarMesa() {
+    partida.cartas.forEach((c, i) => {
+        const n = nodos[i];
+        if (!n) return;
+        n.classList.toggle('vuelta', c.vuelta || c.hecha);
+        n.classList.toggle('hecha', c.hecha);
+        n.disabled = c.hecha;
+    });
+}
+
+/* En la barra solo caben siete letras, y recortar "Jugador 1" ahí deja
+   "JUGADOR" en los dos huecos: el marcador se vuelve ilegible justo en el
+   caso por defecto. Un nombre que no quepa se sustituye por J1 o J2, que
+   distingue siempre; el nombre entero sigue saliendo en el turno. */
+function etiquetaCorta(i) {
+    const n = partida.nombres[i];
+    return n.length <= 7 ? n.toUpperCase() : 'J' + (i + 1);
+}
+
+function pintarBarra() {
+    const dos = partida.modo === 'dos';
+    document.querySelector('#dParejas b').textContent = partida.hechas + '/' + partida.parejas;
+    document.querySelector('#dIntentos b').textContent = String(partida.intentos);
+
+    document.getElementById('dTiempo').style.display = dos ? 'none' : '';
+    document.getElementById('dUno').style.display = dos ? '' : 'none';
+    document.getElementById('dDos').style.display = dos ? '' : 'none';
+
+    if (dos) {
+        document.querySelector('#dUno b').textContent = String(partida.marcador[0]);
+        document.querySelector('#dUno b').style.color = COLORES[0];
+        document.querySelector('#dDos b').textContent = String(partida.marcador[1]);
+        document.querySelector('#dDos b').style.color = COLORES[1];
+        document.querySelector('#dUno span').textContent = etiquetaCorta(0);
+        document.querySelector('#dDos span').textContent = etiquetaCorta(1);
+    }
+    pintarReloj();
+}
+
+function pintarReloj() {
+    const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
+    document.querySelector('#dTiempo b').textContent = m + ':' + String(s).padStart(2, '0');
+}
+
+function pintarTurno() {
+    const el = document.getElementById('turno');
+    if (partida.modo !== 'dos') {
+        el.textContent = '';
+        return;
+    }
+    const color = COLORES[partida.turno];
+    el.innerHTML = '<span class="pastilla" style="background:' + color + '"></span>' +
+                   '<span style="color:' + color + '">' +
+                   escaparHtml(partida.nombres[partida.turno].toUpperCase()) + '</span>';
+}
+
+/* ==========================================================
+   JUGAR
+   ========================================================== */
+function tocarCarta(i) {
+    if (!partida.jugando || partida.pausado) return;
+    /* Mientras dos cartas se comparan no se admite una tercera. Sin esto, a
+       base de toques rápidos se destapa media mesa y el juego se rompe. */
+    if (partida.comparando) return;
+
+    const c = partida.cartas[i];
+    if (!c || c.hecha || c.vuelta) return;
+
+    c.vuelta = true;
+    sonGirar();
+    pintarMesa();
+
+    if (partida.primera === -1) {
+        partida.primera = i;
+        return;
+    }
+
+    const a = partida.cartas[partida.primera];
+    const b = c;
+    partida.intentos++;
+    partida.comparando = true;
+
+    if (a.dibujo === b.dibujo) {
+        resolverAcierto(partida.primera, i);
+    } else {
+        resolverFallo(partida.primera, i);
+    }
+    partida.primera = -1;
+    pintarBarra();
+}
+
+function resolverAcierto(i, j) {
+    partida.cartas[i].hecha = true;
+    partida.cartas[j].hecha = true;
+    /* `vuelta` pasa a significar una sola cosa: destapada a la espera de
+       comparar. Las emparejadas se ven por `hecha`, que es lo que las deja a
+       la vista para siempre. Dejando las dos marcas puestas, `vuelta` querría
+       decir dos cosas distintas y cualquier recuento de "cartas a la vista"
+       saldría mal. */
+    partida.cartas[i].vuelta = false;
+    partida.cartas[j].vuelta = false;
+    partida.hechas++;
+    if (partida.modo === 'dos') partida.marcador[partida.turno]++;
+    sonPareja();
+
+    if (nodos[i]) nodos[i].classList.add('pareja');
+    if (nodos[j]) nodos[j].classList.add('pareja');
+
+    setTimeout(() => {
+        if (nodos[i]) nodos[i].classList.remove('pareja');
+        if (nodos[j]) nodos[j].classList.remove('pareja');
+        partida.comparando = false;
+        pintarMesa();
+        pintarBarra();
+
+        /* Acertar da otro turno: es la regla que hace que una buena memoria
+           se note en el marcador. No hace falta anunciarlo con un aviso
+           flotante, que además caería justo encima del indicador de turno:
+           que el nombre NO cambie ya lo dice. */
+        if (partida.hechas === partida.parejas) terminar();
+    }, ESPERA_ACIERTO);
+}
+
+function resolverFallo(i, j) {
+    sonFallo();
+    if (nodos[i]) nodos[i].classList.add('fallo');
+    if (nodos[j]) nodos[j].classList.add('fallo');
+
+    setTimeout(() => {
+        partida.cartas[i].vuelta = false;
+        partida.cartas[j].vuelta = false;
+        if (nodos[i]) nodos[i].classList.remove('fallo');
+        if (nodos[j]) nodos[j].classList.remove('fallo');
+        partida.comparando = false;
+
+        if (partida.modo === 'dos') {
+            partida.turno = 1 - partida.turno;
+            sonTurno();
+            pintarTurno();
+        }
+        pintarMesa();
+    }, ESPERA_FALLO);
+}
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function arrancarReloj() {
+    pararReloj();
+    partida.timerId = setInterval(() => {
+        if (!partida.jugando || partida.pausado) return;
+        partida.segundos++;
+        pintarReloj();
+    }, 1000);
+}
+
+function pararReloj() {
+    if (partida.timerId !== null) { clearInterval(partida.timerId); partida.timerId = null; }
+}
+
+function nuevaPartida() {
+    const cartas = repartir(partida.parejas, partida.tema);
+    if (!cartas) {
+        avisar('Ese tema no tiene tantos dibujos', true);
+        volverAlMenu();
+        return;
+    }
+
+    partida.cartas = cartas;
+    partida.primera = -1;
+    partida.comparando = false;
+    partida.hechas = 0;
+    partida.intentos = 0;
+    partida.turno = 0;
+    partida.marcador = [0, 0];
+    partida.segundos = 0;
+    partida.jugando = true;
+    partida.pausado = false;
+
+    cerrarCapa('capaFin');
+    cerrarCapa('capaPausa');
+    construirMesa();
+    pintarMesa();
+    pintarBarra();
+    pintarTurno();
+    arrancarReloj();
+}
+
+function terminar() {
+    partida.jugando = false;
+    pararReloj();
+    sonFin();
+
+    const tFin = document.getElementById('tFin');
+    const mFin = document.getElementById('mFin');
+    const sFin = document.getElementById('sFin');
+
+    if (partida.modo === 'dos') {
+        const [a, b] = partida.marcador;
+        if (a === b) {
+            tFin.textContent = '🤝 EMPATE';
+            tFin.style.color = 'var(--amarillo)';
+            sFin.textContent = 'A ' + a + (a === 1 ? ' pareja' : ' parejas') + ' cada uno.';
+        } else {
+            const gana = a > b ? 0 : 1;
+            tFin.textContent = '🏆 ¡GANA ' + partida.nombres[gana].toUpperCase() + '!';
+            tFin.style.color = COLORES[gana];
+            sFin.textContent = 'En ' + partida.intentos + ' intentos entre los dos.';
+        }
+        mFin.innerHTML = '<span style="color:' + COLORES[0] + '">' + a + '</span>' +
+                         ' <span style="color:var(--apagado)">·</span> ' +
+                         '<span style="color:' + COLORES[1] + '">' + b + '</span>';
+    } else {
+        const m = Math.floor(partida.segundos / 60), s = partida.segundos % 60;
+        tFin.textContent = '🏆 ¡TODAS ENCONTRADAS!';
+        tFin.style.color = '';
+        mFin.innerHTML = '<span style="color:var(--acento)">' +
+                         m + ':' + String(s).padStart(2, '0') + '</span>';
+
+        /* El mínimo de intentos posible es el número de parejas: acertar
+           todas a la primera. Sirve para decir cómo de fino ha estado. */
+        const sobras = partida.intentos - partida.parejas;
+        sFin.textContent = partida.parejas + ' parejas en ' + partida.intentos + ' intentos' +
+            (sobras === 0 ? '. Perfecto, ni un fallo.'
+                          : sobras <= 2 ? '. Casi perfecto.'
+                          : '.');
+    }
+
+    setTimeout(() => abrirCapa('capaFin'), 550);
+}
+
+function pausar() {
+    if (!partida.jugando || partida.pausado) return;
+    partida.pausado = true;
+    pararMusica();
+    document.getElementById('zonaMesa').style.visibility = 'hidden';
+    abrirCapa('capaPausa');
+}
+
+function reanudar() {
+    if (!partida.pausado) return;
+    partida.pausado = false;
+    document.getElementById('zonaMesa').style.visibility = '';
+    arrancarMusica();
+    cerrarCapa('capaPausa');
+}
+
+function volverAlMenu() {
+    partida.jugando = false;
+    partida.pausado = false;
+    pararReloj();
+    document.getElementById('zonaMesa').style.visibility = '';
+    ['capaPausa', 'capaFin'].forEach(cerrarCapa);
+    mostrarPantalla('pMenu');
+}
+
+/* ==========================================================
+   MENÚ
+   ========================================================== */
+function pintarTemas() {
+    const cont = document.getElementById('grpTema');
+    cont.innerHTML = '';
+    [MEZCLA].concat(Object.keys(TEMAS)).forEach(t => {
+        const b = document.createElement('button');
+        b.className = 'opcion';
+        b.type = 'button';
+        b.dataset.v = t;
+        b.setAttribute('aria-pressed', String(t === partida.tema));
+        b.textContent = t.toUpperCase();
+        cont.appendChild(b);
+    });
+}
+
+function grupoSimple(id, alElegir) {
+    const cont = document.getElementById(id);
+    cont.addEventListener('click', (e) => {
+        const b = e.target.closest('.opcion');
+        if (!b) return;
+        cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+        alElegir(b.dataset.v);
+    });
+}
+
+grupoSimple('grpModo', (v) => {
+    partida.modo = v;
+    document.getElementById('fsNombres').style.display = v === 'dos' ? '' : 'none';
+});
+
+grupoSimple('grpTamaño', (v) => { partida.parejas = Number(v); });
+grupoSimple('grpTema', (v) => { partida.tema = v; });
+
+/* ==========================================================
+   LISTENERS
+   ========================================================== */
+document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    const interruptor = t.closest('[data-son]');
+    if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+    if (t.closest('.opcion, .principal, .secundario, .icono')) sonPulsar();
+});
+
+document.getElementById('btnJugar').addEventListener('click', () => {
+    if (partida.modo === 'dos') {
+        const n1 = document.getElementById('inpJ1').value.trim().slice(0, 10);
+        const n2 = document.getElementById('inpJ2').value.trim().slice(0, 10);
+        partida.nombres = [n1 || 'Jugador 1', n2 || 'Jugador 2'];
+        /* Dos nombres iguales harían ilegible el marcador */
+        if (partida.nombres[0].toLowerCase() === partida.nombres[1].toLowerCase()) {
+            partida.nombres[1] += ' (2)';
+        }
+    }
+    mostrarPantalla('pJuego');
+    nuevaPartida();
+});
+
+document.getElementById('mesa').addEventListener('click', (e) => {
+    const b = e.target.closest('.carta');
+    if (!b || b.dataset.i === undefined) return;
+    tocarCarta(Number(b.dataset.i));
+});
+
+document.getElementById('btnPausa').addEventListener('click', () => {
+    if (partida.pausado) reanudar(); else pausar();
+});
+
+document.getElementById('btnSeguir').addEventListener('click', reanudar);
+document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
+document.getElementById('btnOtraDesdePausa').addEventListener('click', () => {
+    document.getElementById('zonaMesa').style.visibility = '';
+    nuevaPartida();
+});
+document.getElementById('btnOtra').addEventListener('click', nuevaPartida);
+document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
+
+document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
+document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
+
+document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    if (e.key === 'Escape') {
+        e.preventDefault();
+        if (hayCapaAbierta()) {
+            if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
+            else cerrarCapa('capaAyuda');
+        } else if (partida.jugando) pausar();
+    }
+});
+
+/* La música se corta al irse a otra pestaña: en segundo plano setTimeout se
+   frena a ~1 Hz, así que dejarla correr no la mantendría sonando, la
+   mantendría sonando mal. */
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        pararMusica();
+        if (audio.ctx) { try { audio.ctx.suspend(); } catch (e) {} }
+    } else if (!partida.pausado) {
+        arrancarMusica();
+    }
+});
+
+/* ==========================================================
+   ARRANQUE
+   ========================================================== */
+pintarTemas();
+pintarBotonesSonido();
+
+if (typeof ResizeObserver === 'function') {
+    try { new ResizeObserver(ajustarMesa).observe(document.getElementById('zonaMesa')); }
+    catch (e) { window.addEventListener('resize', ajustarMesa); }
+} else {
+    window.addEventListener('resize', ajustarMesa);
+}
+window.addEventListener('orientationchange', () => setTimeout(ajustarMesa, 120));
+
+/* Si en la visita anterior quedó algo encendido, el navegador sigue sin
+   permitir audio hasta el primer toque: se espera a ese gesto. */
+if (audio.musica || audio.efectos) {
+    const desbloquear = () => {
+        document.removeEventListener('pointerdown', desbloquear);
+        document.removeEventListener('keydown', desbloquear);
+        crearContexto();
+        reanudarContexto();
+        aplicarVolumenes();
+        if (audio.musica) arrancarMusica();
+    };
+    document.addEventListener('pointerdown', desbloquear);
+    document.addEventListener('keydown', desbloquear);
+}
+</script>
+</body>
+</html>
