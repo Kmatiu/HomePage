@@ -157,7 +157,10 @@
         flex-wrap: wrap;
     }
 
-    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+    /* El padding lateral separa los rótulos entre sí: desde que el contador
+       de barcos enemigos se oculta durante la partida quedan solo dos datos
+       y, sin él, "MI FLOTA" y "DISPAROS" se leían pegados. */
+    #barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; padding: 0 7px; }
     #barra .dato b { font-size: 0.92rem; color: var(--acento); font-weight: bold; }
     #barra .dato span { color: var(--apagado); font-size: 0.52rem; letter-spacing: 0.5px; }
     #barra .hueco { flex: 1 1 auto; }
@@ -495,7 +498,7 @@
         <p id="sFin"></p>
         <button class="principal" id="btnOtra" type="button">OTRA PARTIDA</button>
         <div class="fila-btns">
-            <button class="secundario" id="btnVerTablero" type="button">VER EL TABLERO</button>
+            <button class="secundario" id="btnVerTablero" type="button">VER SU TABLERO</button>
             <button class="secundario" id="btnVolverMenu" type="button">MENÚ</button>
         </div>
     </div>
@@ -509,7 +512,8 @@
             <li>Toca un barco de la lista y luego la casilla donde quieres la popa. Con <b>↻ GIRAR</b> lo pones de pie o tumbado, y tocando un barco ya puesto lo quitas.</li>
             <li>Luego se dispara por turnos tocando una casilla del tablero enemigo.</li>
             <li><b>Si aciertas, vuelves a disparar.</b> Solo pasa el turno cuando das en agua.</li>
-            <li>Al hundir un barco <b>no se descarta el agua de alrededor</b>: como los barcos pueden ir pegados, justo al lado puede haber otro esperando.</li>
+            <li><b>No se te avisa cuando hundes un barco suyo.</b> Solo ves dónde diste y dónde no: te toca deducir qué has hundido y qué sigue a flote. Tampoco se descarta el agua de alrededor, y como los barcos pueden ir pegados, justo al lado puede haber otro.</li>
+            <li>Al acabar se destapa su tablero entero y ves dónde tenía cada barco.</li>
             <li id="ayudaGana">Gana quien hunda antes todos los barcos del otro.</li>
         </ul>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
@@ -1249,16 +1253,21 @@ function svgBarco(largo, horizontal) {
            '<g transform="rotate(90) translate(0,-' + H + ')">' + contenido + '</g></svg>';
 }
 
+/* Hundir un barco del rival no se anuncia de NINGUNA manera hasta que acaba
+   la partida: ni figura, ni color propio de la casilla, ni aviso, ni sonido,
+   ni contador, ni tachón en la fila de barcos. Lo único que orienta al
+   jugador son sus disparos y su color. Todo lo que destaparía un hundimiento
+   pasa por esta función, para que no se escape ninguno por el camino. */
+const seVenSusHundidos = () => partida.fase === 'fin';
+
 /* Pinta los cascos encima de la rejilla. Se borran y se vuelven a crear en
    cada repintado: son pocos y así no hay estado que mantener. */
-function pintarBarcos(flota, soloHundidos) {
+function pintarBarcos(flota, mostrar) {
     const cont = document.getElementById('tablero');
     cont.querySelectorAll('.dibujo').forEach(d => d.remove());
-    if (!flota) return;
+    if (!flota || !mostrar) return;
 
     flota.barcos.forEach(b => {
-        if (soloHundidos && !b.hundido) return;
-
         const primera = Math.min(...b.celdas);
         const f = filaDe(primera), c = colDe(primera);
         /* La rejilla lleva una fila y una columna de rótulos, así que la
@@ -1304,8 +1313,11 @@ function pintarTablero() {
         if (tiros[i] === 1) { d.classList.add('agua'); d.textContent = '·'; }
         else if (tiros[i] === 2) {
             const barco = flota.barcos[flota.ocupadas[i] - 1];
-            if (barco && barco.hundido) { d.classList.add('hundido'); d.textContent = '✖'; }
-            else { d.classList.add('tocado'); d.textContent = '✖'; }
+            /* En el tablero enemigo, hasta el final todo impacto es "tocado":
+               el magenta de hundido diría qué casillas forman un barco. */
+            const hundidoVisible = barco && barco.hundido && (mia || seVenSusHundidos());
+            d.classList.add(hundidoVisible ? 'hundido' : 'tocado');
+            d.textContent = '✖';
         }
     }
 
@@ -1313,9 +1325,11 @@ function pintarTablero() {
         casillas[partida.ultima].classList.add('ultima');
     }
 
-    /* En mi tablero se ven todos mis barcos; en el enemigo, solo los que ya
-       he hundido, y al acabar la partida se destapan todos. */
-    pintarBarcos(flota, !mia && partida.fase !== 'fin');
+    /* En mi tablero se ven siempre todos mis barcos. En el enemigo, NINGUNO
+       mientras se juega: ni siquiera los hundidos, porque ver la figura de un
+       barco hundido delata cómo colocó el rival la flota alrededor. Se
+       destapan todos de golpe al acabar, se haya ganado o perdido. */
+    pintarBarcos(flota, mia || seVenSusHundidos());
 }
 
 function pintarColocacion() {
@@ -1326,7 +1340,7 @@ function pintarColocacion() {
         d.textContent = '';
         if (partida.miFlota.ocupadas[i]) d.classList.add('barco');
     }
-    pintarBarcos(partida.miFlota, false);
+    pintarBarcos(partida.miFlota, true);
 }
 
 function pintarBarra() {
@@ -1334,7 +1348,11 @@ function pintarBarra() {
 
     /* Mientras se coloca no hay enemigo ni disparos: enseñar "0 MI FLOTA" y
        "10 ENEMIGO" ahí no informa de nada y parece una mala noticia. */
-    document.getElementById('dSuyos').style.display = colocando ? 'none' : '';
+    /* El contador de barcos enemigos a flote es un aviso de hundimiento en
+       toda regla: baja de 6 a 5 justo cuando hundes uno. Solo aparece al
+       acabar la partida. */
+    document.getElementById('dSuyos').style.display =
+        colocando || !seVenSusHundidos() ? 'none' : '';
     document.getElementById('dDisparos').style.display = colocando ? 'none' : '';
 
     if (colocando) {
@@ -1361,7 +1379,8 @@ function pintarFlotas() {
 
     flota.barcos.forEach(b => {
         const d = document.createElement('div');
-        d.className = 'barquito' + (b.hundido ? ' hundido' : '');
+        d.className = 'barquito' +
+            (b.hundido && (mia || seVenSusHundidos()) ? ' hundido' : '');
         const casco = document.createElement('span');
         casco.className = 'casco';
         d.appendChild(casco);
@@ -1575,16 +1594,19 @@ function miDisparo(i) {
         return;
     }
 
-    if (r.resultado === HUNDIDO) {
+    /* Hundir y tocar se anuncian IGUAL: mismo aviso y mismo sonido. Un
+       "¡HUNDIDO!" o un sonido distinto delatan que ese barco ya está
+       entero, que es justo lo que no se quiere saber hasta el final.
+       (Cuando el rival hunde uno MÍO sí se avisa: esa flota la veo.) */
+    if (r.resultado === HUNDIDO && flotaHundida(partida.suFlota)) {
         sonHundido();
         pintarTodo();
-        if (flotaHundida(partida.suFlota)) { terminar('yo'); return; }
-        pintarEstado('¡HUNDIDO! REPITES', 'var(--rosa)');
-    } else {
-        sonTocado();
-        pintarTodo();
-        pintarEstado('¡TOCADO! REPITES', 'var(--amarillo)');
+        terminar('yo');
+        return;
     }
+    sonTocado();
+    pintarTodo();
+    pintarEstado('¡TOCADO! REPITES', 'var(--amarillo)');
 }
 
 function turnoMaquina() {
@@ -1665,6 +1687,11 @@ function terminar(quien) {
     mFin.textContent = (TOTAL_BARCOS - suyos) + ' · ' + (TOTAL_BARCOS - mios);
 
     pintarTodo();
+    /* Si no se escribe aquí, la línea de estado se queda con el último aviso
+       de la partida ("TE TOCA: DISPARA") y encima se vuelve a pintar cada vez
+       que se cambia de pestaña, invitando a disparar con la partida acabada. */
+    pintarEstado(quien === 'yo' ? 'GANASTE TÚ' : 'GANÓ LA MÁQUINA',
+                 quien === 'yo' ? 'var(--acento)' : 'var(--rosa)');
     setTimeout(() => abrirCapa('capaFin'), 650);
 }
 
@@ -1771,7 +1798,13 @@ document.getElementById('btnSeguir').addEventListener('click', reanudar);
 document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
 document.getElementById('btnOtra').addEventListener('click', empezarColocacion);
 document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
-document.getElementById('btnVerTablero').addEventListener('click', () => cerrarCapa('capaFin'));
+/* Lleva siempre al tablero del rival, que es lo que se quiere mirar al
+   acabar: dónde tenía la flota. Si la partida se perdió, la pestaña activa
+   era la propia y el botón dejaba al jugador mirando su propio tablero. */
+document.getElementById('btnVerTablero').addEventListener('click', () => {
+    cerrarCapa('capaFin');
+    cambiarPestana('enemigo');
+});
 
 document.getElementById('btnAyuda').addEventListener('click', () => abrirCapa('capaAyuda'));
 document.getElementById('btnCerrarAyuda').addEventListener('click', () => cerrarCapa('capaAyuda'));
