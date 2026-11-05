@@ -441,8 +441,8 @@
             <legend>NIVEL DE LA MÁQUINA</legend>
             <div class="opciones" id="grpNivel">
                 <button class="opcion" type="button" data-v="facil" aria-pressed="false">FÁCIL<span class="sub">se despista a menudo</span></button>
-                <button class="opcion" type="button" data-v="normal" aria-pressed="true">NORMAL<span class="sub">mira 4 jugadas</span></button>
-                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">mira hasta 9</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">NORMAL<span class="sub">se despista a veces</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">mira 4 jugadas</span></button>
             </div>
         </fieldset>
 
@@ -728,8 +728,22 @@ function mejorJugada(tab, alturas, fichas, yo, prof) {
     return { columna: mejorCol, valor: mejorValor };
 }
 
-/* ---------- LOS TRES NIVELES ---------- */
-const PRESUPUESTO_MS = 250;   // tope de reflexión del nivel difícil
+/* ---------- LOS TRES NIVELES ----------
+   Difícil es la búsqueda a 4 jugadas (el antiguo normal). La de hasta 9
+   jugadas se quitó por pedido: era demasiado para jugar en familia.
+
+   Normal es la misma búsqueda, pero en una de cada tres jugadas se despista
+   y juega como el fácil. Se probó antes buscar menos hondo y no sirve de
+   escalón intermedio. Medido en 400 partidas por pareja (2.000 para afinar el
+   despiste), con las dos primeras jugadas al azar y saliendo cada uno la
+   mitad de las veces; puntos contra el fácil + puntos contra el difícil, donde
+   1,00 es estar justo a medio camino:
+     buscar a 2 → 1,34 · buscar a 3 → 1,18 (las dos, más cerca del difícil)
+     despiste 0,30 → 1,06 · 0,32 → 1,02 · 0,34 → 0,98 · 0,40 → 0,95
+   Con 0,33, en 3.000 partidas: gana al fácil el 90 % y al difícil el 9 %
+   (suma 1,00). El difícil gana al fácil el 100 %.
+   Si cambia la evaluación o la búsqueda, hay que volver a medirlo. */
+const DESPISTE_NORMAL = 0.33;
 
 /* Fácil: gana si puede y tapa solo la mitad de las veces. No es una IA
    tonta por accidente, es tonta a propósito y de forma predecible. */
@@ -752,42 +766,13 @@ function jugadaFacil(tab, alturas, yo, azar) {
     return libres[libres.length - 1];
 }
 
-function jugadaMaquina(tab, alturas, fichas, yo, nivel, azar, ahora) {
+function jugadaMaquina(tab, alturas, fichas, yo, nivel, azar) {
     azar = azar || Math.random;
-    ahora = ahora || Date.now;
 
     if (!columnasLibres(alturas).length) return -1;
     if (nivel === 'facil') return jugadaFacil(tab, alturas, yo, azar);
-
-    if (nivel === 'normal') return mejorJugada(tab, alturas, fichas, yo, 4).columna;
-
-    /* Difícil: profundización iterativa con tope de tiempo. Un nivel fijo
-       sería rápido en un móvil potente y dejaría el dedo esperando en uno
-       modesto; así cada aparato llega hasta donde le da en el mismo rato. */
-    const t0 = ahora();
-    let elegida = mejorJugada(tab, alturas, fichas, yo, 4).columna;
-    let ultima = Math.max(1, ahora() - t0);
-
-    for (let prof = 5; prof <= 9; prof++) {
-        /* No basta con mirar el tiempo YA gastado: cada nivel cuesta del
-           orden de siete veces el anterior, así que quedando diez
-           milisegundos todavía se colaba una pasada de medio segundo y la
-           interfaz se quedaba clavada. Se estima antes de empezarla y, si no
-           cabe, no se empieza. La estimación sale de lo que ha tardado este
-           aparato, así que un móvil modesto corta antes él solo. */
-        const previsto = ultima * 7;
-        if (ahora() - t0 + previsto > PRESUPUESTO_MS) break;
-
-        const t1 = ahora();
-        const r = mejorJugada(tab, alturas, fichas, yo, prof);
-        ultima = Math.max(1, ahora() - t1);
-
-        if (r.columna !== -1) elegida = r.columna;
-        /* Victoria o derrota forzada encontrada: buscar más hondo no cambia
-           nada */
-        if (Math.abs(r.valor) >= VICTORIA - 100) break;
-    }
-    return elegida;
+    if (nivel === 'normal' && azar() < DESPISTE_NORMAL) return jugadaFacil(tab, alturas, yo, azar);
+    return mejorJugada(tab, alturas, fichas, yo, 4).columna;
 }
 
 /* ==========================================================
