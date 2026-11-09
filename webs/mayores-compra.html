@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fff8ee">
+<title>La lista de la compra</title>
+<style>
+/* ==========================================================
+   BASE DE LOS JUEGOS PARA MAYORES
+   Tema claro a propósito, distinto del oscuro del resto del portal: con la
+   vista cansada se lee mejor texto oscuro sobre fondo claro. Todos los
+   colores de texto pasan de 7:1 de contraste sobre el fondo (nivel AAA).
+
+   Todo lo de dentro del juego va en rem, y el tamaño de letra se cambia
+   tocando solo --escala: así A− / A+ agrandan textos, botones y tarjetas a
+   la vez. La barra de arriba va en px a propósito: tiene que caber y estar
+   al alcance con la letra al máximo.
+   Base de 18 px (el navegador trae 16) y escalones hasta 26 px. Se probó
+   llegar a 33 px y a 29 px: en un móvil no cabía ni una pregunta.
+   ========================================================== */
+:root {
+    --escala: 1;
+    --fondo: #fff8ee;
+    --tarjeta: #ffffff;
+    --texto: #1b1b1b;
+    --suave: #4a4a4a;
+    --azul: #174f94;
+    --azul-claro: #e3edf9;
+    --verde: #0d5524;
+    --verde-claro: #e2f3e6;
+    --naranja: #763800;
+    --naranja-claro: #fdeedd;
+    --borde: #c9bfae;
+}
+
+* { box-sizing: border-box; }
+
+html {
+    font-size: calc(18px * var(--escala));
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.35;
+    /* Sin zoom por doble toque ni selección de texto al pulsar fuerte:
+       con temblor, un toque doble involuntario es lo normal */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- BARRA DE ARRIBA ---------- */
+.barra {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(env(safe-area-inset-top, 0px) + 6px) 10px 6px;
+    background: var(--fondo);
+    border-bottom: 2px solid var(--borde);
+}
+.barra button {
+    min-width: 56px;
+    height: 52px;
+    padding: 0 12px;
+    border: 2px solid var(--azul);
+    border-radius: 12px;
+    background: var(--tarjeta);
+    color: var(--azul);
+    font: 700 20px/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+}
+.barra .salir { margin-right: auto; }
+.barra button:disabled { opacity: 0.35; }
+
+/* ---------- PANTALLAS ---------- */
+.pantalla { display: none; padding: 0.6rem 0.8rem calc(env(safe-area-inset-bottom, 0px) + 0.8rem); max-width: 34rem; margin: 0 auto; }
+.pantalla.activa { display: block; }
+
+h1 { font-size: 1.5rem; margin: 0.4rem 0 0.6rem; line-height: 1.2; text-align: center; }
+.explicacion { font-size: 1.1rem; text-align: center; margin: 0 0 1rem; }
+.pista { font-size: 1rem; text-align: center; color: var(--suave); margin: 0.4rem 0; min-height: 1.35em; }
+.fila-botones { display: flex; gap: 0.5rem; }
+.fila-botones .boton { margin: 0.4rem 0; }
+.fila-botones .boton:first-child { flex: 2; }
+.fila-botones .boton:not(:first-child) { flex: 1; }
+
+/* ---------- BOTONES ---------- */
+.boton {
+    display: block;
+    width: 100%;
+    min-height: 3.2rem;
+    margin: 0.6rem 0;
+    padding: 0.6rem 1rem;
+    border: 3px solid var(--azul);
+    border-radius: 0.8rem;
+    background: var(--azul);
+    color: #fff;
+    font: 700 1.25rem/1.2 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+}
+.boton.secundario { background: var(--tarjeta); color: var(--azul); }
+.boton:disabled { opacity: 0.4; }
+
+:focus-visible { outline: 4px solid #e08a00; outline-offset: 3px; }
+
+/* ---------- MENSAJES ---------- */
+.bien { color: var(--verde); }
+.felicidad { font-size: 1.4rem; font-weight: 700; text-align: center; color: var(--verde); margin: 0.6rem 0; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- PROPIO DE ESTE JUEGO ---------- */
+/* minmax(0, 1fr) y no 1fr a secas: con 1fr la columna crece hasta el ancho
+   de la palabra más larga y la rejilla se salía de la pantalla por la
+   derecha con la letra grande */
+.lista, .estantes {
+    display: grid;
+    grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.4rem 0 0.6rem;
+}
+.lista .producto { cursor: default; }
+
+
+.producto {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.2rem;
+    /* El ancho de la tarjeta manda en el tamaño del nombre (unidades cqi) */
+    container-type: inline-size;
+    border: 3px solid var(--borde);
+    border-radius: 0.8rem;
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: 600 1rem/1.15 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+}
+.producto .icono { font-size: 2rem; line-height: 1.1; }
+/* El nombre crece con la letra hasta donde quepa la palabra más larga
+   («mantequilla», 11 letras) sin partirla. La primera versión partía las
+   palabras por cualquier sitio («mant-equill-a») con la letra grande, que
+   es lo peor para quien ya lee con esfuerzo. 15cqi = 15 % del ancho de la
+   tarjeta; en negrita una letra ocupa algo más de media eme. */
+.producto .nombre { margin-top: 0.1rem; font-size: 1rem; }
+@supports (font-size: 1cqi) {
+    .producto .nombre { font-size: min(1rem, 15cqi); }
+    .producto .icono { font-size: min(2rem, 40cqi); }
+}
+
+.producto.en-cesta { border-color: var(--verde); background: var(--verde-claro); }
+.producto.en-cesta::after {
+    content: '✓';
+    position: absolute; top: 0.1rem; right: 0.35rem;
+    color: var(--verde); font-size: 1.3rem; font-weight: 900;
+}
+/* El que no estaba se apaga pero se sigue leyendo: no desaparece, para que
+   la tienda no cambie de sitio debajo del dedo */
+.producto.no-estaba { opacity: 0.38; border-style: dashed; }
+/* El aviso late con un halo, sin cambiar de tamaño: la primera versión
+   crecía y encogía (scale) y un blanco que se mueve es más difícil de
+   acertar con temblor. Hasta Playwright se negaba a pulsarla. */
+.producto.ayuda { border-color: var(--naranja); background: var(--naranja-claro); animation: halo 1.2s ease-in-out infinite; }
+@keyframes halo { 50% { box-shadow: 0 0 0 0.35rem rgba(118, 56, 0, 0.35); } }
+
+.pie { display: flex; align-items: center; gap: 0.6rem; }
+.cesta { flex: 1; font-size: 1.05rem; font-weight: 700; margin: 0; }
+.pie .boton { width: auto; flex: 0 0 auto; margin: 0.3rem 0; }
+.pista.titulo { font-size: 1.15rem; font-weight: 700; color: var(--texto); margin: 0.2rem 0; }
+</style>
+</head>
+<body>
+<main>
+    <section class="pantalla activa" id="inicio">
+        <h1>🛒 La lista de la compra</h1>
+        <p class="explicacion">Primero te enseño una lista. Luego, en la tienda, toca lo que había en ella.</p>
+        <button class="boton" id="btnEmpezar" type="button">EMPEZAR</button>
+    </section>
+
+    <section class="pantalla" id="recordar">
+        <h1 data-foco>Recuerda:</h1>
+        <div class="lista" id="lista"></div>
+        <div class="fila-botones">
+            <button class="boton" id="btnYa" type="button">YA ME LA SÉ</button>
+            <button class="boton secundario" id="btnOirLista" type="button" aria-label="Oír la lista otra vez">🔊</button>
+        </div>
+    </section>
+
+    <section class="pantalla" id="tienda">
+        <p class="pista titulo" id="pistaTienda" data-foco aria-live="polite"></p>
+        <div class="estantes" id="estantes"></div>
+        <div class="pie">
+            <p class="cesta" id="cesta" aria-live="polite"></p>
+            <button class="boton secundario" id="btnVerLista" type="button">VER LISTA</button>
+        </div>
+    </section>
+
+    <section class="pantalla" id="hecho">
+        <h1 data-foco class="bien">¡Ya tienes toda la compra!</h1>
+        <div class="lista" id="listaHecha"></div>
+        <button class="boton" id="btnSiguiente" type="button">SIGUIENTE</button>
+    </section>
+
+    <section class="pantalla" id="final">
+        <h1 data-foco>¡Muy bien!</h1>
+        <p class="felicidad" id="textoFinal"></p>
+        <button class="boton" id="btnOtraVez" type="button">OTRA VEZ</button>
+        <button class="boton secundario" id="btnSalirFinal" type="button">SALIR</button>
+    </section>
+</main>
+
+<script>
+/* ==========================================================
+   LÓGICA DE LOS JUEGOS PARA MAYORES
+   Lo que no toca la pantalla: cómo se ajusta la dificultad y qué sale en
+   cada ronda. Sirve igual en el navegador y en Node, donde se prueba.
+
+   Toda elección al azar recibe la función `azar`, para que las pruebas
+   puedan repetir exactamente la misma partida.
+   ========================================================== */
+
+/* ---------- DIFICULTAD QUE SE AJUSTA SOLA ----------
+   La meta es que acierten casi siempre (en torno a 8 de cada 10): con estas
+   personas, fallar seguido no enseña, desanima.
+   Sube tras 3 rondas limpias seguidas y baja con la primera que no lo sea.
+   Es la escalera «3 arriba, 1 abajo», que se estabiliza donde acertar tres
+   veces seguidas tiene un 50 % de probabilidad: 0,79³ ≈ 0,5, o sea en un 79 %
+   de aciertos. Medido con jugadores simulados (prueba-logica.js): 77-79 % de
+   rondas limpias, y un 70 % el más flojo porque se queda en el nivel 1, que
+   es el suelo. La primera versión bajaba tras DOS rondas malas y perdonaba
+   un error suelto: parecía más amable y dejaba a todos en un 48 %.
+   - 'bien': sin errores y sin pedir ayuda
+   - 'mal':  cualquier error o ayuda. Bajar no se le enseña al jugador:
+             solo hace la siguiente ronda un poco más fácil. */
+const SUBIR_TRAS = 3, BAJAR_TRAS = 1;
+
+function nivelInicial() {
+    return { nivel: 1, seguidasBien: 0 };
+}
+
+function adaptarNivel(estado, resultado, nivelMaximo) {
+    let { nivel, seguidasBien } = estado;
+    if (resultado === 'bien') {
+        seguidasBien++;
+        if (seguidasBien >= SUBIR_TRAS && nivel < nivelMaximo) { nivel++; seguidasBien = 0; }
+    } else {
+        seguidasBien = 0;
+        if (nivel > 1) nivel--;
+    }
+    return { nivel, seguidasBien };
+}
+
+function resultadoDeRonda(errores, ayudas) {
+    return errores === 0 && ayudas === 0 ? 'bien' : 'mal';
+}
+
+function barajar(lista, azar) {
+    const l = lista.slice();
+    for (let i = l.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        [l[i], l[j]] = [l[j], l[i]];
+    }
+    return l;
+}
+
+/* ==========================================================
+   LA LISTA DE LA COMPRA
+   Solo emojis hasta la versión 12 (2019): los más nuevos salen como un
+   cuadrado vacío en móviles algo viejos. Y ninguno que se preste a
+   confusión: la seta del emoji es una seta venenosa roja con lunares, no
+   un champiñón, así que no está.
+   ========================================================== */
+const PRODUCTOS = [
+    { nombre: 'pan',          icono: '🍞', grupo: 'desayuno' },
+    { nombre: 'leche',        icono: '🥛', grupo: 'desayuno' },
+    { nombre: 'huevos',       icono: '🥚', grupo: 'desayuno' },
+    { nombre: 'queso',        icono: '🧀', grupo: 'desayuno' },
+    { nombre: 'café',         icono: '☕', grupo: 'desayuno' },
+    { nombre: 'galletas',     icono: '🍪', grupo: 'desayuno' },
+    { nombre: 'mantequilla',  icono: '🧈', grupo: 'desayuno' },
+
+    { nombre: 'manzanas',     icono: '🍎', grupo: 'fruta' },
+    { nombre: 'plátanos',     icono: '🍌', grupo: 'fruta' },
+    { nombre: 'naranjas',     icono: '🍊', grupo: 'fruta' },
+    { nombre: 'uvas',         icono: '🍇', grupo: 'fruta' },
+    { nombre: 'fresas',       icono: '🍓', grupo: 'fruta' },
+    { nombre: 'peras',        icono: '🍐', grupo: 'fruta' },
+    { nombre: 'limones',      icono: '🍋', grupo: 'fruta' },
+    { nombre: 'sandía',       icono: '🍉', grupo: 'fruta' },
+    { nombre: 'piña',         icono: '🍍', grupo: 'fruta' },
+    { nombre: 'cerezas',      icono: '🍒', grupo: 'fruta' },
+
+    { nombre: 'tomates',      icono: '🍅', grupo: 'verdura' },
+    { nombre: 'patatas',      icono: '🥔', grupo: 'verdura' },
+    { nombre: 'zanahorias',   icono: '🥕', grupo: 'verdura' },
+    { nombre: 'cebollas',     icono: '🧅', grupo: 'verdura' },
+    { nombre: 'ajos',         icono: '🧄', grupo: 'verdura' },
+    { nombre: 'lechuga',      icono: '🥬', grupo: 'verdura' },
+    { nombre: 'pepino',       icono: '🥒', grupo: 'verdura' },
+    { nombre: 'berenjena',    icono: '🍆', grupo: 'verdura' },
+    { nombre: 'maíz',         icono: '🌽', grupo: 'verdura' },
+    { nombre: 'brócoli',      icono: '🥦', grupo: 'verdura' },
+
+    { nombre: 'pollo',        icono: '🍗', grupo: 'carne y pescado' },
+    { nombre: 'pescado',      icono: '🐟', grupo: 'carne y pescado' },
+    { nombre: 'gambas',       icono: '🦐', grupo: 'carne y pescado' },
+    { nombre: 'filetes',      icono: '🥩', grupo: 'carne y pescado' },
+
+    { nombre: 'arroz',        icono: '🍚', grupo: 'despensa' },
+    { nombre: 'sal',          icono: '🧂', grupo: 'despensa' },
+    { nombre: 'miel',         icono: '🍯', grupo: 'despensa' },
+    { nombre: 'chocolate',    icono: '🍫', grupo: 'despensa' },
+    { nombre: 'vino',         icono: '🍷', grupo: 'despensa' },
+
+    { nombre: 'jabón',        icono: '🧼', grupo: 'limpieza' },
+    { nombre: 'papel higiénico', icono: '🧻', grupo: 'limpieza' },
+    { nombre: 'esponja',      icono: '🧽', grupo: 'limpieza' }
+];
+
+/* Cuántos productos hay que recordar y cuántos de más hay en la tienda.
+   Nunca más de 9 en la tienda: con la letra al máximo en un móvil pequeño
+   no caben más sin desplazar la pantalla, y desplazar es otra dificultad
+   que no es la que se quiere entrenar. Desde el nivel 6 los que sobran son
+   del mismo tipo que los de la lista (frutas entre frutas), que obliga a
+   recordar de verdad y no a reconocer «algo de fruta». */
+const NIVELES_COMPRA = [
+    { lista: 2, otros: 2, parecidos: false },
+    { lista: 2, otros: 4, parecidos: false },
+    { lista: 3, otros: 3, parecidos: false },
+    { lista: 3, otros: 6, parecidos: false },
+    { lista: 4, otros: 5, parecidos: false },
+    { lista: 4, otros: 5, parecidos: true },
+    { lista: 5, otros: 4, parecidos: true },
+    { lista: 6, otros: 3, parecidos: true }
+];
+
+/* `evitar`: nombres de la lista anterior, para que no se repita la compra */
+function rondaCompra(nivel, azar, evitar) {
+    const cfg = NIVELES_COMPRA[Math.min(nivel, NIVELES_COMPRA.length) - 1];
+    const fuera = new Set(evitar || []);
+    const candidatos = PRODUCTOS.filter(p => !fuera.has(p.nombre));
+
+    const lista = barajar(candidatos, azar).slice(0, cfg.lista);
+    const enLista = new Set(lista.map(p => p.nombre));
+    const resto = barajar(PRODUCTOS.filter(p => !enLista.has(p.nombre)), azar);
+
+    let otros;
+    if (cfg.parecidos) {
+        const grupos = new Set(lista.map(p => p.grupo));
+        const mismos = resto.filter(p => grupos.has(p.grupo));
+        const distintos = resto.filter(p => !grupos.has(p.grupo));
+        otros = mismos.concat(distintos).slice(0, cfg.otros);
+    } else {
+        otros = resto.slice(0, cfg.otros);
+    }
+    return { lista, tienda: barajar(lista.concat(otros), azar) };
+}
+
+/* ==========================================================
+   REFRANES
+   Partidos donde se hace la pausa al decirlos. Nivel 1, los que sabe todo
+   el mundo; nivel 2, conocidos pero menos repetidos. Se han dejado fuera
+   los de muerte o violencia («Muerto el perro…», «Cría cuervos…»): son un
+   rato de entretenimiento, no hace falta llevarlo ahí.
+   ========================================================== */
+const REFRANES = [
+    ['A quien madruga', 'Dios le ayuda', 1],
+    ['No por mucho madrugar', 'amanece más temprano', 1],
+    ['Más vale pájaro en mano', 'que ciento volando', 1],
+    ['En casa del herrero', 'cuchillo de palo', 1],
+    ['Perro ladrador', 'poco mordedor', 1],
+    ['Ojos que no ven', 'corazón que no siente', 1],
+    ['Camarón que se duerme', 'se lo lleva la corriente', 1],
+    ['Quien a buen árbol se arrima', 'buena sombra le cobija', 1],
+    ['Dime con quién andas', 'y te diré quién eres', 1],
+    ['Más vale tarde', 'que nunca', 1],
+    ['No hay mal', 'que por bien no venga', 1],
+    ['A caballo regalado', 'no le mires el diente', 1],
+    ['Quien mucho abarca', 'poco aprieta', 1],
+    ['Agua que no has de beber', 'déjala correr', 1],
+    ['De tal palo', 'tal astilla', 1],
+    ['En boca cerrada', 'no entran moscas', 1],
+    ['A palabras necias', 'oídos sordos', 1],
+    ['Hablando del rey de Roma', 'por la puerta asoma', 1],
+    ['Cuando el río suena', 'agua lleva', 1],
+    ['No dejes para mañana', 'lo que puedas hacer hoy', 1],
+    ['Más vale prevenir', 'que curar', 1],
+    ['Zapatero', 'a tus zapatos', 1],
+    ['A mal tiempo', 'buena cara', 1],
+    ['El hábito', 'no hace al monje', 1],
+    ['Cada oveja', 'con su pareja', 1],
+    ['Dios los cría', 'y ellos se juntan', 1],
+
+    ['Más sabe el diablo por viejo', 'que por diablo', 2],
+    ['Del dicho al hecho', 'hay mucho trecho', 2],
+    ['A buen entendedor', 'pocas palabras bastan', 2],
+    ['El que tenga tienda', 'que la atienda', 2],
+    ['Gato escaldado', 'del agua fría huye', 2],
+    ['Una golondrina', 'no hace verano', 2],
+    ['En abril', 'aguas mil', 2],
+    ['Hasta el cuarenta de mayo', 'no te quites el sayo', 2],
+    ['Año de nieves', 'año de bienes', 2],
+    ['Por la boca', 'muere el pez', 2],
+    ['Quien siembra vientos', 'recoge tempestades', 2],
+    ['No es oro', 'todo lo que reluce', 2],
+    ['La avaricia', 'rompe el saco', 2],
+    ['A falta de pan', 'buenas son tortas', 2],
+    ['Ande yo caliente', 'y ríase la gente', 2],
+    ['Sobre gustos', 'no hay nada escrito', 2],
+    ['Quien tiene un amigo', 'tiene un tesoro', 2],
+    ['Lo cortés', 'no quita lo valiente', 2],
+    ['Más vale maña', 'que fuerza', 2],
+    ['Las apariencias', 'engañan', 2],
+    ['Donde fueres', 'haz lo que vieres', 2],
+    ['El que la sigue', 'la consigue', 2]
+].map(([inicio, final, fama]) => ({ inicio, final, fama }));
+
+/* Nivel: cuántos finales se ofrecen y hasta qué fama de refrán entra */
+const NIVELES_REFRANES = [
+    { opciones: 2, fama: 1 },
+    { opciones: 3, fama: 1 },
+    { opciones: 3, fama: 2 },
+    { opciones: 4, fama: 2 }
+];
+
+const primeraPalabra = (t) => t.toLowerCase().split(/\s+/)[0];
+const dosPalabras = (t) => t.toLowerCase().split(/\s+/).slice(0, 2).join(' ');
+
+/* Un final de otro refrán que empiece igual que este («Más vale…») no sirve
+   de distractor: «Más vale prevenir que nunca» casi suena bien, y para
+   quien duda eso no es un reto, es una trampa. */
+function sirveDeDistractor(objetivo, otro) {
+    if (otro === objetivo || otro.final === objetivo.final) return false;
+    return dosPalabras(otro.inicio) !== dosPalabras(objetivo.inicio) &&
+           primeraPalabra(otro.inicio) !== primeraPalabra(objetivo.inicio);
+}
+
+/* `usados`: inicios ya salidos en la sesión, para no repetir refrán */
+function rondaRefran(nivel, azar, usados) {
+    const cfg = NIVELES_REFRANES[Math.min(nivel, NIVELES_REFRANES.length) - 1];
+    const vistos = new Set(usados || []);
+    let pool = REFRANES.filter(r => r.fama <= cfg.fama && !vistos.has(r.inicio));
+    if (!pool.length) pool = REFRANES.filter(r => r.fama <= cfg.fama);
+
+    const refran = pool[Math.floor(azar() * pool.length)];
+    const distractores = barajar(REFRANES.filter(r => sirveDeDistractor(refran, r)), azar)
+        .slice(0, cfg.opciones - 1)
+        .map(r => r.final);
+    return { refran, opciones: barajar([refran.final].concat(distractores), azar) };
+}
+</script>
+<script>
+/* ==========================================================
+   BASE DE LOS JUEGOS PARA MAYORES
+   Lo común a todos: barra de arriba, tamaño de letra, voz, sonidos suaves,
+   memoria del nivel y protección contra toques dobles.
+
+   Uso:
+     const M = Mayores.iniciar({ id: 'compra', nivelMaximo: 8 });
+     M.tocar(boton, () => ...);   M.decir('texto');   M.sonar('bien');
+     M.mostrar('juego');   M.nivel   M.anotar('bien' | 'mal')
+   ========================================================== */
+const Mayores = (() => {
+    /* 18, 21, 23 y 26 px. Un escalón de 29 px se probó y en un móvil de
+       360 de ancho dejaba ocho letras por renglón: el refrán solo ocupaba
+       media pantalla y no cabían ni dos respuestas. */
+    const ESCALAS = [1, 1.15, 1.3, 1.45];
+    const ANTIRREBOTE_MS = 450;
+
+    /* localStorage falla en navegación privada y en algunos iframes: se
+       cae a memoria y el juego sigue, solo que sin recordar entre visitas */
+    const memoria = {};
+    function leer(clave, porDefecto) {
+        try {
+            const v = localStorage.getItem(clave);
+            return v === null ? porDefecto : JSON.parse(v);
+        } catch (e) {
+            return clave in memoria ? memoria[clave] : porDefecto;
+        }
+    }
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    /* ---------- VOZ ----------
+       La del propio navegador: en Android e iPhone habla castellano sin
+       instalar nada. Un poco más lenta que la normal (0,9). */
+    let vozElegida = null;
+    function elegirVoz() {
+        if (!('speechSynthesis' in window)) return;
+        const voces = speechSynthesis.getVoices();
+        vozElegida = voces.find(v => v.lang === 'es-ES') ||
+                     voces.find(v => /^es[-_]/i.test(v.lang)) || null;
+    }
+    if ('speechSynthesis' in window) {
+        elegirVoz();
+        /* En Chrome la lista de voces llega más tarde que la página */
+        speechSynthesis.addEventListener('voiceschanged', elegirVoz);
+    }
+
+    /* ---------- SONIDOS ----------
+       El acierto suena a campanilla; el error, a un «toc» grave y corto.
+       Nada de zumbidos de «has fallado». El contexto de audio se crea con
+       el primer toque, que es cuando el navegador deja. */
+    let ctxAudio = null;
+    function audio() {
+        if (ctxAudio) return ctxAudio;
+        try { ctxAudio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctxAudio = null; }
+        return ctxAudio;
+    }
+    function nota(frec, inicio, dur, vol) {
+        const ctx = audio();
+        if (!ctx) return;
+        const t = ctx.currentTime + inicio;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = frec;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(ctx.destination);
+        o.start(t);
+        o.stop(t + dur + 0.05);
+    }
+
+    function iniciar(opciones) {
+        const id = opciones.id;
+        const nivelMaximo = opciones.nivelMaximo || 1;
+        let escala = Math.min(ESCALAS.length - 1, Math.max(0, leer('mayores.letra', 1)));
+        let sonido = leer('mayores.sonido', true);
+        let estadoNivel = leer('mayores.' + id + '.nivel', nivelInicial());
+        if (!estadoNivel || typeof estadoNivel.nivel !== 'number') estadoNivel = nivelInicial();
+        estadoNivel.nivel = Math.min(nivelMaximo, Math.max(1, estadoNivel.nivel));
+
+        /* ---------- barra de arriba ---------- */
+        const barra = document.createElement('div');
+        barra.className = 'barra';
+        barra.innerHTML =
+            '<button type="button" class="salir" data-b="salir" aria-label="Salir al portal de juegos">← Salir</button>' +
+            '<button type="button" data-b="menos" aria-label="Letra más pequeña">A−</button>' +
+            '<button type="button" data-b="mas" aria-label="Letra más grande">A+</button>' +
+            '<button type="button" data-b="sonido"></button>';
+        document.body.insertBefore(barra, document.body.firstChild);
+        const bMenos = barra.querySelector('[data-b="menos"]');
+        const bMas = barra.querySelector('[data-b="mas"]');
+        const bSonido = barra.querySelector('[data-b="sonido"]');
+
+        function aplicarEscala() {
+            document.documentElement.style.setProperty('--escala', ESCALAS[escala]);
+            bMenos.disabled = escala === 0;
+            bMas.disabled = escala === ESCALAS.length - 1;
+        }
+        function aplicarSonido() {
+            bSonido.textContent = sonido ? '🔊' : '🔇';
+            bSonido.setAttribute('aria-label', sonido ? 'Quitar el sonido' : 'Poner el sonido');
+            bSonido.setAttribute('aria-pressed', String(sonido));
+        }
+        aplicarEscala();
+        aplicarSonido();
+
+        /* ---------- toques ----------
+           Un toque doble involuntario no debe contar como dos respuestas:
+           se ignora todo toque que llegue antes de ANTIRREBOTE_MS del
+           anterior que sí se atendió. */
+        /* Cada juego puede querer recolocar su pantalla al cambiar la letra */
+        const avisosLetra = [];
+
+        let ultimoToque = 0;
+        function tocar(el, accion) {
+            el.addEventListener('click', (e) => {
+                const ahora = Date.now();
+                if (ahora - ultimoToque < ANTIRREBOTE_MS) { e.preventDefault(); return; }
+                ultimoToque = ahora;
+                audio();
+                if (ctxAudio && ctxAudio.state === 'suspended') ctxAudio.resume();
+                accion(e);
+            });
+        }
+
+        const cambiarLetra = (d) => {
+            const nueva = Math.min(ESCALAS.length - 1, Math.max(0, escala + d));
+            if (nueva === escala) return;
+            escala = nueva;
+            guardar('mayores.letra', escala);
+            aplicarEscala();
+            avisosLetra.forEach(f => f());
+        };
+        tocar(bMenos, () => cambiarLetra(-1));
+        tocar(bMas, () => cambiarLetra(1));
+        tocar(bSonido, () => {
+            sonido = !sonido;
+            guardar('mayores.sonido', sonido);
+            aplicarSonido();
+            if (!sonido && 'speechSynthesis' in window) speechSynthesis.cancel();
+            else decir('Sonido puesto');
+        });
+        tocar(barra.querySelector('[data-b="salir"]'), () => {
+            if ('speechSynthesis' in window) speechSynthesis.cancel();
+            /* Los juegos viven en webs/ y la portada en la raíz */
+            location.href = '../';
+        });
+
+        function decir(texto) {
+            if (!sonido || !('speechSynthesis' in window) || !texto) return;
+            try {
+                /* cancel antes de hablar: si no, las frases se encolan y la
+                   voz va contando lo de hace tres toques */
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(texto);
+                u.lang = 'es-ES';
+                if (vozElegida) u.voice = vozElegida;
+                u.rate = 0.9;
+                /* Chrome a veces deja la síntesis en pausa tras pasar la
+                   pestaña a segundo plano, y speak() ya no suena */
+                speechSynthesis.resume();
+                speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+
+        function sonar(tipo) {
+            if (!sonido) return;
+            if (tipo === 'bien') { nota(784, 0, 0.25, 0.18); nota(1047, 0.12, 0.35, 0.16); }
+            else if (tipo === 'fin') { nota(659, 0, 0.3, 0.16); nota(784, 0.15, 0.3, 0.16); nota(1047, 0.3, 0.5, 0.16); }
+            else nota(220, 0, 0.18, 0.12);
+        }
+
+        function mostrar(idPantalla) {
+            document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === idPantalla));
+            window.scrollTo(0, 0);
+            /* El foco a la pantalla nueva: quien navega con lector de
+               pantalla o teclado no se queda en un botón que ya no se ve */
+            const h = document.querySelector('#' + idPantalla + ' [data-foco]') ||
+                      document.querySelector('#' + idPantalla + ' h1');
+            if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && 'speechSynthesis' in window) speechSynthesis.cancel();
+        });
+
+        /* ¿Cabe la pantalla sin desplazar? Se mide lo que de verdad se ve,
+           no se estima: el tamaño de letra, la pantalla y hasta la fuente
+           del sistema cambian de un aparato a otro. Se mira también el
+           ancho, porque una rejilla con una palabra larga puede ensanchar
+           la página en vez de bajar de línea. */
+        function cabe() {
+            const raiz = document.scrollingElement || document.documentElement;
+            const ancho = document.documentElement.clientWidth;
+            const sale = [...document.querySelectorAll('.pantalla.activa *')]
+                .some(e => e.offsetParent !== null && e.getBoundingClientRect().right > ancho + 1);
+            return raiz.scrollHeight <= window.innerHeight + 1 && !sale;
+        }
+
+        return {
+            tocar, decir, sonar, mostrar, cabe,
+            alCambiarLetra(f) { avisosLetra.push(f); },
+            get letraGrande() { return escala >= 2; },
+            get nivel() { return estadoNivel.nivel; },
+            anotar(resultado) {
+                estadoNivel = adaptarNivel(estadoNivel, resultado, nivelMaximo);
+                guardar('mayores.' + id + '.nivel', estadoNivel);
+                return estadoNivel.nivel;
+            },
+            get hayVoz() { return 'speechSynthesis' in window; }
+        };
+    }
+
+    return { iniciar };
+})();
+</script>
+<script>
+/* ==========================================================
+   LA LISTA DE LA COMPRA
+   Nunca se pierde: lo que no estaba se apaga y se sigue buscando; a los
+   dos errores el juego dice qué falta. La dificultad la lleva la base:
+   solo cuenta si la ronda salió limpia o no.
+   ========================================================== */
+const RONDAS = 5;
+const ERRORES_ANTES_DE_AYUDAR = 2;
+
+const M = Mayores.iniciar({ id: 'compra', nivelMaximo: NIVELES_COMPRA.length });
+const $ = (id) => document.getElementById(id);
+
+const partida = {
+    ronda: 0,
+    lista: [], tienda: [],
+    encontrados: new Set(),
+    errores: 0, ayudas: 0,
+    anterior: [],
+    viendoLista: false        // volvió a mirar la lista desde la tienda
+};
+
+if (!M.hayVoz) $('btnOirLista').style.display = 'none';
+
+/* «pan, leche y huevos» */
+function enumerar(nombres) {
+    if (nombres.length < 2) return nombres.join('');
+    return nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1];
+}
+
+function tarjeta(p, etiqueta) {
+    const el = document.createElement(etiqueta || 'div');
+    el.className = 'producto';
+    if (etiqueta === 'button') el.type = 'button';
+    /* Emoji y nombre siempre juntos: el dibujo cambia de un móvil a otro y
+       la palabra es lo que de verdad se recuerda */
+    el.innerHTML = '<span class="icono" aria-hidden="true"></span><span class="nombre"></span>';
+    el.querySelector('.icono').textContent = p.icono;
+    el.querySelector('.nombre').textContent = p.nombre;
+    return el;
+}
+
+/* Dos columnas con pocas tarjetas (sin hueco suelto en la última fila), o
+   cuando en tres el nombre bajaría del 85 % de la letra elegida: el nombre
+   ocupa el 15 % del ancho de DENTRO de la tarjeta (ver .nombre en el CSS),
+   así que se descuentan su relleno (0,2rem por lado) y su borde (3 px).
+   Sin descontarlos, «papel higiénico» salía a 13,7 px en un móvil de 360. */
+function columnasPara(n, contenedor) {
+    if (n <= 4) return 2;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    const ancho = (contenedor || document.querySelector('main')).clientWidth;
+    const dentroEn3 = (ancho - 2 * 0.5 * rem) / 3 - 0.4 * rem - 6;
+    return dentroEn3 * 0.15 >= 0.85 * rem ? 3 : 2;
+}
+
+function pintarLista(contenedor) {
+    contenedor.style.setProperty('--columnas', columnasPara(partida.lista.length, contenedor));
+    contenedor.innerHTML = '';
+    partida.lista.forEach(p => {
+        const t = tarjeta(p);
+        if (contenedor.id === 'listaHecha') t.classList.add('en-cesta');
+        contenedor.appendChild(t);
+    });
+}
+
+function decirLista() { M.decir('Recuerda: ' + enumerar(partida.lista.map(p => p.nombre)) + '.'); }
+
+function empezarSesion() {
+    partida.ronda = 0;
+    nuevaRonda();
+}
+
+function nuevaRonda() {
+    partida.ronda++;
+    const r = rondaCompra(M.nivel, Math.random, partida.anterior);
+    partida.lista = r.lista;
+    partida.tienda = r.tienda;
+    partida.anterior = r.lista.map(p => p.nombre);
+    partida.encontrados = new Set();
+    partida.errores = 0;
+    partida.ayudas = 0;
+    partida.viendoLista = false;
+
+    caberEnPantalla();
+    $('btnYa').textContent = 'YA ME LA SÉ';
+    decirLista();
+}
+
+/* Antes de enseñar la lista se comprueba que la tienda que vendrá luego
+   cabe sin desplazar. Se pinta la tienda (en el mismo instante, el navegador
+   no llega a enseñarla), se quitan productos de los que sobran y, si ni con
+   uno solo de más cabe, se acorta la lista. Luego lo mismo con la pantalla
+   de la lista. Nunca menos de dos en la lista ni de uno de más. */
+function caberEnPantalla() {
+    const quitarDeLista = () => {
+        const fuera = partida.lista.pop();
+        partida.tienda = partida.tienda.filter(p => p.nombre !== fuera.nombre);
+    };
+    pintarTienda();
+    M.mostrar('tienda');
+    ajustarTienda();
+    while (!M.cabe() && partida.lista.length > 2) {
+        quitarDeLista();
+        pintarTienda();
+        ajustarTienda();
+    }
+    pintarLista($('lista'));
+    M.mostrar('recordar');
+    while (!M.cabe() && partida.lista.length > 2) {
+        quitarDeLista();
+        pintarLista($('lista'));
+    }
+    partida.anterior = partida.lista.map(p => p.nombre);
+}
+
+function pintarTienda() {
+    const est = $('estantes');
+    est.innerHTML = '';
+    partida.tienda.forEach(p => {
+        const b = tarjeta(p, 'button');
+        b.dataset.nombre = p.nombre;
+        M.tocar(b, () => elegir(p, b));
+        est.appendChild(b);
+    });
+    /* Los textos también, aunque solo se vaya a medir: la comprobación de
+       caberEnPantalla() los pintaba vacíos, medía una tienda más baja que
+       la real y con la letra grande se pasaba 5 px en un iPhone */
+    pintarCesta();
+    $('pistaTienda').textContent = 'Toca lo de tu lista';
+}
+
+function abrirTienda() {
+    pintarTienda();
+    M.mostrar('tienda');
+    ajustarTienda();
+    M.decir('Toca lo que había en tu lista.');
+}
+
+/* Si la tienda no cabe sin desplazar, se quitan productos de los que
+   sobran (nunca de la lista) hasta que quepa. Un producto escondido bajo
+   el borde de la pantalla es peor que una ronda algo más fácil: quien no
+   lo ve, cree que no está. Se mide de verdad, no se estima. */
+function ajustarTienda(ultimoRecurso) {
+    const est = $('estantes');
+    const sobrantes = () => [...est.children].filter(b => !partida.lista.some(x => x.nombre === b.dataset.nombre) &&
+                                                         !b.classList.contains('no-estaba'));
+    est.style.setProperty('--columnas', columnasPara(est.children.length, est));
+    let quitados = 0;
+    while (!M.cabe() && sobrantes().length > 1) {
+        const b = sobrantes().pop();
+        partida.tienda = partida.tienda.filter(p => p.nombre !== b.dataset.nombre);
+        b.remove();
+        quitados++;
+        est.style.setProperty('--columnas', columnasPara(est.children.length, est));
+    }
+    /* Último recurso: si agranda la letra a mitad de la tienda, la lista ya
+       está memorizada y no se puede acortar. Entonces, tres columnas aunque
+       el nombre quede algo más pequeño: mejor todo a la vista. */
+    if (ultimoRecurso && !M.cabe() && est.children.length > 2) est.style.setProperty('--columnas', 3);
+    if (quitados) console.info('tienda recortada en ' + quitados + ' para que quepa');
+}
+
+function volverATienda() {
+    partida.viendoLista = false;
+    $('btnYa').textContent = 'YA ME LA SÉ';
+    M.mostrar('tienda');
+}
+
+function pintarCesta() {
+    $('cesta').textContent = 'Llevas ' + partida.encontrados.size + ' de ' + partida.lista.length;
+}
+
+function elegir(p, boton) {
+    if (boton.disabled) return;
+    const enLista = partida.lista.some(x => x.nombre === p.nombre);
+
+    if (enLista) {
+        partida.encontrados.add(p.nombre);
+        boton.classList.remove('ayuda');
+        boton.classList.add('en-cesta');
+        boton.disabled = true;
+        boton.setAttribute('aria-label', p.nombre + ', en la cesta');
+        pintarCesta();
+        if (partida.encontrados.size === partida.lista.length) return terminarRonda();
+        M.sonar('bien');
+        M.decir(p.nombre + '. Muy bien.');
+        $('pistaTienda').textContent = 'Muy bien. Sigue buscando.';
+        return;
+    }
+
+    partida.errores++;
+    boton.classList.add('no-estaba');
+    boton.disabled = true;
+    boton.setAttribute('aria-label', p.nombre + ', no estaba en la lista');
+    M.sonar('suave');
+
+    if (partida.errores >= ERRORES_ANTES_DE_AYUDAR) {
+        /* Aprender sin error: tras dos fallos no se deja que siga probando
+           a ciegas, se le enseña uno de los que faltan */
+        const falta = partida.lista.find(x => !partida.encontrados.has(x.nombre));
+        const b = document.querySelector('#estantes [data-nombre="' + CSS.escape(falta.nombre) + '"]');
+        if (b) b.classList.add('ayuda');
+        $('pistaTienda').textContent = 'Te ayudo: busca ' + falta.nombre + '.';
+        M.decir('Eso no estaba. Te ayudo: busca ' + falta.nombre + '.');
+    } else {
+        $('pistaTienda').textContent = 'Eso no estaba en la lista. Prueba otro.';
+        M.decir('Eso no estaba en la lista. Prueba otro.');
+    }
+}
+
+function terminarRonda() {
+    M.anotar(resultadoDeRonda(partida.errores, partida.ayudas));
+    pintarLista($('listaHecha'));
+    $('btnSiguiente').textContent = partida.ronda >= RONDAS ? 'TERMINAR' : 'SIGUIENTE';
+    M.sonar('bien');
+    M.mostrar('hecho');
+    M.decir('¡Ya tienes toda la compra!');
+}
+
+function terminarSesion() {
+    $('textoFinal').textContent = 'Has hecho ' + RONDAS + ' compras.';
+    M.sonar('fin');
+    M.mostrar('final');
+    M.decir('¡Muy bien! Has hecho ' + RONDAS + ' compras.');
+}
+
+/* Con la letra cambiada a mitad de ronda puede dejar de caber */
+M.alCambiarLetra(() => {
+    if (document.getElementById('tienda').classList.contains('activa')) ajustarTienda(true);
+    pintarLista($('lista'));
+});
+
+M.tocar($('btnEmpezar'), empezarSesion);
+M.tocar($('btnYa'), () => (partida.viendoLista ? volverATienda() : abrirTienda()));
+M.tocar($('btnOirLista'), decirLista);
+M.tocar($('btnVerLista'), () => {
+    partida.ayudas++;
+    partida.viendoLista = true;
+    $('btnYa').textContent = 'VOLVER A LA TIENDA';
+    M.mostrar('recordar');
+    decirLista();
+});
+M.tocar($('btnSiguiente'), () => (partida.ronda >= RONDAS ? terminarSesion() : nuevaRonda()));
+M.tocar($('btnOtraVez'), empezarSesion);
+M.tocar($('btnSalirFinal'), () => { location.href = '../'; });
+</script>
+</body>
+</html>
