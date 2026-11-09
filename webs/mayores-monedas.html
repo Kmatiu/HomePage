@@ -32,6 +32,9 @@
     --naranja: #763800;
     --naranja-claro: #fdeedd;
     --borde: #c9bfae;
+    /* Alto de la barra de arriba: 16 + 52 + 6 de relleno y botón, más 2 de
+       borde. Lo usan los juegos que dimensionan su tablero con el alto libre. */
+    --alto-barra: calc(env(safe-area-inset-top, 0px) + 76px);
 }
 
 * { box-sizing: border-box; }
@@ -65,7 +68,11 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: calc(env(safe-area-inset-top, 0px) + 6px) 10px 6px;
+    /* 16 px y no 6 por arriba: en el iPhone, Safari difumina lo que queda
+       justo debajo de la hora y la batería, y con 6 px el difuminado caía
+       sobre los botones. Se suma al hueco de seguridad, no lo sustituye
+       (max() lo sustituiría; trampa ya pagada en este proyecto). */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 10px 6px;
     background: var(--fondo);
     border-bottom: 2px solid var(--borde);
 }
@@ -180,6 +187,34 @@ h1 { font-size: 1.5rem; margin: 0.4rem 0 0.6rem; line-height: 1.2; text-align: c
 .cesta { flex: 1; font-size: 1.05rem; font-weight: 700; margin: 0; }
 .pie .boton { width: auto; flex: 0 0 auto; margin: 0.3rem 0; }
 .pista.titulo { font-size: 1.15rem; font-weight: 700; color: var(--texto); margin: 0.2rem 0; }
+
+/* ---------- CARTAS DE MEMORY ----------
+   Cuadradas y del ancho de su columna; el alto lo da aspect-ratio, sin
+   height fijo (con height explícito aspect-ratio no hace nada; trampa ya
+   pagada en este proyecto). */
+.cartas {
+    display: grid;
+    grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+    gap: 0.5rem;
+    width: min(100%, var(--ancho-cartas, 100%));
+    margin: 0.4rem auto 0.6rem;
+}
+.carta {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0.2rem; overflow: hidden;
+    border: 3px solid var(--azul); border-radius: 0.8rem;
+    background: var(--azul-claro); color: var(--azul);
+    font: 700 1rem/1.15 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+    container-type: inline-size;
+}
+.carta.abierta { background: var(--tarjeta); border-color: var(--texto); color: var(--texto); outline: 0.3rem solid var(--texto); outline-offset: 0.1rem; }
+.carta.hecha { background: var(--verde-claro); border-color: var(--verde); color: var(--texto); cursor: default; }
+.carta.ayuda { animation: halo 1.2s ease-in-out infinite; }
+.carta .icono { font-size: min(2.2rem, 42cqi); line-height: 1.1; }
+.carta .nombre { font-size: min(1rem, 15cqi); margin-top: 0.1rem; }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -732,6 +767,145 @@ function rondaCambio(nivel, azar, evitar) {
     }
     return { tipo: 'cambia', mesa, hueco, quitado: mesa[hueco], nuevo: restantes[0] };
 }
+
+/* ==========================================================
+   PON EN ORDEN
+   Solo tareas cuyo orden lo impone la propia cosa (no se puede meter la
+   carta en el buzón antes de escribirla), nunca costumbres que cada casa
+   hace a su manera (¿la sal antes o después?). Se descartaron por eso la
+   tortilla, el huevo frito, el té y la lavadora.
+   ========================================================== */
+const TAREAS = [
+    { nombre: 'Hacer la compra', pasos: [
+        ['Hacer la lista', '📝'], ['Ir a la tienda', '🚶'], ['Coger lo que hace falta', '🛒'],
+        ['Pagar en la caja', '💶'], ['Volver a casa', '🏠']] },
+    { nombre: 'Cocer macarrones', pasos: [
+        ['Llenar la olla de agua', '💧'], ['Ponerla al fuego', '🔥'], ['Esperar a que hierva', '♨️'],
+        ['Echar los macarrones', '🍝'], ['Servirlos en el plato', '🍽️']] },
+    { nombre: 'Hacer zumo de naranja', pasos: [
+        ['Coger las naranjas', '🍊'], ['Partirlas por la mitad', '🔪'], ['Exprimirlas', '✊'],
+        ['Echar el zumo en el vaso', '🥛'], ['Bebérselo', '😋']] },
+    { nombre: 'Hacer una llamada', pasos: [
+        ['Coger el teléfono', '📱'], ['Marcar el número', '🔢'], ['Esperar a que contesten', '⏳'],
+        ['Hablar', '🗣️'], ['Colgar', '👋']] },
+    { nombre: 'Coger el autobús', pasos: [
+        ['Ir a la parada', '🚏'], ['Esperar el autobús', '⏳'], ['Subir al autobús', '🚌'],
+        ['Pagar el billete', '🎫'], ['Bajar en tu parada', '🏁']] },
+    { nombre: 'Plantar una flor', pasos: [
+        ['Hacer un hoyo en la tierra', '🕳️'], ['Poner la semilla', '🌰'], ['Taparla con tierra', '🤲'],
+        ['Regarla', '💧'], ['Ver salir la flor', '🌷']] },
+    /* Solo tres: abrir el grifo o mojarse antes o después del jabón es
+       costumbre de cada cual; enjabonar, aclarar y secar, no */
+    { nombre: 'Lavarse las manos', pasos: [
+        ['Enjabonarse las manos', '🧼'], ['Aclararse con agua', '💧'], ['Secarse con la toalla', '🙌']] },
+    { nombre: 'Mandar una carta', pasos: [
+        ['Escribir la carta', '✍️'], ['Meterla en el sobre', '✉️'], ['Echarla al buzón', '📮'], ['Le llega a quien la espera', '😊']] },
+    { nombre: 'Entrar en casa', pasos: [
+        ['Sacar la llave', '🔑'], ['Meterla en la cerradura', '🔐'], ['Abrir la puerta', '🚪'], ['Entrar en casa', '🏠']] },
+    { nombre: 'Fregar los platos', pasos: [
+        ['Quitar los restos', '🍽️'], ['Frotar con jabón', '🧽'], ['Aclarar con agua', '💧'], ['Dejar que se sequen', '🌬️']] }
+].map(t => ({ nombre: t.nombre, pasos: t.pasos.map(([texto, icono]) => ({ texto, icono })) }));
+
+const NIVELES_ORDEN = [{ pasos: 3 }, { pasos: 4 }, { pasos: 5 }];
+
+/* Con menos pasos que la tarea se quitan del medio: el primero y el último
+   se quedan siempre, que son los que dan sentido a la tarea */
+function rondaOrden(nivel, azar, evitar) {
+    const n = NIVELES_ORDEN[Math.min(nivel, NIVELES_ORDEN.length) - 1].pasos;
+    let candidatas = TAREAS.filter(t => t.pasos.length >= n && t.nombre !== evitar);
+    if (!candidatas.length) candidatas = TAREAS.filter(t => t.pasos.length >= n);
+    const tarea = candidatas[Math.floor(azar() * candidatas.length)];
+    const medio = barajar(tarea.pasos.slice(1, -1).map((_, i) => i + 1), azar).slice(0, n - 2).sort((a, b) => a - b);
+    const pasos = [0].concat(medio, [tarea.pasos.length - 1]).map(i => tarea.pasos[i]);
+    /* Desordenados de verdad: si el azar los deja en su sitio, no hay juego */
+    let barajados;
+    do { barajados = barajar(pasos, azar); } while (barajados.every((p, i) => p === pasos[i]));
+    return { tarea: tarea.nombre, pasos, barajados };
+}
+
+/* ==========================================================
+   CLASIFICAR
+   Un objeto cada vez y dos o tres grupos. Fuera todo lo discutible: las
+   bebidas en «¿Es comida?», el tomate (¿fruta o verdura?) y el maíz.
+   ========================================================== */
+const SIN_DUDA = new Set(['café', 'vino', 'leche', 'tomates', 'maíz']);
+const deGrupo = (g) => PRODUCTOS.filter(p => p.grupo === g && !SIN_DUDA.has(p.nombre));
+const NO_COMIDA = OBJETOS.filter(o => o.nombre !== 'manzana').concat(deGrupo('limpieza'));
+const COMIDA = PRODUCTOS.filter(p => p.grupo !== 'limpieza' && !SIN_DUDA.has(p.nombre));
+
+const CLASIFICACIONES = [
+    { pregunta: '¿Es comida?', grupos: [
+        { nombre: 'Es comida', icono: '🍽️', cosas: COMIDA },
+        { nombre: 'No es comida', icono: '✋', cosas: NO_COMIDA }] },
+    { pregunta: '¿Fruta o verdura?', grupos: [
+        { nombre: 'Fruta', icono: '🍎', cosas: deGrupo('fruta') },
+        { nombre: 'Verdura', icono: '🥕', cosas: deGrupo('verdura') }] },
+    { pregunta: '¿Fruta, verdura o carne y pescado?', grupos: [
+        { nombre: 'Fruta', icono: '🍎', cosas: deGrupo('fruta') },
+        { nombre: 'Verdura', icono: '🥕', cosas: deGrupo('verdura') },
+        { nombre: 'Carne y pescado', icono: '🐟', cosas: deGrupo('carne y pescado') }] }
+];
+
+const NIVELES_CLASIFICAR = [
+    { clasificacion: 0, cosas: 5 },
+    { clasificacion: 1, cosas: 6 },
+    { clasificacion: 2, cosas: 6 },
+    { clasificacion: 2, cosas: 8 }
+];
+
+/* Cada grupo sale al menos una vez, y nada se repite */
+function rondaClasificar(nivel, azar) {
+    const cfg = NIVELES_CLASIFICAR[Math.min(nivel, NIVELES_CLASIFICAR.length) - 1];
+    const c = CLASIFICACIONES[cfg.clasificacion];
+    const bolsas = c.grupos.map(g => barajar(g.cosas, azar));
+    const cosas = [];
+    for (let k = 0; cosas.length < cfg.cosas; k++) {
+        const g = k < c.grupos.length ? k : Math.floor(azar() * c.grupos.length);
+        const obj = bolsas[g].pop();
+        if (obj) cosas.push({ obj, grupo: g });
+    }
+    return { pregunta: c.pregunta, grupos: c.grupos.map(g => ({ nombre: g.nombre, icono: g.icono })), cosas: barajar(cosas, azar) };
+}
+
+/* ==========================================================
+   MEMORY (de oído y de fotos)
+   Un jugador con memoria perfecta falla, como mucho, parejas − 1 veces:
+   las que no puede evitar porque aún no ha visto la carta compañera
+   (medido en 20.000 partidas por tamaño, de 2 a 6 parejas; nunca más).
+   Así que solo cuentan como error los fallos de más.
+   ========================================================== */
+function erroresMemoria(fallos, pares) {
+    return Math.max(0, fallos - (pares - 1));
+}
+
+/* Palabras que no se parezcan al oído: nada de sol/col ni pan/flan */
+const PALABRAS_OIDO = [
+    { nombre: 'gato', icono: '🐈' }, { nombre: 'luna', icono: '🌙' }, { nombre: 'reloj', icono: '⏰' },
+    { nombre: 'flor', icono: '🌷' }, { nombre: 'coche', icono: '🚗' }, { nombre: 'árbol', icono: '🌳' },
+    { nombre: 'campana', icono: '🔔' }, { nombre: 'llave', icono: '🔑' }, { nombre: 'zapato', icono: '👞' },
+    { nombre: 'naranja', icono: '🍊' }, { nombre: 'libro', icono: '📕' }, { nombre: 'guitarra', icono: '🎸' },
+    { nombre: 'pelota', icono: '⚽' }, { nombre: 'caballo', icono: '🐎' }, { nombre: 'paraguas', icono: '☂️' },
+    { nombre: 'tren', icono: '🚂' }
+];
+const NIVELES_OIDO = [{ pares: 2 }, { pares: 3 }, { pares: 4 }, { pares: 5 }, { pares: 6 }];
+const NIVELES_FOTOS = [{ pares: 2 }, { pares: 3 }, { pares: 4 }, { pares: 6 }];
+
+function barajarParejas(cosas, pares, azar) {
+    const elegidas = barajar(cosas, azar).slice(0, pares);
+    return barajar(elegidas.concat(elegidas).map((c, i) => ({ id: i, cosa: c })), azar);
+}
+
+function rondaOido(nivel, azar) {
+    const pares = NIVELES_OIDO[Math.min(nivel, NIVELES_OIDO.length) - 1].pares;
+    return { pares, cartas: barajarParejas(PALABRAS_OIDO, pares, azar) };
+}
+
+/* Con fotos: nunca más parejas que fotos haya cargado */
+function rondaFotos(nivel, azar, fotos) {
+    const quiere = NIVELES_FOTOS[Math.min(nivel, NIVELES_FOTOS.length) - 1].pares;
+    const pares = Math.min(quiere, fotos.length);
+    return { pares, cartas: barajarParejas(fotos, pares, azar) };
+}
 </script>
 <script>
 /* ==========================================================
@@ -974,11 +1148,36 @@ const Mayores = (() => {
             const ancho = document.documentElement.clientWidth;
             const sale = [...document.querySelectorAll('.pantalla.activa *')]
                 .some(e => e.offsetParent !== null && e.getBoundingClientRect().right > ancho + 1);
-            return raiz.scrollHeight <= window.innerHeight + 1 && !sale;
+            /* Sin tolerancia: con 1 px de margen se colaban pantallas que se
+               pasaban justo ese píxel y obligaban a desplazar */
+            return raiz.scrollHeight <= window.innerHeight && !sale;
         }
 
+        /* Reservar el alto del mensaje más largo que puede salir en una pista.
+           Sin esto, al fallar, «¿Qué se hace primero?» pasaba a «Eso se hace
+           más tarde. ¿Qué se hace primero?», ocupaba un renglón más y todo lo
+           de debajo bajaba: la tarjeta siguiente ya no estaba bajo el dedo.
+           `medido` es el bloque que ocupa sitio; `texto`, dónde va el mensaje
+           (el mismo elemento o uno de dentro). Se recalcula al cambiar la
+           letra, y como deja puesto el min-height, cabe() ya lo cuenta. */
+        const reservas = new Map();
+        function reservar(medido, textos, texto) {
+            texto = texto || medido;
+            reservas.set(medido, { textos, texto });
+            const antes = texto.textContent;
+            medido.style.minHeight = '';
+            let alto = 0;
+            for (const t of textos) {
+                texto.textContent = t;
+                alto = Math.max(alto, medido.getBoundingClientRect().height);
+            }
+            texto.textContent = antes;
+            medido.style.minHeight = Math.ceil(alto) + 'px';
+        }
+        avisosLetra.push(() => reservas.forEach((r, el) => { if (el.offsetParent !== null) reservar(el, r.textos, r.texto); }));
+
         return {
-            tocar, decir, sonar, tono, mostrar, cabe, tarjeta, columnasPara,
+            tocar, decir, sonar, tono, mostrar, cabe, tarjeta, columnasPara, reservar,
             get paleta() { return PALETAS.find(p => p.id === paletaId); },
             elegirPaleta(id) {
                 if (!PALETAS.some(p => p.id === id)) return;
@@ -993,7 +1192,8 @@ const Mayores = (() => {
                 guardar('mayores.' + id + '.nivel', estadoNivel);
                 return estadoNivel.nivel;
             },
-            get hayVoz() { return 'speechSynthesis' in window; }
+            get hayVoz() { return 'speechSynthesis' in window; },
+            get sonidoActivo() { return sonido; }
         };
     }
 
@@ -1158,6 +1358,8 @@ function nuevaRonda() {
     $('btnAyuda').style.display = '';
     $('btnSiguiente').style.display = 'none';
     M.mostrar('juego');
+    M.reservar($('pista'), ['Te faltan ' + importeEnCifra(r.precio), 'Te has pasado. Toca una de las de abajo para quitarla.',
+        'Todavía te pasas.', 'Quita la que brilla.', 'Pon la que brilla: 50 c.', '¡Justo! Muy bien.']);
     decirPrecio();
 }
 
