@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f0c2d">
-    <title>Quiz Arcade Retro</title>
+    <title>Quiz de cultura</title>
     <!-- Sin Google Fonts ni Tone.js: el juego ya no necesita la red para nada -->
     <style>
 /* ==== ESTÁNDAR CSS ====
@@ -308,23 +308,47 @@ body {
 }
 /* ==== FIN ESTÁNDAR CSS ==== */
 
-        /* ---------- PROPIO DEL QUIZ ---------- */
+        /* ---------- PROPIO DEL QUIZ ----------
+           Aspecto sobrio (pedido del usuario: los neones llamaban demasiado
+           la atención). Se redefinen las variables del estándar para este
+           juego, así el menú y las capas también se templan sin tocar el
+           estándar de los demás. */
         :root {
-            --color-neon-green: #00ff00;
-            --color-neon-pink: #ff00ff;
-            --color-neon-blue: #00ffff;
-            --color-error: #ff0000;
-            --color-success: #00ff00;
-            --color-p1: #00ff00; /* Jugador 1: verde */
-            --color-p2: #ff00ff; /* Jugador 2: rosa */
-            --color-neutral: #888888;
+            --fondo: #121821;
+            --panel: rgba(255, 255, 255, 0.04);
+            --borde: rgba(255, 255, 255, 0.12);
+            --acento: #7fb0de;
+            --rosa: #d9826a;
+            --amarillo: #d9b768;
+            --texto: #e8edf3;
+            --apagado: #98a4b3;
+            --fuente: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            /* Nombres que usa el código del juego */
+            --color-neon-green: #7fb0de;   /* barra de tiempo al empezar */
+            --color-neon-pink: #d9b768;    /* barra a la mitad */
+            --color-error: #d0675f;        /* barra al final y respuesta fallada */
+            --color-success: #4fa37a;
+            --color-p1: #7fb0de;           /* jugador 1: azul */
+            --color-p2: #d9a06a;           /* jugador 2: ocre */
         }
+        body { background: linear-gradient(180deg, #18212d 0%, var(--fondo) 60%); }
+        .est-titulo { letter-spacing: 1px; }
+        .est-titulo span { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: var(--acento); }
+        .opcion[aria-pressed="true"] { background: rgba(127, 176, 222, 0.14); }
+        .principal { background: rgba(127, 176, 222, 0.14); letter-spacing: 2px; }
+        @media (hover: hover) { .principal:hover { background: rgba(127, 176, 222, 0.24); } }
+        .secundario[aria-pressed="true"] { background: rgba(127, 176, 222, 0.12); }
+        .est-campo { background: #0d1219; }
+        .capa { background: rgba(8, 11, 16, 0.92); }
+        .caja { background: #18202b; border-width: 1px; }
+        #estAviso { background: rgba(18, 24, 33, 0.96); border-width: 1px; font-weight: 600; }
+
         .grupo-j2 { display: contents; }
-        /* 17 temas y 6 melodías: en fichas compactas, para que JUGAR no quede
+        /* 16 temas y 4 melodías: en fichas compactas, para que JUGAR no quede
            a tres pantallas de distancia en el móvil */
         .opciones.fichas { gap: 6px; }
-        .opciones.fichas .opcion { padding: 7px 8px; font-size: 0.72rem; border-radius: 8px; }
-        .opciones.fichas .opcion .sub { display: inline; margin: 0 0 0 4px; font-size: 0.6rem; }
+        .opciones.fichas .opcion { padding: 7px 8px; font-size: 0.74rem; border-radius: 8px; }
+        .opciones.fichas .opcion .sub { display: inline; margin: 0 0 0 4px; font-size: 0.62rem; }
         #score-p1 { color: var(--color-p1); }
         #score-p2 { color: var(--color-p2); }
 
@@ -338,115 +362,123 @@ body {
             display: flex;
             flex-direction: column;
             align-items: center;
-            text-align: center;
-            padding: 6px 4px 10px;
+            padding: 6px 2px 10px;
         }
         #player-turn {
-            font-size: 0.85rem;
-            letter-spacing: 2px;
-            margin: 6px 0 0;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin: 10px 0 0;
             color: var(--color-p1);
-            text-shadow: 0 0 5px var(--color-p1);
         }
         .timer-bar {
             width: 100%;
-            height: 16px;
+            height: 6px;
             flex: 0 0 auto;
-            background-color: #440000;
-            border: 2px solid var(--color-error);
+            background: rgba(255, 255, 255, 0.08);
             margin-top: 8px;
-            border-radius: 4px;
+            border-radius: 3px;
+            overflow: hidden;
         }
         .timer-fill {
             height: 100%;
             width: 100%;
             background-color: var(--color-neon-green);
             transition: width linear;
-            border-radius: 2px;
+        }
+        /* Tarjeta de la pregunta */
+        #tarjeta {
+            width: 100%;
+            max-width: 620px;
+            margin-top: 12px;
+            padding: 16px 18px 18px;
+            border: 1px solid var(--borde);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.035);
         }
         #topic-display {
-            color: var(--color-neon-pink);
-            font-size: clamp(0.75rem, 2vw, 1.05rem);
-            text-shadow: 0 0 5px var(--color-neon-pink);
-            margin: 12px 0 0;
-            letter-spacing: 1px;
+            display: inline-block;
+            margin: 0;
+            padding: 3px 10px;
+            border-radius: 999px;
+            background: rgba(127, 176, 222, 0.12);
+            color: var(--acento);
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
         }
         #question-text {
-            color: var(--color-neon-blue);
-            font-size: clamp(1rem, 3.2vw, 1.3rem);
-            line-height: 1.35;
-            margin: 10px 0 14px;
-            min-height: 3.2em;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-shadow: 0 0 5px var(--color-neon-blue);
+            color: var(--texto);
+            font-size: clamp(1.08rem, 3.6vw, 1.35rem);
+            font-weight: 600;
+            line-height: 1.4;
+            margin: 12px 0 0;
+            min-height: 2.8em;
         }
         .options {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            align-items: center;
+            gap: 9px;
             width: 100%;
+            max-width: 620px;
+            margin-top: 14px;
         }
         .answer-option {
             font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 12px;
             width: 100%;
-            max-width: 560px;
-            padding: 14px 18px;
+            padding: 13px 14px;
             cursor: pointer;
-            border-radius: 6px;
-            text-transform: uppercase;
-            white-space: normal;
-            word-break: break-word;
-            line-height: 1.25;
-            background-color: #1a1a1a;
-            border: 3px solid var(--color-neutral);
-            color: var(--color-neon-blue);
-            box-shadow: 0 4px 0 var(--color-neutral);
-            font-size: clamp(0.85rem, 2.4vw, 1rem);
-            transition: background-color 0.2s, border-color 0.2s;
+            border-radius: 12px;
+            text-align: left;
+            line-height: 1.3;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--borde);
+            color: var(--texto);
+            font-size: clamp(0.95rem, 2.6vw, 1.05rem);
+            transition: background-color 0.15s, border-color 0.15s;
             -webkit-tap-highlight-color: transparent;
         }
-        .answer-option.selected {
-            border-color: var(--color-neon-pink);
-            background-color: #330033;
-            box-shadow: 0 4px 0 var(--color-neon-pink);
+        /* Letra de la opción (A, B, C, D) en un círculo: ayuda a decir «la B» en voz alta */
+        .answer-option::before {
+            content: attr(data-letra);
+            flex: 0 0 auto;
+            width: 26px; height: 26px;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--borde);
+            color: var(--apagado);
+            font-size: 0.75rem; font-weight: 600;
         }
-        .answer-option:hover {
-            border-color: var(--color-neon-green);
-            background-color: #003300;
+        .answer-option.selected { border-color: var(--acento); background: rgba(127, 176, 222, 0.12); }
+        .answer-option.acierto { border-color: var(--color-success); background: rgba(79, 163, 122, 0.22); }
+        .answer-option.acierto::before { content: '✓'; border-color: var(--color-success); color: #fff; background: var(--color-success); }
+        .answer-option.fallo { border-color: var(--color-error); background: rgba(208, 103, 95, 0.2); }
+        .answer-option.fallo::before { content: '✗'; border-color: var(--color-error); color: #fff; background: var(--color-error); }
+        .answer-option.apagada { opacity: 0.55; }
+        @media (hover: hover) {
+            .answer-option:not(.acierto):not(.fallo):hover { border-color: var(--acento); }
         }
+        .answer-option:active { background: rgba(127, 176, 222, 0.16); }
+        #veredicto { min-height: 1.4em; margin: 12px 0 0; font-size: 0.95rem; font-weight: 600; color: var(--color-success); }
+        #veredicto.malo { color: var(--color-error); }
         #control-instructions {
-            font-size: 0.75rem;
-            color: var(--color-neon-green);
+            font-size: 0.72rem;
+            color: var(--apagado);
             margin: 14px 0 0;
             min-height: 20px;
         }
-        #control-instructions span { color: var(--color-neon-pink); }
-        /* En pantalla táctil el :hover se queda pegado tras tocar, y hacía que
-           la última opción pulsada siguiera resaltada en la pregunta siguiente. */
-        @media (hover: none) {
-            .answer-option:hover {
-                background-color: #1a1a1a;
-                border-color: var(--color-neutral);
-                color: var(--color-neon-blue);
-                box-shadow: 0 4px 0 var(--color-neutral);
-            }
-            .answer-option:active {
-                background-color: #003300;
-                border-color: var(--color-neon-green);
-            }
-            .answer-option { padding: 16px 18px; }
-        }
+        #control-instructions span { color: var(--texto); font-weight: 600; }
         @media (orientation: landscape) and (max-height: 520px) {
             .est-barra { padding: 2px 6px; }
             .est-barra .dato b { font-size: 0.85rem; }
             .est-icono { height: 28px; }
-            .options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-            .answer-option { padding: 10px 12px; }
-            #question-text { min-height: 0; margin: 6px 0 10px; }
-            #topic-display { margin-top: 6px; }
+            .options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: none; }
+            .answer-option { padding: 9px 12px; }
+            #tarjeta { margin-top: 6px; padding: 10px 14px; max-width: none; }
+            #question-text { min-height: 0; margin-top: 6px; }
         }
     </style>
 </head>
@@ -455,7 +487,7 @@ body {
 <!-- ===================== MENÚ ===================== -->
 <section class="pantalla activa est-menu" id="pMenu">
     <div class="est-scroll">
-        <div class="est-titulo">QUIZ <span>ARCADE</span></div>
+        <div class="est-titulo">QUIZ <span>DE CULTURA</span></div>
         <p class="est-lema">Demuestra lo que sabes y bate el récord</p>
 
         <fieldset class="est-grupo">
@@ -482,14 +514,12 @@ body {
         </fieldset>
 
         <fieldset class="est-grupo">
-            <legend>MELODÍA</legend>
+            <legend>MÚSICA DE FONDO</legend>
             <div class="opciones fichas" id="grpMelodia">
                 <button class="opcion" type="button" data-v="Aleatorio" aria-pressed="true">🎲 ALEATORIA</button>
-                <button class="opcion" type="button" data-v="Melodía 1 (Alegre)" aria-pressed="false">ALEGRE</button>
-                <button class="opcion" type="button" data-v="Melodía 2 (Ritmo Rápido)" aria-pressed="false">RÁPIDA</button>
-                <button class="opcion" type="button" data-v="Melodía 3 (Chill Retro)" aria-pressed="false">CHILL</button>
-                <button class="opcion" type="button" data-v="Melodía 4 (Acción)" aria-pressed="false">ACCIÓN</button>
-                <button class="opcion" type="button" data-v="Melodía 5 (Sincopada)" aria-pressed="false">SINCOPADA</button>
+                <button class="opcion" type="button" data-v="Serena" aria-pressed="false">SERENA</button>
+                <button class="opcion" type="button" data-v="Alegre" aria-pressed="false">ALEGRE</button>
+                <button class="opcion" type="button" data-v="Concentración" aria-pressed="false">CONCENTRACIÓN</button>
             </div>
             <p class="est-nota">Suena al elegirla si la música está encendida.</p>
         </fieldset>
@@ -527,9 +557,12 @@ body {
 
     <div id="zonaQuiz">
         <p id="player-turn" style="display:none;">TURNO: JUGADOR 1</p>
-        <p id="topic-display"></p>
-        <p id="question-text">Cargando pregunta...</p>
+        <div id="tarjeta">
+            <p id="topic-display"></p>
+            <p id="question-text">Cargando pregunta...</p>
+        </div>
         <div id="options-container" class="options"></div>
+        <p id="veredicto" aria-live="polite"></p>
         <p id="control-instructions"></p>
     </div>
 </section>
@@ -2575,139 +2608,75 @@ const EST = (() => {
 { question: "¿Cómo se llama el villano principal de Sonic?", options: ["Tails", "Knuckles", "Dr. Eggman", "Shadow"], answer: "Dr. Eggman", theme: "Videojuegos" }
         ];
 
-        // MELODÍAS (notación de compás de Tone.js, que se sigue usando tal cual)
-        // MELODÍAS NUEVAS: Más rítmicas y alegres
-        const MELODIES = {
-            'Melodía 1 (Alegre)': [
-                { time: '0:0', note: 'C5', duration: '8n', velocity: 0.9 },
-                { time: '0:0:2', note: 'G4', duration: '8n', velocity: 0.9 },
-                { time: '0:1', note: 'E4', duration: '8n', velocity: 0.9 },
-                { time: '0:1:2', note: 'C5', duration: '4n', velocity: 1.0 },
-                { time: '0:2:1', note: 'G4', duration: '8n', velocity: 0.8 },
-                { time: '0:2:2', note: 'A4', duration: '8n', velocity: 0.8 },
-                { time: '0:3', note: 'F4', duration: '2n', velocity: 0.9 }
-            ],
-            'Melodía 2 (Ritmo Rápido)': [
-                { time: '0:0', note: 'C4', duration: '16n', velocity: 0.8 },
-                { time: '0:0:1', note: 'E4', duration: '16n', velocity: 0.8 },
-                { time: '0:0:2', note: 'G4', duration: '16n', velocity: 0.8 },
-                { time: '0:0:3', note: 'C5', duration: '16n', velocity: 0.9 },
-                { time: '0:1', note: 'G4', duration: '8n', velocity: 0.9 },
-                { time: '0:1:2', note: 'E4', duration: '8n', velocity: 0.9 },
-                { time: '0:2', note: 'D4', duration: '4n', velocity: 0.8 }
-            ],
-            'Melodía 3 (Chill Retro)': [
-                { time: '0:0', note: 'C4', duration: '4n', velocity: 0.6 },
-                { time: '0:1', note: 'A3', duration: '4n', velocity: 0.6 },
-                { time: '0:2', note: 'G3', duration: '4n', velocity: 0.6 },
-                { time: '0:3', note: 'C4', duration: '4n', velocity: 0.7 }
-            ],
-            'Melodía 4 (Acción)': [
-                { time: '0:0', note: 'C3', duration: '8n', velocity: 0.9 },
-                { time: '0:0:2', note: 'G3', duration: '8n', velocity: 0.9 },
-                { time: '0:1', note: 'A#3', duration: '8n', velocity: 0.9 },
-                { time: '0:1:2', note: 'G3', duration: '8n', velocity: 0.9 },
-                { time: '0:2', note: 'C4', duration: '4n', velocity: 1.0 }
-            ],
-            'Melodía 5 (Sincopada)': [
-                { time: '0:0', note: 'E4', duration: '8n', velocity: 0.8 },
-                { time: '0:0:3', note: 'G4', duration: '8n', velocity: 0.8 },
-                { time: '0:1:2', note: 'C5', duration: '8n', velocity: 0.9 },
-                { time: '0:2:1', note: 'G4', duration: '8n', velocity: 0.8 },
-                { time: '0:3', note: 'E4', duration: '4n', velocity: 0.9 }
-            ]
+        /* ---------- SONIDO ----------
+           Fondos tranquilos en lugar de las cinco melodías de 8 bits: un quiz
+           pide concentración. Cada estilo es una progresión de cuatro acordes
+           en arpegio suave (seno o triángulo) con un bajo; suena seguido, sin
+           los 6 s de silencio que dejaba el bucle de 4 compases de antes.
+           Notas en Hz: el código no depende de ninguna librería. */
+        const N = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+        const ESTILOS = {
+            'Serena':        { bpm: 76,  onda: 'sine',     acordes: [[48, 64, 67, 71], [45, 64, 67, 72], [41, 65, 69, 72], [43, 62, 67, 71]] },
+            'Alegre':        { bpm: 100, onda: 'triangle', acordes: [[48, 64, 67, 72], [43, 62, 67, 71], [45, 64, 69, 72], [41, 65, 69, 72]] },
+            'Concentración': { bpm: 88,  onda: 'sine',     acordes: [[50, 65, 69, 72], [43, 65, 71, 74], [48, 64, 67, 71], [45, 64, 67, 72]] }
         };
+        const PATRON = [1, 2, 3, 2, 1, 2, 3, 2];   // índices dentro del acorde, en corcheas
 
-        // =========================================================================
-        // FUNCIONES DE AUDIO
-        // =========================================================================
-
-        /* Sintetizador propio con Web Audio, en lugar de Tone.js: era la única
-           dependencia de red del juego (sin conexión no había sonido) y pesaba
-           más que todo lo demás. Imita el PolySynth de antes: onda cuadrada y
-           envolvente ataque 5 ms, caída 0,1 s hasta el 30 %, salida de 1 s.
-           Las notas y los tiempos de MELODIES se leen igual que los leía Tone
-           (compás:pulso:semicorchea a 120 ppm). */
-        const BPM = 120;
-        const PULSO = 60 / BPM;
-        const DURACION = { '1n': PULSO * 4, '2n': PULSO * 2, '4n': PULSO, '8n': PULSO / 2, '16n': PULSO / 4 };
-        const SEMITONO = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-
-        function frecuencia(nota) {
-            const m = /^([A-G])(#?)(-?\d)$/.exec(nota);
-            if (!m) return 440;
-            const midi = (Number(m[3]) + 1) * 12 + SEMITONO[m[1]] + (m[2] ? 1 : 0);
-            return 440 * Math.pow(2, (midi - 69) / 12);
-        }
-        function segundos(pos) {
-            const [compas, pulso, semi] = pos.split(':').map(Number);
-            return (compas || 0) * PULSO * 4 + (pulso || 0) * PULSO + (semi || 0) * PULSO / 4;
-        }
-
-        /* Los osciladores de música vivos: al pausar se cortan, porque se
-           programan con hasta un ciclo de adelanto */
-        const sonandoMusica = new Set();
-
-        function tono(bus, nota, t, dur, vel, pico) {
+        function nota(bus, frec, t, dur, pico, onda) {
             const ctx = EST.audio.ctx;
             const osc = ctx.createOscillator();
             const g = ctx.createGain();
-            const a = pico * vel;
-            osc.type = 'square';
-            osc.frequency.value = frecuencia(nota);
+            osc.type = onda;
+            osc.frequency.value = frec;
+            // Ataque de 25 ms y caída larga: sin chasquidos ni golpes
             g.gain.setValueAtTime(0.0001, t);
-            g.gain.exponentialRampToValueAtTime(a, t + 0.005);
-            g.gain.exponentialRampToValueAtTime(Math.max(a * 0.3, 0.0001), t + 0.105);
-            g.gain.setValueAtTime(Math.max(a * 0.3, 0.0001), t + Math.max(dur, 0.105));
-            g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(dur, 0.105) + 1);
+            g.gain.exponentialRampToValueAtTime(pico, t + 0.025);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
             osc.connect(g); g.connect(bus);
-            osc.start(t);
-            osc.stop(t + Math.max(dur, 0.105) + 1.02);
+            osc.start(t); osc.stop(t + dur + 0.02);
             return osc;
         }
 
-        function playSound(note, duration = '8n', velocity = 0.5) {
+        function playSound(frecs, dur, pico) {
             if (!EST.audio.efectos || !EST.contexto()) return;
             const t = EST.audio.ctx.currentTime + 0.01;
-            for (const n of [].concat(note)) {
-                const osc = tono(EST.audio.busEfectos, n, t, DURACION[duration] || 0.25, velocity, 0.16);
-                osc.onended = () => osc.disconnect();
-            }
+            frecs.forEach((f, i) => {
+                const o = nota(EST.audio.busEfectos, f, t + i * 0.07, dur, pico, 'sine');
+                o.onended = () => o.disconnect();
+            });
         }
+        function playSelectSound() { playSound([N(84)], 0.06, 0.05); }
+        function playCorrectSound() { playSound([N(76), N(83)], 0.45, 0.16); }
+        function playWrongSound() { playSound([N(57), N(53)], 0.5, 0.14); }
+        function playGameOverSound() { stopMusic(); playSound([N(72), N(67), N(64), N(60)], 0.8, 0.12); }
 
-        function playSelectSound() { playSound('C4', '16n', 0.8); }
-        function playCorrectSound() { playSound(['C5', 'E5', 'G5'], '8n', 1.0); }
-        function playWrongSound() { playSound(['C3', 'C#3'], '8n', 1.0); }
-        function playGameOverSound() {
-             stopMusic();
-             playSound(['F#2', 'C2'], '2n', 1.0);
-        }
-
-        // La melodía dura un compás y el bucle cuatro, como estaba en Tone (loopEnd '4m')
-        const CICLO = PULSO * 4 * 4;
-        let musicaTimer = null;
-        let cicloInicio = 0;
-        let secuencia = null;
+        const sonandoMusica = new Set();
+        let musicaTimer = null, estilo = null, paso = 0, proximo = 0;
 
         function programarMusica() {
             const ctx = EST.audio.ctx;
-            if (!ctx || !secuencia) return;
-            // Se programa el ciclo entero en cuanto entra en la ventana de 0,3 s
-            while (cicloInicio < ctx.currentTime + 0.3) {
-                for (const v of secuencia) {
-                    const osc = tono(EST.audio.busMusica, v.note, cicloInicio + segundos(v.time), DURACION[v.duration] || 0.25, v.velocity, 0.09);
-                    sonandoMusica.add(osc);
-                    osc.onended = () => { sonandoMusica.delete(osc); osc.disconnect(); };
-                }
-                cicloInicio += CICLO;
+            if (!ctx || !estilo) return;
+            const corchea = 30 / estilo.bpm;
+            if (proximo < ctx.currentTime) proximo = ctx.currentTime + 0.05;
+            while (proximo < ctx.currentTime + 0.3) {
+                const acorde = estilo.acordes[Math.floor(paso / 8) % estilo.acordes.length];
+                const tocar = (frec, dur, pico, onda) => {
+                    const o = nota(EST.audio.busMusica, frec, proximo, dur, pico, onda);
+                    sonandoMusica.add(o);
+                    o.onended = () => { sonandoMusica.delete(o); o.disconnect(); };
+                };
+                if (paso % 4 === 0) tocar(N(acorde[0]), corchea * 3.6, 0.10, 'triangle');   // bajo cada dos tiempos
+                tocar(N(acorde[PATRON[paso % 8]]), corchea * 2.2, 0.045, estilo.onda);
+                paso = (paso + 1) % (estilo.acordes.length * 8);
+                proximo += corchea;
             }
         }
 
         function stopMusic() {
             if (musicaTimer) { clearInterval(musicaTimer); musicaTimer = null; }
-            secuencia = null;
+            estilo = null;
             const ctx = EST.audio.ctx;
-            sonandoMusica.forEach(osc => { try { osc.stop(ctx ? ctx.currentTime + 0.02 : 0); } catch (e) {} });
+            sonandoMusica.forEach(o => { try { o.stop(ctx ? ctx.currentTime + 0.05 : 0); } catch (e) {} });
             sonandoMusica.clear();
         }
 
@@ -2715,14 +2684,11 @@ const EST = (() => {
             stopMusic();
             currentMelodyId = melodyId;
             if (!EST.audio.musica || !EST.contexto()) return;
-            let melody = melodyId;
-            if (melody === 'Aleatorio') {
-                const availableMelodies = Object.keys(MELODIES).filter(id => id !== 'Aleatorio');
-                melody = availableMelodies[Math.floor(Math.random() * availableMelodies.length)];
-            }
-            secuencia = MELODIES[melody];
-            if (!secuencia || secuencia.length === 0) { secuencia = null; return; }
-            cicloInicio = EST.audio.ctx.currentTime + 0.05;
+            const nombres = Object.keys(ESTILOS);
+            const id = ESTILOS[melodyId] ? melodyId : nombres[Math.floor(Math.random() * nombres.length)];
+            estilo = ESTILOS[id];
+            paso = 0;
+            proximo = EST.audio.ctx.currentTime + 0.05;
             programarMusica();
             musicaTimer = setInterval(programarMusica, 100);
         }
@@ -2759,8 +2725,12 @@ const EST = (() => {
 
         // Los avisos van por el del estándar; antes era una caja fija en el
         // centro que tapaba la pregunta y las respuestas durante 3 s
+        // En partida, el veredicto va en una línea bajo las respuestas (el aviso
+        // flotante tapaba la pregunta); fuera de partida, el aviso del estándar
         function showMessage(msg, malo) {
-            EST.avisar(msg, malo);
+            const v = document.getElementById('veredicto');
+            if (gameState.isGameActive && v) { v.textContent = msg; v.className = malo ? 'malo' : ''; }
+            else EST.avisar(msg, malo);
         }
 
         // Lo elegido en el menú (antes, inputs ocultos)
@@ -2867,10 +2837,11 @@ const EST = (() => {
             updateControlInstructions();
             
             // Mostrar Tema
-            document.getElementById('topic-display').textContent = `TEMA: ${question.theme ? question.theme.toUpperCase() : 'VARIOS'}`;
+            document.getElementById('topic-display').textContent = question.theme ? question.theme.toUpperCase() : 'VARIOS';
             
             // Mostrar Pregunta
             document.getElementById('question-text').textContent = question.question;
+            document.getElementById('veredicto').textContent = '';
             document.getElementById('progress-display').textContent = `${gameState.currentQuestionIndex + 1}/${gameState.currentQuestions.length}`;
             
             // Barajar opciones
@@ -2889,7 +2860,8 @@ const EST = (() => {
                 button.classList.add('answer-option');
                 button.textContent = option;
                 // Usamos el índice de la opción EN EL ARRAY HTML para la selección por teclado
-                button.setAttribute('data-index', index); 
+                button.setAttribute('data-index', index);
+                button.setAttribute('data-letra', 'ABCD'[index] || '');
                 button.onclick = () => selectAnswer(index);
                 optionsContainer.appendChild(button);
             });
@@ -3065,13 +3037,10 @@ const EST = (() => {
             // Marcar respuestas
             options.forEach(btn => {
                 btn.classList.remove('selected');
-                if (btn.textContent === question.answer) {
-                    btn.style.backgroundColor = 'var(--color-success)';
-                    btn.style.borderColor = 'var(--color-success)';
-                } else if (btn.textContent === selectedText) {
-                    btn.style.backgroundColor = 'var(--color-error)';
-                    btn.style.borderColor = 'var(--color-error)';
-                }
+                // Clases y no colores en línea: el aspecto lo decide la hoja de estilo
+                if (btn.textContent === question.answer) btn.classList.add('acierto');
+                else if (btn.textContent === selectedText) btn.classList.add('fallo');
+                else btn.classList.add('apagada');
             });
 
             if (isCorrect) {
@@ -3083,14 +3052,14 @@ const EST = (() => {
                 
                 gameState.playerScores[gameState.currentPlayerIndex] += score;
                 playCorrectSound();
-                showMessage(`¡CORRECTO! +${score} pts`);
+                showMessage(`¡Correcto! +${score} puntos`);
 
             } else {
                 playWrongSound();
                 if (isTimeout) {
-                    showMessage('¡TIEMPO AGOTADO! 0 pts', true);
+                    showMessage('Se acabó el tiempo', true);
                 } else {
-                    showMessage(`¡ERROR! Era: ${question.answer}`, true);
+                    showMessage('Respuesta incorrecta', true);
                 }
             }
             
@@ -3139,7 +3108,6 @@ const EST = (() => {
             const playerTurnElement = document.getElementById('player-turn');
             playerTurnElement.textContent = turnText;
             playerTurnElement.style.color = color;
-            playerTurnElement.style.textShadow = `0 0 5px ${color}`;
         }
 
         function gameOver() {
@@ -3164,7 +3132,7 @@ const EST = (() => {
                 ? p1.toLocaleString('es-ES') + ' – ' + p2.toLocaleString('es-ES')
                 : gameState.scoreToSave.toLocaleString('es-ES');
             document.getElementById('finDetalle').textContent =
-                (dos ? 'J1 verde · J2 rosa · ' : '') +
+                (dos ? 'J1 azul · J2 ocre · ' : '') +
                 gameState.difficulty.title + ' · ' + (gameState.theme === 'Estándar' ? 'temas mixtos' : gameState.theme);
 
             document.getElementById('player-name-input').value = '';

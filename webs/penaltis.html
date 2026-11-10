@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0f0c2d">
-    <title>Penalty Shooters - Arcade Football</title>
+    <title>Penaltis</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/penaltis (node construir.js) -->
     <style>
 /* ==== ESTÁNDAR CSS ====
    Menú, barra de partida y capas comunes a los juegos del portal (el mismo
@@ -307,134 +308,67 @@ body {
 }
 /* ==== FIN ESTÁNDAR CSS ==== */
 
-        /* ---------- PROPIO DE PENALTY SHOOTERS ---------- */
-        #pJuego { max-width: 1400px; }
-        .est-barra #player1Name, .est-barra #player2Name, .est-barra #turnInfo {
-            max-width: 8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
+        /* ---------- PROPIO DE PENALTIS ---------- */
+        #pJuego { max-width: 1100px; }
+        .est-barra .dato span { max-width: 8.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        #tiros { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px 0; }
+        .marcas { display: flex; gap: 4px; flex-wrap: wrap; }
+        .marcas i {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.45);
+            display: inline-flex; align-items: center; justify-content: center;
+            font-style: normal; font-size: 11px; font-weight: bold; color: #fff;
         }
-        /* Las casillas de los cinco tiros, en una fila fina bajo la barra */
-        #tiros {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            padding: 5px 4px 0;
-        }
-        .shot-tracker { display: flex; gap: 4px; }
-        #gameStage {
+        .marcas i.gol { background: #19b35a; border-color: #19b35a; }
+        .marcas i.no { background: #d23c3c; border-color: #d23c3c; }
+        #escena {
             position: relative;
             flex: 1 1 auto;
             min-height: 0;
             margin-top: 5px;
-            overflow: hidden;
             border-radius: 10px;
+            overflow: hidden;
+            background: #1d5a2c;
         }
         /* Fuera del flujo: si el lienzo cuenta para la altura, el escenario
-           crece con él y la medida de resize() sale inflada */
-        #gameCanvas {
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
+           crece con él y la medida sale inflada */
+        #lienzo {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
             display: block;
-            background: #000;
-            cursor: crosshair;
-            /* El dedo apunta y dispara: sin esto el gesto desplaza la página */
             touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
+            -webkit-user-select: none; user-select: none;
+            cursor: crosshair;
         }
-        .hidden { display: none !important; }
-        #countdown {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Arial Black', Arial, sans-serif;
-            font-size: clamp(40px, 14vw, 120px);
-            font-weight: bold;
-            white-space: nowrap;
-            color: white;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px rgba(255,107,53,0.6);
-            z-index: 60;
+        #cartel {
+            position: absolute; left: 50%; top: 42%;
+            transform: translate(-50%, -50%) scale(0.6);
+            font-size: clamp(2rem, 11vw, 4.2rem);
+            font-weight: bold; letter-spacing: 3px;
+            color: #fff; white-space: nowrap;
+            text-shadow: 0 3px 0 rgba(0,0,0,0.45), 0 0 24px rgba(0,0,0,0.5);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.15s, transform 0.25s cubic-bezier(.2,1.6,.4,1);
+        }
+        #cartel.visible { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        #cartel.gol { color: #ffe14d; }
+        #cartel.parada { color: #7fe3ff; }
+        #cartel.palo, #cartel.fuera { color: #ffb3b3; }
+        #pista {
+            position: absolute; left: 8px; right: 8px; bottom: 8px;
+            text-align: center; font-size: 0.8rem; line-height: 1.35;
+            color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
             pointer-events: none;
-            animation: pulse 0.5s ease-in-out;
+            transition: opacity 0.2s;
         }
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
-        }
-        .shot-marker {
-            width: 35px;
-            height: 35px;
-            border: 3px solid white;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            background: rgba(255,255,255,0.1);
-        }
-        
-        .shot-marker.goal {
-            background: #00ff00;
-            color: white;
-        }
-        
-        .shot-marker.miss {
-            background: #ff0000;
-            color: white;
-        }
-        
-        .shot-marker.save {
-            background: #ffa500;
-            color: white;
-        }
-        
-        #countdown {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 120px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px rgba(255,107,53,0.6);
-            z-index: 60;
-            animation: pulse 0.5s ease-in-out;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
-        }
-        
-        /* MODIFICADO - Indicador de modo portero más pequeño y transparente */
-        #goalkeeperMode {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
-            color: #FFD700;
-            padding: 15px 30px;
-            border-radius: 10px;
-            font-size: 20px;
-            font-weight: bold;
-            text-align: center;
-            z-index: 55;
-            border: 3px solid #FFD700;
-            box-shadow: 0 0 20px rgba(255,215,0,0.5);
-            pointer-events: none;
-        }
-        .shot-marker { width: 22px; height: 22px; border-width: 2px; border-radius: 4px; font-size: 13px; }
-        #goalkeeperMode { top: 12px; font-size: 15px; padding: 10px 16px; width: max-content; max-width: 92%; }
+        .grupo-nombres { display: none; }
         @media (orientation: landscape) and (max-height: 520px) {
             .est-barra { padding: 2px 6px; }
             .est-barra .dato b { font-size: 0.85rem; }
             .est-icono { height: 28px; }
-            .shot-marker { width: 16px; height: 16px; font-size: 10px; }
+            .marcas i { width: 15px; height: 15px; font-size: 9px; }
             #tiros { padding-top: 2px; }
+            #pista { font-size: 0.7rem; bottom: 4px; }
         }
     </style>
 </head>
@@ -443,30 +377,31 @@ body {
 <!-- ===================== MENÚ ===================== -->
 <section class="pantalla activa est-menu" id="pMenu">
     <div class="est-scroll">
-        <div class="est-titulo">PENALTY <span>SHOOTERS</span></div>
-        <p class="est-lema">Tanda de cinco y, si hay empate, muerte súbita</p>
+        <div class="est-titulo">PENAL<span>TIS</span></div>
+        <p class="est-lema">Desliza el dedo y ¡a puerta!</p>
 
         <fieldset class="est-grupo">
             <legend>MODO</legend>
             <div class="opciones iguales" id="grpModo">
-                <button class="opcion" type="button" data-v="single" aria-pressed="true">🧍 1 JUGADOR<span class="sub">contra el PC</span></button>
-                <button class="opcion" type="button" data-v="double" aria-pressed="false">👥 2 JUGADORES<span class="sub">por turnos</span></button>
+                <button class="opcion" type="button" data-v="tanda" aria-pressed="true">⚽ TANDA<span class="sub">contra el PC: tiras y paras</span></button>
+                <button class="opcion" type="button" data-v="racha" aria-pressed="false">🔥 RACHA<span class="sub">tira hasta que falles</span></button>
+                <button class="opcion" type="button" data-v="dos" aria-pressed="false">👥 2 JUGADORES<span class="sub">por turnos</span></button>
             </div>
         </fieldset>
 
         <fieldset class="est-grupo">
-            <legend>PORTERO RIVAL</legend>
+            <legend>RIVAL</legend>
             <div class="opciones iguales" id="grpDif">
-                <button class="opcion" type="button" data-v="easy" aria-pressed="false">2ª RFEF<span class="sub">fácil</span></button>
-                <button class="opcion" type="button" data-v="medium" aria-pressed="true">1ª DIVISIÓN<span class="sub">medio</span></button>
-                <button class="opcion" type="button" data-v="hard" aria-pressed="false">CHAMPIONS<span class="sub">difícil</span></button>
+                <button class="opcion" type="button" data-v="facil" aria-pressed="false">2ª RFEF<span class="sub">fácil</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="true">1ª DIVISIÓN<span class="sub">normal</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">CHAMPIONS<span class="sub">difícil</span></button>
             </div>
         </fieldset>
 
-        <fieldset class="est-grupo" id="grpNombres" style="display:none;">
+        <fieldset class="est-grupo grupo-nombres" id="grpNombres">
             <legend>NOMBRES</legend>
-            <input type="text" class="est-campo" id="player1Input" maxlength="15" autocomplete="off" placeholder="Jugador 1">
-            <input type="text" class="est-campo" id="player2Input" maxlength="15" autocomplete="off" placeholder="Jugador 2" style="margin-top:8px;">
+            <input type="text" class="est-campo" id="nombre1" maxlength="15" autocomplete="off" placeholder="Jugador 1">
+            <input type="text" class="est-campo" id="nombre2" maxlength="15" autocomplete="off" placeholder="Jugador 2" style="margin-top:8px;">
         </fieldset>
 
         <fieldset class="est-grupo">
@@ -489,21 +424,20 @@ body {
 <!-- ===================== PARTIDA ===================== -->
 <section class="pantalla" id="pJuego">
     <div class="est-barra">
-        <div class="dato"><b id="score1">0</b><span id="player1Name">TÚ</span></div>
-        <div class="dato"><b id="shotInfo">1/5</b><span id="turnInfo">TIRAS TÚ</span></div>
-        <div class="dato"><b id="score2">0</b><span id="player2Name">PC</span></div>
+        <div class="dato"><b id="d1">0</b><span id="e1">TÚ</span></div>
+        <div class="dato"><b id="d2">1/5</b><span id="e2">TIRO</span></div>
+        <div class="dato"><b id="d3">0</b><span id="e3">PC</span></div>
         <div class="hueco"></div>
         <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
     </div>
-    <div id="tiros" aria-label="Tiros de la tanda">
-        <div class="shot-tracker" id="tracker1"></div>
-        <div class="shot-tracker" id="tracker2"></div>
+    <div id="tiros">
+        <div class="marcas" id="marcasA" aria-label="Tiros del primero"></div>
+        <div class="marcas" id="marcasB" aria-label="Tiros del segundo"></div>
     </div>
-
-    <div id="gameStage">
-        <canvas id="gameCanvas"></canvas>
-        <div id="countdown" class="hidden"></div>
-        <div id="goalkeeperMode" class="hidden">🧤 PORTERO: toca donde crees que irá el balón</div>
+    <div id="escena">
+        <canvas id="lienzo"></canvas>
+        <div id="cartel" role="status" aria-live="polite"></div>
+        <div id="pista"></div>
     </div>
 </section>
 
@@ -525,8 +459,8 @@ body {
 
 <div class="capa" id="capaFin">
     <div class="caja">
-        <h2 id="finTitulo">¡PARTIDO TERMINADO!</h2>
-        <div class="marcador" id="finMarcador">0 – 0</div>
+        <h2 id="finTitulo">FIN</h2>
+        <div class="marcador" id="finMarcador">0</div>
         <p id="finDetalle"></p>
         <div id="zonaNombre" style="display:none;">
             <p class="destacado">¡Entras en el Top 10!</p>
@@ -543,8 +477,10 @@ body {
 <div class="capa" id="capaRanking">
     <div class="caja">
         <h2>🏆 TOP 10</h2>
-        <p style="font-size:0.75rem;">Goles marcados contra el PC</p>
+        <h3 style="font-size:0.8rem;margin:6px 0 4px;">TANDA · goles marcados al PC</h3>
         <div class="est-lista" id="rankingList"></div>
+        <h3 style="font-size:0.8rem;margin:12px 0 4px;">RACHA · goles seguidos</h3>
+        <div class="est-lista" id="rankingRacha"></div>
         <div class="fila-btns">
             <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
             <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
@@ -556,21 +492,29 @@ body {
     <div class="caja">
         <h2>📖 CÓMO SE JUEGA</h2>
         <div class="est-ayuda">
-            <p>Cinco penaltis por cabeza, alternando. Si acaba en empate, muerte súbita hasta que uno falle y el otro marque.</p>
             <h3>TIRAR</h3>
             <ul>
-                <li>Mantén pulsado el dedo (o el ratón, o el <b>espacio</b>) y suelta para chutar al punto donde lo tengas.</li>
-                <li>La barra de potencia sube y baja mientras esperas: suéltala en la zona verde. Lejos del centro, el balón se desvía.</li>
-                <li>Con potencia óptima, al portero le cuesta más pararla.</li>
+                <li><b>Desliza el dedo</b> hacia el punto de la portería donde quieras tirar y suelta. El balón va a donde acaba el dedo.</li>
+                <li>Cuanto <b>más rápido</b> el gesto, más fuerte y más difícil de parar… pero se desvía más.</li>
+                <li>Un toque en la portería es un tiro suave y preciso a ese punto.</li>
+                <li>Si el dedo no llega a la portería, el tiro sale raso en esa dirección.</li>
             </ul>
-            <h3>PARAR (contra el PC)</h3>
+            <h3>PARAR</h3>
             <ul>
-                <li>Cuando tira el PC eres el portero: toca la zona de la portería donde crees que irá el balón.</li>
+                <li>Cuando tira el rival, <b>toca hacia dónde te tiras</b>. Puedes adivinar antes del chut o reaccionar cuando sale el balón.</li>
+                <li>El portero solo para lo que toca con el cuerpo o los guantes: lo que ves es lo que cuenta.</li>
+                <li>Las escuadras no las alcanza nadie.</li>
             </ul>
-            <h3>MARCADOR</h3>
+            <h3>MODOS</h3>
             <ul>
-                <li>✓ gol · ◉ parada · ✗ fuera o al palo.</li>
-                <li>En el Top 10 cuentan los goles que le marcas al PC.</li>
+                <li><b>Tanda:</b> cinco penaltis cada uno contra el PC, alternando. Acaba en cuanto uno ya no puede alcanzar al otro; con empate, muerte súbita.</li>
+                <li><b>Racha:</b> tira hasta que falles. Cada tres goles el portero mejora.</li>
+                <li><b>2 jugadores:</b> los dos tiran por turnos contra el mismo portero.</li>
+            </ul>
+            <h3>ORDENADOR</h3>
+            <ul>
+                <li>Con el ratón, igual que con el dedo. Con teclado: flechas para apuntar, mantén <b>espacio</b> para la fuerza y suelta.</li>
+                <li>Parando: <b>← →</b> a los lados, <b>↑</b> arriba, <b>↓</b> abajo.</li>
                 <li><b>P</b> o <b>Esc</b> pausa.</li>
             </ul>
         </div>
@@ -913,1913 +857,1012 @@ const EST = (() => {
 })();
 /* ==== FIN ESTÁNDAR JS ==== */
 </script>
-    <script>
-        /* El contexto y los canales MÚSICA / EFECTOS los pone el estándar (EST).
-           Antes cada nota iba directa a destination y el botón 🔊 solo cortaba
-           la música, no los efectos ya programados. */
-        class AudioManager {
-            constructor() {
-                this.musicInterval = null;
-            }
+<script>
+/* Motor de Penaltis: geometría, portero, tiros y reglas de la tanda.
+   Sin DOM: lo usan el juego (construir.js lo mete en la plantilla) y las
+   pruebas de Node.
 
-            playTone(frequency, duration, type = 'sine', volume = 0.3) {
-                if (!EST.audio.efectos) return;
-                const ctx = EST.contexto();
-                if (!ctx) return;
+   Todo en metros, en el plano de la portería: x desde el centro (−3,66 a
+   3,66 por dentro de los postes), y desde el césped (0 a 2,44).
 
-                const oscillator = ctx.createOscillator();
-                const gainNode = ctx.createGain();
+   La regla que manda: el portero se dibuja con las MISMAS piezas con las que
+   se decide la parada (cabeza, tronco, brazos, guantes y piernas, todas
+   círculos o cápsulas). Antes la parada se decidía con un radio de 120-230
+   unidades alrededor de un punto que no era el que se veía, y había balones
+   que atravesaban las manos y eran gol, o paradas sin tocar al portero. */
+(function (raiz) {
+    'use strict';
 
-                oscillator.connect(gainNode);
-                gainNode.connect(EST.audio.busEfectos);
-                oscillator.onended = () => { oscillator.disconnect(); gainNode.disconnect(); };
+    const CAMPO = {
+        medio: 3.66,      // media anchura por dentro de los postes
+        alto: 2.44,       // altura por dentro del larguero
+        poste: 0.12,      // grosor de postes y larguero
+        balon: 0.11       // radio del balón
+    };
 
-                oscillator.type = type;
-                oscillator.frequency.value = frequency;
+    /* Dificultad del portero rival (cuando tiras tú) y del lanzador rival
+       (cuando paras tú). Las cifras salen de medir con jugadores simulados:
+       ver medir.js y el documento de estado. */
+    const DIF = {
+        facil:   { lee: 0.25, error: 0.85, reaccion: 0.30, dur: 0.55, quieto: 0.20,
+                   pc: { esquina: 0.25, potencia: [0.15, 0.45], sd: 0.35 } },
+        normal:  { lee: 0.42, error: 0.65, reaccion: 0.21, dur: 0.46, quieto: 0.14,
+                   pc: { esquina: 0.50, potencia: [0.35, 0.70], sd: 0.30 } },
+        dificil: { lee: 0.58, error: 0.50, reaccion: 0.14, dur: 0.40, quieto: 0.10,
+                   pc: { esquina: 0.75, potencia: [0.55, 0.95], sd: 0.25 } }
+    };
 
-                gainNode.gain.setValueAtTime(volume, ctx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+    /* Vuelo del balón según la potencia (0 a 1): de 0,78 s a 0,38 s. Antes
+       tardaba 6 s por una cámara lenta permanente. */
+    const vuelo = (potencia) => 0.78 - 0.40 * clamp(potencia, 0, 1);
+    /* Desviación típica del error del tiro: chutar fuerte desvía */
+    const dispersion = (potencia) => 0.10 + 0.70 * Math.pow(clamp(potencia, 0, 1), 3);
+    /* Cuánto tarda el portero que manejas tú en estirarse del todo */
+    const DUR_HUMANO = 0.36;
 
-                oscillator.start(ctx.currentTime);
-                oscillator.stop(ctx.currentTime + duration);
-            }
+    function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+    function gauss(rnd) {
+        // Box-Muller; rnd() en [0, 1)
+        const u = 1 - rnd(), v = rnd();
+        return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+    const lerp = (a, b, u) => a + (b - a) * u;
+    const suave = (u) => 1 - Math.pow(1 - u, 3);   // sale rápido y frena al estirarse
 
-            play(soundName) {
-                if (!EST.audio.efectos) return;
-                
-                switch(soundName) {
-                    case 'goal':
-                    
-                    this.playTone(400, 0.3, 'square', 0.6);
-                    setTimeout(() => {
-                        this.playTone(450, 0.3, 'square', 0.6);
-                        this.playTone(350, 0.3, 'sine', 0.4);
-                    }, 150);
-                    setTimeout(() => {
-                        this.playTone(500, 0.4, 'square', 0.65);
-                        this.playTone(400, 0.4, 'sine', 0.45);
-                    }, 350);
-                    setTimeout(() => {
-                        this.playTone(550, 0.5, 'square', 0.7);
-                        this.playTone(450, 0.5, 'sine', 0.5);
-                    }, 600);
-                    setTimeout(() => {
-                        this.playTone(600, 0.6, 'square', 0.75);
-                        this.playTone(500, 0.6, 'sine', 0.55);
-                    }, 900);
-                    setTimeout(() => {
-                        this.playTone(650, 0.8, 'square', 0.8);
-                        this.playTone(550, 0.8, 'sine', 0.6);
-                    }, 1300);
-                    break;
-                    case 'save':
-                    this.playTone(300, 0.1, 'sawtooth', 0.4);
-                    setTimeout(() => this.playTone(250, 0.1, 'sawtooth', 0.4), 100);
-                    setTimeout(() => this.playTone(200, 0.2, 'sawtooth', 0.4), 200);
-                    break;
-                    case 'miss':
-                    this.playTone(400, 0.1, 'triangle', 0.3);
-                    setTimeout(() => this.playTone(300, 0.15, 'triangle', 0.3), 100);
-                    setTimeout(() => this.playTone(200, 0.2, 'triangle', 0.3), 250);
-                    break;
-                    case 'whistle':
-                    this.playTone(900, 0.2, 'square', 0.4);
-                    setTimeout(() => this.playTone(900, 0.2, 'square', 0.4), 250);
-                    break;
-                    case 'countdown':
-                    this.playTone(550, 0.12, 'sine', 0.35);
-                    break;
-                    case 'ready':
-                    this.playTone(660, 0.1, 'sine', 0.4);
-                    setTimeout(() => this.playTone(880, 0.15, 'sine', 0.4), 100);
-                    break;
-                    case 'kick':
-                    this.playTone(150, 0.08, 'sawtooth', 0.3);
-                    break;
-                    case 'post':
-                    this.playTone(800, 0.15, 'square', 0.5);
-                    setTimeout(() => this.playTone(600, 0.2, 'square', 0.4), 150);
-                    break;
-                    case 'net':
-                    this.playTone(400, 0.08, 'sine', 0.3);
-                    setTimeout(() => this.playTone(350, 0.08, 'sine', 0.25), 60);
-                    setTimeout(() => this.playTone(300, 0.1, 'sine', 0.2), 120);
-                    break;
-                }
-            }
-            
-            playMusic() {
-                this.stopMusic();
-                if (!EST.audio.musica || !EST.contexto()) return;
+    /* ---------- PORTERO ----------
+       tirada: null (quieto) o { tx, ty, t0, dur } — hacia dónde estira las
+       manos, cuándo empieza (s) y cuánto tarda. pose(tirada, t) devuelve las
+       piezas en el instante t. */
+    const CENTRO0 = { x: 0, y: 1.0 };
+    const DESPLAZA = 1.95;   // cuánto puede desplazarse el cuerpo al tirarse (con 1,40 no llegaba nunca a las esquinas)
+    const ALCANCE = 1.05;    // del centro del cuerpo a los guantes, estirado
 
-                const melodies = [
-                [523, 587, 659, 587, 523, 440, 523, 587],
-                [659, 698, 784, 698, 659, 587, 659, 698]
-                ];
-                const duration = 0.4;
-                let noteIndex = 0;
-                let melodyIndex = 0;
-
-                this.musicInterval = setInterval(() => {
-                    const ctx = EST.audio.ctx;
-                    if (!ctx || !EST.audio.musica) return;
-
-                    const melody = melodies[melodyIndex % melodies.length];
-                    const note = melody[noteIndex % melody.length];
-
-                    const oscillator = ctx.createOscillator();
-                    const gainNode = ctx.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(EST.audio.busMusica);
-                    oscillator.onended = () => { oscillator.disconnect(); gainNode.disconnect(); };
-
-                    oscillator.type = 'sine';
-                    oscillator.frequency.value = note;
-                    // Rampa de salida: sin ella cada nota acababa en un chasquido
-                    gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-
-                    oscillator.start();
-                    oscillator.stop(ctx.currentTime + duration);
-
-                    noteIndex++;
-                    if (noteIndex % melody.length === 0) {
-                        melodyIndex++;
-                    }
-                }, duration * 1000);
-            }
-
-            stopMusic() {
-                if (this.musicInterval) {
-                    clearInterval(this.musicInterval);
-                    this.musicInterval = null;
-                }
-            }
+    function pose(tirada, t) {
+        let u = 0, T = CENTRO0;
+        if (tirada) {
+            u = suave(clamp((t - tirada.t0) / tirada.dur, 0, 1));
+            T = { x: tirada.tx, y: clamp(tirada.ty, 0, CAMPO.alto + 0.3) };
         }
+        const vx = T.x - CENTRO0.x, vy = T.y - CENTRO0.y;
+        const d = Math.hypot(vx, vy);
+        const central = d < 0.6;        // al centro no se tira: sube o baja las manos
+        const ux = d > 1e-6 ? vx / d : 0, uy = d > 1e-6 ? vy / d : 1;
 
-        class Particle {
-            constructor(x, y, color, vx, vy) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                this.vx = vx;
-                this.vy = vy;
-                this.life = 1.0;
-                this.size = Math.random() * 5 + 3;
-            }
-            
-            update(dt) {
-                this.x += this.vx * dt;
-                this.y += this.vy * dt;
-                this.vy += 500 * dt;
-                this.life -= dt * 2;
-            }
-            
-            draw(ctx) {
-                ctx.globalAlpha = this.life;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
-            
-            isDead() {
-                return this.life <= 0;
-            }
+        const despl = central ? 0 : Math.min(DESPLAZA, Math.max(0, d - ALCANCE));
+        const C = { x: CENTRO0.x + ux * despl * u, y: Math.max(0.32, CENTRO0.y + uy * despl * u) };
+
+        // Eje del cuerpo: de vertical a apuntando al objetivo
+        let ax = lerp(0, central ? 0 : ux, u), ay = lerp(1, central ? 1 : uy, u);
+        if (!central && uy < 0) {
+            // A ras de suelo se tumba de lado, no de cabeza
+            ay = lerp(1, Math.max(0.15, uy + 0.6), u);
         }
-        
-        class NetEffect {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.life = 1.0;
-                this.maxLife = 0.8;
-                this.ripples = [];
-                for (let i = 0; i < 3; i++) {
-                    this.ripples.push({
-                        radius: 0,
-                        maxRadius: 40 + i * 15,
-                        delay: i * 0.1
-                    });
-                }
-            }
-            
-            update(dt) {
-                this.life -= dt / this.maxLife;
-                this.ripples.forEach(ripple => {
-                    if (ripple.delay > 0) {
-                        ripple.delay -= dt;
-                    } else {
-                        ripple.radius += dt * 80;
-                    }
-                });
-            }
-            
-            draw(ctx) {
-                ctx.globalAlpha = Math.max(0, this.life);
-                this.ripples.forEach(ripple => {
-                    if (ripple.delay <= 0 && ripple.radius < ripple.maxRadius) {
-                        ctx.strokeStyle = '#FFFFFF';
-                        ctx.lineWidth = 3;
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, ripple.radius, 0, Math.PI * 2);
-                        ctx.stroke();
-                    }
-                });
-                ctx.globalAlpha = 1.0;
-            }
-            
-            isDead() {
-                return this.life <= 0;
-            }
+        const n = Math.hypot(ax, ay) || 1; ax /= n; ay /= n;
+        const px = ay, py = -ax;   // perpendicular
+
+        const P = (k, l) => ({ x: C.x + ax * k + px * l, y: C.y + ay * k + py * l });
+        const hombro = P(0.32, 0), cadera = P(-0.28, 0);
+
+        // Guantes: de los costados al objetivo
+        const g0 = [{ x: CENTRO0.x - 0.42, y: CENTRO0.y + 0.05 }, { x: CENTRO0.x + 0.42, y: CENTRO0.y + 0.05 }];
+        let g1;
+        if (central) {
+            g1 = [{ x: T.x - 0.13, y: T.y }, { x: T.x + 0.13, y: T.y }];
+        } else {
+            const largo = Math.min(ALCANCE, Math.max(0.5, d - despl));
+            const m = { x: C.x + ux * largo, y: C.y + uy * largo };
+            g1 = [{ x: m.x + px * 0.12, y: m.y + py * 0.12 }, { x: m.x - px * 0.12, y: m.y - py * 0.12 }];
         }
-        
-        class PenaltyGame {
-            constructor() {
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.audio = new AudioManager();
-                
-                this.state = 'menu';
-                this.mode = null;
-                this.difficulty = 'medium';
-                this.player1Name = 'Jugador 1';
-                this.player2Name = 'PC';
-                
-                this.score1 = 0;
-                this.score2 = 0;
-                this.currentPlayer = 1;
-                this.currentShot = 1;
-                this.maxShots = 5;
-                this.suddenDeath = false;
-                
-                this.player1Shots = [];
-                this.player2Shots = [];
-                
-                this.canShoot = false;
-                this.countdownActive = false;
-                this.waitingNextTurn = false;
-                
-                this.shooting = false;
-                this.charging = false;
-                
-                this.slowMotion = false;
-                this.slowMotionFactor = 0.3;
-                
-                this.goalkeeperMode = false;
-                this.playerGoalkeeperChoice = null;
-                
-                this.ball = { 
-                    x: 0, y: 0, z: 0,
-                    startX: 0, startY: 0, startZ: 0,
-                    targetX: 0, targetY: 0, targetZ: 0,
-                    screenX: 0, screenY: 0,
-                    rotation: 0,
-                    progress: 0
-                };
-                
-                this.mouseX = 0;
-                this.mouseY = 0;
-                
-                this.powerBar = {
-                    value: 0.5,
-                    direction: 1,
-                    speed: 1.2
-                };
-                
-                this.goalkeeper = {
-                    x: 0, y: 0, z: 0,
-                    targetX: 0, targetY: 0, targetZ: 0,
-                    diving: false, celebrating: false,
-                    animTime: 0,
-                    anticipationTime: 0,
-                    anticipationX: 0,
-                    anticipationY: 0,
-                    chosenDirection: null,
-                    leftArm: {angle: 0, targetAngle: 0},
-                    rightArm: {angle: 0, targetAngle: 0},
-                    leftLeg: {angle: 0, targetAngle: 0},
-                    rightLeg: {angle: 0, targetAngle: 0},
-                    torsoRotation: 0
-                };
-                
-                this.particles = [];
-                this.netEffects = [];
-                
-                this.goalkeeperZones = [
-                {x: -0.7, y: -0.6, name: 'arriba-izquierda'},
-                {x: 0, y: -0.7, name: 'arriba-centro'},
-                {x: 0.7, y: -0.6, name: 'arriba-derecha'},
-                {x: -0.8, y: 0, name: 'centro-izquierda'},
-                {x: 0, y: 0, name: 'centro'},
-                {x: 0.8, y: 0, name: 'centro-derecha'},
-                {x: -0.7, y: 0.5, name: 'abajo-izquierda'},
-                {x: 0, y: 0.6, name: 'abajo-centro'},
-                {x: 0.7, y: 0.5, name: 'abajo-derecha'}
-                ];
-                
-                /* Temporizadores en tiempo de juego, no setTimeout: así la pausa
-                   los congela y ABANDONAR los borra. Antes, salir al menú en mitad
-                   de un turno dejaba vivo el nextTurn y relanzaba la cuenta atrás. */
-                this.timers = [];
-                this.rafId = null;
-                this.resize();
-                this.setupEventListeners();
-                this.lastTime = Date.now();
-            }
+        const guantes = g0.map((g, i) => ({ x: lerp(g.x, g1[i].x, u), y: Math.max(0.1, lerp(g.y, g1[i].y, u)), r: 0.12 }));
 
-            later(fn, ms) {
-                this.timers.push({ t: ms / 1000, fn });
-            }
+        const pies = [P(-0.95, 0.15), P(-0.95, -0.15)].map(p => ({ x: p.x, y: Math.max(0.05, p.y) }));
+        return {
+            u,
+            cabeza: { x: C.x + ax * 0.56, y: C.y + ay * 0.56, r: 0.13 },
+            torso: { a: cadera, b: hombro, r: 0.2 },
+            brazos: [{ a: P(0.3, 0.12), b: guantes[0], r: 0.065 }, { a: P(0.3, -0.12), b: guantes[1], r: 0.065 }],
+            guantes,
+            piernas: [{ a: P(-0.3, 0.1), b: pies[0], r: 0.09 }, { a: P(-0.3, -0.1), b: pies[1], r: 0.09 }]
+        };
+    }
 
-            runTimers(dt) {
-                if (!this.timers.length) return;
-                const vencidos = [];
-                this.timers = this.timers.filter(x => {
-                    x.t -= dt;
-                    if (x.t <= 0) { vencidos.push(x); return false; }
-                    return true;
-                });
-                // Uno a uno y comprobando el estado: un vencido puede acabar la partida
-                for (const x of vencidos) {
-                    if (this.state !== 'playing') return;
-                    x.fn();
-                }
-            }
+    function distSeg(p, a, b) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const l2 = dx * dx + dy * dy;
+        const k = l2 ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / l2, 0, 1) : 0;
+        return Math.hypot(p.x - (a.x + dx * k), p.y - (a.y + dy * k));
+    }
 
-            arrancarBucle() {
-                if (this.rafId !== null) return;
-                this.lastTime = Date.now();
-                this.rafId = requestAnimationFrame(() => this.gameLoop());
-            }
+    /* ¿Toca el balón (centro b) alguna pieza del portero? */
+    function tocaPortero(ps, b) {
+        const r = CAMPO.balon;
+        const circ = (c) => Math.hypot(b.x - c.x, b.y - c.y) <= c.r + r;
+        const caps = (c) => distSeg(b, c.a, c.b) <= c.r + r;
+        if (circ(ps.cabeza) || caps(ps.torso)) return true;
+        if (ps.guantes.some(circ) || ps.brazos.some(caps) || ps.piernas.some(caps)) return true;
+        return false;
+    }
 
-            pararBucle() {
-                if (this.rafId !== null) cancelAnimationFrame(this.rafId);
-                this.rafId = null;
-            }
-            
-            // MODIFICADO - En la función resize() - línea 737
-            resize() {
-                // El escenario está debajo de la barra estándar: se mide él, no la ventana
-                const st = this.canvas.parentElement;
-                this.canvas.width = Math.min(st.clientWidth || window.innerWidth, 1400);
-                this.canvas.height = Math.min(st.clientHeight || window.innerHeight, 900);
-                
-                // MODIFICADO - Ajustes correctos
-                this.goalWidth3D = 850;   
-                this.goalHeight3D = 480;  
-                this.goalDepth = 550;     
-                
-                this.penaltyX = this.canvas.width / 2;
-                this.penaltyY = this.canvas.height - 70; // MODIFICADO
-                this.penaltyZ = 0;
-                
-                // MODIFICADO - Portería alineada con la línea de gol
-                this.goalCenterX = this.canvas.width / 2;
-                this.goalCenterZ = this.goalDepth;
-                
-                // Calculamos primero donde queremos la línea de suelo (línea de gol)
-                const perspective = 550;
-                const scale = perspective / (perspective + this.goalDepth);
-                const displayHeight = this.goalHeight3D * scale;
-                
-                // Posicionamos la línea de gol en una posición fija óptima
-                this.goalGroundY = this.canvas.height * 0.68; // Ajusta este valor según necesites
-                
-                // El centro de la portería se calcula restando la mitad de la altura
-                this.goalCenterY = this.goalGroundY - displayHeight / 2;
-                
-            }
-            
-            setupEventListeners() {
-                // Cambiar el tamaño borra el lienzo: en pausa o al final se repinta a mano
-                window.addEventListener('resize', () => { this.resize(); if (this.state !== 'menu' && this.rafId === null) this.draw(); });
-                
-                this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
-                this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
-                this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
-                
-                this.canvas.addEventListener('touchstart', (e) => {
-                    e.preventDefault();
-                    this.handleStart(e.touches[0]);
-                });
-                this.canvas.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    this.handleEnd(e.changedTouches[0]);
-                });
-                this.canvas.addEventListener('touchmove', (e) => {
-                    e.preventDefault();
-                    this.handleMove(e.touches[0]);
-                });
-                
-                document.addEventListener('keydown', (e) => {
-                    /* Escribiendo un nombre, las teclas son texto (el espacio también) */
-                    if (e.target instanceof HTMLInputElement) {
-                        if (e.key === 'Enter' && e.target.id === 'nameInput') { e.preventDefault(); this.saveScore(); }
-                        return;
-                    }
-                    if (this.state !== 'playing' && this.state !== 'paused') {
-                        if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
-                        return;
-                    }
-                    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
-                        if (this.state === 'paused') this.resumeGame(); else this.pauseGame();
-                        return;
-                    }
-                    if (e.key === ' ') {
-                        e.preventDefault();
-                        if (this.canShoot && !this.charging && this.state === 'playing' && !this.shooting) {
-                            this.startCharging();
-                        }
-                    }
-                });
-
-                document.addEventListener('keyup', (e) => {
-                    if (e.key === ' ' && this.charging && this.state === 'playing') {
-                        this.shoot();
-                    }
-                });
-            }
-
-            handleStart(e) {
-                if (this.state !== 'playing' || this.shooting) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                this.mouseX = e.clientX - rect.left;
-                this.mouseY = e.clientY - rect.top;
-                
-                
-                if (this.goalkeeperMode && this.canShoot) {
-                    this.playerGoalkeeperChoice = {x: this.mouseX, y: this.mouseY};
-                    this.canShoot = false;
-                    document.getElementById('goalkeeperMode').classList.add('hidden');
-                    
-                    this.later(() => {
-                        this.executeAIShot();
-                    }, 300);
-                } else if (this.canShoot && !this.goalkeeperMode) {
-                    this.startCharging();
-                }
-            }
-            
-            handleEnd(e) {
-                if (this.charging && this.state === 'playing') {
-                    this.shoot();
-                }
-            }
-            
-            handleMove(e) {
-                if (this.state !== 'playing') return;
-                const rect = this.canvas.getBoundingClientRect();
-                this.mouseX = e.clientX - rect.left;
-                this.mouseY = e.clientY - rect.top;
-            }
-            
-            startGame() {
-                ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
-                const n1 = document.getElementById('player1Input').value.trim();
-                const n2 = document.getElementById('player2Input').value.trim();
-                this.player1Name = this.mode === 'single' ? 'TÚ' : (n1 || 'Jugador 1');
-                this.player2Name = this.mode === 'single' ? 'PC' : (n2 || 'Jugador 2');
-
-                EST.mostrar('pJuego');
-                // Primero las casillas de tiros (ocupan alto), luego medir:
-                // el escenario solo tiene tamaño cuando su pantalla se ve
-                this.resetGame();
-                this.resize();
-                this.finMostrado = false;
-                this.state = 'playing';
-                this.audio.playMusic();
-                this.startCountdown();
-                this.arrancarBucle();
-            }
-
-            pauseGame() {
-                if (this.state !== 'playing') return;
-                this.state = 'paused';
-                this.charging = false;
-                this.pararBucle();
-                this.audio.stopMusic();
-                EST.abrir('capaPausa');
-            }
-
-            resumeGame() {
-                if (this.state !== 'paused') return;
-                EST.cerrar('capaPausa');
-                this.state = 'playing';
-                this.audio.playMusic();
-                this.arrancarBucle();
-            }
-
-            quitToMenu() {
-                this.state = 'menu';
-                this.timers = [];
-                this.pararBucle();
-                this.audio.stopMusic();
-                this.charging = false;
-                document.getElementById('countdown').classList.add('hidden');
-                document.getElementById('goalkeeperMode').classList.add('hidden');
-                ['capaFin', 'capaPausa'].forEach(EST.cerrar);
-                EST.mostrar('pMenu');
-            }
-
-            resetGame() {
-                this.score1 = 0;
-                this.score2 = 0;
-                this.currentPlayer = 1;
-                this.currentShot = 1;
-                this.suddenDeath = false;
-                this.shooting = false;
-                this.charging = false;
-                this.canShoot = false;
-                this.slowMotion = false;
-                this.goalkeeperMode = false;
-                this.playerGoalkeeperChoice = null;
-                this.waitingNextTurn = false;
-                this.countdownActive = false;
-                this.timers = [];
-                this.particles = [];
-                this.netEffects = [];
-                this.player1Shots = [];
-                this.player2Shots = [];
-                this.powerBar.value = 0.5;
-                this.powerBar.direction = 1;
-                this.updateHUD();
-                this.resetBall();
-                this.resetGoalkeeper();
-            }
-            
-            resetBall() {
-                this.ball.x = 0;
-                this.ball.y = 0;
-                this.ball.z = 0;
-                this.ball.startX = 0;
-                this.ball.startY = 0;
-                this.ball.startZ = 0;
-                this.ball.targetX = 0;
-                this.ball.targetY = 0;
-                this.ball.targetZ = 0;
-                this.ball.rotation = 0;
-                this.ball.progress = 0;
-            }
-            
-            
-            // MODIFICADO - Portero pisando la línea de gol - línea ~870
-            resetGoalkeeper() {
-                this.goalkeeper.x = 0;
-                // MODIFICADO - Portero en la línea de gol (abajo del todo)
-                this.goalkeeper.y = this.goalHeight3D / 2 - 80; // Ajustado para que pise la línea
-                this.goalkeeper.z = this.goalDepth;
-                this.goalkeeper.diving = false;
-                this.goalkeeper.celebrating = false;
-                this.goalkeeper.animTime = 0;
-                this.goalkeeper.anticipationTime = 0;
-                this.goalkeeper.anticipationX = 0;
-                this.goalkeeper.anticipationY = 0;
-                this.goalkeeper.chosenDirection = null;
-                this.goalkeeper.leftArm = {angle: -0.3, targetAngle: -0.3};
-                this.goalkeeper.rightArm = {angle: 0.3, targetAngle: 0.3};
-                this.goalkeeper.leftLeg = {angle: 0, targetAngle: 0};
-                this.goalkeeper.rightLeg = {angle: 0, targetAngle: 0};
-                this.goalkeeper.torsoRotation = 0;
-            }
-            
-            startCountdown() {
-                this.canShoot = false;
-                this.countdownActive = true;
-                const countdownEl = document.getElementById('countdown');
-                countdownEl.classList.remove('hidden');
-                
-                let count = 3;
-                
-                const countdown = () => {
-                    if (count > 0) {
-                        countdownEl.textContent = count;
-                        this.audio.play('countdown');
-                        count--;
-                        this.later(countdown, 1000);
-                    } else {
-                        
-                        if (this.mode === 'single' && this.currentPlayer === 2) {
-                            countdownEl.textContent = '¡PARA EL BALÓN!';
-                            this.goalkeeperMode = true;
-                            document.getElementById('goalkeeperMode').classList.remove('hidden');
-                            
-                            
-                            this.later(() => {
-                                document.getElementById('goalkeeperMode').classList.add('hidden');
-                            }, 2000);
-                        } else {
-                            countdownEl.textContent = '¡TIRA!';
-                            this.goalkeeperMode = false;
-                            
-                            const randomZone = this.goalkeeperZones[Math.floor(Math.random() * this.goalkeeperZones.length)];
-                            this.goalkeeper.chosenDirection = randomZone;
-                        }
-                        
-                        this.audio.play('ready');
-                        
-                        this.later(() => {
-                            countdownEl.classList.add('hidden');
-                            this.canShoot = true;
-                            this.countdownActive = false;
-                        }, 800);
-                    }
-                };
-                
-                countdown();
-            }
-            
-            startCharging() {
-                if (this.shooting || !this.canShoot || this.goalkeeperMode) return;
-                this.charging = true;
-            }
-            
-            shoot() {
-                if (!this.charging || this.shooting || !this.canShoot) return;
-                
-                this.charging = false;
-                this.shooting = true;
-                this.canShoot = false;
-                this.slowMotion = true;
-                this.audio.play('kick');
-                
-                this.ball.startX = 0;
-                this.ball.startY = 0;
-                this.ball.startZ = 0;
-                this.ball.progress = 0;
-                
-                
-                const targetX = (this.mouseX - this.canvas.width / 2) * 0.85;
-                const targetY = (this.mouseY - this.goalCenterY) * 1.0;
-                const targetZ = this.goalDepth;
-                
-                const power = this.powerBar.value;
-                const powerError = Math.abs(power - 0.5) * 90;
-                
-                this.ball.targetX = targetX + (Math.random() - 0.5) * powerError;
-                this.ball.targetY = targetY + (Math.random() - 0.5) * powerError;
-                this.ball.targetZ = targetZ;
-                
-                this.setGoalkeeperPosition();
-            }
-            
-            
-            executeAIShot() {
-                this.shooting = true;
-                this.slowMotion = true;
-                this.audio.play('kick');
-                
-                this.ball.startX = 0;
-                this.ball.startY = 0;
-                this.ball.startZ = 0;
-                this.ball.progress = 0;
-                
-                const randomZone = this.goalkeeperZones[Math.floor(Math.random() * this.goalkeeperZones.length)];
-                const targetX = randomZone.x * this.goalWidth3D / 2 * 0.9;
-                const targetY = randomZone.y * this.goalHeight3D / 2 * 0.9;
-                const targetZ = this.goalDepth;
-                
-                const variation = 40;
-                this.ball.targetX = targetX + (Math.random() - 0.5) * variation;
-                this.ball.targetY = targetY + (Math.random() - 0.5) * variation;
-                this.ball.targetZ = targetZ;
-                
-                this.setGoalkeeperPositionPlayer();
-            }
-            
-            
-            setGoalkeeperPositionPlayer() {
-                if (!this.playerGoalkeeperChoice) return;
-                
-                this.later(() => {
-                    this.goalkeeper.diving = true;
-                    this.goalkeeper.animTime = 0;
-                    
-                    const targetX = (this.playerGoalkeeperChoice.x - this.canvas.width / 2) * 0.85;
-                    const targetY = (this.playerGoalkeeperChoice.y - this.goalCenterY) * 1.0;
-                    
-                    this.goalkeeper.targetX = targetX;
-                    this.goalkeeper.targetY = targetY - this.goalHeight3D / 2 + 60;
-                    this.goalkeeper.targetZ = this.goalDepth;
-                    
-                    this.goalkeeper.leftArm.targetAngle = Math.PI / 2;
-                    this.goalkeeper.rightArm.targetAngle = Math.PI / 2;
-                    this.goalkeeper.leftLeg.targetAngle = -0.3;
-                    this.goalkeeper.rightLeg.targetAngle = 0.3;
-                    this.goalkeeper.torsoRotation = (targetX / this.goalWidth3D) * 0.5;
-                    
-                }, 300);
-            }
-            
-            setGoalkeeperPosition() {
-                const difficultySettings = {
-                    easy: { reactionTime: 0.6, speed: 0.6 },
-                    medium: { reactionTime: 0.4, speed: 0.8 },
-                    hard: { reactionTime: 0.25, speed: 1.0 }
-                };
-                
-                const settings = difficultySettings[this.difficulty];
-                
-                this.later(() => {
-                    this.goalkeeper.diving = true;
-                    this.goalkeeper.animTime = 0;
-                    
-                    const zone = this.goalkeeper.chosenDirection;
-                    
-                    this.goalkeeper.targetX = zone.x * this.goalWidth3D / 2;
-                    this.goalkeeper.targetY = zone.y * this.goalHeight3D / 2;
-                    this.goalkeeper.targetZ = this.goalDepth;
-                    
-                    this.goalkeeper.leftArm.targetAngle = Math.PI / 2;
-                    this.goalkeeper.rightArm.targetAngle = Math.PI / 2;
-                    this.goalkeeper.leftLeg.targetAngle = -0.3;
-                    this.goalkeeper.rightLeg.targetAngle = 0.3;
-                    this.goalkeeper.torsoRotation = (this.goalkeeper.targetX / this.goalWidth3D) * 0.5;
-                    
-                }, settings.reactionTime * 1000);
-            }
-            
-            checkGoal() {
-                const finalX = this.ball.targetX;
-                const finalY = this.ball.targetY;
-                const finalZ = this.ball.targetZ;
-                
-                const halfWidth = this.goalWidth3D / 2;
-                const halfHeight = this.goalHeight3D / 2;
-                
-                const inGoalX = Math.abs(finalX) <= halfWidth;
-                const inGoalY = finalY >= -halfHeight && finalY <= halfHeight * 0.85;
-                const inGoalZ = finalZ >= this.goalDepth * 0.85 && finalZ <= this.goalDepth * 1.15;
-                
-                const nearPost = (Math.abs(Math.abs(finalX) - halfWidth) < 45 || 
-                Math.abs(Math.abs(finalY) - halfHeight) < 45);
-                
-                if (inGoalX && inGoalY && inGoalZ) {
-                    if (this.goalkeeper.diving && this.goalkeeper.animTime > 0.4) {
-                        const dist = Math.sqrt(
-                        Math.pow(finalX - this.goalkeeper.targetX, 2) +
-                        Math.pow(finalY - this.goalkeeper.targetY, 2)
-                        );
-                        
-                        const power = this.powerBar.value;
-                        const baseRadius = this.difficulty === 'easy' ? 170 : 
-                        this.difficulty === 'medium' ? 140 : 120;
-                        
-                        const powerMod = Math.abs(power - 0.5) < 0.15 ? 0.8 : 1.35;
-                        const saveRadius = baseRadius * powerMod;
-                        
-                        if (dist < saveRadius) {
-                            this.audio.play('save');
-                            this.createParticles(this.ball.screenX, this.ball.screenY, '#FFD700', 30);
-                            this.goalkeeper.celebrating = true;
-                            this.recordShot('save');
-                            return 'save';
-                        }
-                    }
-                    
-                    // ¡GOL!
-                    this.audio.play('goal');
-                    this.audio.play('net');
-                    this.createParticles(this.ball.screenX, this.ball.screenY, '#00FF00', 80);
-                    this.netEffects.push(new NetEffect(this.ball.screenX, this.ball.screenY));
-                    if (this.currentPlayer === 1) {
-                        this.score1++;
-                    } else {
-                        this.score2++;
-                    }
-                    this.recordShot('goal');
-                    return 'goal';
-                    
-                } else if (nearPost && inGoalZ) {
-                    this.audio.play('post');
-                    this.createParticles(this.ball.screenX, this.ball.screenY, '#FFA500', 35);
-                    this.goalkeeper.celebrating = true;
-                    this.recordShot('miss');
-                    return 'post';
-                } else {
-                    this.audio.play('miss');
-                    this.createParticles(this.ball.screenX, this.ball.screenY, '#FF0000', 25);
-                    this.goalkeeper.celebrating = true;
-                    this.recordShot('miss');
-                    return 'miss';
-                }
-            }
-            
-            recordShot(result) {
-                if (this.currentPlayer === 1) {
-                    this.player1Shots.push(result);
-                } else {
-                    this.player2Shots.push(result);
-                }
-                // El marcador de la barra cambia al momento, no 3,5 s después con el turno
-                this.updateHUD();
-            }
-            
-            updateShotTrackers() {
-                const tracker1 = document.getElementById('tracker1');
-                const tracker2 = document.getElementById('tracker2');
-                
-                tracker1.innerHTML = '';
-                tracker2.innerHTML = '';
-                
-                for (let i = 0; i < this.maxShots; i++) {
-                    const marker = document.createElement('div');
-                    marker.className = 'shot-marker';
-                    if (i < this.player1Shots.length) {
-                        marker.classList.add(this.player1Shots[i]);
-                        marker.textContent = this.player1Shots[i] === 'goal' ? '✓' : 
-                        this.player1Shots[i] === 'save' ? '◉' : '✗';
-                    }
-                    tracker1.appendChild(marker);
-                }
-                
-                for (let i = 0; i < this.maxShots; i++) {
-                    const marker = document.createElement('div');
-                    marker.className = 'shot-marker';
-                    if (i < this.player2Shots.length) {
-                        marker.classList.add(this.player2Shots[i]);
-                        marker.textContent = this.player2Shots[i] === 'goal' ? '✓' : 
-                        this.player2Shots[i] === 'save' ? '◉' : '✗';
-                    }
-                    tracker2.appendChild(marker);
-                }
-            }
-            
-            createParticles(x, y, color, count) {
-                for (let i = 0; i < count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * 280 + 180;
-                    this.particles.push(new Particle(
-                    x, y, color,
-                    Math.cos(angle) * speed,
-                    Math.sin(angle) * speed - 150
-                    ));
-                }
-            }
-            
-            nextTurn() {
-                this.waitingNextTurn = true;
-                this.slowMotion = false;
-                this.playerGoalkeeperChoice = null;
-                this.goalkeeperMode = false; 
-                
-                this.later(() => {
-                    this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
-                    
-                    if (this.currentPlayer === 1) {
-                        if (!this.suddenDeath) {
-                            this.currentShot++;
-                        }
-                        
-                        if (this.currentShot > this.maxShots && !this.suddenDeath) {
-                            if (this.score1 === this.score2) {
-                                this.suddenDeath = true;
-                                this.currentShot = 1;
-                            } else {
-                                this.endGame();
-                                return;
-                            }
-                        } else if (this.suddenDeath && this.score1 !== this.score2) {
-                            this.endGame();
-                            return;
-                        }
-                    }
-                    
-                    this.resetBall();
-                    this.resetGoalkeeper(); 
-                    this.updateHUD();
-                    this.waitingNextTurn = false;
-                    
-                    this.startCountdown();
-                }, 3500);
-            }
-            
-            endGame() {
-                if (this.finMostrado) return;
-                this.finMostrado = true;
-                this.state = 'results';
-                this.timers = [];
-                this.pararBucle();
-                this.audio.stopMusic();
-                this.audio.play('whistle');
-
-                const solo = this.mode === 'single';
-                const gana1 = this.score1 > this.score2;
-                const winner = gana1 ? this.player1Name : this.player2Name;
-                // textContent: los nombres los escribe el usuario
-                document.getElementById('finTitulo').textContent =
-                    this.score1 === this.score2 ? '¡EMPATE!' :
-                    solo ? (gana1 ? '🏆 ¡GANAS LA TANDA!' : '🧤 GANA EL PC') : '🏆 ¡GANA ' + winner.toUpperCase() + '!';
-                document.getElementById('finMarcador').textContent = this.score1 + ' – ' + this.score2;
-                document.getElementById('finDetalle').textContent =
-                    this.player1Name + ' ' + this.score1 + ' – ' + this.score2 + ' ' + this.player2Name +
-                    (this.suddenDeath ? ' · tras muerte súbita' : '') +
-                    (solo ? ' · ' + DIFS[this.difficulty] : '');
-
-                /* Antes se guardaba solo, con el nombre puesto antes de jugar; ahora,
-                   como en el resto de juegos, se pide al final si entra en el Top 10.
-                   En dos jugadores no hay récord (tampoco lo había) */
-                document.getElementById('nameInput').value = '';
-                document.getElementById('zonaNombre').style.display =
-                    solo && ranking.entra(this.score1) ? '' : 'none';
-                EST.abrir('capaFin');
-            }
-
-            updateHUD() {
-                document.getElementById('player1Name').textContent = this.player1Name;
-                document.getElementById('player2Name').textContent = this.player2Name;
-                document.getElementById('score1').textContent = this.score1;
-                document.getElementById('score2').textContent = this.score2;
-
-                const currentName = this.currentPlayer === 1 ? this.player1Name : this.player2Name;
-                document.getElementById('turnInfo').textContent =
-                    this.mode === 'single' ? (this.currentPlayer === 1 ? 'TIRAS TÚ' : 'TIRA EL PC') : 'TIRA ' + currentName;
-
-                document.getElementById('shotInfo').textContent = this.suddenDeath ? '¡MS!' : `${this.currentShot}/${this.maxShots}`;
-
-                this.updateShotTrackers();
-            }
-
-            saveScore() {
-                const input = document.getElementById('nameInput');
-                const name = input.value.trim();
-                if (name === '') { EST.avisar('Escribe tu nombre', true); input.focus(); return; }
-                ranking.anadir({
-                    name: name,
-                    score: this.score1,
-                    difficulty: this.difficulty,
-                    date: new Date().toLocaleDateString()
-                });
-                document.getElementById('zonaNombre').style.display = 'none';
-                EST.avisar('¡Guardado!');
-            }
-
-            update(dt) {
-                if (this.state !== 'playing') return;
-                this.runTimers(dt);
-                if (this.state !== 'playing') return;
-                
-                const effectiveDt = this.slowMotion ? dt * this.slowMotionFactor : dt;
-                
-                
-                if (!this.goalkeeperMode && (this.charging || (this.canShoot && !this.shooting))) {
-                    this.powerBar.value += this.powerBar.direction * this.powerBar.speed * dt;
-                    
-                    if (this.powerBar.value >= 1.0) {
-                        this.powerBar.value = 1.0;
-                        this.powerBar.direction = -1;
-                    } else if (this.powerBar.value <= 0.0) {
-                        this.powerBar.value = 0.0;
-                        this.powerBar.direction = 1;
-                    }
-                }
-                
-                
-                if (this.canShoot && !this.shooting && !this.charging && !this.countdownActive && !this.goalkeeperMode) {
-                    this.goalkeeper.anticipationTime += dt;
-                    this.goalkeeper.anticipationX = Math.sin(this.goalkeeper.anticipationTime * 2) * 20;
-                    this.goalkeeper.anticipationY = Math.sin(this.goalkeeper.anticipationTime * 4) * 5;
-                }
-                
-                if (this.shooting) {
-                    this.ball.progress += effectiveDt * 0.55;
-                    
-                    if (this.ball.progress >= 1.0) {
-                        this.ball.progress = 1.0;
-                        const result = this.checkGoal();
-                        this.shooting = false;
-                        
-                        if (!this.waitingNextTurn) {
-                            this.nextTurn();
-                        }
-                    }
-                    
-                    const t = this.ball.progress;
-                    const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-                    
-                    this.ball.x = this.ball.startX + (this.ball.targetX - this.ball.startX) * easeT;
-                    this.ball.y = this.ball.startY + (this.ball.targetY - this.ball.startY) * easeT;
-                    this.ball.z = this.ball.startZ + (this.ball.targetZ - this.ball.startZ) * easeT;
-                    
-                    this.ball.rotation += effectiveDt * 10;
-                    
-                    this.updateBallScreenPosition();
-                }
-                
-                if (this.goalkeeper.diving || this.goalkeeper.celebrating) {
-                    this.goalkeeper.animTime += effectiveDt;
-                    
-                    if (this.goalkeeper.diving && this.goalkeeper.animTime < 1.2) {
-                        const t = Math.min(1, this.goalkeeper.animTime / 1.2);
-                        const easeT = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-                        
-                        this.goalkeeper.x = this.goalkeeper.targetX * easeT;
-                        this.goalkeeper.y = (this.goalHeight3D / 2 - 60) + this.goalkeeper.targetY * easeT;
-                        
-                        this.goalkeeper.leftArm.angle += (this.goalkeeper.leftArm.targetAngle - this.goalkeeper.leftArm.angle) * effectiveDt * 5;
-                        this.goalkeeper.rightArm.angle += (this.goalkeeper.rightArm.targetAngle - this.goalkeeper.rightArm.angle) * effectiveDt * 5;
-                        this.goalkeeper.leftLeg.angle += (this.goalkeeper.leftLeg.targetAngle - this.goalkeeper.leftLeg.angle) * effectiveDt * 5;
-                        this.goalkeeper.rightLeg.angle += (this.goalkeeper.rightLeg.targetAngle - this.goalkeeper.rightLeg.angle) * effectiveDt * 5;
-                    }
-                }
-                
-                this.particles = this.particles.filter(p => {
-                    p.update(dt);
-                    return !p.isDead();
-                });
-                
-                this.netEffects = this.netEffects.filter(e => {
-                    e.update(dt);
-                    return !e.isDead();
-                });
-            }
-            
-            updateBallScreenPosition() {
-                const perspective = 550;
-                const scale = perspective / (perspective + this.ball.z);
-                
-                this.ball.screenX = this.canvas.width / 2 + this.ball.x * scale;
-                this.ball.screenY = this.goalCenterY + this.ball.y * scale;
-            }
-            draw() {
-                const skyGradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-                skyGradient.addColorStop(0, '#87CEEB');
-                skyGradient.addColorStop(0.5, '#4A90E2');
-                skyGradient.addColorStop(1, '#2C5F8D');
-                this.ctx.fillStyle = skyGradient;
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                this.drawStadium();
-                this.drawGround();
-                this.drawGoal3DFrontal();
-                
-                this.netEffects.forEach(e => e.draw(this.ctx));
-                
-                this.drawGoalkeeper3DRealistic();
-                this.drawBall3DFrontal();
-                
-                
-                if (this.charging && this.canShoot && !this.goalkeeperMode) {
-                    this.drawAimingLine();
-                }
-                
-                this.particles.forEach(p => p.draw(this.ctx));
-                
-                
-                if (!this.goalkeeperMode) {
-                    this.drawPowerBar();
-                    
-                    if ((this.charging || this.canShoot) && !this.shooting && !this.countdownActive) {
-                        this.drawHeightBar();
-                    }
-                }
-                
-                if (this.slowMotion) {
-                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.7)';
-                    this.ctx.font = 'bold 28px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText('⏱️ CÁMARA LENTA', this.canvas.width / 2, 60);
-                }
-                
-                if (this.state === 'playing' && !this.shooting && !this.charging && this.canShoot && !this.countdownActive && !this.goalkeeperMode) {
-                    this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
-                    this.ctx.font = 'bold 22px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText('Click o ESPACIO para apuntar y disparar', 
-                    this.canvas.width / 2, this.canvas.height - 20);
-                }
-            }
-            
-            drawStadium() {
-                const horizonY = this.goalCenterY - 300; // Aumentado de 200 a 300 píxeles de separación
-                
-                this.ctx.fillStyle = '#1a1a2e';
-                this.ctx.fillRect(0, 0, this.canvas.width, horizonY + 150);
-                
-                this.ctx.fillStyle = '#16213e';
-                this.ctx.beginPath();
-                this.ctx.moveTo(0, horizonY);
-                this.ctx.lineTo(0, this.canvas.height);
-                this.ctx.lineTo(this.canvas.width * 0.08, this.canvas.height);
-                this.ctx.lineTo(this.canvas.width * 0.12, horizonY + 100);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.canvas.width, horizonY);
-                this.ctx.lineTo(this.canvas.width, this.canvas.height);
-                this.ctx.lineTo(this.canvas.width * 0.92, this.canvas.height);
-                this.ctx.lineTo(this.canvas.width * 0.88, horizonY + 100);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                for (let row = 0; row < 5; row++) {
-                    const y = horizonY + row * 10;
-                    const numSeats = 55 + row * 5;
-                    
-                    for (let i = 0; i < numSeats; i++) {
-                        const x = (this.canvas.width * 0.12) + (i * (this.canvas.width * 0.76 / numSeats));
-                        const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8'];
-                        this.ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
-                        this.ctx.fillRect(x, y, 5, 4);
-                    }
-                }
-                
-                const boardY = horizonY + 60;
-                const boards = ['PENALTY SHOOTERS', 'ARCADE 2025', '⚽ FOOTBALL ⚽'];
-                boards.forEach((text, i) => {
-                    const x = this.canvas.width * (0.2 + i * 0.3);
-                    this.ctx.fillStyle = '#00FF00';
-                    this.ctx.fillRect(x - 80, boardY, 160, 22);
-                    this.ctx.fillStyle = '#000';
-                    this.ctx.font = 'bold 11px Arial';
-                    this.ctx.textAlign = 'center';
-                    this.ctx.fillText(text, x, boardY + 15);
-                });
-            }
-            
-            
-            // MODIFICADO - En drawGround() - línea ~1390
-            drawGround() {
-                // MODIFICADO - Césped empieza exactamente en la base de la portería
-                const groundY = this.goalGroundY - 5; // Solo 5px de margen
-                
-                const stripes = 10; // MODIFICADO - Más franjas de césped
-                for (let i = 0; i < stripes; i++) {
-                    const color = i % 2 === 0 ? '#2d7a3e' : '#3ea055';
-                    this.ctx.fillStyle = color;
-                    
-                    const stripeHeight = (this.canvas.height - groundY) / stripes;
-                    const y = groundY + i * stripeHeight;
-                    
-                    const topWidth = this.canvas.width * 0.75;
-                    const bottomWidth = this.canvas.width;
-                    const leftMargin = (this.canvas.width - topWidth) / 2;
-                    
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(leftMargin * (1 - i / stripes), y);
-                    this.ctx.lineTo(this.canvas.width - leftMargin * (1 - i / stripes), y);
-                    this.ctx.lineTo(this.canvas.width - leftMargin * (1 - (i + 1) / stripes), y + stripeHeight);
-                    this.ctx.lineTo(leftMargin * (1 - (i + 1) / stripes), y + stripeHeight);
-                    this.ctx.closePath();
-                    this.ctx.fill();
-                }
-                
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-                this.ctx.lineWidth = 5;
-                
-                // MODIFICADO - Línea del área justo debajo de la portería
-                const areaY = this.goalGroundY + 5;
-                const areaWidth = this.goalWidth3D * 1.15;
-                const perspective = 550;
-                const scale = perspective / (perspective + this.goalDepth * 0.55);
-                const displayWidth = areaWidth * scale;
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.canvas.width / 2 - displayWidth / 2, areaY);
-                this.ctx.lineTo(this.canvas.width / 2 + displayWidth / 2, areaY);
-                this.ctx.stroke();
-                
-                this.ctx.fillStyle = 'white';
-                this.ctx.beginPath();
-                this.ctx.arc(this.penaltyX, this.penaltyY, 9, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-            
-            drawGoal3DFrontal() {
-                const centerX = this.canvas.width / 2;
-                const centerY = this.goalCenterY;
-                
-                const perspective = 550;
-                const scale = perspective / (perspective + this.goalDepth);
-                
-                const displayWidth = this.goalWidth3D * scale;
-                const displayHeight = this.goalHeight3D * scale;
-                
-                const left = centerX - displayWidth / 2;
-                const right = centerX + displayWidth / 2;
-                const top = centerY - displayHeight / 2;
-                const bottom = centerY + displayHeight / 2;
-                
-                const innerScale = 0.80;
-                const innerLeft = centerX - (displayWidth * innerScale) / 2;
-                const innerRight = centerX + (displayWidth * innerScale) / 2;
-                const innerTop = centerY - (displayHeight * innerScale) / 2;
-                const innerBottom = centerY + (displayHeight * innerScale) / 2;
-                
-                this.ctx.fillStyle = 'rgba(0, 0, 15, 0.85)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(left, top);
-                this.ctx.lineTo(innerLeft, innerTop);
-                this.ctx.lineTo(innerRight, innerTop);
-                this.ctx.lineTo(right, top);
-                this.ctx.lineTo(right, bottom);
-                this.ctx.lineTo(innerRight, innerBottom);
-                this.ctx.lineTo(innerLeft, innerBottom);
-                this.ctx.lineTo(left, bottom);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-                this.ctx.lineWidth = 2.5;
-                
-                for (let i = 0; i <= 18; i++) {
-                    const t = i / 18;
-                    const x = left + displayWidth * t;
-                    const innerX = innerLeft + (innerRight - innerLeft) * t;
-                    
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x, top);
-                    this.ctx.lineTo(innerX, innerTop);
-                    this.ctx.lineTo(innerX, innerBottom);
-                    this.ctx.lineTo(x, bottom);
-                    this.ctx.stroke();
-                }
-                
-                for (let i = 0; i <= 14; i++) {
-                    const t = i / 14;
-                    const y = top + displayHeight * t;
-                    const innerY = innerTop + (innerBottom - innerTop) * t;
-                    
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(left, y);
-                    this.ctx.lineTo(innerLeft, innerY);
-                    this.ctx.lineTo(innerRight, innerY);
-                    this.ctx.lineTo(right, y);
-                    this.ctx.stroke();
-                }
-                
-                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.6)';
-                this.ctx.lineWidth = 20;
-                this.ctx.lineCap = 'round';
-                this.ctx.lineJoin = 'round';
-                this.ctx.beginPath();
-                this.ctx.moveTo(left + 6, bottom + 6);
-                this.ctx.lineTo(left + 6, top + 6);
-                this.ctx.lineTo(right + 6, top + 6);
-                this.ctx.lineTo(right + 6, bottom + 6);
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = 'white';
-                this.ctx.lineWidth = 16;
-                this.ctx.beginPath();
-                this.ctx.moveTo(left, bottom);
-                this.ctx.lineTo(left, top);
-                this.ctx.lineTo(right, top);
-                this.ctx.lineTo(right, bottom);
-                this.ctx.stroke();
-            }
-            
-            drawGoalkeeper3DRealistic() {
-                const centerX = this.canvas.width / 2;
-                const centerY = this.goalCenterY;
-                
-                const perspective = 550;
-                const scale = perspective / (perspective + this.goalDepth);
-                
-                let finalGkX = this.goalkeeper.x;
-                let finalGkY = this.goalkeeper.y;
-                
-                if (!this.shooting && this.canShoot && !this.charging && !this.goalkeeperMode && !this.goalkeeper.diving) {
-                    finalGkX += this.goalkeeper.anticipationX;
-                    finalGkY += this.goalkeeper.anticipationY;
-                }
-                
-                const gkScreenX = centerX + finalGkX * scale;
-                const gkScreenY = centerY + finalGkY * scale;
-                const gkScale = scale * 1.6;
-                
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-                this.ctx.beginPath();
-                this.ctx.ellipse(gkScreenX, gkScreenY + 95 * gkScale, 55 * gkScale, 18 * gkScale, 0, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                const bodyColor = this.currentPlayer === 1 ? '#FF6B35' : '#00A8E8';
-                
-                let bounceY = 0;
-                if (this.goalkeeper.celebrating) {
-                    bounceY = Math.sin(this.goalkeeper.animTime * 7) * 20 * gkScale;
-                }
-                
-                if (!this.shooting && this.canShoot && !this.charging && !this.countdownActive && !this.goalkeeperMode && !this.goalkeeper.diving) {
-                    bounceY = Math.abs(Math.sin(this.goalkeeper.anticipationTime * 4)) * 8 * gkScale;
-                }
-                
-                this.ctx.save();
-                this.ctx.translate(gkScreenX, gkScreenY + bounceY);
-                this.ctx.scale(gkScale, gkScale);
-                this.ctx.rotate(this.goalkeeper.torsoRotation);
-                
-                this.drawRealisticLeg(this.ctx, -20, 45, this.goalkeeper.leftLeg.angle, bodyColor, 'left');
-                this.drawRealisticLeg(this.ctx, 20, 45, this.goalkeeper.rightLeg.angle, bodyColor, 'right');
-                
-                const bodyGradient = this.ctx.createLinearGradient(-35, -20, 35, 20);
-                bodyGradient.addColorStop(0, this.lightenColor(bodyColor, 20));
-                bodyGradient.addColorStop(0.5, bodyColor);
-                bodyGradient.addColorStop(1, this.shadeColor(bodyColor, -40));
-                
-                this.ctx.fillStyle = bodyGradient;
-                this.ctx.strokeStyle = this.shadeColor(bodyColor, -50);
-                this.ctx.lineWidth = 2;
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(-28, -15);
-                this.ctx.bezierCurveTo(-32, 0, -30, 30, -22, 50);
-                this.ctx.lineTo(-18, 52);
-                this.ctx.lineTo(18, 52);
-                this.ctx.lineTo(22, 50);
-                this.ctx.bezierCurveTo(30, 30, 32, 0, 28, -15);
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = this.shadeColor(bodyColor, -70);
-                this.ctx.lineWidth = 1.5;
-                this.ctx.beginPath();
-                this.ctx.moveTo(-15, -10);
-                this.ctx.lineTo(-15, 30);
-                this.ctx.moveTo(15, -10);
-                this.ctx.lineTo(15, 30);
-                this.ctx.stroke();
-                
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                this.ctx.font = 'bold 24px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('1', 0, 25);
-                
-                this.drawRealisticArm(this.ctx, -28, -5, this.goalkeeper.leftArm.angle, bodyColor, 'left');
-                this.drawRealisticArm(this.ctx, 28, -5, this.goalkeeper.rightArm.angle, bodyColor, 'right');
-                
-                this.drawRealisticHead(this.ctx, 0, -40);
-                
-                this.ctx.restore();
-            }
-            
-            drawRealisticLeg(ctx, x, y, angle, color, side) {
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle);
-                
-                const thighGradient = ctx.createLinearGradient(-8, 0, 8, 0);
-                thighGradient.addColorStop(0, this.shadeColor(color, -20));
-                thighGradient.addColorStop(0.5, color);
-                thighGradient.addColorStop(1, this.shadeColor(color, -30));
-                
-                ctx.fillStyle = thighGradient;
-                ctx.strokeStyle = this.shadeColor(color, -50);
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.ellipse(0, 15, 10, 18, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.fillStyle = this.shadeColor(color, -10);
-                ctx.beginPath();
-                ctx.ellipse(side === 'left' ? -2 : 2, 38, 8, 15, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.fillStyle = '#1a1a1a';
-                ctx.strokeStyle = '#000';
-                ctx.beginPath();
-                ctx.ellipse(side === 'left' ? -2 : 2, 52, 11, 8, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 3; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(-4, 48 + i * 3);
-                    ctx.lineTo(4, 48 + i * 3);
-                    ctx.stroke();
-                }
-                
-                ctx.restore();
-            }
-            
-            drawRealisticArm(ctx, x, y, angle, color, side) {
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle);
-                
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 16;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(0, 35);
-                ctx.stroke();
-                
-                ctx.lineWidth = 14;
-                ctx.beginPath();
-                ctx.moveTo(0, 35);
-                ctx.lineTo(side === 'left' ? -5 : 5, 60);
-                ctx.stroke();
-                
-                const gloveX = side === 'left' ? -5 : 5;
-                const gloveY = 60;
-                
-                const gloveGradient = ctx.createRadialGradient(gloveX, gloveY, 2, gloveX, gloveY, 16);
-                gloveGradient.addColorStop(0, '#FFE44D');
-                gloveGradient.addColorStop(0.7, '#FFD700');
-                gloveGradient.addColorStop(1, '#FFA500');
-                
-                ctx.fillStyle = gloveGradient;
-                ctx.strokeStyle = '#CC8800';
-                ctx.lineWidth = 2;
-                
-                ctx.beginPath();
-                ctx.arc(gloveX, gloveY, 16, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                for (let i = 0; i < 4; i++) {
-                    const fingerAngle = (i - 1.5) * 0.4;
-                    const fx = gloveX + Math.cos(fingerAngle) * 12;
-                    const fy = gloveY + Math.sin(fingerAngle) * 12;
-                    
-                    ctx.fillStyle = '#FFD700';
-                    ctx.beginPath();
-                    ctx.arc(fx, fy, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-                
-                ctx.fillStyle = '#CC8800';
-                ctx.font = 'bold 8px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('GK', gloveX, gloveY + 3);
-                
-                ctx.restore();
-            }
-            
-            drawRealisticHead(ctx, x, y) {
-                ctx.fillStyle = '#FFD1A3';
-                ctx.strokeStyle = '#E6B88A';
-                ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.rect(x - 6, y + 20, 12, 10);
-                ctx.fill();
-                ctx.stroke();
-                
-                const headGradient = ctx.createRadialGradient(x - 8, y - 5, 5, x, y, 28);
-                headGradient.addColorStop(0, '#FFDFC3');
-                headGradient.addColorStop(0.6, '#FFD1A3');
-                headGradient.addColorStop(1, '#E6B88A');
-                
-                ctx.fillStyle = headGradient;
-                ctx.strokeStyle = '#D4A574';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(x, y, 26, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                ctx.fillStyle = '#3d2817';
-                ctx.beginPath();
-                ctx.arc(x, y - 10, 26, Math.PI, 0, true);
-                ctx.fill();
-                
-                ctx.fillStyle = '#FFD1A3';
-                ctx.beginPath();
-                ctx.ellipse(x - 24, y, 6, 8, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.ellipse(x + 24, y, 6, 8, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-                
-                if (this.goalkeeper.celebrating) {
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2.5;
-                    ctx.beginPath();
-                    ctx.arc(x - 9, y - 3, 4, 0.2, Math.PI - 0.2);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(x + 9, y - 3, 4, 0.2, Math.PI - 0.2);
-                    ctx.stroke();
-                    
-                    ctx.lineWidth = 3;
-                    ctx.beginPath();
-                    ctx.arc(x, y + 5, 12, 0.2, Math.PI - 0.2);
-                    ctx.stroke();
-                } else {
-                    ctx.fillStyle = '#000';
-                    ctx.beginPath();
-                    ctx.arc(x - 9, y - 2, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.arc(x + 9, y - 2, 4, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(x - 8, y - 3, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.beginPath();
-                    ctx.arc(x + 10, y - 3, 1.5, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    ctx.strokeStyle = '#2d1f10';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x - 14, y - 10);
-                    ctx.lineTo(x - 5, y - 8);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(x + 14, y - 10);
-                    ctx.lineTo(x + 5, y - 8);
-                    ctx.stroke();
-                    
-                    ctx.strokeStyle = '#000';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(x - 8, y + 12);
-                    ctx.lineTo(x + 8, y + 12);
-                    ctx.stroke();
-                }
-                
-                ctx.strokeStyle = '#D4A574';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x, y + 3);
-                ctx.lineTo(x - 2, y + 8);
-                ctx.stroke();
-            }
-            
-            drawBall3DFrontal() {
-                let ballX, ballY, radius;
-                
-                if (!this.shooting) {
-                    ballX = this.penaltyX;
-                    ballY = this.penaltyY;
-                    radius = 24;
-                    this.drawBallAtPosition(ballX, ballY, radius, 0);
-                } else {
-                    const perspective = 550;
-                    const scale = perspective / (perspective + this.ball.z);
-                    radius = 24 * scale * 1.9;
-                    
-                    this.drawBallAtPosition(this.ball.screenX, this.ball.screenY, radius, this.ball.rotation);
-                }
-            }
-            
-            drawBallAtPosition(x, y, radius, rotation) {
-                const shadowOffset = radius * 0.35;
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                this.ctx.beginPath();
-                this.ctx.ellipse(x + shadowOffset * 0.4, y + radius + shadowOffset, 
-                radius * 0.95, radius * 0.28, 0, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                const ballGradient = this.ctx.createRadialGradient(
-                x - radius * 0.4, y - radius * 0.4, radius * 0.1,
-                x, y, radius
-                );
-                ballGradient.addColorStop(0, '#ffffff');
-                ballGradient.addColorStop(0.35, '#fafafa');
-                ballGradient.addColorStop(0.7, '#e8e8e8');
-                ballGradient.addColorStop(1, '#b8b8b8');
-                
-                this.ctx.fillStyle = ballGradient;
-                this.ctx.strokeStyle = '#2a2a2a';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.fillStyle = '#1a1a1a';
-                for (let i = 0; i < 6; i++) {
-                    const angle = (Math.PI * 2 / 6) * i + rotation;
-                    const distance = radius * 0.58;
-                    const px = x + Math.cos(angle) * distance;
-                    const py = y + Math.sin(angle) * distance;
-                    
-                    this.ctx.beginPath();
-                    this.ctx.arc(px, py, radius * 0.24, 0, Math.PI * 2);
-                    this.ctx.fill();
-                }
-                
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-                this.ctx.beginPath();
-                this.ctx.arc(x - radius * 0.42, y - radius * 0.42, radius * 0.38, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-                this.ctx.beginPath();
-                this.ctx.arc(x - radius * 0.28, y - radius * 0.28, radius * 0.18, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-            
-            drawAimingLine() {
-                this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.8)';
-                this.ctx.lineWidth = 6;
-                this.ctx.setLineDash([20, 14]);
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.penaltyX, this.penaltyY);
-                this.ctx.lineTo(this.mouseX, this.mouseY);
-                this.ctx.stroke();
-                this.ctx.setLineDash([]);
-                
-                const angle = Math.atan2(this.mouseY - this.penaltyY, this.mouseX - this.penaltyX);
-                const arrowSize = 38;
-                
-                this.ctx.fillStyle = 'rgba(255, 255, 0, 0.9)';
-                this.ctx.strokeStyle = 'rgba(255, 150, 0, 0.95)';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.mouseX, this.mouseY);
-                this.ctx.lineTo(
-                this.mouseX - arrowSize * Math.cos(angle - Math.PI / 6),
-                this.mouseY - arrowSize * Math.sin(angle - Math.PI / 6)
-                );
-                this.ctx.lineTo(
-                this.mouseX - arrowSize * Math.cos(angle + Math.PI / 6),
-                this.mouseY - arrowSize * Math.sin(angle + Math.PI / 6)
-                );
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = 'rgba(255, 100, 0, 1)';
-                this.ctx.lineWidth = 6;
-                this.ctx.beginPath();
-                this.ctx.arc(this.mouseX, this.mouseY, 28, 0, Math.PI * 2);
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = 'rgba(255, 255, 255, 1)';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.moveTo(this.mouseX - 35, this.mouseY);
-                this.ctx.lineTo(this.mouseX + 35, this.mouseY);
-                this.ctx.moveTo(this.mouseX, this.mouseY - 35);
-                this.ctx.lineTo(this.mouseX, this.mouseY + 35);
-                this.ctx.stroke();
-            }
-            
-            drawPowerBar() {
-                if (!this.canShoot && !this.charging) return;
-                
-                const barWidth = 440;
-                const barHeight = 60;
-                const barX = this.canvas.width / 2- barWidth / 2;
-                const barY = this.canvas.height - 140;
-                
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                this.ctx.fillRect(barX - 8, barY - 8, barWidth + 16, barHeight + 16);
-                
-                const optimalStart = barWidth * 0.35;
-                const optimalWidth = barWidth * 0.3;
-                
-                this.ctx.fillStyle = 'rgba(0, 255, 0, 0.4)';
-                this.ctx.fillRect(barX + optimalStart, barY, optimalWidth, barHeight);
-                
-                this.ctx.fillStyle = 'rgba(255, 255, 0, 0.4)';
-                this.ctx.fillRect(barX + optimalStart * 0.5, barY, optimalStart * 0.5, barHeight);
-                this.ctx.fillRect(barX + optimalStart + optimalWidth, barY, optimalStart * 0.5, barHeight);
-                
-                this.ctx.fillStyle = 'rgba(255, 0, 0, 0.4)';
-                this.ctx.fillRect(barX, barY, optimalStart * 0.5, barHeight);
-                this.ctx.fillRect(barX + optimalStart + optimalWidth + optimalStart * 0.5, barY, 
-                barWidth - (optimalStart + optimalWidth + optimalStart * 0.5), barHeight);
-                
-                const indicatorX = barX + this.powerBar.value * barWidth;
-                
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                this.ctx.beginPath();
-                this.ctx.moveTo(indicatorX + 3, barY - 14 + 3);
-                this.ctx.lineTo(indicatorX - 16 + 3, barY + 3);
-                this.ctx.lineTo(indicatorX + 16 + 3, barY + 3);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(indicatorX + 3, barY + barHeight + 14 + 3);
-                this.ctx.lineTo(indicatorX - 16 + 3, barY + barHeight + 3);
-                this.ctx.lineTo(indicatorX + 16 + 3, barY + barHeight + 3);
-                this.ctx.closePath();
-                this.ctx.fill();
-                
-                let indicatorColor;
-                if (this.powerBar.value >= 0.35 && this.powerBar.value <= 0.65) {
-                    indicatorColor = '#00FF00';
-                } else if (this.powerBar.value >= 0.2 && this.powerBar.value <= 0.8) {
-                    indicatorColor = '#FFFF00';
-                } else {
-                    indicatorColor = '#FF0000';
-                }
-                
-                this.ctx.fillStyle = indicatorColor;
-                this.ctx.strokeStyle = '#FFF';
-                this.ctx.lineWidth = 4;
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(indicatorX, barY - 14);
-                this.ctx.lineTo(indicatorX - 16, barY);
-                this.ctx.lineTo(indicatorX + 16, barY);
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(indicatorX, barY + barHeight + 14);
-                this.ctx.lineTo(indicatorX - 16, barY + barHeight);
-                this.ctx.lineTo(indicatorX + 16, barY + barHeight);
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = indicatorColor;
-                this.ctx.lineWidth = 6;
-                this.ctx.beginPath();
-                this.ctx.moveTo(indicatorX, barY);
-                this.ctx.lineTo(indicatorX, barY + barHeight);
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = '#FFF';
-                this.ctx.lineWidth = 5;
-                this.ctx.strokeRect(barX, barY, barWidth, barHeight);
-                
-                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-                this.ctx.shadowBlur = 12;
-                this.ctx.fillStyle = 'white';
-                this.ctx.font = 'bold 24px Arial';
-                this.ctx.textAlign = 'center';
-                
-                let powerText;
-                if (this.powerBar.value >= 0.35 && this.powerBar.value <= 0.65) {
-                    powerText = '✓ POTENCIA ÓPTIMA';
-                } else if (this.powerBar.value >= 0.2 && this.powerBar.value <= 0.8) {
-                    powerText = '⚠ ARRIESGADO';
-                } else {
-                    powerText = '✗ ¡MUY PELIGROSO!';
-                }
-                
-                this.ctx.fillText(powerText, this.canvas.width / 2, barY - 32);
-                this.ctx.fillText('¡Suelta para disparar!', this.canvas.width / 2, barY + barHeight + 42);
-                this.ctx.shadowBlur = 0;
-            }
-            
-            drawHeightBar() {
-                const barX = this.canvas.width - 90;
-                const barY = this.canvas.height / 2 - 300;
-                const barHeight = 600;
-                
-                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
-                this.ctx.fillRect(barX - 8, barY - 8, 52, barHeight + 16);
-                
-                const goalTop = this.goalCenterY - this.goalHeight3D / 2;
-                const goalBottom = this.goalCenterY + this.goalHeight3D / 2;
-                const goalTopBar = barY + (goalTop / this.canvas.height) * barHeight;
-                const goalHeightBar = ((goalBottom - goalTop) / this.canvas.height) * barHeight;
-                
-                this.ctx.fillStyle = 'rgba(0, 255, 0, 0.5)';
-                this.ctx.fillRect(barX, goalTopBar, 36, goalHeightBar);
-                
-                const barGradient = this.ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-                barGradient.addColorStop(0, 'rgba(255, 50, 50, 0.7)');
-                barGradient.addColorStop(0.3, 'rgba(255, 255, 50, 0.7)');
-                barGradient.addColorStop(0.7, 'rgba(50, 255, 50, 0.7)');
-                barGradient.addColorStop(1, 'rgba(50, 50, 255, 0.7)');
-                this.ctx.fillStyle = barGradient;
-                this.ctx.fillRect(barX, barY, 36, barHeight);
-                
-                const mousePercent = Math.max(0, Math.min(1, this.mouseY / this.canvas.height));
-                const indicatorY = barY + mousePercent * barHeight;
-                
-                const inGoalZone = this.mouseY >= goalTop && this.mouseY <= goalBottom;
-                this.ctx.fillStyle = inGoalZone ? '#00FF00' : '#FF0000';
-                this.ctx.strokeStyle = '#fff';
-                this.ctx.lineWidth = 3;
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(barX - 22, indicatorY);
-                this.ctx.lineTo(barX - 5, indicatorY - 14);
-                this.ctx.lineTo(barX - 5, indicatorY + 14);
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.beginPath();
-                this.ctx.moveTo(barX + 36 + 22, indicatorY);
-                this.ctx.lineTo(barX + 36 + 5, indicatorY - 14);
-                this.ctx.lineTo(barX + 36 + 5, indicatorY + 14);
-                this.ctx.closePath();
-                this.ctx.fill();
-                this.ctx.stroke();
-                
-                this.ctx.strokeStyle = '#FFF';
-                this.ctx.lineWidth = 5;
-                this.ctx.strokeRect(barX, barY, 36, barHeight);
-                
-                this.ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-                this.ctx.shadowBlur = 10;
-                this.ctx.fillStyle = 'white';
-                this.ctx.font = 'bold 22px Arial';
-                this.ctx.textAlign = 'center';
-                this.ctx.fillText('↑', barX + 18, barY - 38);
-                this.ctx.fillText('ALTURA', barX + 18, barY - 14);
-                this.ctx.fillText('↓', barX + 18, barY + barHeight + 38);
-                this.ctx.shadowBlur = 0;
-            }
-            
-            lightenColor(color, percent) {
-                const num = parseInt(color.replace("#",""), 16);
-                const amt = Math.round(2.55 * percent);
-                const R = Math.min(255, (num >> 16) + amt);
-                const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
-                const B = Math.min(255, (num & 0x0000FF) + amt);
-                return "#" + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-            }
-            
-            shadeColor(color, percent) {
-                const num = parseInt(color.replace("#",""), 16);
-                const amt = Math.round(2.55 * percent);
-                const R = (num >> 16) + amt;
-                const G = (num >> 8 & 0x00FF) + amt;
-                const B = (num & 0x0000FF) + amt;
-                return "#" + (0x1000000 + (R<255?R<1?0:R:255)*0x10000 +
-                (G<255?G<1?0:G:255)*0x100 + (B<255?B<1?0:B:255))
-                .toString(16).slice(1);
-            }
-            
-            gameLoop() {
-                this.rafId = null;
-                const now = Date.now();
-                const dt = Math.min((now - this.lastTime) / 1000, 0.1);
-                this.lastTime = now;
-
-                this.update(dt);
-                this.draw();
-
-                // Solo hay bucle en partida: en el menú y en pausa no se pinta nada
-                if (this.state === 'playing') {
-                    this.rafId = requestAnimationFrame(() => this.gameLoop());
-                }
-            }
-        }
-
-        // ==========================================
-        // INTERFAZ ESTÁNDAR - menú, capas y récords
-        // ==========================================
-        const DIFS = { easy: '2ª RFEF', medium: '1ª División', hard: 'Champions' };
-        const DIF_CORTA = { easy: '2ªRFEF', medium: '1ªDiv', hard: 'UCL' };
-
-        /* Misma clave y campos de siempre: los récords de antes siguen */
-        const ranking = EST.ranking({ clave: 'penaltyScores', nombre: 'name', puntos: 'score' });
-
-        const game = new PenaltyGame();
-        game.mode = 'single';
-
-        function showRanking() {
-            ranking.pintar(document.getElementById('rankingList'), (e) =>
-                DIF_CORTA[e.difficulty] ? ' · ' + DIF_CORTA[e.difficulty] : '');
-            EST.abrir('capaRanking');
-        }
-
-        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
-
-        EST.grupo('grpModo', (v) => {
-            game.mode = v;
-            // Los nombres solo hacen falta para distinguir a dos personas en el mismo móvil
-            document.getElementById('grpNombres').style.display = v === 'double' ? '' : 'none';
+    /* ¿Toca un poste o el larguero? (rectángulos) */
+    function tocaPalo(b) {
+        const r = CAMPO.balon, m = CAMPO.medio, h = CAMPO.alto, g = CAMPO.poste;
+        const rects = [[-m - g, 0, -m, h + g], [m, 0, m + g, h + g], [-m - g, h, m + g, h + g]];
+        return rects.some(([x0, y0, x1, y1]) => {
+            const cx = clamp(b.x, x0, x1), cy = clamp(b.y, y0, y1);
+            return Math.hypot(b.x - cx, b.y - cy) <= r;
         });
-        EST.grupo('grpDif', (v) => { game.difficulty = v; });
+    }
 
-        btn('btnJugar', () => game.startGame());
-        btn('btnPausa', () => game.pauseGame());
-        btn('btnSeguir', () => game.resumeGame());
-        btn('btnAbandonar', () => game.quitToMenu());
-        btn('btnGuardar', () => game.saveScore());
-        btn('btnOtra', () => game.startGame());
-        btn('btnMenuFin', () => game.quitToMenu());
-        btn('btnRanking', showRanking);
-        btn('btnCerrarRanking', () => EST.cerrar('capaRanking'));
-        btn('btnBorrarRanking', () => {
-            if (!confirm('¿Borrar todos los récords?')) return;
-            ranking.borrar();
-            showRanking();
-        });
-        btn('btnAyuda', () => EST.abrir('capaAyuda'));
-        btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+    const dentro = (b) => Math.abs(b.x) < CAMPO.medio && b.y < CAMPO.alto;
 
-        // Irse de la aplicación pausa: una llamada en mitad del tiro lo dejaba volando
-        window.addEventListener('blur', () => game.pauseGame());
-        document.addEventListener('visibilitychange', () => { if (document.hidden) game.pauseGame(); });
+    /* Resultado de un balón que llega a la línea en (x, y) con el portero en
+       la pose ps. Si el balón va dentro y toca al portero, parada, aunque roce
+       también el palo: el portero está delante. */
+    function resolver(b, ps) {
+        if (dentro(b) && tocaPortero(ps, b)) return 'parada';
+        if (tocaPalo(b)) return 'palo';
+        if (!dentro(b)) return 'fuera';
+        return 'gol';
+    }
 
-        EST.iniciar({
-            claveAudio: 'penaltyAudio',
-            alCambiarMusica(on) {
-                if (on && game.state === 'playing') game.audio.playMusic();
-                else game.audio.stopMusic();
-            }
-        });
-    </script>
+    /* ---------- TIROS ---------- */
+    /* Del punto apuntado y la potencia al punto real de llegada */
+    function tiro(apunta, potencia, rnd) {
+        const sd = dispersion(potencia);
+        return {
+            x: apunta.x + gauss(rnd) * sd,
+            y: Math.max(CAMPO.balon, apunta.y + gauss(rnd) * sd * 0.8),
+            t: vuelo(potencia),
+            potencia: clamp(potencia, 0, 1)
+        };
+    }
+
+    /* Hacia dónde se tira el portero rival, decidido al chutar. Si "lee" el
+       tiro va hacia donde va el balón, con error; si no, adivina. */
+    function decidirPortero(nivel, llegada, rnd) {
+        const c = typeof nivel === 'string' ? DIF[nivel] : nivel;
+        let tx, ty;
+        const r = rnd();
+        if (r < c.lee) {
+            tx = llegada.x + gauss(rnd) * c.error;
+            ty = llegada.y + gauss(rnd) * c.error * 0.6;
+        } else if (r < c.lee + c.quieto) {
+            tx = 0; ty = 1.0 + (rnd() - 0.5) * 0.8;
+        } else {
+            const lado = rnd() < 0.5 ? -1 : 1;
+            tx = lado * (1 + rnd() * 2.5);
+            ty = 0.2 + rnd() * 2.0;
+        }
+        return { tx, ty, t0: c.reaccion, dur: c.dur };
+    }
+
+    /* En la racha, el portero mejora cada 3 goles hasta el nivel difícil */
+    function porteroRacha(base, goles) {
+        const a = DIF[base], z = DIF.dificil;
+        const k = Math.min(1, Math.floor(goles / 3) * 0.2);
+        const mezcla = {};
+        for (const p of ['lee', 'error', 'reaccion', 'dur', 'quieto']) mezcla[p] = lerp(a[p], z[p], k) + (p === 'lee' ? 0.03 * Math.max(0, Math.floor(goles / 3) - 5) : 0);
+        mezcla.lee = Math.min(0.75, mezcla.lee);
+        return mezcla;
+    }
+
+    /* Tiro del ordenador cuando paras tú */
+    function tiroPC(nivel, rnd) {
+        const c = DIF[nivel].pc;
+        const lado = rnd() < 0.5 ? -1 : 1;
+        let ax, ay;
+        if (rnd() < c.esquina) { ax = lado * (2.6 + rnd() * 0.8); ay = rnd() < 0.5 ? 0.3 + rnd() * 0.4 : 1.6 + rnd() * 0.6; }
+        else { ax = lado * rnd() * 2.6; ay = 0.25 + rnd() * 1.9; }
+        const pot = c.potencia[0] + rnd() * (c.potencia[1] - c.potencia[0]);
+        const sd = c.sd;
+        return {
+            x: ax + gauss(rnd) * sd,
+            y: Math.max(CAMPO.balon, ay + gauss(rnd) * sd * 0.7),
+            t: vuelo(pot),
+            potencia: pot
+        };
+    }
+
+    /* ---------- TANDA ----------
+       a y b: listas de booleanos (gol o no) de cada equipo, que tira primero
+       a. Acaba en cuanto uno ya no puede alcanzar al otro (como en la regla
+       de verdad: antes se tiraban siempre los diez); tras cinco cada uno con
+       empate, muerte súbita por parejas. */
+    function estadoTanda(a, b, n) {
+        n = n || 5;
+        const ga = a.filter(Boolean).length, gb = b.filter(Boolean).length;
+        if (a.length <= n && b.length <= n) {
+            const quedanA = n - a.length, quedanB = n - b.length;
+            if (ga + quedanA < gb) return { acabada: true, gana: 'b', ga, gb, muerte: false };
+            if (gb + quedanB < ga) return { acabada: true, gana: 'a', ga, gb, muerte: false };
+            if (a.length === n && b.length === n) return { acabada: false, ga, gb, muerte: true };
+            return { acabada: false, ga, gb, muerte: false };
+        }
+        // Muerte súbita: solo se decide con los dos el mismo número de tiros
+        if (a.length === b.length && ga !== gb) return { acabada: true, gana: ga > gb ? 'a' : 'b', ga, gb, muerte: true };
+        return { acabada: false, ga, gb, muerte: true };
+    }
+
+    const API = { CAMPO, DIF, DUR_HUMANO, vuelo, dispersion, pose, tocaPortero, tocaPalo, resolver, tiro, tiroPC, decidirPortero, porteroRacha, estadoTanda, gauss };
+    if (typeof module !== 'undefined' && module.exports) module.exports = API;
+    else raiz.Penaltis = API;
+})(typeof window !== 'undefined' ? window : this);
+
+</script>
+<script>
+'use strict';
+/* Penaltis: dibujo, entrada y flujo de la partida. La física y las reglas
+   están en motor-penaltis.js (Penaltis); aquí no se decide ningún resultado. */
+const M = Penaltis;
+const C = M.CAMPO;
+
+/* ---------- PERSPECTIVA ----------
+   Cámara detrás del punto de penalti. K = cuánto más grande se ve el balón en
+   el punto que en la línea de gol. Con K y la posición en pantalla de la línea
+   y del punto sale una cámara de verdad: el balón, el césped y la red usan la
+   misma proyección. */
+const K = 3.2;
+const D0 = 11 * K / (K - 1);          // distancia cámara → línea de gol (m)
+const L = { W: 0, H: 0, dpr: 1, s: 40, cx: 0, gy: 0, spotY: 0, hor: 0, hc: 3 };
+
+const lienzo = document.getElementById('lienzo');
+const ctx = lienzo.getContext('2d');
+
+function escala(z) { return L.s * D0 / (D0 - z); }      // z: metros hacia la cámara
+function proyectar(x, y, z) {
+    const k = escala(z);
+    return { X: L.cx + x * k, Y: L.hor + (L.hc - y) * k, k };
+}
+const enLinea = (x, y) => ({ X: L.cx + x * L.s, Y: L.gy - y * L.s });
+const aPlano = (X, Y) => ({ x: (X - L.cx) / L.s, y: (L.gy - Y) / L.s });
+
+function medir() {
+    const r = document.getElementById('escena').getBoundingClientRect();
+    L.W = Math.max(1, r.width); L.H = Math.max(1, r.height);
+    L.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    lienzo.width = Math.round(L.W * L.dpr);
+    lienzo.height = Math.round(L.H * L.dpr);
+    /* La portería entera (7,56 m con los postes) y algo de aire caben siempre
+       a lo ancho. Antes medía 425 px fijos y en un móvil de 390 se salía. */
+    L.s = Math.min(L.W * 0.94 / 8.4, L.H * 0.36 / 2.7);
+    L.cx = L.W / 2;
+    L.gy = L.H * 0.07 + 2.9 * L.s;
+    L.spotY = L.H * 0.86;
+    L.hc = (L.spotY - L.gy) / ((K - 1) * L.s);
+    L.hor = L.gy - L.hc * L.s;
+    if (partido && !bucleId) pintar();
+}
+
+/* ---------- ESTADO ---------- */
+const DIFS = { facil: '2ª RFEF', normal: '1ª División', dificil: 'Champions' };
+// En los récords se guardan con los nombres de antes, para no perder los viejos
+const DIF_GUARDA = { facil: 'easy', normal: 'medium', dificil: 'hard' };
+const DIF_CORTA = { easy: '2ªRFEF', medium: '1ªDiv', hard: 'UCL' };
+const sel = { modo: 'tanda', dif: 'normal' };
+
+let partido = null;   // { modo, dif, nombres:[a,b], A:[], B:[], racha }
+let ronda = null;     // el tiro en curso
+let tiempo = 0;       // reloj de juego (s); solo corre en partida y sin pausa
+let pausado = false;
+let bucleId = null, ultimo = 0;
+let finMostrado = false;
+let detenido = false;   // capa de fin abierta: ya no hay nada que mover
+const esperas = [];   // temporizadores en tiempo de juego: la pausa los congela
+
+function luego(seg, fn) { esperas.push({ t: tiempo + seg, fn }); }
+
+/* ---------- RÉCORDS ---------- */
+const ranking = EST.ranking({ clave: 'penaltyScores', nombre: 'name', puntos: 'score' });
+const rankingRacha = EST.ranking({ clave: 'penaltyRacha', nombre: 'name', puntos: 'score' });
+
+/* ---------- SONIDO ---------- */
+const musica = EST.musica({
+    bpm: 128,
+    acordes: [
+        { bajo: 98, notas: [392, 494, 587] },     // Sol
+        { bajo: 131, notas: [523, 659, 784] },    // Do
+        { bajo: 110, notas: [440, 523, 659] },    // La m
+        { bajo: 147, notas: [587, 740, 880] }     // Re
+    ]
+});
+const sonido = {
+    pito() { EST.efecto('pito', 200, [[2900, 0.22, 'square', 0.05], [3050, 0.32, 'square', 0.05, 0.26]]); },
+    chut() { EST.ruido(0.09, 0.55, 1500, 200); EST.efecto('chut', 60, [[140, 0.08, 'triangle', 0.25, 0, 60]]); },
+    gol() { EST.ruido(1.3, 0.22, 2600, 700); EST.efecto('gol', 300, [[523, 0.14, 'square', 0.07], [659, 0.14, 'square', 0.07, 0.12], [784, 0.14, 'square', 0.07, 0.24], [1047, 0.35, 'square', 0.07, 0.36]]); },
+    parada() { EST.ruido(0.18, 0.5, 900, 120); EST.efecto('parada', 200, [[330, 0.12, 'square', 0.06], [247, 0.25, 'square', 0.06, 0.1]]); },
+    palo() { EST.efecto('palo', 200, [[1760, 0.45, 'triangle', 0.18], [2637, 0.3, 'sine', 0.08]]); },
+    fuera() { EST.efecto('fuera', 200, [[300, 0.5, 'sawtooth', 0.05, 0, 120]]); }
+};
+
+/* ---------- FLUJO ---------- */
+const humanoTira = () => partido.modo !== 'tanda' || ronda.tira === 'a';
+function nivelPortero() {
+    return partido.modo === 'racha' ? M.porteroRacha(partido.dif, partido.racha) : partido.dif;
+}
+
+function empezar() {
+    const n1 = document.getElementById('nombre1').value.trim();
+    const n2 = document.getElementById('nombre2').value.trim();
+    partido = {
+        modo: sel.modo, dif: sel.dif, A: [], B: [], racha: 0,
+        nombres: sel.modo === 'dos' ? [n1 || 'Jugador 1', n2 || 'Jugador 2'] : ['TÚ', 'PC']
+    };
+    finMostrado = false;
+    detenido = false;
+    pausado = false;
+    tiempo = 0;
+    esperas.length = 0;
+    ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+    EST.mostrar('pJuego');
+    document.getElementById('tiros').style.display = partido.modo === 'racha' ? 'none' : '';
+    medir();
+    sonido.pito();
+    musica.arrancar();
+    nuevaRonda('a');
+    pintarBarra();
+    arrancarBucle();
+}
+
+function nuevaRonda(tira) {
+    ronda = {
+        tira, fase: 'apuntar', reloj: 0, tirada: null, llegada: null, resultado: null,
+        balon: { x: 0, y: C.balon, z: 11, vx: 0, vy: 0, vz: 0, giro: 0 },
+        gesto: null, teclado: null
+    };
+    if (!humanoTira()) {
+        // Tira el PC: carrerilla de 0,85 s; el reloj cuenta desde el chut
+        ronda.fase = 'carrera';
+        ronda.reloj = -0.85;
+        pistaTexto('¡Paras tú! Toca hacia dónde te tiras.');
+    } else {
+        const quien = partido.modo === 'dos' ? partido.nombres[tira === 'a' ? 0 : 1] + ': ' : '';
+        pistaTexto(quien ? quien + 'desliza el dedo hacia la portería y suelta.' : 'Desliza el dedo hacia la portería y suelta.');
+    }
+    ocultarCartel();
+}
+
+function chutar(llegada) {
+    ronda.llegada = llegada;
+    ronda.fase = 'vuelo';
+    ronda.reloj = 0;
+    const T = llegada.t;
+    Object.assign(ronda.balon, { vx: llegada.x / T, vz: -11 / T });
+    if (humanoTira()) ronda.tirada = M.decidirPortero(nivelPortero(), llegada, Math.random);
+    sonido.chut();
+    pistaTexto('');
+}
+
+function tirarHumano(apunta, potencia) {
+    if (!ronda || ronda.fase !== 'apuntar' || pausado) return;
+    chutar(M.tiro(apunta, potencia, Math.random));
+}
+
+function tirarseHumano(x, y) {
+    if (!ronda || humanoTira() || ronda.tirada || pausado) return;
+    if (ronda.fase !== 'carrera' && ronda.fase !== 'vuelo') return;
+    ronda.tirada = { tx: x, ty: y, t0: ronda.reloj, dur: M.DUR_HUMANO };
+}
+
+/* El balón llega a la línea: el motor decide con la pose de ese instante
+   exacto, que es la que se pinta en ese fotograma */
+function llegar() {
+    const b = ronda.llegada;
+    const ps = M.pose(ronda.tirada, b.t);
+    const r = M.resolver(b, ps);
+    ronda.resultado = r;
+    ronda.fase = 'tras';
+    ronda.reloj = b.t;
+    ronda.tras = 0;
+    const bal = ronda.balon;
+    Object.assign(bal, { x: b.x, y: b.y, z: 0 });
+    if (r === 'gol') { bal.vz = -5; bal.vx *= 0.3; bal.vy = 0; }
+    else if (r === 'fuera') { bal.vz = -8; bal.vy = 1; }
+    else {
+        // Rechace: hacia el campo y hacia fuera del cuerpo o del palo
+        const cuerpo = (ps.guantes[0].x + ps.guantes[1].x) / 2;
+        const lado = r === 'palo' ? -Math.sign(b.x || 1) : Math.sign((b.x - cuerpo) || (Math.random() - 0.5));
+        bal.vz = 5 + Math.random() * 2; bal.vx = lado * (2 + Math.random() * 2); bal.vy = 2.5;
+    }
+    sonido[r]();
+    const textos = { gol: '¡GOL!', parada: '¡PARADA!', palo: '¡AL PALO!', fuera: '¡FUERA!' };
+    // Desde el punto de vista de quien juega: si paras tú, la parada es tuya
+    mostrarCartel(textos[r], r);
+    luego(1.25, apuntarYSeguir);
+}
+
+function apuntarYSeguir() {
+    const gol = ronda.resultado === 'gol';
+    if (partido.modo === 'racha') {
+        if (gol) { partido.racha++; pintarBarra(); nuevaRonda('a'); }
+        else acabar();
+        return;
+    }
+    (ronda.tira === 'a' ? partido.A : partido.B).push(gol);
+    pintarBarra();
+    const st = M.estadoTanda(partido.A, partido.B, 5);
+    if (st.acabada) { acabar(st); return; }
+    nuevaRonda(partido.A.length > partido.B.length ? 'b' : 'a');
+}
+
+function acabar(st) {
+    if (finMostrado) return;
+    finMostrado = true;
+    ronda.fase = 'fin';
+    sonido.pito();
+    musica.parar();
+    luego(0.6, () => mostrarFin(st));
+}
+
+function mostrarFin(st) {
+    detenido = true;
+    pararBucle();
+    const t = document.getElementById('finTitulo');
+    const marc = document.getElementById('finMarcador');
+    const det = document.getElementById('finDetalle');
+    let puntos = 0, rk = null;
+    if (partido.modo === 'racha') {
+        puntos = partido.racha;
+        t.textContent = puntos ? '🔥 RACHA DE ' + puntos : '😬 A LA PRIMERA';
+        marc.textContent = puntos + (puntos === 1 ? ' gol' : ' goles');
+        det.textContent = 'Seguidos contra el portero de ' + DIFS[partido.dif];
+        rk = rankingRacha;
+    } else {
+        const [a, b] = partido.nombres;
+        // textContent: los nombres los escribe el usuario
+        t.textContent = partido.modo === 'tanda'
+            ? (st.gana === 'a' ? '🏆 ¡GANAS LA TANDA!' : '🧤 GANA EL PC')
+            : '🏆 ¡GANA ' + (st.gana === 'a' ? a : b).toUpperCase() + '!';
+        marc.textContent = st.ga + ' – ' + st.gb;
+        det.textContent = a + ' ' + st.ga + ' – ' + st.gb + ' ' + b + (st.muerte ? ' · muerte súbita' : '') + ' · ' + DIFS[partido.dif];
+        if (partido.modo === 'tanda') { puntos = st.ga; rk = ranking; }
+    }
+    document.getElementById('nameInput').value = '';
+    /* Sin foco automático: en el móvil abriría el teclado tapando el marcador */
+    document.getElementById('zonaNombre').style.display = rk && rk.entra(puntos) ? '' : 'none';
+    partido.puntos = puntos;
+    partido.rk = rk;
+    EST.abrir('capaFin');
+}
+
+function guardar() {
+    const input = document.getElementById('nameInput');
+    const name = input.value.trim();
+    if (name === '') { EST.avisar('Escribe tu nombre', true); input.focus(); return; }
+    if (!partido || !partido.rk) return;
+    partido.rk.anadir({ name, score: partido.puntos, difficulty: DIF_GUARDA[partido.dif], date: new Date().toLocaleDateString() });
+    partido.rk = null;
+    document.getElementById('zonaNombre').style.display = 'none';
+    EST.avisar('¡Guardado!');
+}
+
+function verRecords() {
+    const det = (e) => DIF_CORTA[e.difficulty] ? ' · ' + DIF_CORTA[e.difficulty] : '';
+    ranking.pintar(document.getElementById('rankingList'), det);
+    rankingRacha.pintar(document.getElementById('rankingRacha'), det);
+    EST.abrir('capaRanking');
+}
+
+/* ---------- PAUSA Y BUCLE ---------- */
+function pausar() {
+    if (!partido || pausado || finMostrado) return;
+    pausado = true;
+    ronda.gesto = null;
+    if (ronda.teclado) ronda.teclado.cargando = false;
+    pararBucle();
+    musica.parar();
+    EST.abrir('capaPausa');
+}
+function seguir() {
+    if (!pausado) return;
+    pausado = false;
+    EST.cerrar('capaPausa');
+    musica.arrancar();
+    arrancarBucle();
+}
+function abandonar() {
+    pararBucle();
+    musica.parar();
+    partido = null; ronda = null; pausado = false; esperas.length = 0;
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    EST.mostrar('pMenu');
+}
+function arrancarBucle() {
+    if (bucleId !== null) return;
+    ultimo = performance.now();
+    bucleId = requestAnimationFrame(fotograma);
+}
+function pararBucle() {
+    if (bucleId !== null) cancelAnimationFrame(bucleId);
+    bucleId = null;
+}
+
+function fotograma(ahora) {
+    bucleId = null;
+    // Techo de 50 ms: al volver de segundo plano no se salta medio tiro
+    const dt = Math.min(0.05, Math.max(0, (ahora - ultimo) / 1000));
+    ultimo = ahora;
+    avanzar(dt);
+    pintar();
+    // Sin esto, el fotograma en curso volvía a pedir otro tras abrir la capa de fin
+    if (partido && !pausado && !detenido) bucleId = requestAnimationFrame(fotograma);
+}
+
+function avanzar(dt) {
+    tiempo += dt;
+    for (let i = 0; i < esperas.length; i++) {
+        if (esperas[i].t <= tiempo) { const e = esperas.splice(i, 1)[0]; i--; e.fn(); if (!partido) return; }
+    }
+    if (!ronda) return;
+    const r = ronda, b = r.balon;
+    if (r.teclado && r.teclado.cargando) {
+        // Barra de fuerza de ida y vuelta: 0,8 s de vacío a lleno
+        r.teclado.carga += dt / 0.8 * r.teclado.sentido;
+        if (r.teclado.carga >= 1) { r.teclado.carga = 1; r.teclado.sentido = -1; }
+        if (r.teclado.carga <= 0) { r.teclado.carga = 0; r.teclado.sentido = 1; }
+    }
+    if (r.fase === 'carrera') {
+        r.reloj += dt;
+        if (r.reloj >= 0) {
+            const resto = r.reloj;
+            chutar(M.tiroPC(partido.dif, Math.random));
+            r.reloj = resto;
+        }
+    } else if (r.fase === 'vuelo') {
+        r.reloj += dt;
+        if (r.reloj >= r.llegada.t) llegar();
+    } else if (r.fase === 'tras' || r.fase === 'fin') {
+        r.reloj += dt;
+        r.tras = (r.tras || 0) + dt;
+        if (r.resultado) {
+            b.x += b.vx * dt; b.z += b.vz * dt; b.y += b.vy * dt; b.vy -= 9.8 * dt;
+            if (b.y < C.balon) { b.y = C.balon; b.vy = Math.abs(b.vy) * 0.45; b.vx *= 0.8; b.vz *= 0.8; }
+            // La red frena el balón: no sale por detrás de la portería
+            if (r.resultado === 'gol' && b.z < -1.5) { b.z = -1.5; b.vz = 0; b.vx = 0; }
+            b.giro += dt * 6;
+        }
+    }
+    if (r.fase === 'vuelo') {
+        const p = Math.min(1, r.reloj / r.llegada.t);
+        const lob = 0.5 * (1 - r.llegada.potencia) * Math.sin(Math.PI * p);
+        b.x = r.llegada.x * p;
+        b.z = 11 * (1 - p);
+        b.y = C.balon + (r.llegada.y - C.balon) * p + lob;
+        b.giro += dt * 14;
+    }
+}
+
+/* ---------- ENTRADA ---------- */
+function puntoLienzo(e) {
+    const r = lienzo.getBoundingClientRect();
+    return { X: e.clientX - r.left, Y: e.clientY - r.top, t: e.timeStamp || performance.now() };
+}
+
+lienzo.addEventListener('pointerdown', (e) => {
+    if (!ronda || pausado) return;
+    e.preventDefault();
+    const p = puntoLienzo(e);
+    if (!humanoTira()) {
+        const q = aPlano(p.X, p.Y);
+        tirarseHumano(Math.max(-4.2, Math.min(4.2, q.x)), Math.max(0, Math.min(3, q.y)));
+        return;
+    }
+    if (ronda.fase !== 'apuntar') return;
+    try { lienzo.setPointerCapture(e.pointerId); } catch (err) {}
+    ronda.gesto = { id: e.pointerId, ini: p, puntos: [p] };
+});
+lienzo.addEventListener('pointermove', (e) => {
+    const g = ronda && ronda.gesto;
+    if (!g || g.id !== e.pointerId) return;
+    g.puntos.push(puntoLienzo(e));
+    if (g.puntos.length > 60) g.puntos.splice(0, g.puntos.length - 60);
+    if (!bucleId) pintar();
+});
+function soltar(e) {
+    const g = ronda && ronda.gesto;
+    if (!g || g.id !== e.pointerId) return;
+    g.puntos.push(puntoLienzo(e));
+    ronda.gesto = null;
+    const t = interpretarGesto(g);
+    ronda.ultimoGesto = t;
+    if (t) tirarHumano(t.apunta, t.potencia);
+    else pistaTexto('Desliza hacia la portería, o tócala.');
+}
+lienzo.addEventListener('pointerup', soltar);
+lienzo.addEventListener('pointercancel', (e) => { if (ronda && ronda.gesto && ronda.gesto.id === e.pointerId) ronda.gesto = null; });
+
+/* Del gesto al tiro:
+   - toque (menos de 12 px): tiro suave y preciso al punto tocado
+   - deslizar hasta la portería o más arriba: al punto donde acaba el dedo
+   - deslizar corto: raso, en la dirección del gesto desde el balón
+   La fuerza sale de la velocidad de los últimos 100 ms */
+function interpretarGesto(g) {
+    const a = g.ini, z = g.puntos[g.puntos.length - 1];
+    const dx = z.X - a.X, dy = z.Y - a.Y;
+    if (Math.hypot(dx, dy) < 12) {
+        const q = aPlano(z.X, z.Y);
+        if (Math.abs(q.x) > 4.6 || q.y < -0.4 || q.y > 3.4) return null;
+        return { apunta: { x: q.x, y: Math.max(C.balon, q.y) }, potencia: 0.35, tipo: 'toque' };
+    }
+    if (dy > -8) return null;   // hacia abajo o de lado: no es un tiro
+    let q;
+    if (z.Y <= L.gy) q = aPlano(z.X, z.Y);
+    else {
+        // Se prolonga desde el balón con la dirección del gesto hasta la línea
+        const k = (L.spotY - (L.gy - 0.15 * L.s)) / -dy;
+        q = aPlano(L.cx + dx * k, L.gy - 0.15 * L.s);
+    }
+    /* Velocidad punta en ventanas de 40 ms dentro de los últimos 250 ms. Con
+       solo los últimos 100 ms salía floja: casi todo el mundo frena un
+       instante antes de levantar el dedo (y Playwright también) */
+    let v = 0;
+    const pts = g.puntos;
+    for (let j = pts.length - 1; j > 0 && z.t - pts[j].t <= 250; j--) {
+        let i = j - 1;
+        while (i > 0 && pts[j].t - pts[i].t < 40) i--;
+        const dtms = Math.max(8, pts[j].t - pts[i].t);
+        v = Math.max(v, Math.hypot(pts[j].X - pts[i].X, pts[j].Y - pts[i].Y) / dtms);
+    }
+    v *= 600 / L.H;   // px/ms en una pantalla de 600 px de alto
+    const potencia = Math.max(0, Math.min(1, (v - 0.35) / 2.2));
+    const t = { apunta: { x: q.x, y: Math.max(C.balon, q.y) }, potencia, tipo: 'gesto', v };
+    return t;
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) {
+        if (e.key === 'Enter' && e.target.id === 'nameInput') { e.preventDefault(); guardar(); }
+        return;
+    }
+    if (!partido) {
+        if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+        return;
+    }
+    if (finMostrado) return;
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
+        if (pausado) seguir(); else pausar();
+        return;
+    }
+    if (pausado || !ronda) return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
+    if (!humanoTira()) {
+        const dirs = { ArrowLeft: [-2.9, 0.8], ArrowRight: [2.9, 0.8], ArrowUp: [0, 2.1], ArrowDown: [0, 0.3] };
+        if (dirs[e.key]) tirarseHumano(dirs[e.key][0], dirs[e.key][1]);
+        return;
+    }
+    if (ronda.fase !== 'apuntar') return;
+    const k = ronda.teclado || (ronda.teclado = { x: 0, y: 1.1, carga: 0, sentido: 1, cargando: false });
+    if (e.key === 'ArrowLeft') k.x = Math.max(-4, k.x - 0.18);
+    if (e.key === 'ArrowRight') k.x = Math.min(4, k.x + 0.18);
+    if (e.key === 'ArrowUp') k.y = Math.min(2.9, k.y + 0.15);
+    if (e.key === 'ArrowDown') k.y = Math.max(C.balon, k.y - 0.15);
+    if (e.key === ' ' && !e.repeat && !k.cargando) { k.cargando = true; k.carga = 0; k.sentido = 1; }
+    if (e.key === 'Enter') tirarHumano({ x: k.x, y: k.y }, 0.45);
+    if (!bucleId) pintar();
+});
+document.addEventListener('keyup', (e) => {
+    if (e.key !== ' ' || !ronda || !ronda.teclado || !ronda.teclado.cargando) return;
+    const k = ronda.teclado;
+    k.cargando = false;
+    tirarHumano({ x: k.x, y: k.y }, k.carga);
+});
+
+/* ---------- INTERFAZ ---------- */
+const $ = (id) => document.getElementById(id);
+let ultimoCartel = 0;
+function mostrarCartel(txt, clase) {
+    const c = $('cartel');
+    c.textContent = txt;
+    c.className = clase + ' visible';
+}
+function ocultarCartel() { $('cartel').className = ''; }
+function pistaTexto(t) { $('pista').textContent = t; }
+
+function pintarBarra() {
+    const p = partido;
+    if (p.modo === 'racha') {
+        $('d1').textContent = p.racha; $('e1').textContent = 'GOLES';
+        const mejor = rankingRacha.lista()[0];
+        $('d2').textContent = Math.max(p.racha, mejor ? Number(mejor.score) : 0); $('e2').textContent = 'RÉCORD';
+        $('d3').textContent = 'nv ' + (1 + Math.min(5, Math.floor(p.racha / 3))); $('e3').textContent = 'PORTERO';
+        return;
+    }
+    const st = M.estadoTanda(p.A, p.B, 5);
+    $('d1').textContent = st.ga; $('e1').textContent = p.nombres[0];
+    $('d3').textContent = st.gb; $('e3').textContent = p.nombres[1];
+    const n = Math.max(p.A.length, p.B.length) + (p.A.length === p.B.length ? 1 : 0);
+    $('d2').textContent = n > 5 ? 'MS' : n + '/5';
+    $('e2').textContent = n > 5 ? 'MUERTE SÚBITA' : 'TIRO';
+    const marcas = (lista, el) => {
+        const total = Math.max(5, lista.length);
+        let html = '';
+        for (let i = 0; i < total; i++) {
+            const v = lista[i];
+            html += v === undefined ? '<i></i>' : v ? '<i class="gol">✓</i>' : '<i class="no">✗</i>';
+        }
+        el.innerHTML = html;   // solo marcas fijas: aquí no entra texto del usuario
+    };
+    marcas(p.A, $('marcasA'));
+    marcas(p.B, $('marcasB'));
+}
+
+/* ---------- DIBUJO ---------- */
+const COLOR_PORTERO = { facil: '#e0a020', normal: '#d33a3a', dificil: '#7a3ad3' };
+
+function pintar() {
+    const c = ctx;
+    c.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+    pintarFondo(c);
+    if (!ronda) return;
+    const r = ronda, b = r.balon;
+    const ps = poseVista(r);
+    const balonDetras = b.z < 0;   // ya dentro de la red o por detrás
+    pintarRed(c, r.resultado === 'gol' ? b : null);
+    if (balonDetras) pintarBalon(c, b);
+    pintarPortero(c, ps, humanoTira() ? COLOR_PORTERO[partido.dif] : '#1aa6b7');
+    pintarPalos(c);
+    if (!balonDetras) pintarBalon(c, b);
+    if (r.fase === 'carrera') pintarAviso(c, r.reloj);
+    if (r.fase === 'apuntar') pintarApuntado(c);
+}
+
+/* Tras la llegada el portero NO sigue estirándose: se queda con la pose del
+   instante del balón y cae. Si seguía, el guante pasaba por encima de un
+   balón que ya había entrado y parecía que la paraba y era gol. */
+function poseVista(r) {
+    if (r.fase === 'apuntar') return M.pose(null, 0);
+    if (r.fase !== 'tras' && r.fase !== 'fin') return M.pose(r.tirada, r.reloj);
+    const ps = M.pose(r.tirada, r.llegada.t);
+    const piezas = [ps.cabeza, ...ps.guantes];
+    const caps = [ps.torso, ...ps.brazos, ...ps.piernas];
+    let bajo = Infinity;
+    piezas.forEach(k => { bajo = Math.min(bajo, k.y - k.r); });
+    caps.forEach(k => { bajo = Math.min(bajo, k.a.y - k.r, k.b.y - k.r); });
+    const t = r.tras || 0;
+    const caida = Math.max(0, Math.min(bajo, 4.9 * t * t));
+    if (!caida) return ps;
+    // Un Set: el extremo del brazo ES el guante (mismo objeto) y bajaría dos veces
+    const puntos = new Set(piezas);
+    caps.forEach(k => { puntos.add(k.a); puntos.add(k.b); });
+    puntos.forEach(p => { p.y -= caida; });
+    return ps;
+}
+
+function pintarFondo(c) {
+    const W = L.W, H = L.H;
+    // Grada al fondo
+    const fondoY = proyectar(0, 0, -26).Y;
+    const g = c.createLinearGradient(0, 0, 0, fondoY);
+    g.addColorStop(0, '#1c2440'); g.addColorStop(1, '#2d3a5e');
+    c.fillStyle = g; c.fillRect(0, 0, W, fondoY + 1);
+    // Público: puntos de colores fijos (semilla fija, no parpadea)
+    let semilla = 9;
+    const az = () => { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647; };
+    const filas = Math.max(3, Math.floor(fondoY / 9));
+    const colores = ['#e8e8e8', '#e05050', '#f0c040', '#5080e0', '#50c070'];
+    for (let f = 0; f < filas; f++) {
+        const y = 4 + f * (fondoY - 6) / filas;
+        for (let x = 3 + (f % 2) * 4; x < W; x += 8) {
+            c.fillStyle = colores[Math.floor(az() * colores.length)];
+            c.globalAlpha = 0.35 + az() * 0.35;
+            c.fillRect(x, y, 3, 3);
+        }
+    }
+    c.globalAlpha = 1;
+    // Césped a franjas en profundidad, desde el fondo: si empieza más cerca,
+    // por detrás de la red queda un hueco sin pintar que se ve negro
+    let zAnt = -26;
+    for (let z = -26, i = 0; z < 14; z += 2, i++) {
+        const y0 = proyectar(0, 0, zAnt).Y, y1 = proyectar(0, 0, z + 2).Y;
+        c.fillStyle = i % 2 ? '#2f8a3e' : '#2a7d38';
+        c.fillRect(0, y0, W, Math.min(H, y1) - y0 + 1);
+        zAnt = z + 2;
+    }
+    const y16 = proyectar(0, 0, 14).Y;
+    if (y16 < H) { c.fillStyle = '#2a7d38'; c.fillRect(0, y16, W, H - y16); }
+    // Valla baja y sin letras al fondo: con texto se leía a través de la red
+    const vY = proyectar(0, 0.7, -9).Y, vY2 = proyectar(0, 0, -9).Y;
+    c.fillStyle = '#1b3550'; c.fillRect(0, vY, W, vY2 - vY);
+    // Líneas: de gol, área pequeña y punto de penalti
+    c.strokeStyle = 'rgba(255,255,255,0.85)';
+    c.lineWidth = Math.max(1.2, L.s * 0.06);
+    const linea = (pts) => { c.beginPath(); pts.forEach((p, i) => { const q = proyectar(p[0], 0, p[1]); i ? c.lineTo(q.X, q.Y) : c.moveTo(q.X, q.Y); }); c.stroke(); };
+    linea([[-30, 0], [30, 0]]);
+    linea([[-9.16, 0], [-9.16, 5.5], [9.16, 5.5], [9.16, 0]]);
+    // El área grande (16,5 m) queda detrás de la cámara (a 16 m): solo sus laterales
+    linea([[-20.16, 0], [-20.16, 14]]); linea([[20.16, 0], [20.16, 14]]);
+    const pp = proyectar(0, 0, 11);
+    c.fillStyle = 'rgba(255,255,255,0.9)';
+    c.beginPath(); c.ellipse(pp.X, pp.Y + 0.02 * pp.k, 0.1 * pp.k, 0.035 * pp.k, 0, 0, Math.PI * 2); c.fill();
+}
+
+function pintarRed(c, bolsa) {
+    const m = C.medio, h = C.alto;
+    const Q = (x, y, z) => proyectar(x, y, z);
+    // Fondo de la red algo más oscuro, para que se lea la portería
+    c.fillStyle = 'rgba(0,0,0,0.18)';
+    c.beginPath();
+    [Q(-m, 0, 0), Q(-m, h, 0), Q(m, h, 0), Q(m, 0, 0)].forEach((p, i) => i ? c.lineTo(p.X, p.Y) : c.moveTo(p.X, p.Y));
+    c.fill();
+    c.strokeStyle = 'rgba(255,255,255,0.42)';
+    c.lineWidth = 1;
+    const atras = (x, y) => {
+        // Red trasera: abajo a 2 m, arriba a 1 m; con gol se abomba donde entra el balón
+        let z = -2 + (1 * y / h);
+        if (bolsa) {
+            const d = Math.hypot(x - bolsa.x, y - bolsa.y);
+            z -= Math.max(0, 0.6 - d * 0.5) * Math.min(1, ronda.tras * 6);
+        }
+        return Q(x, y, z);
+    };
+    for (let x = -m; x <= m + 1e-6; x += 0.305) {
+        c.beginPath();
+        for (let y = 0; y <= h + 1e-6; y += 0.305) { const p = atras(x, y); y ? c.lineTo(p.X, p.Y) : c.moveTo(p.X, p.Y); }
+        c.stroke();
+    }
+    for (let y = 0; y <= h + 1e-6; y += 0.305) {
+        c.beginPath();
+        for (let x = -m; x <= m + 1e-6; x += 0.305) { const p = atras(x, y); x > -m ? c.lineTo(p.X, p.Y) : c.moveTo(p.X, p.Y); }
+        c.stroke();
+    }
+    // Laterales
+    for (const sx of [-1, 1]) {
+        for (let y = 0; y <= h + 1e-6; y += 0.305) {
+            const a = Q(sx * m, y, 0), b = atras(sx * m, y);
+            c.beginPath(); c.moveTo(a.X, a.Y); c.lineTo(b.X, b.Y); c.stroke();
+        }
+    }
+}
+
+function pintarPalos(c) {
+    const m = C.medio, h = C.alto, g = C.poste;
+    const a = enLinea(-m - g, h + g), b = enLinea(m + g, 0);
+    c.fillStyle = '#f4f4f4';
+    c.fillRect(a.X, a.Y, (g) * L.s, b.Y - a.Y);                         // poste izquierdo
+    c.fillRect(enLinea(m, 0).X, a.Y, g * L.s, b.Y - a.Y);              // poste derecho
+    c.fillRect(a.X, a.Y, b.X - a.X, g * L.s);                          // larguero
+    c.fillStyle = 'rgba(0,0,0,0.15)';
+    c.fillRect(enLinea(-m - g * 0.3, 0).X, a.Y + g * L.s, g * 0.3 * L.s, b.Y - a.Y - g * L.s);
+    c.fillRect(enLinea(m + g * 0.7, 0).X, a.Y + g * L.s, g * 0.3 * L.s, b.Y - a.Y - g * L.s);
+}
+
+/* El portero se pinta con las mismas piezas con las que el motor decide la
+   parada: si el balón se solapa con lo que ves, es parada; si no, no. */
+function pintarPortero(c, ps, camiseta, mascara) {
+    const P = (p) => enLinea(p.x, p.y);
+    const capsula = (k, color) => {
+        const a = P(k.a), b = P(k.b);
+        c.strokeStyle = mascara || color; c.lineCap = 'round';
+        c.lineWidth = 2 * k.r * L.s;
+        c.beginPath(); c.moveTo(a.X, a.Y); c.lineTo(b.X, b.Y); c.stroke();
+    };
+    const circulo = (k, color) => {
+        const p = P(k);
+        c.fillStyle = mascara || color;
+        c.beginPath(); c.arc(p.X, p.Y, k.r * L.s, 0, Math.PI * 2); c.fill();
+    };
+    if (!mascara) {
+        // Sombra en el césped
+        const sx = (ps.torso.a.x + ps.torso.b.x) / 2;
+        const sh = enLinea(sx, 0);
+        c.fillStyle = 'rgba(0,0,0,0.25)';
+        c.beginPath(); c.ellipse(sh.X, sh.Y + 2, 0.55 * L.s, 0.09 * L.s, 0, 0, Math.PI * 2); c.fill();
+    }
+    ps.piernas.forEach(k => capsula(k, '#222a35'));
+    capsula(ps.torso, camiseta);
+    ps.brazos.forEach(k => capsula(k, camiseta));
+    circulo(ps.cabeza, '#e8b98c');
+    if (!mascara) {
+        const h = P(ps.cabeza);
+        c.fillStyle = '#3a2a1a';
+        c.beginPath(); c.arc(h.X, h.Y, ps.cabeza.r * L.s, Math.PI * 1.05, Math.PI * 1.95); c.fill();
+    }
+    ps.guantes.forEach(k => circulo(k, '#f5f5f5'));
+    if (!mascara) {
+        c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = 1;
+        ps.guantes.forEach(k => { const p = P(k); c.beginPath(); c.arc(p.X, p.Y, k.r * L.s, 0, Math.PI * 2); c.stroke(); });
+    }
+}
+
+function pintarBalon(c, b, mascara) {
+    const q = proyectar(b.x, b.y, b.z);
+    const r = C.balon * q.k;
+    if (!mascara) {
+        const s = proyectar(b.x, 0, b.z);
+        c.fillStyle = 'rgba(0,0,0,0.28)';
+        c.beginPath(); c.ellipse(s.X, s.Y, r * 1.05, r * 0.32, 0, 0, Math.PI * 2); c.fill();
+    }
+    c.fillStyle = mascara || '#fafafa';
+    c.beginPath(); c.arc(q.X, q.Y, r, 0, Math.PI * 2); c.fill();
+    if (mascara) return;
+    // Parches que giran: se nota el efecto sin pesar nada
+    c.fillStyle = '#222';
+    for (let i = 0; i < 5; i++) {
+        const a = b.giro + i * Math.PI * 2 / 5;
+        const px = q.X + Math.cos(a) * r * 0.55, py = q.Y + Math.sin(a) * r * 0.55;
+        c.beginPath(); c.arc(px, py, r * 0.22, 0, Math.PI * 2); c.fill();
+    }
+    c.beginPath(); c.arc(q.X, q.Y, r * 0.25, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1;
+    c.beginPath(); c.arc(q.X, q.Y, r, 0, Math.PI * 2); c.stroke();
+}
+
+/* Cuánto falta para el chut del rival: un anillo que se cierra sobre el
+   balón. Un lanzador dibujado tan cerca de la cámara salía gigante */
+function pintarAviso(c, reloj) {
+    const u = Math.max(0, Math.min(1, (reloj + 0.85) / 0.85));
+    const q = proyectar(0, C.balon, 11);
+    const r = C.balon * q.k;
+    c.strokeStyle = '#ffe14d'; c.lineWidth = 4;
+    c.beginPath(); c.arc(q.X, q.Y, r * (1.5 + 2.5 * (1 - u)), 0, Math.PI * 2); c.stroke();
+}
+
+function pintarApuntado(c) {
+    const r = ronda;
+    const balon = proyectar(0, C.balon, 11);
+    if (r.gesto && r.gesto.puntos.length > 1) {
+        const t = interpretarGesto(r.gesto);
+        const z = r.gesto.puntos[r.gesto.puntos.length - 1];
+        c.strokeStyle = 'rgba(255,255,255,0.55)'; c.setLineDash([6, 6]); c.lineWidth = 2;
+        c.beginPath(); c.moveTo(balon.X, balon.Y); c.lineTo(z.X, z.Y); c.stroke(); c.setLineDash([]);
+        if (t) mirilla(c, t.apunta, t.potencia);
+    } else if (r.teclado) {
+        mirilla(c, r.teclado, r.teclado.cargando ? r.teclado.carga : null);
+    }
+}
+
+function mirilla(c, a, potencia) {
+    const p = enLinea(a.x, a.y);
+    // El círculo crece con la fuerza: es lo que se puede desviar el tiro
+    const rad = Math.max(8, M.dispersion(potencia == null ? 0.45 : potencia) * L.s);
+    c.strokeStyle = '#ffe14d'; c.lineWidth = 2;
+    c.beginPath(); c.arc(p.X, p.Y, rad, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(p.X - 6, p.Y); c.lineTo(p.X + 6, p.Y); c.moveTo(p.X, p.Y - 6); c.lineTo(p.X, p.Y + 6); c.stroke();
+    if (potencia != null) {
+        const bw = Math.min(160, L.W * 0.5), bx = L.cx - bw / 2, by = L.H - 62;
+        c.fillStyle = 'rgba(0,0,0,0.45)'; c.fillRect(bx, by, bw, 10);
+        c.fillStyle = potencia > 0.75 ? '#ff6b4a' : potencia > 0.4 ? '#ffe14d' : '#7fe37f';
+        c.fillRect(bx, by, bw * potencia, 10);
+    }
+}
+
+/* ---------- ARRANQUE ---------- */
+const boton = (id, fn) => $(id).addEventListener('click', fn);
+EST.grupo('grpModo', (v) => {
+    sel.modo = v;
+    // Los nombres solo hacen falta para distinguir a dos personas en el mismo móvil
+    $('grpNombres').style.display = v === 'dos' ? 'block' : '';
+});
+EST.grupo('grpDif', (v) => { sel.dif = v; });
+boton('btnJugar', empezar);
+boton('btnPausa', pausar);
+boton('btnSeguir', seguir);
+boton('btnAbandonar', abandonar);
+boton('btnGuardar', guardar);
+boton('btnOtra', empezar);
+boton('btnMenuFin', abandonar);
+boton('btnRanking', verRecords);
+boton('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+boton('btnBorrarRanking', () => {
+    if (!confirm('¿Borrar todos los récords (tanda y racha)?')) return;
+    ranking.borrar(); rankingRacha.borrar();
+    verRecords();
+});
+boton('btnAyuda', () => EST.abrir('capaAyuda'));
+boton('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+
+window.addEventListener('resize', medir);
+// Irse de la aplicación pausa: una llamada en mitad del tiro lo dejaba volando
+window.addEventListener('blur', pausar);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+
+EST.iniciar({
+    claveAudio: 'penaltyAudio',
+    alCambiarMusica(on) { if (on && partido && !pausado && !finMostrado) musica.arrancar(); else musica.parar(); }
+});
+
+/* Para las pruebas: dibujar portero y balón en un color plano, sin adornos */
+window.__penaltis = { L, pintarPortero, pintarBalon, medir, estado: () => ({ partido, ronda, pausado, finMostrado, bucle: bucleId !== null }) };
+
+</script>
 </body>
 </html>
