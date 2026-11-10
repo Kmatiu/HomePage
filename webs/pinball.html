@@ -386,7 +386,7 @@
 <section class="pantalla activa" id="pMenu">
     <div class="scroll">
         <h1>PIN<span>BALL</span></h1>
-        <p class="lema">Tres bumpers, un banco de dianas y multibola</p>
+        <p class="lema">Bumpers, setas, un banco de dianas y multibola</p>
 
         <fieldset>
             <legend>JUGADORES</legend>
@@ -523,6 +523,7 @@
             <ul>
                 <li><b>Carriles de arriba:</b> enciende los tres y sube el bonus (hasta ×5). Las aletas mueven las luces.</li>
                 <li><b>Skill shot:</b> al lanzar, si la bola entra por el carril que parpadea, 10.000.</li>
+                <li><b>Setas de arriba a la izquierda:</b> cada rebote seguido sube el combo (hasta ×8). Enciende las cuatro y suman 7.500.</li>
                 <li><b>Dianas del centro:</b> tira las tres y se enciende el <b>kickback</b>, que devuelve una vez la bola que se cuela por la calle de fuera izquierda. A la cuarta vez, bola extra.</li>
                 <li><b>Dianas verdes de los lados:</b> las cuatro empiezan la <b>multibola</b>.</li>
                 <li><b>Órbita:</b> sube la bola por la izquierda hasta que pase por encima de los carriles. En multibola vale un <b>jackpot</b>.</li>
@@ -581,6 +582,7 @@ const MATERIAL = {
     goma:      { e: 0.6 },
     tirachinas:{ e: 0.5, patada: 520, umbral: 60 },
     bumper:    { e: 0.4, patada: 680, umbral: 0 },
+    seta:      { e: 0.5, patada: 420, umbral: 0 },
     diana:     { e: 0.3, umbral: 40 },
     standup:   { e: 0.35, umbral: 40 },
     compuerta: { e: 0.3 },
@@ -689,6 +691,15 @@ function construirMesa() {
     circulos.push({ x: 195, y: 222, r: 24, tipo: 'bumper', id: 'B0' });
     circulos.push({ x: 295, y: 222, r: 24, tipo: 'bumper', id: 'B1' });
     circulos.push({ x: 245, y: 295, r: 24, tipo: 'bumper', id: 'B2' });
+    /* Setas de arriba a la izquierda: cuatro bumpers pequeños de patada
+       suave, juntos para que la bola rebote de una a otra. Dejan libre un
+       pasillo de 61 junto a la pared izquierda: por ahí sube la órbita y baja
+       el lanzamiento fuerte. Huecos medidos con la bola de 22: o cabe de
+       sobra (≥ 28,8) o no cabe (17,4 entre las dos de arriba): nada a medio
+       encajar. */
+    [[98, 205], [136, 184], [112, 258], [150, 300]].forEach(([x, y], i) => {
+        circulos.push({ x, y, r: 13, tipo: 'seta', id: 'T' + i });
+    });
 
     /* ---- banco de tres dianas abatibles ----
        Inclinado: si fuera horizontal, una bola que cae encima desde los
@@ -1042,10 +1053,16 @@ const DIFICULTAD = {
 const PUNTOS = {
     bumper: 100, tirachinas: 30, diana: 500, banco: 5000, standup: 750,
     carril: 500, carrilesCompletos: 2000, inlane: 250, outlane: 1000,
-    orbita: 3000, skill: 10000, jackpot: 25000, subeJackpot: 5000
+    orbita: 3000, skill: 10000, jackpot: 25000, subeJackpot: 5000,
+    seta: 150, setas: 7500
 };
 /* Lo que suma cada cosa al bonus de final de bola, antes del multiplicador */
-const BONUS = { diana: 200, standup: 200, carril: 100, orbita: 500, bumper: 10 };
+const BONUS = { diana: 200, standup: 200, carril: 100, orbita: 500, bumper: 10, seta: 50 };
+
+/* Combo de las setas: cada rebote antes de que pase VENTANA_COMBO desde el
+   anterior multiplica la seta, hasta COMBO_MAX */
+const VENTANA_COMBO = 1.5;
+const COMBO_MAX = 8;
 
 const MULT_MAX = 5;
 const BANCOS_PARA_EXTRA = 4;         // medido: con 3 salía casi una extra por partida en normal (0,9)
@@ -1071,6 +1088,7 @@ function crearPartida(opciones) {
         jugadores.push({
             puntos: 0, bola: 1, extras: 0, extrasDadas: 0,
             carriles: [false, false, false], standups: [false, false, false, false],
+            setas: [false, false, false, false],
             bancos: 0, kickback: dif.kickbackInicial, jackpot: PUNTOS.jackpot
         });
     }
@@ -1083,6 +1101,7 @@ function crearPartida(opciones) {
         mult: 1, bonusBola: 0,
         salvar: 0,                 // segundos que quedan de bola salvada
         multibola: false,
+        combo: 0, ultimaSeta: -99,
         skill: { carril: 0, activo: false, hasta: 0 },
         orbita: [],                // [{id, dir, t}] cruces recientes
         autoLanzar: [],            // instantes en que la mesa lanza una bola del carril
@@ -1111,6 +1130,8 @@ function crearPartida(opciones) {
         mesa.segmentos.forEach(s => { if (s.tipo === 'diana') s.activo = true; });
         p.levantarEn = 0;
         p.orbita = [];
+        p.combo = 0;
+        p.ultimaSeta = -99;
         avisar('turno', { jugador: p.actual, bola: jug().bola });
     }
 
@@ -1221,6 +1242,22 @@ function crearPartida(opciones) {
             if (e.tipo === 'bumper') {
                 sumar(PUNTOS.bumper * (p.multibola ? 2 : 1));
                 p.bonusBola += BONUS.bumper;
+            } else if (e.tipo === 'seta') {
+                const i = +e.id.slice(1);
+                p.combo = mundo.tiempo - p.ultimaSeta < VENTANA_COMBO ? Math.min(COMBO_MAX, p.combo + 1) : 1;
+                p.ultimaSeta = mundo.tiempo;
+                sumar(PUNTOS.seta * p.combo);
+                p.bonusBola += BONUS.seta;
+                if (p.combo >= 3) avisar('mensaje', { texto: 'COMBO ×' + p.combo });
+                if (!j.setas[i]) {
+                    j.setas[i] = true;
+                    if (j.setas.every(Boolean)) {
+                        j.setas = [false, false, false, false];
+                        sumar(PUNTOS.setas);
+                        avisar('mensaje', { texto: 'SETAS +' + PUNTOS.setas.toLocaleString('es-ES'), largo: true });
+                        avisar('sonido', { nombre: 'completo' });
+                    }
+                }
             } else if (e.tipo === 'tirachinas') {
                 sumar(PUNTOS.tirachinas);
             } else if (e.tipo === 'diana') {
@@ -1583,6 +1620,8 @@ const SONIDOS = {
     pulsar:    () => efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]),
     aleta:     () => efecto('aleta', 40, [[180, 0.05, 'square', 0.06, 0, 90]]),
     bumper:    () => efecto('bumper', 60, [[740, 0.09, 'square', 0.07, 0, 370], [1480, 0.04, 'square', 0.03]]),
+    /* La seta sube un semitono por cada paso del combo: se oye la racha */
+    seta:      () => { const k = juego.partida ? juego.partida.combo : 1; const f = 660 * Math.pow(2, (k - 1) / 12); efecto('seta', 50, [[f, 0.07, 'square', 0.06], [f * 1.5, 0.05, 'sine', 0.04, 0.03]]); },
     tirachinas:() => efecto('tira', 60, [[520, 0.06, 'sawtooth', 0.05, 0, 260]]),
     diana:     () => efecto('diana', 50, [[330, 0.08, 'square', 0.07], [220, 0.1, 'square', 0.05, 0.05]]),
     standup:   () => efecto('standup', 50, [[1046, 0.07, 'square', 0.06], [1318, 0.08, 'square', 0.05, 0.05]]),
@@ -1846,9 +1885,22 @@ function pintar() {
     });
     for (let i = 2; i <= 5; i++) if (p.mult >= i) lampara(c, 182 + (i - 2) * 42, 548, 12, true, 'rgba(255,204,0,0.55)');
 
-    /* Bumpers */
+    /* Bumpers y setas */
     for (const b of p.mesa.circulos) {
         const on = brilla(b.id, ahora);
+        if (b.tipo === 'seta') {
+            /* Seta vista desde arriba: sombrero turquesa con la luz en medio,
+               encendida cuando ya se ha tocado en esta ronda de las cuatro */
+            const encendida = j.setas[+b.id.slice(1)];
+            c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+            c.fillStyle = on ? '#e6fff9' : encendida ? 'rgba(0,255,200,0.55)' : 'rgba(0,255,200,0.16)';
+            c.fill();
+            neon(c, '#00ffc8', on ? 3.5 : 2.5);
+            c.beginPath(); c.arc(b.x, b.y, 4.5, 0, Math.PI * 2);
+            c.fillStyle = on ? '#fff' : encendida ? '#ffcc00' : 'rgba(255,204,0,0.3)';
+            c.fill();
+            continue;
+        }
         c.beginPath(); c.arc(b.x, b.y, b.r, 0, Math.PI * 2);
         c.fillStyle = on ? '#ffd0ec' : 'rgba(255,47,160,0.25)';
         c.fill();
@@ -2025,10 +2077,10 @@ function tratarAviso(a) {
         const e = a.evento;
         if (e.t === 'golpe') {
             juego.destellos[e.id] = ahora + 130;
-            sonar(e.tipo === 'bumper' ? 'bumper' : e.tipo);
+            sonar(e.tipo);
             const c = p.mesa.circulos.find(x => x.id === e.id);
             const b = p.mundo.bolas.find(x => x.id === e.bola);
-            if (b) chispas(b.x, b.y, e.tipo === 'bumper' ? '#ff7cc6' : e.tipo === 'standup' ? '#16f29a' : '#ffcc00');
+            if (b) chispas(b.x, b.y, e.tipo === 'bumper' ? '#ff7cc6' : e.tipo === 'standup' ? '#16f29a' : e.tipo === 'seta' ? '#00ffc8' : '#ffcc00');
             else if (c) chispas(c.x, c.y, '#ff7cc6');
         } else if (e.t === 'aletazo' || e.t === 'toque') {
             sonar('toque');
@@ -2325,10 +2377,12 @@ document.addEventListener('click', (e) => {
     if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
     if (t.closest('.opcion, .principal, .secundario, .icono')) sonar('pulsar');
     /* En la partida, un botón con el foco se volvería a pulsar con el espacio
-       (que es el lanzador): se le quita */
-    if ($('pJuego').classList.contains('activa') && document.activeElement && document.activeElement.blur) {
-        document.activeElement.blur();
-    }
+       (que es el lanzador): se le quita. Solo a botones: la pantalla de fin se
+       abre encima de la partida, y quitárselo a cualquier cosa dejaba sin
+       foco el campo del nombre en el mismo toque que lo enfocaba; en el
+       iPhone el teclado no llegaba a salir. */
+    const activo = document.activeElement;
+    if ($('pJuego').classList.contains('activa') && activo && activo.tagName === 'BUTTON') activo.blur();
 });
 
 $('btnJugar').addEventListener('click', () => {
