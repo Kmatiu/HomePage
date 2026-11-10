@@ -1,277 +1,362 @@
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Retro Arcade</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Quiz Arcade Retro</title>
+    <!-- Sin Google Fonts ni Tone.js: el juego ya no necesita la red para nada -->
     <style>
-        /* Estilos CSS retro */
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DEL QUIZ ---------- */
         :root {
-            --color-bg: #000000;
             --color-neon-green: #00ff00;
             --color-neon-pink: #ff00ff;
             --color-neon-blue: #00ffff;
-            --color-glow: #00ff0077;
             --color-error: #ff0000;
             --color-success: #00ff00;
-            --color-p1: #00ff00; /* Player 1: Green */
-            --color-p2: #ff00ff; /* Player 2: Pink */
+            --color-p1: #00ff00; /* Jugador 1: verde */
+            --color-p2: #ff00ff; /* Jugador 2: rosa */
             --color-neutral: #888888;
-            --arcade-border: 8px;
         }
-
-        body {
-            font-family: 'Press Start 2P', monospace;
-            background-color: var(--color-bg);
-            color: var(--color-neon-green);
-            display: flex;
-            flex-direction: column; 
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            text-align: center;
-            overflow-y: auto;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 800px;
-            min-height: 500px;
-            background: #111;
-            border: var(--arcade-border) solid var(--color-neon-green);
-            box-shadow: 0 0 20px var(--color-glow), 0 0 5px var(--color-neon-green) inset;
-            border-radius: 12px;
-            padding: 30px;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 70px;
-            position: relative; /* Necesario para la capa de pausa */
-        }
-
-        h1 {
-            color: var(--color-neon-pink);
-            font-size: clamp(1.5rem, 4vw, 3rem);
-            text-shadow: 0 0 10px var(--color-neon-pink);
-            margin-bottom: 30px;
-        }
-
-        h2 {
-            font-size: clamp(1rem, 3vw, 2rem);
-            color: var(--color-neon-blue);
-            margin-top: 0;
-            text-shadow: 0 0 5px var(--color-neon-blue);
-        }
-        
-        /* Controles y Botones (ESTRUCTURA DE 3 COLUMNAS) */
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr 1fr; /* Columna Izq, Centro Grande, Columna Der */
-            gap: 20px; /* Espacio entre columnas */
-            align-items: start; /* Alinear el contenido de las celdas en la parte superior */
-            margin-top: 30px;
-        }
-
-        /* Contenedores para agrupar las opciones en cada columna */
-        .col-left, .col-center, .col-right {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-            width: 100%; /* Asegurar que usen el ancho de su columna */
-        }
-        
-        /* Asegurar que los botones centrales abarquen el ancho de su columna */
-        .col-center button {
-             max-width: none; /* Ignorar el max-width original para los botones dentro de col-center */
-             width: 100%;
-        }
-
-        /* Restaurar estilos para otros elementos que no son .controls */
-        .game-info, .options { 
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            align-items: center;
-        }
-
-
-        .button, button, select, input[type="text"] {
-            font-family: 'Press Start 2P', monospace;
-            padding: 15px 25px;
-            cursor: pointer;
-            border: 3px solid var(--color-neon-green);
-            background-color: #002200;
-            color: var(--color-neon-green);
-            box-shadow: 0 4px 0 var(--color-neon-green);
-            transition: all 0.1s;
-            text-transform: uppercase;
-            width: 100%;
-            max-width: 350px;
-            border-radius: 4px;
-            margin: 5px 0;
-            font-size: clamp(0.6rem, 2vw, 0.9rem);
-            /* Importante: forzar que los botones de opciones tomen el texto completo */
-            white-space: normal; 
-            word-break: break-word; 
-            line-height: 1.2;
-        }
-        
-        /* Estilo específico para los botones de las opciones del menú principal (simulan select) */
-        .menu-option-group button {
-            background-color: #002222; /* Un color ligeramente diferente para distinguirlos de los botones centrales */
-            color: var(--color-neon-blue);
-            border-color: var(--color-neon-blue);
-            box-shadow: 0 4px 0 var(--color-neon-blue);
-            margin: 2px 0; /* Más juntos */
-            padding: 10px 15px;
-            font-size: clamp(0.6rem, 1.8vw, 0.8rem);
-        }
-        
-        .menu-option-group button:hover {
-            background-color: var(--color-neon-blue);
-            color: var(--color-bg);
-            box-shadow: 0 4px 0 #000055;
-        }
-
-        .menu-option-group button.selected-option {
-            background-color: var(--color-neon-green);
-            color: var(--color-bg);
-            border-color: var(--color-neon-green);
-            box-shadow: 0 4px 0 #005500;
-            font-weight: bold;
-        }
-        
-        /* Ocultar los selects originales para la estructura de botones */
-        .col-left select, .col-right select {
-            display: none;
-        }
-
-        .button:hover, button:hover {
-            background-color: var(--color-neon-green);
-            color: var(--color-bg);
-            box-shadow: 0 4px 0 #005500;
-        }
-
-        .button:active, button:active {
-            box-shadow: none;
-            transform: translateY(4px);
-        }
-
-        select, input[type="text"] {
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            padding-right: 30px;
-            text-align: center;
-            box-sizing: border-box;
-        }
-        
-        /* Estilo específico para el input de nombre que NO debe ser uppercase */
-        #player-name-input {
-            text-transform: none; /* Permite mayúsculas y minúsculas y ESPACIOS */
-            color: var(--color-neon-pink);
-            border-color: var(--color-neon-pink);
-            background-color: #1a001a;
-            box-shadow: 0 4px 0 var(--color-neon-pink);
-        }
-
-
-        /* Opciones de respuesta */
-        .answer-option {
-            background-color: #1a1a1a;
-            border: 3px solid var(--color-neutral);
-            color: var(--color-neon-blue);
-            box-shadow: 0 4px 0 var(--color-neutral);
-            font-size: clamp(0.7rem, 2vw, 1rem);
-            transition: background-color 0.2s, border-color 0.2s;
-        }
-
-        .answer-option.selected {
-            border-color: var(--color-neon-pink);
-            background-color: #330033;
-            box-shadow: 0 4px 0 var(--color-neon-pink);
-        }
-
-        .answer-option:hover {
-            border-color: var(--color-neon-green);
-            background-color: #003300;
-        }
-        
-        /* Estilos de la Pantalla de Juego */
-        #topic-display {
-             color: var(--color-neon-pink);
-             font-size: clamp(0.7rem, 2vw, 1.1rem);
-             text-shadow: 0 0 5px var(--color-neon-pink);
-             margin-bottom: 5px;
-        }
-        
-        #control-instructions {
-            font-size: clamp(0.6rem, 1.8vw, 0.8rem);
-            color: var(--color-neon-green); 
-            margin-top: 15px;
-            margin-bottom: 5px;
-            min-height: 20px;
-        }
-        
-        #question-text {
-            color: var(--color-neon-blue);
-            font-size: clamp(0.8rem, 2.5vw, 1.2rem);
-            margin: 10px 0 20px 0; /* Espacio ajustado por el tema */
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-shadow: 0 0 5px var(--color-neon-blue);
-        }
-
-        .game-info {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            width: 100%;
-            font-size: clamp(0.7rem, 2vw, 1rem);
-            margin-bottom: 20px;
-        }
-        
-        .game-info-line-2 {
-            grid-column: 1 / -1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        #player-turn {
-            grid-column: 1 / -1; 
-            color: var(--color-p1);
-            text-shadow: 0 0 5px var(--color-p1);
-            margin-bottom: 10px;
-        }
-
-        .game-info span {
-            padding: 5px;
-            border: 1px solid var(--color-neutral);
-        }
-
+        .grupo-j2 { display: contents; }
+        /* 17 temas y 6 melodías: en fichas compactas, para que JUGAR no quede
+           a tres pantallas de distancia en el móvil */
+        .opciones.fichas { gap: 6px; }
+        .opciones.fichas .opcion { padding: 7px 8px; font-size: 0.72rem; border-radius: 8px; }
+        .opciones.fichas .opcion .sub { display: inline; margin: 0 0 0 4px; font-size: 0.6rem; }
         #score-p1 { color: var(--color-p1); }
         #score-p2 { color: var(--color-p2); }
 
+        /* La zona de la pregunta desplaza por dentro si una pregunta larga no
+           cabe: la página no se mueve */
+        #zonaQuiz {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 6px 4px 10px;
+        }
+        #player-turn {
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            margin: 6px 0 0;
+            color: var(--color-p1);
+            text-shadow: 0 0 5px var(--color-p1);
+        }
         .timer-bar {
             width: 100%;
-            height: 20px;
+            height: 16px;
+            flex: 0 0 auto;
             background-color: #440000;
             border: 2px solid var(--color-error);
-            margin-top: 10px;
+            margin-top: 8px;
             border-radius: 4px;
         }
-
         .timer-fill {
             height: 100%;
             width: 100%;
@@ -279,336 +364,585 @@
             transition: width linear;
             border-radius: 2px;
         }
-        
-        /* Tabla de Récords */
-        #high-scores-list {
-            list-style: none;
-            padding: 0;
-            margin: 20px 0;
-            width: 100%;
-        }
-
-        #high-scores-list li {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 20px;
-            border-bottom: 1px dashed var(--color-neutral);
-            font-size: clamp(0.7rem, 2vw, 1rem);
-            flex-wrap: wrap;
-        }
-        #high-scores-list li > span:first-child { flex-basis: 50%; text-align: left; }
-        #high-scores-list li > span:nth-child(2) { flex-basis: 50%; text-align: right; }
-        #high-scores-list li:nth-child(1) { color: var(--color-neon-pink); }
-        #high-scores-list li:nth-child(2) { color: var(--color-neon-blue); }
-        #high-scores-list li:nth-child(3) { color: var(--color-neon-green); }
-        #high-scores-list li:last-child { border-bottom: none; }
-
-        .hide {
-            display: none !important;
-        }
-
-        .message-box {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #330033;
+        #topic-display {
             color: var(--color-neon-pink);
-            padding: 20px;
-            border: 5px solid var(--color-neon-pink);
-            box-shadow: 0 0 30px var(--color-neon-pink);
-            z-index: 1000;
-            font-size: 0.8rem;
+            font-size: clamp(0.75rem, 2vw, 1.05rem);
+            text-shadow: 0 0 5px var(--color-neon-pink);
+            margin: 12px 0 0;
+            letter-spacing: 1px;
         }
-        
-        /* CAPA DE PAUSA SEGURA */
-        #pause-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 998; 
-        }
-        
-        #pause-message {
-            font-size: clamp(2rem, 8vw, 5rem);
+        #question-text {
             color: var(--color-neon-blue);
-            padding: 20px;
-            border: 4px solid var(--color-neon-blue);
-            box-shadow: 0 0 20px var(--color-neon-blue);
-            z-index: 999;
-        }
-
-        #volume-controls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: #222;
-            border-top: 4px solid var(--color-neon-green);
-            padding: 10px 20px;
+            font-size: clamp(1rem, 3.2vw, 1.3rem);
+            line-height: 1.35;
+            margin: 10px 0 14px;
+            min-height: 3.2em;
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 20px;
-            z-index: 100;
-            box-shadow: 0 -5px 15px rgba(0, 255, 0, 0.3);
-            font-size: clamp(0.5rem, 1.5vw, 0.8rem);
+            justify-content: center;
+            text-shadow: 0 0 5px var(--color-neon-blue);
         }
-
-        #volume-controls button {
-            all: unset;
-            cursor: pointer;
-            padding: 5px 10px;
-            border: 2px solid var(--color-neon-pink);
-            color: var(--color-neon-pink);
-            transition: background-color 0.1s, color 0.1s;
-            text-align: center;
-        }
-
-        #volume-controls button:hover {
-            background-color: var(--color-neon-pink);
-            color: var(--color-bg);
-        }
-
-        #volume-display {
-            width: 50px;
-            text-align: center;
-            color: var(--color-neon-blue);
-        }
-        
-        /* Botón de pausa dentro de la partida.
-           Necesario en móvil, donde no existe la tecla P. */
-        #pause-button {
-            width: auto;
-            max-width: none;
-            margin: 0;
-            padding: 6px 14px;
-            font-size: clamp(0.7rem, 2.2vw, 1rem);
-            border-color: var(--color-neon-pink);
-            color: var(--color-neon-pink);
-            background-color: #1a001a;
-            box-shadow: 0 3px 0 var(--color-neon-pink);
-            flex: 0 0 auto;
-        }
-
-        #pause-overlay {
-            cursor: pointer;
+        .options {
+            display: flex;
             flex-direction: column;
-            gap: 20px;
-            text-align: center;
-            padding: 20px;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
         }
-
-        #pause-hint {
-            font-size: clamp(0.5rem, 2vw, 0.8rem);
+        .answer-option {
+            font-family: inherit;
+            width: 100%;
+            max-width: 560px;
+            padding: 14px 18px;
+            cursor: pointer;
+            border-radius: 6px;
+            text-transform: uppercase;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.25;
+            background-color: #1a1a1a;
+            border: 3px solid var(--color-neutral);
+            color: var(--color-neon-blue);
+            box-shadow: 0 4px 0 var(--color-neutral);
+            font-size: clamp(0.85rem, 2.4vw, 1rem);
+            transition: background-color 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .answer-option.selected {
+            border-color: var(--color-neon-pink);
+            background-color: #330033;
+            box-shadow: 0 4px 0 var(--color-neon-pink);
+        }
+        .answer-option:hover {
+            border-color: var(--color-neon-green);
+            background-color: #003300;
+        }
+        #control-instructions {
+            font-size: 0.75rem;
             color: var(--color-neon-green);
-            margin-top: 20px;
-            line-height: 1.6;
+            margin: 14px 0 0;
+            min-height: 20px;
         }
-
+        #control-instructions span { color: var(--color-neon-pink); }
         /* En pantalla táctil el :hover se queda pegado tras tocar, y hacía que
            la última opción pulsada siguiera resaltada en la pregunta siguiente. */
         @media (hover: none) {
-            .button:hover, button:hover,
-            .answer-option:hover,
-            .menu-option-group button:hover,
-            #volume-controls button:hover {
-                background-color: inherit;
-                color: inherit;
-                border-color: inherit;
-                box-shadow: inherit;
-            }
-
             .answer-option:hover {
                 background-color: #1a1a1a;
                 border-color: var(--color-neutral);
                 color: var(--color-neon-blue);
                 box-shadow: 0 4px 0 var(--color-neutral);
             }
-
             .answer-option:active {
                 background-color: #003300;
                 border-color: var(--color-neon-green);
             }
-
-            /* Objetivos táctiles algo más altos */
-            .answer-option {
-                padding: 16px 18px;
-            }
+            .answer-option { padding: 16px 18px; }
         }
-
-        /* Media Queries para responsividad */
-        @media (max-width: 768px) { 
-             .controls {
-                 grid-template-columns: 1fr; /* Una sola columna para pantallas medianas/pequeñas */
-                 gap: 40px; /* Más espacio entre grupos de controles */
-             }
-             .col-center button, .menu-option-group button, #custom-topic-input {
-                 max-width: 350px; /* Restaurar el ancho máximo para el centro en móvil */
-             }
-             /* Restaurar la apariencia de select en móvil para los dropdowns del menú si los hubiéramos dejado */
-             .col-left select, .col-right select {
-                 display: block; /* Solo si se decide volver al select */
-                 max-width: 100%;
-             }
-             .menu-option-group {
-                 width: 100%; /* Asegurar que el contenedor de botones usa el ancho completo */
-             }
-        }
-
-        @media (max-width: 600px) {
-            .container {
-                padding: 15px;
-                border: 4px solid var(--color-neon-green);
-            }
-            .game-info {
-                grid-template-columns: 1fr 1fr;
-            }
-            .button, button, select, input[type="text"] {
-                padding: 10px 15px;
-            }
-            #volume-controls {
-                gap: 10px;
-                padding: 8px 10px;
-            }
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+            .options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+            .answer-option { padding: 10px 12px; }
+            #question-text { min-height: 0; margin: 6px 0 10px; }
+            #topic-display { margin-top: 6px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        
-        <section id="start-screen" class="screen">
-            <h1>QUIZ ARCADE RETRO</h1>
-            <p>¡Demuestra tu conocimiento y establece un nuevo récord!</p>
-            <p style="font-size: 0.6rem; margin-top: 10px;">Presiona 'P' para pausar en partida.</p>
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">QUIZ <span>ARCADE</span></div>
+        <p class="est-lema">Demuestra lo que sabes y bate el récord</p>
 
-            <div class="controls">
-                
-                <div class="col-left">
-                    <label for="players-select">PARTICIPANTES</label>
-                    <div id="players-options" class="menu-option-group">
-                        <button class="menu-option-btn selected-option" data-value="1">1 JUGADOR (20 Preguntas)</button>
-                        <button class="menu-option-btn" data-value="2">2 JUGADORES (30 Preguntas)</button>
-                    </div>
-                    <input type="hidden" id="players-select" value="1">
-
-                    <label for="difficulty-select">NIVEL DE JUEGO</label>
-                    <div id="difficulty-options" class="menu-option-group">
-                        <button class="menu-option-btn selected-option" data-value="Principiante">Principiante (20s)</button>
-                        <button class="menu-option-btn" data-value="Avanzado">Avanzado (12s)</button>
-                        <button class="menu-option-btn" data-value="Experto">Experto (6s)</button>
-                    </div>
-                    <input type="hidden" id="difficulty-select" value="Principiante">
-                </div>
-
-                <div class="col-center">
-                    <button onclick="prepareGame()">COMENZAR PARTIDA</button> 
-                    <button onclick="showHighScores(true)">TABLA DE RÉCORDS</button>
-                </div>
-
-                <div class="col-right">
-                     <label for="music-select">MÚSICA DE FONDO</label>
-                     <div id="music-options" class="menu-option-group">
-                         <button class="menu-option-btn selected-option" data-value="Aleatorio">Aleatorio</button>
-                         <button class="menu-option-btn" data-value="Melodía 1 (Alegre)">Melodía 1 (Alegre)</button>
-                         <button class="menu-option-btn" data-value="Melodía 2 (Ritmo Rápido)">Melodía 2 (Ritmo Rápido)</button>
-                         <button class="menu-option-btn" data-value="Melodía 3 (Chill Retro)">Melodía 3 (Chill Retro)</button>
-                         <button class="menu-option-btn" data-value="Melodía 4 (Acción)">Melodía 4 (Acción)</button>
-                         <button class="menu-option-btn" data-value="Melodía 5 (Sincopada)">Melodía 5 (Sincopada)</button>
-                     </div>
-                    <input type="hidden" id="music-select" value="Aleatorio">
-
-
-                    <label for="topic-select">TEMA DE PREGUNTAS</label>
-                    <div id="topic-options" class="menu-option-group">
-                        </div>
-                    <input type="hidden" id="topic-select" value="Estándar">
-                    <input type="text" id="custom-topic-input" placeholder="Ej: Cine de los 90" class="hide">
-                </div>
-
+        <fieldset class="est-grupo">
+            <legend>PARTICIPANTES</legend>
+            <div class="opciones iguales" id="grpJug">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">🧍 1 JUGADOR<span class="sub">20 preguntas</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">👥 2 JUGADORES<span class="sub">30, por turnos</span></button>
             </div>
-        </section>
+        </fieldset>
 
-        <section id="game-screen" class="screen hide">
-            <div id="pause-overlay" class="hide" role="button" tabindex="0" aria-label="Reanudar partida">
-                 <div id="pause-message">
-                     PAUSA
-                     <div id="pause-hint">Toca aquí o pulsa P para continuar</div>
-                 </div>
+        <fieldset class="est-grupo">
+            <legend>NIVEL</legend>
+            <div class="opciones iguales" id="grpDif">
+                <button class="opcion" type="button" data-v="Principiante" aria-pressed="true">PRINCIPIANTE<span class="sub">20 s · ×1</span></button>
+                <button class="opcion" type="button" data-v="Avanzado" aria-pressed="false">AVANZADO<span class="sub">12 s · ×1,5</span></button>
+                <button class="opcion" type="button" data-v="Experto" aria-pressed="false">EXPERTO<span class="sub">6 s · ×2</span></button>
             </div>
-            
-            <div class="game-info">
-                <span id="player-turn">TURNO: JUGADOR 1</span>
-                <span>P1: <span id="score-p1" style="color: var(--color-p1);">0</span></span>
-                <span id="p2-score-container" class="hide">P2: <span id="score-p2" style="color: var(--color-p2);">0</span></span>
-                <div class="game-info-line-2">
-                    <span>TIEMPO: <span id="time-display">0.0</span>s</span>
-                    <span>PROGRESO: <span id="progress-display">0/0</span></span>
-                    <button id="pause-button" type="button" aria-label="Pausar partida">⏸</button>
-                </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>TEMA</legend>
+            <!-- Los botones los crea el código a partir del banco de preguntas -->
+            <div class="opciones fichas" id="grpTema"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>MELODÍA</legend>
+            <div class="opciones fichas" id="grpMelodia">
+                <button class="opcion" type="button" data-v="Aleatorio" aria-pressed="true">🎲 ALEATORIA</button>
+                <button class="opcion" type="button" data-v="Melodía 1 (Alegre)" aria-pressed="false">ALEGRE</button>
+                <button class="opcion" type="button" data-v="Melodía 2 (Ritmo Rápido)" aria-pressed="false">RÁPIDA</button>
+                <button class="opcion" type="button" data-v="Melodía 3 (Chill Retro)" aria-pressed="false">CHILL</button>
+                <button class="opcion" type="button" data-v="Melodía 4 (Acción)" aria-pressed="false">ACCIÓN</button>
+                <button class="opcion" type="button" data-v="Melodía 5 (Sincopada)" aria-pressed="false">SINCOPADA</button>
             </div>
+            <p class="est-nota">Suena al elegirla si la música está encendida.</p>
+        </fieldset>
 
-            <div class="timer-bar"><div id="timer-fill" class="timer-fill" style="width: 100%;"></div></div>
-            
-            <p id="control-instructions"></p> 
-            
-            <p id="topic-display"></p>
-            
-            <p id="question-text">Cargando pregunta...</p>
-
-            <div id="options-container" class="options">
-                </div>
-        </section>
-
-        <section id="end-screen" class="screen hide">
-            <h2>PARTIDA TERMINADA</h2>
-            <p style="font-size: 1.2rem;">Puntuación a Guardar: <span id="final-score" style="color: var(--color-neon-pink);">0</span></p>
-            <p id="p1-final-score-text" class="hide" style="color: var(--color-p1);">P1 (Verde): 0</p>
-            <p id="p2-final-score-text" class="hide" style="color: var(--color-p2);">P2 (Rosa): 0</p>
-
-
-            <div id="new-high-score-form" class="hide">
-                <p style="color: var(--color-neon-pink);">¡NUEVO RÉCORD! Introduce tu nombre/equipo:</p>
-                <input type="text" id="player-name-input" placeholder="Jugador/Equipo" maxlength="20">
-                <button onclick="saveHighScore()">GUARDAR Y VER RANGOS</button>
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
             </div>
+        </fieldset>
 
-            <div id="high-score-list-container" style="margin-top: 30px;">
-                <p>--- MEJORES RANGOS ---</p>
-                </div>
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
 
-            <button onclick="showScreen('start-screen')" style="margin-top: 30px;">VOLVER A INICIO</button>
-        </section>
-
-        <section id="high-score-screen" class="screen hide">
-            <h2>RÉCORDS ARCADE</h2>
-            <div id="global-high-score-list-container">
-                </div>
-            <button onclick="showScreen('start-screen')" style="margin-top: 30px;">VOLVER A INICIO</button>
-        </section>
-
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
     </div>
+</section>
 
-    <div id="notification-message" class="message-box hide"></div>
-    
-    <div id="volume-controls">
-        <span>AUDIO:</span>
-        <button onclick="muteToggle()" id="mute-button">
-            <span id="volume-icon">🔊</span>
-        </button>
-        <button onclick="decreaseVolume()">- VOL</button>
-        <span id="volume-display">-10 dB</span>
-        <button onclick="increaseVolume()">+ VOL</button>
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="score-p1">0</b><span id="lblP1">PUNTOS</span></div>
+        <div class="grupo-j2" style="display:none;">
+            <div class="dato"><b id="score-p2">0</b><span>J2</span></div>
+        </div>
+        <div class="dato"><b id="time-display">0.0</b><span>SEGUNDOS</span></div>
+        <div class="dato"><b id="progress-display">0/0</b><span>PREGUNTA</span></div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
     </div>
+    <div class="timer-bar"><div id="timer-fill" class="timer-fill" style="width: 100%;"></div></div>
 
-    <script type="module">
+    <div id="zonaQuiz">
+        <p id="player-turn" style="display:none;">TURNO: JUGADOR 1</p>
+        <p id="topic-display"></p>
+        <p id="question-text">Cargando pregunta...</p>
+        <div id="options-container" class="options"></div>
+        <p id="control-instructions"></p>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj de la pregunta está parado.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">PARTIDA TERMINADA</h2>
+        <div class="marcador" id="finMarcador">0</div>
+        <p id="finDetalle"></p>
+        <div id="zonaNombre" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="player-name-input" maxlength="20" autocomplete="off" placeholder="Jugador o equipo">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="rankingList"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Contesta cada pregunta antes de que se acabe la barra de tiempo.</p>
+            <h3>PUNTOS</h3>
+            <ul>
+                <li>Cada acierto vale 100 puntos más un bonus de hasta otros 100 según lo rápido que contestes.</li>
+                <li>Se multiplica por 1,5 en Avanzado y por 2 en Experto.</li>
+                <li>Fallar o quedarse sin tiempo, 0.</li>
+            </ul>
+            <h3>DOS JUGADORES</h3>
+            <ul>
+                <li>30 preguntas, una cada uno por turnos: 15 por cabeza. La barra dice de quién es el turno.</li>
+                <li>Al Top 10 va la mejor de las dos puntuaciones.</li>
+            </ul>
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> toca la respuesta.</li>
+                <li><b>Teclado, jugador 1:</b> <b>↑ ↓</b> para moverse e <b>Intro</b> para elegir.</li>
+                <li><b>Teclado, jugador 2:</b> <b>W S</b> y <b>espacio</b>.</li>
+                <li>La primera tecla solo enseña el cursor, para no contestar a ciegas.</li>
+                <li><b>P</b> o <b>Esc</b> pausa; el tiempo se para y al seguir queda el que había.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+    <script>
         // =========================================================================
         // CONFIGURACIÓN Y ESTADO GLOBAL
         // =========================================================================
@@ -617,7 +951,6 @@
         // En dobles no son 20 por jugador (40 en total) porque se hacía largo:
         // 30 en total, 15 por jugador.
         const QUESTIONS_BY_PLAYERS = { 1: 20, 2: 30 };
-        let retroMelody;
 
         // Variables de Estado del Juego
         let gameState = {
@@ -641,9 +974,7 @@
             timerInterval: null // Nuevo: para gestionar el intervalo
         };
 
-        // Variables de Audio (Tone.js)
-        let masterVolume;
-        let currentSynth;
+        // Audio: Web Audio por los canales del estándar (antes Tone.js desde un CDN)
         let currentMelodyId = 'Aleatorio';
 
         // =========================================================================
@@ -2244,7 +2575,7 @@
 { question: "¿Cómo se llama el villano principal de Sonic?", options: ["Tails", "Knuckles", "Dr. Eggman", "Shadow"], answer: "Dr. Eggman", theme: "Videojuegos" }
         ];
 
-        // DEFINICIONES DE MELODÍAS MIDI SIMULADAS (Tone.js)
+        // MELODÍAS (notación de compás de Tone.js, que se sigue usando tal cual)
         // MELODÍAS NUEVAS: Más rítmicas y alegres
         const MELODIES = {
             'Melodía 1 (Alegre)': [
@@ -2291,224 +2622,158 @@
         // FUNCIONES DE AUDIO
         // =========================================================================
 
-        function setupAudio() {
-            if (masterVolume) return;
-            masterVolume = new Tone.Volume(-10).toDestination();
-            currentSynth = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "square" },
-                envelope: {
-                    attack: 0.005,
-                    decay: 0.1,
-                    sustain: 0.3,
-                    release: 1
-                }
-            }).connect(masterVolume);
+        /* Sintetizador propio con Web Audio, en lugar de Tone.js: era la única
+           dependencia de red del juego (sin conexión no había sonido) y pesaba
+           más que todo lo demás. Imita el PolySynth de antes: onda cuadrada y
+           envolvente ataque 5 ms, caída 0,1 s hasta el 30 %, salida de 1 s.
+           Las notas y los tiempos de MELODIES se leen igual que los leía Tone
+           (compás:pulso:semicorchea a 120 ppm). */
+        const BPM = 120;
+        const PULSO = 60 / BPM;
+        const DURACION = { '1n': PULSO * 4, '2n': PULSO * 2, '4n': PULSO, '8n': PULSO / 2, '16n': PULSO / 4 };
+        const SEMITONO = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 
-            const savedVolume = parseFloat(localStorage.getItem('gameVolume'));
-            if (!isNaN(savedVolume)) {
-                masterVolume.volume.value = savedVolume;
-            }
-            const isMuted = localStorage.getItem('isMuted') === 'true';
-            Tone.Destination.mute = isMuted;
+        function frecuencia(nota) {
+            const m = /^([A-G])(#?)(-?\d)$/.exec(nota);
+            if (!m) return 440;
+            const midi = (Number(m[3]) + 1) * 12 + SEMITONO[m[1]] + (m[2] ? 1 : 0);
+            return 440 * Math.pow(2, (midi - 69) / 12);
+        }
+        function segundos(pos) {
+            const [compas, pulso, semi] = pos.split(':').map(Number);
+            return (compas || 0) * PULSO * 4 + (pulso || 0) * PULSO + (semi || 0) * PULSO / 4;
+        }
 
-            updateVolumeDisplay();
+        /* Los osciladores de música vivos: al pausar se cortan, porque se
+           programan con hasta un ciclo de adelanto */
+        const sonandoMusica = new Set();
+
+        function tono(bus, nota, t, dur, vel, pico) {
+            const ctx = EST.audio.ctx;
+            const osc = ctx.createOscillator();
+            const g = ctx.createGain();
+            const a = pico * vel;
+            osc.type = 'square';
+            osc.frequency.value = frecuencia(nota);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(a, t + 0.005);
+            g.gain.exponentialRampToValueAtTime(Math.max(a * 0.3, 0.0001), t + 0.105);
+            g.gain.setValueAtTime(Math.max(a * 0.3, 0.0001), t + Math.max(dur, 0.105));
+            g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(dur, 0.105) + 1);
+            osc.connect(g); g.connect(bus);
+            osc.start(t);
+            osc.stop(t + Math.max(dur, 0.105) + 1.02);
+            return osc;
         }
 
         function playSound(note, duration = '8n', velocity = 0.5) {
-            if (Tone.Destination.mute) return;
-            currentSynth.triggerAttackRelease(note, duration, Tone.now(), velocity);
+            if (!EST.audio.efectos || !EST.contexto()) return;
+            const t = EST.audio.ctx.currentTime + 0.01;
+            for (const n of [].concat(note)) {
+                const osc = tono(EST.audio.busEfectos, n, t, DURACION[duration] || 0.25, velocity, 0.16);
+                osc.onended = () => osc.disconnect();
+            }
         }
-        
+
         function playSelectSound() { playSound('C4', '16n', 0.8); }
         function playCorrectSound() { playSound(['C5', 'E5', 'G5'], '8n', 1.0); }
         function playWrongSound() { playSound(['C3', 'C#3'], '8n', 1.0); }
-        function playGameOverSound() { 
+        function playGameOverSound() {
              stopMusic();
-             playSound(['F#2', 'C2'], '2n', 1.0); 
+             playSound(['F#2', 'C2'], '2n', 1.0);
+        }
+
+        // La melodía dura un compás y el bucle cuatro, como estaba en Tone (loopEnd '4m')
+        const CICLO = PULSO * 4 * 4;
+        let musicaTimer = null;
+        let cicloInicio = 0;
+        let secuencia = null;
+
+        function programarMusica() {
+            const ctx = EST.audio.ctx;
+            if (!ctx || !secuencia) return;
+            // Se programa el ciclo entero en cuanto entra en la ventana de 0,3 s
+            while (cicloInicio < ctx.currentTime + 0.3) {
+                for (const v of secuencia) {
+                    const osc = tono(EST.audio.busMusica, v.note, cicloInicio + segundos(v.time), DURACION[v.duration] || 0.25, v.velocity, 0.09);
+                    sonandoMusica.add(osc);
+                    osc.onended = () => { sonandoMusica.delete(osc); osc.disconnect(); };
+                }
+                cicloInicio += CICLO;
+            }
         }
 
         function stopMusic() {
-            if (retroMelody) {
-                retroMelody.stop();
-                retroMelody.dispose();
-                retroMelody = null;
-            }
+            if (musicaTimer) { clearInterval(musicaTimer); musicaTimer = null; }
+            secuencia = null;
+            const ctx = EST.audio.ctx;
+            sonandoMusica.forEach(osc => { try { osc.stop(ctx ? ctx.currentTime + 0.02 : 0); } catch (e) {} });
+            sonandoMusica.clear();
         }
 
         function startMusic(melodyId) {
             stopMusic();
+            currentMelodyId = melodyId;
+            if (!EST.audio.musica || !EST.contexto()) return;
             let melody = melodyId;
             if (melody === 'Aleatorio') {
                 const availableMelodies = Object.keys(MELODIES).filter(id => id !== 'Aleatorio');
                 melody = availableMelodies[Math.floor(Math.random() * availableMelodies.length)];
             }
-            
-            const sequence = MELODIES[melody];
-            if (!sequence || sequence.length === 0) return;
-
-            // Crea un nuevo Tone.Part con la secuencia y loop
-            retroMelody = new Tone.Part((time, value) => {
-                currentSynth.triggerAttackRelease(value.note, value.duration, time, value.velocity);
-            }, sequence).start(0);
-
-            retroMelody.loop = true;
-            retroMelody.loopEnd = '4m'; 
-            Tone.Transport.start();
-            currentMelodyId = melodyId;
-        }
-
-        function updateVolumeDisplay() {
-            const vol = masterVolume.volume.value;
-            document.getElementById('volume-display').textContent = `${vol.toFixed(0)} dB`;
-            document.getElementById('volume-icon').textContent = Tone.Destination.mute ? '🔇' : (vol < -20 ? '🔉' : '🔊');
-            localStorage.setItem('gameVolume', vol);
-            localStorage.setItem('isMuted', Tone.Destination.mute);
-        }
-        
-        function increaseVolume() { 
-            Tone.Destination.mute = false;
-            masterVolume.volume.rampTo(Math.min(masterVolume.volume.value + 5, 0), 0.1);
-            updateVolumeDisplay();
-        }
-        
-        function decreaseVolume() {
-            masterVolume.volume.rampTo(Math.max(masterVolume.volume.value - 5, -50), 0.1);
-            updateVolumeDisplay();
-        }
-
-        function muteToggle() {
-            Tone.Destination.mute = !Tone.Destination.mute;
-            updateVolumeDisplay();
+            secuencia = MELODIES[melody];
+            if (!secuencia || secuencia.length === 0) { secuencia = null; return; }
+            cicloInicio = EST.audio.ctx.currentTime + 0.05;
+            programarMusica();
+            musicaTimer = setInterval(programarMusica, 100);
         }
 
         // =========================================================================
         // FUNCIONES DE HIGH SCORES
         // =========================================================================
-        function getHighScores() {
-            try {
-                const scores = JSON.parse(localStorage.getItem('arcadeHighScores')) || [];
-                return scores.sort((a, b) => b.score - a.score).slice(0, 10);
-            } catch (e) {
-                console.error("Error al cargar récords: ", e);
-                return [];
-            }
-        }
+        /* Misma clave y campos de siempre. El estándar escapa el nombre: antes
+           entraba tal cual en innerHTML desde el campo de texto. */
+        const ranking = EST.ranking({ clave: 'arcadeHighScores', nombre: 'name', puntos: 'score' });
 
         function saveHighScore() {
-            // CORRECCIÓN: Usamos .trim() para limpiar espacios al inicio/fin, PERO MANTENEMOS LOS ESPACIOS INTERNOS.
-            const playerName = document.getElementById('player-name-input').value.trim() || 'JUGADOR ARCADE';
+            const input = document.getElementById('player-name-input');
+            const playerName = input.value.trim();
+            if (playerName === '') { EST.avisar('Escribe tu nombre o el del equipo', true); input.focus(); return; }
             const score = gameState.scoreToSave;
-            
-            // Si la puntuación es 0 o ya se ha guardado (scoreToSave = 0 después de guardar), salir.
-            if (score <= 0) return showMessage("Puntuación insuficiente para guardar récord o ya guardada.");
+            if (score <= 0) return;
 
-            const newScoreEntry = { name: playerName, score: score, date: new Date().toLocaleDateString() };
-            let scores = getHighScores();
-            
-            scores.push(newScoreEntry);
-            scores.sort((a, b) => b.score - a.score);
-            scores = scores.slice(0, 10); // Mantener solo los 10 mejores
-
-            localStorage.setItem('arcadeHighScores', JSON.stringify(scores));
-            
-            // HIDE THE FORM: Evita que se pueda volver a presionar el botón de guardar
-            document.getElementById('new-high-score-form').classList.add('hide');
-            
-            // SHOW THE UPDATED LIST: Muestra la lista de récords actualizada en la pantalla final
-            document.getElementById('high-score-list-container').classList.remove('hide');
-            displayHighScores('high-score-list-container'); 
-            
-            // RESET SCORE TO PREVENT RE-SAVING IF USER STAYS ON SCREEN
-            gameState.scoreToSave = 0; 
-            
-            showMessage("¡RÉCORD GUARDADO! Puedes ver la tabla o volver a Inicio.");
+            ranking.anadir({ name: playerName, score: score, date: new Date().toLocaleDateString() });
+            document.getElementById('zonaNombre').style.display = 'none';
+            // Evita guardar dos veces la misma partida
+            gameState.scoreToSave = 0;
+            EST.avisar('¡Guardado!');
         }
 
-        function displayHighScores(containerId) {
-            const scores = getHighScores();
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            if (scores.length === 0) {
-                container.innerHTML = '<p>No hay récords guardados. ¡Sé el primero!</p>';
-                return;
-            }
-
-            const ul = document.createElement('ul');
-            ul.id = 'high-scores-list';
-            scores.forEach((s, index) => {
-                const li = document.createElement('li');
-                // Asegurarse de que el score sea entero
-                const displayScore = Math.round(s.score);
-                li.innerHTML = `<span>${index + 1}. ${s.name}</span><span>${displayScore} pts (${s.date})</span>`;
-                ul.appendChild(li);
-            });
-            container.appendChild(ul);
-        }
-        
-        function showHighScores(isGlobal) {
-            if (isGlobal) {
-                displayHighScores('global-high-score-list-container');
-                showScreen('high-score-screen');
-            } else {
-                displayHighScores('high-score-list-container');
-                showScreen('end-screen');
-            }
+        function showHighScores() {
+            ranking.pintar(document.getElementById('rankingList'));
+            EST.abrir('capaRanking');
         }
 
         // =========================================================================
         // LÓGICA DE PANTALLAS Y JUEGO
         // =========================================================================
 
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(screen => {
-                screen.classList.add('hide');
-            });
-            document.getElementById(screenId).classList.remove('hide');
+        // Los avisos van por el del estándar; antes era una caja fija en el
+        // centro que tapaba la pregunta y las respuestas durante 3 s
+        function showMessage(msg, malo) {
+            EST.avisar(msg, malo);
         }
-        
-        function showMessage(msg) {
-             const box = document.getElementById('notification-message');
-             box.textContent = msg;
-             box.classList.remove('hide');
-             setTimeout(() => box.classList.add('hide'), 3000);
-        }
-        
-        function handleMenuOptionClick(groupId, button) {
-            const value = button.getAttribute('data-value');
-            const hiddenInputId = groupId.replace('-options', '-select');
-            const hiddenInput = document.getElementById(hiddenInputId);
 
-            // Deseleccionar todos en el grupo
-            document.querySelectorAll(`#${groupId} .menu-option-btn`).forEach(btn => {
-                btn.classList.remove('selected-option');
-            });
-            
-            // Seleccionar el botón clickeado
-            button.classList.add('selected-option');
-            hiddenInput.value = value;
-            
-            // Lógica específica para Música
-            if (groupId === 'music-options') {
-                if (Tone.context.state === 'suspended') {
-                    Tone.start();
-                }
-                startMusic(value);
-            }
-        }
-        
+        // Lo elegido en el menú (antes, inputs ocultos)
+        const sel = { jugadores: '1', dificultad: 'Principiante', tema: 'Estándar', musica: 'Aleatorio' };
+
         function prepareGame() {
-            if (Tone.context.state === 'suspended') {
-                Tone.start();
-            }
             // 1. Obtener ajustes
-            gameState.numPlayers = parseInt(document.getElementById('players-select').value);
-            const difficultyKey = document.getElementById('difficulty-select').value;
-            gameState.difficulty = DIFFICULTY_SETTINGS[difficultyKey];
-            gameState.theme = document.getElementById('topic-select').value;
-            
-            // 2. Filtrar y barajar preguntas
-            let availableQuestions = ALL_QUESTIONS;
+            gameState.numPlayers = parseInt(sel.jugadores, 10);
+            gameState.difficulty = DIFFICULTY_SETTINGS[sel.dificultad];
+            gameState.theme = sel.tema;
+
+            // 2. Filtrar y barajar preguntas (sobre una copia: antes se barajaba el banco)
+            let availableQuestions = ALL_QUESTIONS.slice();
             if (gameState.theme !== 'Estándar') {
                  // Filtrar solo si el tema no es "Estándar"
                  availableQuestions = ALL_QUESTIONS.filter(q => q.theme === gameState.theme);
@@ -2516,7 +2781,7 @@
             
             // Si el tema seleccionado no tiene preguntas disponibles
             if (availableQuestions.length === 0) {
-                 showMessage("Error: No hay preguntas disponibles para el tema seleccionado. Intenta con 'Estándar'.");
+                 showMessage("No hay preguntas de ese tema. Prueba con 'Estándar'.", true);
                  return;
             }
 
@@ -2542,20 +2807,19 @@
             resetGame();
             
             // Configurar UI para 1 o 2 jugadores
-            const p2Container = document.getElementById('p2-score-container');
-            if (gameState.numPlayers === 2) {
-                p2Container.classList.remove('hide');
-            } else {
-                p2Container.classList.add('hide');
-            }
-            
-            // Iniciar música si no está ya sonando
-            if (!retroMelody) {
-                 startMusic(document.getElementById('music-select').value);
-            }
-            
+            // Datos del jugador 2: '' / 'none' y la clase .grupo-j2 pone el display
+            const dos = gameState.numPlayers === 2;
+            document.querySelectorAll('.grupo-j2').forEach(el => { el.style.display = dos ? '' : 'none'; });
+            document.getElementById('lblP1').textContent = dos ? 'J1' : 'PUNTOS';
+            document.getElementById('player-turn').style.display = dos ? '' : 'none';
+            // Las teclas solo se explican donde hay teclado
+            document.getElementById('control-instructions').style.display = tactil ? 'none' : '';
+
+            ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+            EST.mostrar('pJuego');
+            startMusic(sel.musica);
+
             gameState.isGameActive = true;
-            showScreen('game-screen');
             loadQuestion();
         }
 
@@ -2741,8 +3005,6 @@
              if (!gameState.isGameActive) return;
 
              gameState.isPaused = !gameState.isPaused;
-             const overlay = document.getElementById('pause-overlay');
-             const pauseButton = document.getElementById('pause-button');
 
              if (gameState.isPaused) {
                  // El salto a la siguiente pregunta también tiene que congelarse:
@@ -2755,13 +3017,11 @@
                  }
 
                  stopTimer();
-                 overlay.classList.remove('hide');
                  stopMusic();
-                 if (pauseButton) pauseButton.textContent = '▶';
+                 EST.abrir('capaPausa');
              } else {
-                 overlay.classList.add('hide');
+                 EST.cerrar('capaPausa');
                  startMusic(currentMelodyId);
-                 if (pauseButton) pauseButton.textContent = '⏸';
 
                  if (gameState.advancePending) {
                      gameState.advancePending = false;
@@ -2828,9 +3088,9 @@
             } else {
                 playWrongSound();
                 if (isTimeout) {
-                    showMessage('¡TIEMPO AGOTADO! 0 pts');
+                    showMessage('¡TIEMPO AGOTADO! 0 pts', true);
                 } else {
-                    showMessage(`¡ERROR! La respuesta correcta era: ${question.answer}`);
+                    showMessage(`¡ERROR! Era: ${question.answer}`, true);
                 }
             }
             
@@ -2883,46 +3143,46 @@
         }
 
         function gameOver() {
+            // Idempotente y sin nada en marcha detrás: un temporizador vivo
+            // contestaba solo "por tiempo" con la capa de fin ya abierta
+            if (!gameState.isGameActive) return;
+            stopTimer();
+            if (gameState.advanceTimeout) { clearTimeout(gameState.advanceTimeout); gameState.advanceTimeout = null; }
+            gameState.advancePending = false;
             playGameOverSound();
             gameState.isGameActive = false;
-            
-            let finalScore;
-            
-            if (gameState.numPlayers === 1) {
-                finalScore = gameState.playerScores[0];
-                document.getElementById('p1-final-score-text').classList.add('hide');
-                document.getElementById('p2-final-score-text').classList.add('hide');
-            } else {
-                // En 2P, el récord es la puntuación más alta de los dos jugadores
-                finalScore = Math.max(gameState.playerScores[0], gameState.playerScores[1]);
-                document.getElementById('p1-final-score-text').textContent = `P1 (Verde): ${gameState.playerScores[0]} pts`;
-                document.getElementById('p2-final-score-text').textContent = `P2 (Rosa): ${gameState.playerScores[1]} pts`;
-                document.getElementById('p1-final-score-text').classList.remove('hide');
-                document.getElementById('p2-final-score-text').classList.remove('hide');
-            }
-            
-            // Aseguramos que la puntuación a guardar sea un número entero, aunque ya debería serlo por el redondeo en checkAnswer
-            gameState.scoreToSave = Math.round(finalScore); 
-            document.getElementById('final-score').textContent = gameState.scoreToSave;
 
-            const highScores = getHighScores();
-            const isNewHighScore = gameState.scoreToSave > 0 && (highScores.length < 10 || gameState.scoreToSave > highScores[highScores.length - 1].score);
+            const [p1, p2] = gameState.playerScores;
+            const dos = gameState.numPlayers === 2;
+            // En 2P el récord es la puntuación más alta de los dos jugadores
+            gameState.scoreToSave = Math.round(dos ? Math.max(p1, p2) : p1);
 
-            if (isNewHighScore) {
-                document.getElementById('new-high-score-form').classList.remove('hide');
-                document.getElementById('high-score-list-container').classList.add('hide');
-                // Valor inicial en el input que respeta may/min
-                document.getElementById('player-name-input').value = `Equipo P${gameState.playerScores[0] > gameState.playerScores[1] ? 1 : 2}`;
-                
-                // Enfocar el input para que el usuario pueda escribir de inmediato
-                document.getElementById('player-name-input').focus(); 
-            } else {
-                document.getElementById('new-high-score-form').classList.add('hide');
-                document.getElementById('high-score-list-container').classList.remove('hide');
-                displayHighScores('high-score-list-container');
-            }
+            document.getElementById('finTitulo').textContent = dos
+                ? (p1 === p2 ? '🤝 ¡EMPATE!' : '🏆 GANA EL JUGADOR ' + (p1 > p2 ? 1 : 2))
+                : '🏁 PARTIDA TERMINADA';
+            document.getElementById('finMarcador').textContent = dos
+                ? p1.toLocaleString('es-ES') + ' – ' + p2.toLocaleString('es-ES')
+                : gameState.scoreToSave.toLocaleString('es-ES');
+            document.getElementById('finDetalle').textContent =
+                (dos ? 'J1 verde · J2 rosa · ' : '') +
+                gameState.difficulty.title + ' · ' + (gameState.theme === 'Estándar' ? 'temas mixtos' : gameState.theme);
 
-            showScreen('end-screen');
+            document.getElementById('player-name-input').value = '';
+            /* Sin foco automático: en el móvil abriría el teclado tapando el marcador */
+            document.getElementById('zonaNombre').style.display = ranking.entra(gameState.scoreToSave) ? '' : 'none';
+            EST.abrir('capaFin');
+        }
+
+        function pausar() {
+            if (gameState.isGameActive && !gameState.isPaused) togglePause();
+        }
+
+        // ABANDONAR: resetGame ya para el reloj y el salto pendiente
+        function quitToMenu() {
+            resetGame();
+            stopMusic();
+            ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+            EST.mostrar('pMenu');
         }
 
         function resetGame() {
@@ -2944,9 +3204,6 @@
             gameState.isPaused = false;
             gameState.keyboardCursorVisible = false;
 
-            document.getElementById('pause-overlay').classList.add('hide');
-            const pauseButton = document.getElementById('pause-button');
-            if (pauseButton) pauseButton.textContent = '⏸';
 
             updateScoreDisplay();
         }
@@ -2956,40 +3213,27 @@
         // =========================================================================
         document.addEventListener('keydown', (e) => {
             
-            // ************ NUEVA LÓGICA DE DETECCIÓN DE INPUT ************
-            // 1. Verificar si el foco está en un campo de texto (input o textarea)
-            const isTyping = document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA';
-            
-            // 2. Si está escribiendo en el input, solo permitimos 'P' para pausa, el resto se ignora aquí.
-            if (isTyping && !['p', 'P'].includes(e.key)) {
-                 // Permitir que el input maneje las teclas (incluyendo S, W, y Espacio)
-                 return; 
+            /* Escribiendo el nombre las teclas son texto: antes la P pausaba
+               a mitad de escribirlo y Enter no guardaba */
+            if (e.target instanceof HTMLInputElement) {
+                if (e.key === 'Enter') { e.preventDefault(); saveHighScore(); }
+                return;
             }
-            // ************************************************************
+            if (!gameState.isGameActive) {
+                if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                return;
+            }
 
             // Evitar scroll de pantalla: Añadidos 'w', 'W', 's', 'S', y Espacio (' ')
             if (['ArrowUp', 'ArrowDown', 'Enter', ' ', 'w', 'W', 's', 'S'].includes(e.key)) {
                 e.preventDefault();
             }
 
-            if (gameState.isPaused) {
-                if (e.key === 'p' || e.key === 'P') {
-                    togglePause();
-                }
+            if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
+                togglePause();
                 return;
             }
-            
-            // Tecla 'P' para Pausa (si el juego está activo)
-            if (e.key === 'p' || e.key === 'P') {
-                if (gameState.isGameActive) {
-                    togglePause();
-                    return;
-                }
-            }
-
-            if (!gameState.isGameActive) {
-                return;
-            }
+            if (gameState.isPaused) return;
 
             const options = document.querySelectorAll('.answer-option');
             if (options.length === 0) return;
@@ -3060,65 +3304,68 @@
         });
         
         // =========================================================================
-        // INICIALIZACIÓN Y EXPOSICIÓN DE FUNCIONES GLOBALES
+        // MENÚ ESTÁNDAR Y ARRANQUE
         // =========================================================================
-        document.addEventListener('DOMContentLoaded', initializeGame);
+        const tactil = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
-        function initializeGame() {
-            setupAudio();
-            
-            // 1. Inicializar la lista de temas a partir del array de preguntas
-            const uniqueThemes = [...new Set(ALL_QUESTIONS.map(q => q.theme))].sort();
-            const topicOptionsContainer = document.getElementById('topic-options');
-            topicOptionsContainer.innerHTML = ''; // Limpiar temas anteriores
-            
-            // Opción Estándar (Mixtos) - Seleccionada por defecto
-            let standardButton = document.createElement('button');
-            standardButton.classList.add('menu-option-btn', 'selected-option');
-            standardButton.textContent = 'Estándar (Temas Mixtos)';
-            standardButton.setAttribute('data-value', 'Estándar');
-            topicOptionsContainer.appendChild(standardButton);
-            
-            // Opciones de Temas Únicos (Ciencia, Arte, etc.)
-            uniqueThemes.forEach(theme => {
-                let button = document.createElement('button');
-                button.classList.add('menu-option-btn');
-                button.textContent = theme.toUpperCase();
-                button.setAttribute('data-value', theme);
-                topicOptionsContainer.appendChild(button);
-            });
-            
-            
-            // 2b. Botón de pausa y capa de pausa (imprescindibles sin teclado)
-            document.getElementById('pause-button').addEventListener('click', () => {
-                if (Tone.context.state === 'suspended') Tone.start();
-                togglePause();
-            });
+        (function crearTemas() {
+            // Los temas salen del propio banco de preguntas, con cuántas hay de cada uno
+            const cuenta = {};
+            ALL_QUESTIONS.forEach(q => { cuenta[q.theme] = (cuenta[q.theme] || 0) + 1; });
+            const cont = document.getElementById('grpTema');
+            const boton = (valor, texto, sub, pulsado) => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'opcion';
+                b.dataset.v = valor;
+                b.setAttribute('aria-pressed', String(pulsado));
+                b.textContent = texto;
+                const s = document.createElement('span');
+                s.className = 'sub';
+                s.textContent = sub;
+                b.appendChild(s);
+                cont.appendChild(b);
+            };
+            boton('Estándar', 'MIXTO', ALL_QUESTIONS.length + ' preguntas', true);
+            Object.keys(cuenta).sort((a, b) => a.localeCompare(b, 'es')).forEach(t => boton(t, t.toUpperCase(), cuenta[t] + ''));
+        })();
 
-            document.getElementById('pause-overlay').addEventListener('click', () => {
-                if (gameState.isPaused) togglePause();
-            });
+        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
 
-            // 2. Adjuntar los listeners de clic a todos los grupos de botones de menú
-            document.querySelectorAll('.menu-option-group').forEach(group => {
-                group.addEventListener('click', (e) => {
-                    const button = e.target.closest('.menu-option-btn');
-                    if (!button) return;
+        EST.grupo('grpJug', (v) => { sel.jugadores = v; });
+        EST.grupo('grpDif', (v) => { sel.dificultad = v; });
+        EST.grupo('grpTema', (v) => { sel.tema = v; });
+        // Elegir melodía en el menú la hace sonar, como antes, si la música está encendida
+        EST.grupo('grpMelodia', (v) => { sel.musica = v; startMusic(v); });
 
-                    handleMenuOptionClick(group.id, button);
-                });
-            });
-        };
-        
-        // Exportar funciones al objeto window para que los onclick del HTML funcionen
-        window.prepareGame = prepareGame;
-        window.showHighScores = showHighScores;
-        window.saveHighScore = saveHighScore;
-        window.showScreen = showScreen;
-        window.muteToggle = muteToggle;
-        window.increaseVolume = increaseVolume;
-        window.decreaseVolume = decreaseVolume;
+        btn('btnJugar', prepareGame);
+        btn('btnPausa', pausar);
+        btn('btnSeguir', () => { if (gameState.isPaused) togglePause(); });
+        btn('btnAbandonar', quitToMenu);
+        btn('btnGuardar', saveHighScore);
+        btn('btnOtra', prepareGame);
+        btn('btnMenuFin', quitToMenu);
+        btn('btnRanking', showHighScores);
+        btn('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+        btn('btnBorrarRanking', () => {
+            if (!confirm('¿Borrar todos los récords?')) return;
+            ranking.borrar();
+            showHighScores();
+        });
+        btn('btnAyuda', () => EST.abrir('capaAyuda'));
+        btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
 
+        // Irse de la aplicación pausa: el reloj de la pregunta seguía corriendo
+        window.addEventListener('blur', pausar);
+        document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+
+        EST.iniciar({
+            claveAudio: 'quizAudio',
+            alCambiarMusica(on) {
+                if (on && gameState.isGameActive && !gameState.isPaused) startMusic(sel.musica);
+                else stopMusic();
+            }
+        });
     </script>
 </body>
 </html>

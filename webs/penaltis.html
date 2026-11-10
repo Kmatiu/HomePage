@@ -2,157 +2,367 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Penalty Shooters - Arcade</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Penalty Shooters - Arcade Football</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE PENALTY SHOOTERS ---------- */
+        #pJuego { max-width: 1400px; }
+        .est-barra #player1Name, .est-barra #player2Name, .est-barra #turnInfo {
+            max-width: 8em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block;
         }
-        
-        body {
-            font-family: 'Arial Black', Arial, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        /* Las casillas de los cinco tiros, en una fila fina bajo la barra */
+        #tiros {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 5px 4px 0;
+        }
+        .shot-tracker { display: flex; gap: 4px; }
+        #gameStage {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 0;
+            margin-top: 5px;
             overflow: hidden;
-            touch-action: none;
+            border-radius: 10px;
         }
-        
+        /* Fuera del flujo: si el lienzo cuenta para la altura, el escenario
+           crece con él y la medida de resize() sale inflada */
         #gameCanvas {
-            display: block;
-            margin: 0 auto;
-            background: #000;
-            cursor: crosshair;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-        }
-        
-        .ui-overlay {
             position: absolute;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-        }
-        
-        .menu-container {
-            background: linear-gradient(145deg, #ffffff, #e6e6e6);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-            text-align: center;
-            max-width: 500px;
-            animation: slideIn 0.5s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-        
-        h1 {
-            color: #ff6b35;
-            text-shadow: 3px 3px 0 #000;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-        }
-        
-        h2 {
-            color: #333;
-            margin: 20px 0 10px 0;
-            font-size: 1.3em;
-        }
-        
-        .btn {
-            background: linear-gradient(145deg, #ff6b35, #ff8555);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            margin: 10px;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        }
-        
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn-small {
-            padding: 10px 20px;
-            font-size: 0.9em;
-        }
-        
-        input[type="text"] {
-            padding: 12px;
-            margin: 10px;
-            border: 3px solid #ff6b35;
-            border-radius: 8px;
-            font-size: 1em;
-            width: 80%;
-            text-align: center;
-        }
-        
-        select {
-            padding: 12px;
-            margin: 10px;
-            border: 3px solid #ff6b35;
-            border-radius: 8px;
-            font-size: 1em;
-            width: 80%;
-            cursor: pointer;
-        }
-        
-        .hidden {
-            display: none !important;
-        }
-        
-        #hud {
-            position: absolute;
-            top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.85);
-            color: white;
-            padding: 15px 30px;
-            border-radius: 12px;
-            font-size: 1em;
-            z-index: 50;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.7);
-            max-width: 90%;
+            display: block;
+            background: #000;
+            cursor: crosshair;
+            /* El dedo apunta y dispara: sin esto el gesto desplaza la página */
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
-        
-        .score-display {
-            display: inline-block;
-            margin: 0 15px;
+        .hidden { display: none !important; }
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Arial Black', Arial, sans-serif;
+            font-size: clamp(40px, 14vw, 120px);
             font-weight: bold;
+            white-space: nowrap;
+            color: white;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px rgba(255,107,53,0.6);
+            z-index: 60;
+            pointer-events: none;
+            animation: pulse 0.5s ease-in-out;
         }
-        
-        .shot-tracker {
-            display: flex;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 10px;
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
         }
-        
         .shot-marker {
             width: 35px;
             height: 35px;
@@ -199,28 +409,6 @@
             50% { transform: translate(-50%, -50%) scale(1.2); }
         }
         
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            z-index: 50;
-        }
-        
-        .leaderboard {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 20px;
-            text-align: left;
-        }
-        
-        .leaderboard-entry {
-            background: #f0f0f0;
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            border-left: 5px solid #ff6b35;
-        }
-        
         /* MODIFICADO - Indicador de modo portero más pequeño y transparente */
         #goalkeeperMode {
             position: absolute;
@@ -239,112 +427,525 @@
             box-shadow: 0 0 20px rgba(255,215,0,0.5);
             pointer-events: none;
         }
+        .shot-marker { width: 22px; height: 22px; border-width: 2px; border-radius: 4px; font-size: 13px; }
+        #goalkeeperMode { top: 12px; font-size: 15px; padding: 10px 16px; width: max-content; max-width: 92%; }
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+            .shot-marker { width: 16px; height: 16px; font-size: 10px; }
+            #tiros { padding-top: 2px; }
+        }
     </style>
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
-    
-    <!-- HUD del juego -->
-    <div id="hud" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-            <div class="score-display">
-                <div style="font-size: 0.9em;">⚽ <span id="player1Name">Jugador 1</span></div>
-                <div style="font-size: 1.8em; margin-top: 3px;"><span id="score1">0</span></div>
-                <div class="shot-tracker" id="tracker1"></div>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">PENALTY <span>SHOOTERS</span></div>
+        <p class="est-lema">Tanda de cinco y, si hay empate, muerte súbita</p>
+
+        <fieldset class="est-grupo">
+            <legend>MODO</legend>
+            <div class="opciones iguales" id="grpModo">
+                <button class="opcion" type="button" data-v="single" aria-pressed="true">🧍 1 JUGADOR<span class="sub">contra el PC</span></button>
+                <button class="opcion" type="button" data-v="double" aria-pressed="false">👥 2 JUGADORES<span class="sub">por turnos</span></button>
             </div>
-            <div style="text-align: center; padding: 0 15px;">
-                <div id="turnInfo" style="font-size: 1em; font-weight: bold;">Turno: Jugador 1</div>
-                <div id="shotInfo" style="margin-top: 5px; font-size: 0.9em;">Lanzamiento: 1/5</div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>PORTERO RIVAL</legend>
+            <div class="opciones iguales" id="grpDif">
+                <button class="opcion" type="button" data-v="easy" aria-pressed="false">2ª RFEF<span class="sub">fácil</span></button>
+                <button class="opcion" type="button" data-v="medium" aria-pressed="true">1ª DIVISIÓN<span class="sub">medio</span></button>
+                <button class="opcion" type="button" data-v="hard" aria-pressed="false">CHAMPIONS<span class="sub">difícil</span></button>
             </div>
-            <div class="score-display">
-                <div style="font-size: 0.9em;">⚽ <span id="player2Name">PC</span></div>
-                <div style="font-size: 1.8em; margin-top: 3px;"><span id="score2">0</span></div>
-                <div class="shot-tracker" id="tracker2"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo" id="grpNombres" style="display:none;">
+            <legend>NOMBRES</legend>
+            <input type="text" class="est-campo" id="player1Input" maxlength="15" autocomplete="off" placeholder="Jugador 1">
+            <input type="text" class="est-campo" id="player2Input" maxlength="15" autocomplete="off" placeholder="Jugador 2" style="margin-top:8px;">
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
             </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
         </div>
     </div>
-    
-    <div id="countdown" class="hidden"></div>
-    
-    <!-- MODIFICADO - Indicador modo portero -->
-    <div id="goalkeeperMode" class="hidden">
-        🧤 MODO PORTERO - Haz click donde crees que irá el balón 🧤
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="score1">0</b><span id="player1Name">TÚ</span></div>
+        <div class="dato"><b id="shotInfo">1/5</b><span id="turnInfo">TIRAS TÚ</span></div>
+        <div class="dato"><b id="score2">0</b><span id="player2Name">PC</span></div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
     </div>
-    
-    <div id="controls">
-        <button id="muteBtn" class="btn btn-small">🔊</button>
+    <div id="tiros" aria-label="Tiros de la tanda">
+        <div class="shot-tracker" id="tracker1"></div>
+        <div class="shot-tracker" id="tracker2"></div>
     </div>
-    
-    <!-- Menú principal -->
-    <div id="mainMenu" class="ui-overlay">
-        <div class="menu-container">
-            <h1>⚽ PENALTY SHOOTERS ⚽</h1>
-            <h2>Selecciona modo de juego</h2>
-            <button class="btn" onclick="game.selectMode('single')">1 Jugador vs PC</button>
-            <button class="btn" onclick="game.selectMode('double')">2 Jugadores Local</button>
-            <h2>Dificultad</h2>
-            <select id="difficultySelect">
-                <option value="easy">Segunda RFEF (Fácil)</option>
-                <option value="medium" selected>Primera División (Medio)</option>
-                <option value="hard">Champions League (Difícil)</option>
-            </select>
-            <div id="nameInputs" class="hidden">
-                <h2>Nombres</h2>
-                <input type="text" id="player1Input" placeholder="Jugador 1" maxlength="15">
-                <input type="text" id="player2Input" placeholder="Jugador 2" maxlength="15" class="hidden">
-            </div>
-            <button id="startBtn" class="btn hidden" onclick="game.startGame()">¡COMENZAR!</button>
-            <div class="leaderboard" id="leaderboard"></div>
+
+    <div id="gameStage">
+        <canvas id="gameCanvas"></canvas>
+        <div id="countdown" class="hidden"></div>
+        <div id="goalkeeperMode" class="hidden">🧤 PORTERO: toca donde crees que irá el balón</div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El balón espera.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
         </div>
     </div>
-    
-    <!-- Pantalla de resultados -->
-    <div id="resultsMenu" class="ui-overlay hidden">
-        <div class="menu-container">
-            <h1 id="resultTitle">¡PARTIDO TERMINADO!</h1>
-            <div id="resultStats" style="font-size: 1.5em; margin: 30px 0;"></div>
-            <button class="btn" onclick="game.restartGame()">Jugar de nuevo</button>
-            <button class="btn" onclick="game.backToMenu()">Menú principal</button>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">¡PARTIDO TERMINADO!</h2>
+        <div class="marcador" id="finMarcador">0 – 0</div>
+        <p id="finDetalle"></p>
+        <div id="zonaNombre" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="nameInput" maxlength="15" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
         </div>
     </div>
-    
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <p style="font-size:0.75rem;">Goles marcados contra el PC</p>
+        <div class="est-lista" id="rankingList"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Cinco penaltis por cabeza, alternando. Si acaba en empate, muerte súbita hasta que uno falle y el otro marque.</p>
+            <h3>TIRAR</h3>
+            <ul>
+                <li>Mantén pulsado el dedo (o el ratón, o el <b>espacio</b>) y suelta para chutar al punto donde lo tengas.</li>
+                <li>La barra de potencia sube y baja mientras esperas: suéltala en la zona verde. Lejos del centro, el balón se desvía.</li>
+                <li>Con potencia óptima, al portero le cuesta más pararla.</li>
+            </ul>
+            <h3>PARAR (contra el PC)</h3>
+            <ul>
+                <li>Cuando tira el PC eres el portero: toca la zona de la portería donde crees que irá el balón.</li>
+            </ul>
+            <h3>MARCADOR</h3>
+            <ul>
+                <li>✓ gol · ◉ parada · ✗ fuera o al palo.</li>
+                <li>En el Top 10 cuentan los goles que le marcas al PC.</li>
+                <li><b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
+        /* El contexto y los canales MÚSICA / EFECTOS los pone el estándar (EST).
+           Antes cada nota iba directa a destination y el botón 🔊 solo cortaba
+           la música, no los efectos ya programados. */
         class AudioManager {
             constructor() {
-                this.audioContext = null;
-                this.muted = false;
-                this.musicOscillators = [];
                 this.musicInterval = null;
             }
-            
-            init() {
-                if (!this.audioContext) {
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                }
-            }
-            
+
             playTone(frequency, duration, type = 'sine', volume = 0.3) {
-                if (this.muted || !this.audioContext) return;
-                
-                const oscillator = this.audioContext.createOscillator();
-                const gainNode = this.audioContext.createGain();
-                
+                if (!EST.audio.efectos) return;
+                const ctx = EST.contexto();
+                if (!ctx) return;
+
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+
                 oscillator.connect(gainNode);
-                gainNode.connect(this.audioContext.destination);
-                
+                gainNode.connect(EST.audio.busEfectos);
+                oscillator.onended = () => { oscillator.disconnect(); gainNode.disconnect(); };
+
                 oscillator.type = type;
                 oscillator.frequency.value = frequency;
-                
-                gainNode.gain.setValueAtTime(volume, this.audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
-                
-                oscillator.start(this.audioContext.currentTime);
-                oscillator.stop(this.audioContext.currentTime + duration);
+
+                gainNode.gain.setValueAtTime(volume, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + duration);
             }
-            
+
             play(soundName) {
-                if (this.muted) return;
-                this.init();
+                if (!EST.audio.efectos) return;
                 
                 switch(soundName) {
                     case 'goal':
@@ -408,10 +1009,9 @@
             }
             
             playMusic() {
-                if (this.muted || !this.audioContext) return;
-                this.init();
                 this.stopMusic();
-                
+                if (!EST.audio.musica || !EST.contexto()) return;
+
                 const melodies = [
                 [523, 587, 659, 587, 523, 440, 523, 587],
                 [659, 698, 784, 698, 659, 587, 659, 698]
@@ -419,52 +1019,45 @@
                 const duration = 0.4;
                 let noteIndex = 0;
                 let melodyIndex = 0;
-                
+
                 this.musicInterval = setInterval(() => {
-                    if (this.muted) return;
-                    
+                    const ctx = EST.audio.ctx;
+                    if (!ctx || !EST.audio.musica) return;
+
                     const melody = melodies[melodyIndex % melodies.length];
                     const note = melody[noteIndex % melody.length];
-                    
-                    const oscillator = this.audioContext.createOscillator();
-                    const gainNode = this.audioContext.createGain();
-                    
+
+                    const oscillator = ctx.createOscillator();
+                    const gainNode = ctx.createGain();
+
                     oscillator.connect(gainNode);
-                    gainNode.connect(this.audioContext.destination);
-                    
+                    gainNode.connect(EST.audio.busMusica);
+                    oscillator.onended = () => { oscillator.disconnect(); gainNode.disconnect(); };
+
                     oscillator.type = 'sine';
                     oscillator.frequency.value = note;
-                    gainNode.gain.value = 0.08;
-                    
+                    // Rampa de salida: sin ella cada nota acababa en un chasquido
+                    gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
                     oscillator.start();
-                    oscillator.stop(this.audioContext.currentTime + duration);
-                    
+                    oscillator.stop(ctx.currentTime + duration);
+
                     noteIndex++;
                     if (noteIndex % melody.length === 0) {
                         melodyIndex++;
                     }
                 }, duration * 1000);
             }
-            
+
             stopMusic() {
                 if (this.musicInterval) {
                     clearInterval(this.musicInterval);
                     this.musicInterval = null;
                 }
-                this.musicOscillators = [];
-            }
-            
-            toggleMute() {
-                this.muted = !this.muted;
-                if (this.muted) {
-                    this.stopMusic();
-                } else {
-                    this.playMusic();
-                }
-                return this.muted;
             }
         }
-        
+
         class Particle {
             constructor(x, y, color, vx, vy) {
                 this.x = x;
@@ -627,17 +1220,52 @@
                 {x: 0.7, y: 0.5, name: 'abajo-derecha'}
                 ];
                 
+                /* Temporizadores en tiempo de juego, no setTimeout: así la pausa
+                   los congela y ABANDONAR los borra. Antes, salir al menú en mitad
+                   de un turno dejaba vivo el nextTurn y relanzaba la cuenta atrás. */
+                this.timers = [];
+                this.rafId = null;
                 this.resize();
                 this.setupEventListeners();
-                this.loadLeaderboard();
                 this.lastTime = Date.now();
-                this.gameLoop();
+            }
+
+            later(fn, ms) {
+                this.timers.push({ t: ms / 1000, fn });
+            }
+
+            runTimers(dt) {
+                if (!this.timers.length) return;
+                const vencidos = [];
+                this.timers = this.timers.filter(x => {
+                    x.t -= dt;
+                    if (x.t <= 0) { vencidos.push(x); return false; }
+                    return true;
+                });
+                // Uno a uno y comprobando el estado: un vencido puede acabar la partida
+                for (const x of vencidos) {
+                    if (this.state !== 'playing') return;
+                    x.fn();
+                }
+            }
+
+            arrancarBucle() {
+                if (this.rafId !== null) return;
+                this.lastTime = Date.now();
+                this.rafId = requestAnimationFrame(() => this.gameLoop());
+            }
+
+            pararBucle() {
+                if (this.rafId !== null) cancelAnimationFrame(this.rafId);
+                this.rafId = null;
             }
             
             // MODIFICADO - En la función resize() - línea 737
             resize() {
-                this.canvas.width = Math.min(window.innerWidth, 1400);
-                this.canvas.height = Math.min(window.innerHeight, 900);
+                // El escenario está debajo de la barra estándar: se mide él, no la ventana
+                const st = this.canvas.parentElement;
+                this.canvas.width = Math.min(st.clientWidth || window.innerWidth, 1400);
+                this.canvas.height = Math.min(st.clientHeight || window.innerHeight, 900);
                 
                 // MODIFICADO - Ajustes correctos
                 this.goalWidth3D = 850;   
@@ -666,7 +1294,8 @@
             }
             
             setupEventListeners() {
-                window.addEventListener('resize', () => this.resize());
+                // Cambiar el tamaño borra el lienzo: en pausa o al final se repinta a mano
+                window.addEventListener('resize', () => { this.resize(); if (this.state !== 'menu' && this.rafId === null) this.draw(); });
                 
                 this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
                 this.canvas.addEventListener('mouseup', (e) => this.handleEnd(e));
@@ -686,31 +1315,34 @@
                 });
                 
                 document.addEventListener('keydown', (e) => {
+                    /* Escribiendo un nombre, las teclas son texto (el espacio también) */
+                    if (e.target instanceof HTMLInputElement) {
+                        if (e.key === 'Enter' && e.target.id === 'nameInput') { e.preventDefault(); this.saveScore(); }
+                        return;
+                    }
+                    if (this.state !== 'playing' && this.state !== 'paused') {
+                        if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                        return;
+                    }
+                    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
+                        if (this.state === 'paused') this.resumeGame(); else this.pauseGame();
+                        return;
+                    }
                     if (e.key === ' ') {
                         e.preventDefault();
                         if (this.canShoot && !this.charging && this.state === 'playing' && !this.shooting) {
                             this.startCharging();
                         }
                     }
-                    if (e.key === 'r' || e.key === 'R') {
-                        if (this.state === 'results') {
-                            this.restartGame();
-                        }
-                    }
                 });
-                
+
                 document.addEventListener('keyup', (e) => {
-                    if (e.key === ' ' && this.charging) {
+                    if (e.key === ' ' && this.charging && this.state === 'playing') {
                         this.shoot();
                     }
                 });
-                
-                document.getElementById('muteBtn').addEventListener('click', () => {
-                    const muted = this.audio.toggleMute();
-                    document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
-                });
             }
-            
+
             handleStart(e) {
                 if (this.state !== 'playing' || this.shooting) return;
                 
@@ -724,7 +1356,7 @@
                     this.canShoot = false;
                     document.getElementById('goalkeeperMode').classList.add('hidden');
                     
-                    setTimeout(() => {
+                    this.later(() => {
                         this.executeAIShot();
                     }, 300);
                 } else if (this.canShoot && !this.goalkeeperMode) {
@@ -733,7 +1365,7 @@
             }
             
             handleEnd(e) {
-                if (this.charging) {
+                if (this.charging && this.state === 'playing') {
                     this.shoot();
                 }
             }
@@ -745,34 +1377,54 @@
                 this.mouseY = e.clientY - rect.top;
             }
             
-            selectMode(mode) {
-                this.mode = mode;
-                this.difficulty = document.getElementById('difficultySelect').value;
-                
-                document.getElementById('nameInputs').classList.remove('hidden');
-                document.getElementById('startBtn').classList.remove('hidden');
-                
-                if (mode === 'double') {
-                    document.getElementById('player2Input').classList.remove('hidden');
-                } else {
-                    document.getElementById('player2Input').classList.add('hidden');
-                }
-            }
-            
             startGame() {
-                this.player1Name = document.getElementById('player1Input').value || 'Jugador 1';
-                this.player2Name = this.mode === 'single' ? 'PC' : 
-                (document.getElementById('player2Input').value || 'Jugador 2');
-                
-                document.getElementById('mainMenu').classList.add('hidden');
-                document.getElementById('hud').classList.remove('hidden');
-                
+                ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                const n1 = document.getElementById('player1Input').value.trim();
+                const n2 = document.getElementById('player2Input').value.trim();
+                this.player1Name = this.mode === 'single' ? 'TÚ' : (n1 || 'Jugador 1');
+                this.player2Name = this.mode === 'single' ? 'PC' : (n2 || 'Jugador 2');
+
+                EST.mostrar('pJuego');
+                // Primero las casillas de tiros (ocupan alto), luego medir:
+                // el escenario solo tiene tamaño cuando su pantalla se ve
                 this.resetGame();
+                this.resize();
+                this.finMostrado = false;
                 this.state = 'playing';
                 this.audio.playMusic();
                 this.startCountdown();
+                this.arrancarBucle();
             }
-            
+
+            pauseGame() {
+                if (this.state !== 'playing') return;
+                this.state = 'paused';
+                this.charging = false;
+                this.pararBucle();
+                this.audio.stopMusic();
+                EST.abrir('capaPausa');
+            }
+
+            resumeGame() {
+                if (this.state !== 'paused') return;
+                EST.cerrar('capaPausa');
+                this.state = 'playing';
+                this.audio.playMusic();
+                this.arrancarBucle();
+            }
+
+            quitToMenu() {
+                this.state = 'menu';
+                this.timers = [];
+                this.pararBucle();
+                this.audio.stopMusic();
+                this.charging = false;
+                document.getElementById('countdown').classList.add('hidden');
+                document.getElementById('goalkeeperMode').classList.add('hidden');
+                ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+                EST.mostrar('pMenu');
+            }
+
             resetGame() {
                 this.score1 = 0;
                 this.score2 = 0;
@@ -785,6 +1437,11 @@
                 this.slowMotion = false;
                 this.goalkeeperMode = false;
                 this.playerGoalkeeperChoice = null;
+                this.waitingNextTurn = false;
+                this.countdownActive = false;
+                this.timers = [];
+                this.particles = [];
+                this.netEffects = [];
                 this.player1Shots = [];
                 this.player2Shots = [];
                 this.powerBar.value = 0.5;
@@ -842,7 +1499,7 @@
                         countdownEl.textContent = count;
                         this.audio.play('countdown');
                         count--;
-                        setTimeout(countdown, 1000);
+                        this.later(countdown, 1000);
                     } else {
                         
                         if (this.mode === 'single' && this.currentPlayer === 2) {
@@ -851,7 +1508,7 @@
                             document.getElementById('goalkeeperMode').classList.remove('hidden');
                             
                             
-                            setTimeout(() => {
+                            this.later(() => {
                                 document.getElementById('goalkeeperMode').classList.add('hidden');
                             }, 2000);
                         } else {
@@ -864,7 +1521,7 @@
                         
                         this.audio.play('ready');
                         
-                        setTimeout(() => {
+                        this.later(() => {
                             countdownEl.classList.add('hidden');
                             this.canShoot = true;
                             this.countdownActive = false;
@@ -937,7 +1594,7 @@
             setGoalkeeperPositionPlayer() {
                 if (!this.playerGoalkeeperChoice) return;
                 
-                setTimeout(() => {
+                this.later(() => {
                     this.goalkeeper.diving = true;
                     this.goalkeeper.animTime = 0;
                     
@@ -966,7 +1623,7 @@
                 
                 const settings = difficultySettings[this.difficulty];
                 
-                setTimeout(() => {
+                this.later(() => {
                     this.goalkeeper.diving = true;
                     this.goalkeeper.animTime = 0;
                     
@@ -1057,7 +1714,8 @@
                 } else {
                     this.player2Shots.push(result);
                 }
-                this.updateShotTrackers();
+                // El marcador de la barra cambia al momento, no 3,5 s después con el turno
+                this.updateHUD();
             }
             
             updateShotTrackers() {
@@ -1108,7 +1766,7 @@
                 this.playerGoalkeeperChoice = null;
                 this.goalkeeperMode = false; 
                 
-                setTimeout(() => {
+                this.later(() => {
                     this.currentPlayer = this.currentPlayer === 1 ? 2 : 1;
                     
                     if (this.currentPlayer === 1) {
@@ -1140,89 +1798,68 @@
             }
             
             endGame() {
+                if (this.finMostrado) return;
+                this.finMostrado = true;
                 this.state = 'results';
+                this.timers = [];
+                this.pararBucle();
                 this.audio.stopMusic();
                 this.audio.play('whistle');
-                
-                const winner = this.score1 > this.score2 ? this.player1Name : this.player2Name;
-                
-                document.getElementById('resultTitle').textContent = 
-                this.score1 === this.score2 ? '¡EMPATE!' : `¡${winner} GANA!`;
-                document.getElementById('resultStats').innerHTML = 
-                `${this.player1Name}: ${this.score1} - ${this.score2} :${this.player2Name}`;
-                
-                document.getElementById('hud').classList.add('hidden');
-                document.getElementById('resultsMenu').classList.remove('hidden');
-                
-                if (this.mode === 'single') {
-                    this.saveScore(this.player1Name, this.score1, this.difficulty);
-                }
+
+                const solo = this.mode === 'single';
+                const gana1 = this.score1 > this.score2;
+                const winner = gana1 ? this.player1Name : this.player2Name;
+                // textContent: los nombres los escribe el usuario
+                document.getElementById('finTitulo').textContent =
+                    this.score1 === this.score2 ? '¡EMPATE!' :
+                    solo ? (gana1 ? '🏆 ¡GANAS LA TANDA!' : '🧤 GANA EL PC') : '🏆 ¡GANA ' + winner.toUpperCase() + '!';
+                document.getElementById('finMarcador').textContent = this.score1 + ' – ' + this.score2;
+                document.getElementById('finDetalle').textContent =
+                    this.player1Name + ' ' + this.score1 + ' – ' + this.score2 + ' ' + this.player2Name +
+                    (this.suddenDeath ? ' · tras muerte súbita' : '') +
+                    (solo ? ' · ' + DIFS[this.difficulty] : '');
+
+                /* Antes se guardaba solo, con el nombre puesto antes de jugar; ahora,
+                   como en el resto de juegos, se pide al final si entra en el Top 10.
+                   En dos jugadores no hay récord (tampoco lo había) */
+                document.getElementById('nameInput').value = '';
+                document.getElementById('zonaNombre').style.display =
+                    solo && ranking.entra(this.score1) ? '' : 'none';
+                EST.abrir('capaFin');
             }
-            
-            restartGame() {
-                document.getElementById('resultsMenu').classList.add('hidden');
-                document.getElementById('hud').classList.remove('hidden');
-                this.resetGame();
-                this.state = 'playing';
-                this.audio.playMusic();
-                this.startCountdown();
-            }
-            
-            backToMenu() {
-                document.getElementById('resultsMenu').classList.add('hidden');
-                document.getElementById('mainMenu').classList.remove('hidden');
-                this.state = 'menu';
-                this.loadLeaderboard();
-            }
-            
+
             updateHUD() {
                 document.getElementById('player1Name').textContent = this.player1Name;
                 document.getElementById('player2Name').textContent = this.player2Name;
                 document.getElementById('score1').textContent = this.score1;
                 document.getElementById('score2').textContent = this.score2;
-                
+
                 const currentName = this.currentPlayer === 1 ? this.player1Name : this.player2Name;
-                document.getElementById('turnInfo').textContent = `Turno: ${currentName}`;
-                
-                const shotText = this.suddenDeath ? '¡MUERTE SÚBITA!' : `${this.currentShot}/${this.maxShots}`;
-                document.getElementById('shotInfo').textContent = `Lanzamiento: ${shotText}`;
-                
+                document.getElementById('turnInfo').textContent =
+                    this.mode === 'single' ? (this.currentPlayer === 1 ? 'TIRAS TÚ' : 'TIRA EL PC') : 'TIRA ' + currentName;
+
+                document.getElementById('shotInfo').textContent = this.suddenDeath ? '¡MS!' : `${this.currentShot}/${this.maxShots}`;
+
                 this.updateShotTrackers();
             }
-            
-            saveScore(name, score, difficulty) {
-                let scores = JSON.parse(localStorage.getItem('penaltyScores') || '[]');
-                scores.push({
+
+            saveScore() {
+                const input = document.getElementById('nameInput');
+                const name = input.value.trim();
+                if (name === '') { EST.avisar('Escribe tu nombre', true); input.focus(); return; }
+                ranking.anadir({
                     name: name,
-                    score: score,
-                    difficulty: difficulty,
+                    score: this.score1,
+                    difficulty: this.difficulty,
                     date: new Date().toLocaleDateString()
                 });
-                scores.sort((a, b) => b.score - a.score);
-                scores = scores.slice(0, 10);
-                localStorage.setItem('penaltyScores', JSON.stringify(scores));
+                document.getElementById('zonaNombre').style.display = 'none';
+                EST.avisar('¡Guardado!');
             }
-            
-            loadLeaderboard() {
-                const scores = JSON.parse(localStorage.getItem('penaltyScores') || '[]');
-                const leaderboard = document.getElementById('leaderboard');
-                
-                if (scores.length === 0) {
-                    leaderboard.innerHTML = '<p style="text-align:center; color:#666;">No hay récords aún</p>';
-                    return;
-                }
-                
-                leaderboard.innerHTML = '<h2>🏆 Mejores Puntuaciones</h2>';
-                scores.forEach((entry, i) => {
-                    const div = document.createElement('div');
-                    div.className = 'leaderboard-entry';
-                    const diffText = {easy: '2ªRFEF', medium: '1ªDiv', hard: 'UCL'}[entry.difficulty];
-                    div.innerHTML = `<strong>${i + 1}.</strong> ${entry.name} - ${entry.score} goles (${diffText}) - ${entry.date}`;
-                    leaderboard.appendChild(div);
-                });
-            }
-            
+
             update(dt) {
+                if (this.state !== 'playing') return;
+                this.runTimers(dt);
                 if (this.state !== 'playing') return;
                 
                 const effectiveDt = this.slowMotion ? dt * this.slowMotionFactor : dt;
@@ -2113,21 +2750,75 @@
             }
             
             gameLoop() {
+                this.rafId = null;
                 const now = Date.now();
                 const dt = Math.min((now - this.lastTime) / 1000, 0.1);
                 this.lastTime = now;
-                
+
                 this.update(dt);
                 this.draw();
-                
-                requestAnimationFrame(() => this.gameLoop());
+
+                // Solo hay bucle en partida: en el menú y en pausa no se pinta nada
+                if (this.state === 'playing') {
+                    this.rafId = requestAnimationFrame(() => this.gameLoop());
+                }
             }
         }
-        
-        // Inicializar juego
-        let game;
-        window.addEventListener('load', () => {
-            game = new PenaltyGame();
+
+        // ==========================================
+        // INTERFAZ ESTÁNDAR - menú, capas y récords
+        // ==========================================
+        const DIFS = { easy: '2ª RFEF', medium: '1ª División', hard: 'Champions' };
+        const DIF_CORTA = { easy: '2ªRFEF', medium: '1ªDiv', hard: 'UCL' };
+
+        /* Misma clave y campos de siempre: los récords de antes siguen */
+        const ranking = EST.ranking({ clave: 'penaltyScores', nombre: 'name', puntos: 'score' });
+
+        const game = new PenaltyGame();
+        game.mode = 'single';
+
+        function showRanking() {
+            ranking.pintar(document.getElementById('rankingList'), (e) =>
+                DIF_CORTA[e.difficulty] ? ' · ' + DIF_CORTA[e.difficulty] : '');
+            EST.abrir('capaRanking');
+        }
+
+        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+
+        EST.grupo('grpModo', (v) => {
+            game.mode = v;
+            // Los nombres solo hacen falta para distinguir a dos personas en el mismo móvil
+            document.getElementById('grpNombres').style.display = v === 'double' ? '' : 'none';
+        });
+        EST.grupo('grpDif', (v) => { game.difficulty = v; });
+
+        btn('btnJugar', () => game.startGame());
+        btn('btnPausa', () => game.pauseGame());
+        btn('btnSeguir', () => game.resumeGame());
+        btn('btnAbandonar', () => game.quitToMenu());
+        btn('btnGuardar', () => game.saveScore());
+        btn('btnOtra', () => game.startGame());
+        btn('btnMenuFin', () => game.quitToMenu());
+        btn('btnRanking', showRanking);
+        btn('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+        btn('btnBorrarRanking', () => {
+            if (!confirm('¿Borrar todos los récords?')) return;
+            ranking.borrar();
+            showRanking();
+        });
+        btn('btnAyuda', () => EST.abrir('capaAyuda'));
+        btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+
+        // Irse de la aplicación pausa: una llamada en mitad del tiro lo dejaba volando
+        window.addEventListener('blur', () => game.pauseGame());
+        document.addEventListener('visibilitychange', () => { if (document.hidden) game.pauseGame(); });
+
+        EST.iniciar({
+            claveAudio: 'penaltyAudio',
+            alCambiarMusica(on) {
+                if (on && game.state === 'playing') game.audio.playMusic();
+                else game.audio.stopMusic();
+            }
         });
     </script>
 </body>

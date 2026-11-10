@@ -3,291 +3,391 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Clásico Tetris</title>
-    <!-- Tailwind estaba importado pero no se usa ni una sola de sus clases:
-         eran ~400 KB de script descargados y ejecutados para nada en cada carga. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Tetris Clásico</title>
+    <!-- Sin Google Fonts: la tipografía del estándar va incluida y no depende de la red -->
     <style>
-        
-        /* Estilos generales para un look retro */
-        * { box-sizing: border-box; }
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
 
-        html, body { height: 100%; }
+* { box-sizing: border-box; }
 
-        body {
-            background-color: #1a1a2e; /* Fondo oscuro */
-            color: #e0f7fa; /* Texto claro */
-            font-family: 'Press Start 2P', cursive;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            /* dvh tiene en cuenta la barra de direcciones del móvil */
-            height: 100vh;
-            height: 100dvh;
-            margin: 0;
-            padding: 8px;
-            padding-top: max(8px, env(safe-area-inset-top, 0px));
-            padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
-            gap: 8px;
-            overflow: hidden;
-            overscroll-behavior: none;
-            user-select: none; /* Evita la selección de texto */
-        }
+html, body { height: 100%; }
 
-        h1 {
-            font-size: clamp(0.7rem, 3vw, 1.4rem);
-            text-align: center;
-            margin: 0;
-            flex: 0 0 auto;
-        }
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
-        /* Los tableros conservan su buffer de 300x600 (la lógica del juego no
-           cambia) y se escalan para caber en la altura disponible. */
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE TETRIS ---------- */
+        #pJuego { max-width: 1100px; }
+        /* Los datos del jugador 2 se meten en la misma barra. La visibilidad la
+           pone el código con '' / 'none'; con un display en línea esta clase no mandaría */
+        .grupo-j2 { display: contents; }
+
+        /* Los tableros conservan su buffer de 300x600 (la lógica no cambia) y se
+           escalan para caber en el hueco que deja la barra */
         .game-container {
             display: flex;
             flex-direction: row;
             gap: 12px;
             background-color: #0d0c1d;
-            padding: 10px;
-            border: 4px solid #3d0000;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            padding: 8px;
+            margin-top: 6px;
+            border: 3px solid #3d0000;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.35);
             border-radius: 10px;
             flex: 1 1 auto;
             min-height: 0;
             max-width: 100%;
             justify-content: center;
         }
-
-        .game-container.doubles-mode {
-            gap: 16px;
-        }
-
+        .game-container.doubles-mode { gap: 16px; }
         .player-section {
             display: flex;
             flex-direction: row;
-            gap: 12px;
+            gap: 10px;
             min-height: 0;
             min-width: 0;
         }
-
         .canvas-wrapper {
             position: relative;
             display: flex;
             min-height: 0;
             min-width: 0;
+            justify-content: center;
         }
-
         #gameCanvas, #gameCanvas2 {
             max-width: 100%;
             max-height: 100%;
             display: block;
-        }
-        
-        .player-label {
-            position: absolute;
-            top: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.8rem;
-            color: #ffcc00;
-            text-shadow: 0 0 10px #ffcc00;
-        }
-        
-        .canvas-wrapper {
-            position: relative;
-        }
-        
-        /* Estilo del tablero de juego */
-        #gameCanvas, #gameCanvas2 {
             border: 4px solid #4a0000;
             background-color: #000000;
             box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
         }
-        
-        /* Estilos de la barra lateral de información */
+        /* En la columna de la siguiente pieza: encima del tablero tapaba la pieza al nacer */
+        .player-label {
+            font-size: 0.7rem;
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00;
+            text-align: center;
+        }
+        /* En dobles el jugador 2 juega a la izquierda: sus datos, también a la izquierda */
+        .est-barra.dobles .grupo-j2 > .dato { order: -1; }
+        /* Al lado del tablero solo queda la siguiente pieza: el resto va en la barra */
         .sidebar {
-            width: 150px;
+            width: 132px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-            font-size: 10px;
-            overflow-y: auto;
-            min-height: 0;
             flex: 0 0 auto;
         }
-        
         .info-box {
             background-color: #1e1e3f;
-            padding: 10px;
+            padding: 8px;
             border: 2px solid #3d0000;
             border-radius: 5px;
             text-align: center;
         }
-        
-        .info-box h3 {
-            font-size: 0.8rem;
-            margin-bottom: 5px;
-            color: #ffcc00;
-        }
-        
-        .value {
-            font-size: 1.2rem;
-            color: #00ff00;
-            min-height: 20px;
-            display: block;
-        }
-        
-        .highscore-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            font-size: 0.6rem;
-            max-height: 120px;
-            overflow-y: auto;
-            color: #e0f7fa;
-        }
-        
-        .highscore-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 2px 0;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.1);
-        }
-        
-        .highscore-item:last-child {
-            border-bottom: none;
-        }
-        
-        .highscore-rank {
-            color: #ffcc00;
-        }
-        
-        .highscore-item.highlight {
-            background: rgba(0, 255, 0, 0.2);
-            font-weight: bold;
-        }
-        
-        /* Estilo del área de la siguiente pieza */
+        .info-box h3 { font-size: 0.65rem; margin: 0 0 5px; color: #ffcc00; letter-spacing: 1px; }
         #nextPieceCanvas, #nextPieceCanvas2 {
             border: 1px solid #4a0000;
             background-color: #0d0c1d;
             margin: 0 auto;
+            display: block;
+            max-width: 100%;
         }
-        
-        .controls-info {
-            font-size: 0.7rem;
-            margin-top: 15px;
-            text-align: left;
-            padding: 10px;
-            background-color: #1e1e3f;
-            border: 2px solid #3d0000;
-            border-radius: 5px;
-        }
-        
-        .overlay {
-            position: fixed; /* Usar fixed para asegurar que cubra todo */
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            text-align: center;
-        }
-        
-        .overlay-content {
-            background-color: #1a1a2e;
-            padding: 40px 30px;
-            border: 5px solid #00ff00;
-            border-radius: 10px;
-            box-shadow: 0 0 30px #00ff00;
-            max-width: 90%;
-            min-width: 300px;
-        }
-        
-        .overlay-content h2 {
-            font-size: 2rem;
-            color: #ff0000;
-            margin-bottom: 20px;
-        }
-        
-        .overlay-content button {
-            background-color: #3d0000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            padding: 10px 20px;
-            margin-top: 20px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.8rem;
-        }
-        
-        .overlay-content button:hover {
-            background-color: #00ff00;
-            color: #1a1a2e;
-            box-shadow: 0 0 15px #00ff00;
-        }
-        
-        .input-group {
-            margin-top: 15px;
-        }
-        
-        .input-group input {
-            background-color: #0d0c1d;
-            border: 2px solid #00ff00;
-            color: #00ff00;
-            padding: 5px 10px;
-            margin-top: 5px;
-            font-family: 'Press Start 2P', cursive;
-            text-align: center;
-            width: 80%;
-            max-width: 200px;
-            user-select: text; /* Añade esta línea */
-        }
-        
-        .input-group button {
-            margin-top: 10px;
-        }
-        
-        .warning-message {
-            color: #ff0000;
-            font-size: 0.6rem;
-            margin-top: 5px;
-        }
-        
-        .ranking {
-            margin-top: 15px;
-            font-size: 0.7rem;
-        }
-        
-        .ranking h3 {
-            margin-bottom: 10px;
-            color: #ffcc00;
-        }
-        
-        .ranking-list {
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .ranking-entry {
-            margin: 5px 0;
-            padding: 2px;
-        }
-        
-        .ranking-entry.highlight {
-            background: rgba(0, 255, 0, 0.2);
-            font-weight: bold;
-        }
-        
+        #doublesNote { font-size: 0.7rem; color: #ff8080; margin: 8px 2px 0; line-height: 1.5; display: none; }
+
         /* ---------- BOTONERA TÁCTIL ---------- */
         /* Tetris pide movimientos discretos y repetibles (una celda cada vez),
            y una rotación que no se pueda confundir con un desplazamiento. Por
@@ -323,7 +423,6 @@
             border: 2px solid #00ff00;
             background: rgba(0, 60, 0, 0.55);
             color: #00ff00;
-            font-family: 'Press Start 2P', cursive;
             font-size: 15px;
             line-height: 1;
             border-radius: 8px;
@@ -342,106 +441,6 @@
             color: #ffcc00;
         }
 
-        /* Botones de partida: en móvil no existen las teclas P ni R */
-        .top-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            flex: 0 0 auto;
-            width: 100%;
-        }
-
-        .top-bar button {
-            background: #3d0000;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            border-radius: 5px;
-            font-family: 'Press Start 2P', cursive;
-            font-size: 0.7rem;
-            padding: 6px 10px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-
-        /* En táctil el :hover se queda pegado tras tocar */
-        @media (hover: none) {
-            .overlay-content button:hover {
-                background-color: #3d0000;
-                color: #00ff00;
-                box-shadow: none;
-            }
-        }
-
-        #doublesNote {
-            font-size: 0.55rem;
-            color: #ff8080;
-            margin-top: 6px;
-            line-height: 1.6;
-        }
-
-        #startDoublesBtn:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            border-color: #666;
-            color: #999;
-        }
-
-        /* ---------- PANTALLAS ESTRECHAS ---------- */
-        /* La barra lateral en columna junto al tablero pedía 150 px extra de
-           ancho; en móvil pasa a ser una fila compacta sobre el tablero. */
-        @media (max-width: 720px) {
-            .player-section {
-                flex-direction: column;
-                gap: 6px;
-                flex: 1 1 auto;
-            }
-
-            .sidebar {
-                width: 100%;
-                flex-direction: row;
-                gap: 6px;
-                justify-content: center;
-                align-items: stretch;
-                overflow: visible;
-                font-size: 8px;
-            }
-
-            .info-box {
-                padding: 4px 6px;
-                flex: 1 1 0;
-                min-width: 0;
-            }
-
-            .info-box h3 { font-size: 0.5rem; margin-bottom: 2px; }
-            .value { font-size: 0.8rem; min-height: 0; }
-
-            /* El Top 10 ya está en el menú de inicio: aquí solo robaría sitio */
-            .sidebar .info-box:last-child { display: none; }
-
-            #nextPieceCanvas, #nextPieceCanvas2 { width: 56px; height: 46px; }
-
-            .canvas-wrapper { flex: 1 1 auto; justify-content: center; }
-
-            .game-container { padding: 6px; border-width: 3px; gap: 6px; }
-
-            .controls-info { display: none; }
-
-            .overlay-content { padding: 20px 14px; min-width: 0; }
-            .overlay-content h2 { font-size: 1.1rem; margin-bottom: 12px; }
-            .overlay-content button { font-size: 0.6rem; padding: 8px 12px; }
-            .input-group input { font-size: 16px; }  /* menos de 16px hace zoom en iOS */
-        }
-
-        /* El texto de teclas no sirve en un móvil */
-        body.touch-device .controls-info { display: none; }
-
-        @media (max-height: 700px) {
-            h1 { font-size: 0.7rem; }
-            .touch-btn { height: 44px; width: 52px; font-size: 13px; }
-            .touch-btn.wide { width: 78px; }
-        }
-
         .game-over-indicator {
             position: absolute;
             top: 50%;
@@ -457,142 +456,108 @@
             z-index: 10;
         }
         
+        #touchControls { margin-top: 6px; padding-bottom: 2px; }
+        @media (max-width: 720px) {
+            .game-container { padding: 6px; gap: 6px; }
+            .player-section { gap: 6px; }
+            .sidebar { width: 64px; }
+            .info-box { padding: 4px; }
+            .info-box h3 { font-size: 0.45rem; letter-spacing: 0; }
+            #nextPieceCanvas, #nextPieceCanvas2 { width: 54px; height: 45px; }
+        }
+        @media (max-height: 700px) {
+            .touch-btn { height: 44px; width: 52px; font-size: 13px; }
+            .touch-btn.wide { width: 78px; }
+        }
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+            .game-container { margin-top: 3px; padding: 4px; }
+        }
     </style>
 </head>
 <body>
-    <!-- Overlay de Menú de Inicio -->
-    <div id="startMenuOverlay" class="overlay" style="display: flex;">
-        <div class="overlay-content">
-            <h2>TETRIS CLÁSICO</h2>
-            <button id="startGameBtn">Partida Individual</button>
-            <button id="startDoublesBtn">Partida Dobles</button>
-            <div id="doublesNote" style="display:none;"></div>
-            <button id="showHighScoresBtn">Ver mejores puntuaciones</button>
-            <button id="showInstructionsBtn">Ver instrucciones</button>
-            <div style="margin-top: 20px;">
-                <label for="volumeSlider">Volumen</label>
-                <input type="range" id="volumeSlider" min="0" max="100" value="30" />
-            </div>
-        </div>
-    </div>
-    <!-- Overlay de Puntuaciones -->
-    <div id="highScoresOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2>TOP 10 PUNTUACIONES</h2>
-            <div id="highScoresMenuList" class="ranking-list" style="max-height: 300px; overflow-y: auto;"></div>
-            <button onclick="closeHighScoresMenu()">Volver</button>
-        </div>
-    </div>
-    
-    <!-- Overlay de Instrucciones -->
-    <div id="instructionsOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2>INSTRUCCIONES</h2>
-            <div style="text-align: left; font-size: 0.7rem; line-height: 1.8;">
-                <p><strong style="color: #ffcc00;">CONTROLES INDIVIDUAL:</strong></p>
-                <p>← →: Mover pieza izquierda/derecha</p>
-                <p>↑: Rotar pieza</p>
-                <p>↓: Caída suave</p>
-                <p>ESPACIO: Caída instantánea</p>
-                <p>P: Pausar juego/música</p>
-                <p>R: Reiniciar partida</p>
-                <br>
-                <p><strong style="color: #ffcc00;">CONTROLES DOBLES:</strong></p>
-                <p><strong>Jugador 1 (Derecha):</strong></p>
-                <p>← →: Mover | ↑: Rotar | ↓: Caída suave | ESPACIO: Caída instantánea</p>
-                <p><strong>Jugador 2 (Izquierda):</strong></p>
-                <p>A D: Mover | W: Rotar | S: Caída suave | SHIFT: Caída instantánea</p>
-                <p>P: Pausar | R: Reiniciar</p>
-                <br>
-                <p><strong style="color: #ffcc00;">OBJETIVO:</strong></p>
-                <p>Completa líneas horizontales para sumar puntos. ¡Cada 10 líneas subes de nivel!</p>
-            </div>
-            <button onclick="closeInstructionsMenu()">Volver</button>
-        </div>
-    </div>
-    <h1>TETRIS CLÁSICO // by Ronie</h1>
 
-    <div class="top-bar">
-        <button id="pauseBtn" type="button" aria-label="Pausar">⏸ PAUSA</button>
-        <button id="restartBtn" type="button" aria-label="Reiniciar">↺ REINICIAR</button>
-        <button id="menuBtn" type="button" aria-label="Menú">☰ MENÚ</button>
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">TETRIS <span>CLÁSICO</span></div>
+        <p class="est-lema">Completa líneas; cada 10 subes de nivel</p>
+
+        <fieldset class="est-grupo">
+            <legend>MODO</legend>
+            <div class="opciones iguales" id="grpModo">
+                <button class="opcion" type="button" data-v="individual" aria-pressed="true">🧱 INDIVIDUAL<span class="sub">1 jugador</span></button>
+                <button class="opcion" type="button" data-v="dobles" aria-pressed="false">👥 DOBLES<span class="sub">2 tableros a la vez</span></button>
+            </div>
+            <div id="doublesNote"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
     </div>
-    
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="score">0</b><span id="lblPuntos">PUNTOS</span></div>
+        <div class="dato"><b id="lines">0</b><span id="lblLineas">LÍNEAS</span></div>
+        <div class="dato"><b id="level">1</b><span id="lblNivel">NIVEL</span></div>
+        <div class="grupo-j2" style="display:none;">
+            <div class="dato"><b id="score2">0</b><span>J2 PUNTOS</span></div>
+            <div class="dato"><b id="lines2">0</b><span>J2 LÍNEAS</span></div>
+            <div class="dato"><b id="level2">1</b><span>J2 NIVEL</span></div>
+        </div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
     <div class="game-container" id="gameContainer">
-        
-        <!-- Sección Jugador 2 (solo en modo dobles) -->
-        <div id="player2Section" class="player-section" style="display: none;">
+        <!-- Jugador 2 (solo en dobles, a la izquierda) -->
+        <div id="player2Section" class="player-section" style="display:none;">
             <div class="sidebar">
-                <div class="info-box">
-                    <h3>PUNTUACIÓN</h3>
-                    <span id="score2" class="value">0</span>
-                </div>
-                
-                <div class="info-box">
-                    <h3>LÍNEAS</h3>
-                    <span id="lines2" class="value">0</span>
-                </div>
-                
-                <div class="info-box">
-                    <h3>NIVEL</h3>
-                    <span id="level2" class="value">1</span>
-                </div>
-                
                 <div class="info-box">
                     <h3>SIGUIENTE</h3>
                     <canvas id="nextPieceCanvas2" width="120" height="100"></canvas>
                 </div>
-            </div>
-            
-            <div class="canvas-wrapper">
                 <div class="player-label">JUGADOR 2</div>
+            </div>
+            <div class="canvas-wrapper">
                 <canvas id="gameCanvas2" width="300" height="600"></canvas>
-                <div id="gameOver2Indicator" style="display: none;" class="game-over-indicator">PERDISTE</div>
+                <div id="gameOver2Indicator" style="display:none;" class="game-over-indicator">PERDISTE</div>
             </div>
         </div>
-        
-        <!-- Sección Jugador 1 -->
+
+        <!-- Jugador 1 -->
         <div id="player1Section" class="player-section">
-            <!-- Barra lateral de información -->
             <div class="sidebar">
-                <div class="info-box">
-                    <h3>PUNTUACIÓN</h3>
-                    <span id="score" class="value">0</span>
-                </div>
-                
-                <div class="info-box">
-                    <h3>LÍNEAS</h3>
-                    <span id="lines" class="value">0</span>
-                </div>
-                
-                <div class="info-box">
-                    <h3>NIVEL</h3>
-                    <span id="level" class="value">1</span>
-                </div>
-                
                 <div class="info-box">
                     <h3>SIGUIENTE</h3>
                     <canvas id="nextPieceCanvas" width="120" height="100"></canvas>
                 </div>
-                
-                <!-- SECCIÓN: HIGH SCORES -->
-                <div class="info-box">
-                    <h3>TOP 10 PUNTUACIONES</h3>
-                    <ul id="highScoresList" class="highscore-list">
-                        <li>Cargando...</li>
-                    </ul>
-                </div>
+                <div id="player1Label" class="player-label" style="display:none;">JUGADOR 1</div>
             </div>
-            
-            <!-- Canvas principal del juego -->
             <div class="canvas-wrapper">
-                <div id="player1Label" class="player-label" style="display: none;">JUGADOR 1</div>
                 <canvas id="gameCanvas" width="300" height="600"></canvas>
-                <div id="gameOver1Indicator" style="display: none;" class="game-over-indicator">PERDISTE</div>
+                <div id="gameOver1Indicator" style="display:none;" class="game-over-indicator">PERDISTE</div>
             </div>
         </div>
     </div>
-    
+
     <div id="touchControls">
         <div class="touch-cluster" id="touchP2" style="display:none;" data-player="2">
             <div class="cluster-label">JUGADOR 2</div>
@@ -619,60 +584,415 @@
             </div>
         </div>
     </div>
+</section>
 
-    <div class="controls-info" id="controlsInfo">
-        <h3>CONTROLES:</h3>
-        <p>← →: Mover | ↑: Rotar</p>
-        <p>↓: Caída suave | ESPACIO: Caída instantánea</p>
-        <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
-    </div>
-    
-    <!-- Overlay de Game Over con Input de Nombre -->
-    <div id="gameOverOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2>¡GAME OVER!</h2>
-            <div id="doublesResults" style="display: none;">
-                <p>Puntuación Jugador 1: <span id="finalScoreP1">0</span> - Nivel: <span id="finalLevelP1">1</span></p>
-                <p>Puntuación Jugador 2: <span id="finalScoreP2">0</span> - Nivel: <span id="finalLevelP2">1</span></p>
-                <p style="color: #ffcc00; margin-top: 10px;">Ganador: <span id="winnerName">-</span></p>
-            </div>
-            <div id="singleResults">
-                <p>Puntuación Final: <span id="finalScore">0</span></p>
-                <p>Alcanzado Nivel: <span id="finalLevel">1</span></p>
-            </div>
-            
-            <!-- Contenedor para la entrada de nombre -->
-            <div id="scoreSubmissionContainer">
-                <div id="nameInputGroup" class="input-group" style="display: none;">
-                    <p>¡Nuevo récord! Ingresa tu nombre:</p>
-                    <input type="text" id="playerName" placeholder="Tu Nombre" maxlength="15" style="ime-mode: auto;">
-                    <button onclick="submitScore()">Guardar Puntuación</button>
-                </div>
-                <p id="submissionMessage" style="color: #00ff00; margin-top: 15px; display: none;">¡Puntuación Guardada!</p>
-                <p id="errorSubmission" style="color: #ff0000; margin-top: 15px; display: none;">Error al guardar la puntuación.</p>
-            </div>
-            
-            <div class="ranking">
-                <h3>TOP 10 PUNTUACIONES</h3>
-                <div id="gameOverRankingList" class="ranking-list"></div>
-            </div>
-            
-            <button id="playAgainBtn" type="button">JUGAR DE NUEVO</button>
-            <p style="font-size:0.6rem; margin-top:10px;">También puedes pulsar R</p>
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>La pieza espera donde la dejaste.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
         </div>
     </div>
-    
-    <!-- Overlay de Pausa -->
-    <div id="pauseOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content">
-            <h2>PAUSA</h2>
-            <p>Presiona 'P' o el botón para continuar</p>
-            <button onclick="togglePause()">CONTINUAR</button>
-            <p>Control de Música:</p>
-            <button onclick="toggleMusic()">🎵 Activar/Desactivar Música</button>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">¡GAME OVER!</h2>
+        <div class="marcador" id="finMarcador">0</div>
+        <p id="finDetalle"></p>
+        <div id="zonaNombre" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="playerName" maxlength="15" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
         </div>
     </div>
-    
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="rankingList"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Encaja las piezas que caen para completar líneas horizontales. Cada línea completa desaparece y suma puntos; cada 10 líneas subes de nivel y las piezas caen más deprisa.</p>
+            <h3>MÓVIL</h3>
+            <ul>
+                <li>◀ ▶ mueven, ↻ gira, ▼ baja deprisa y ⤓ la deja caer de golpe.</li>
+                <li>Mantén pulsados ◀ ▶ ▼ para que repitan.</li>
+            </ul>
+            <h3>ORDENADOR</h3>
+            <ul>
+                <li><b>← →</b> mover · <b>↑</b> girar · <b>↓</b> caída suave · <b>espacio</b> caída instantánea.</li>
+                <li><b>P</b> o <b>Esc</b> pausa; al acabar, <b>R</b> empieza otra.</li>
+            </ul>
+            <h3>DOBLES</h3>
+            <ul>
+                <li>Jugador 1, tablero derecho: las flechas y el espacio.</li>
+                <li>Jugador 2, tablero izquierdo: <b>A D</b> mover, <b>W</b> girar, <b>S</b> caída suave, <b>Mayús</b> caída instantánea.</li>
+                <li>Gana quien más puntos tenga cuando pierdan los dos. Necesita tableta u ordenador.</li>
+            </ul>
+            <h3>PUNTOS</h3>
+            <ul><li>1, 2, 3 o 4 líneas de golpe valen 40, 100, 300 o 1200 puntos, multiplicados por el nivel más uno.</li></ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
         // --- CONFIGURACIÓN DEL JUEGO ---
         const COLS = 10;
@@ -703,15 +1023,7 @@
         const scoreSpan2 = document.getElementById('score2');
         const linesSpan2 = document.getElementById('lines2');
         const levelSpan2 = document.getElementById('level2');
-        const gameOverOverlay = document.getElementById('gameOverOverlay');
-        const pauseOverlay = document.getElementById('pauseOverlay');
-        const nameInputGroup = document.getElementById('nameInputGroup');
-        const playerNameInput = document.getElementById('playerName');
-        const highScoresList = document.getElementById('highScoresList');
-        const gameOverRankingList = document.getElementById('gameOverRankingList');
-        const submissionMessage = document.getElementById('submissionMessage');
-        const errorSubmission = document.getElementById('errorSubmission');
-        
+
         // Estado del Juego - Jugador 1
         let board;
         let currentPiece;
@@ -725,7 +1037,6 @@
         let gameLoopId;
         let isPaused = false;
         let isGameOver = false;
-        let isNameInputVisible = false;
         let isSavingScore = false;
         
         // Estado del Juego - Jugador 2
@@ -787,10 +1098,10 @@
                                     ];
                                     
                                     // --- FUNCIONES DE AUDIO ---
-                                    let audioContext;
-                                    let masterGain;
-                                    let musicNode = null;
-                                    let musicGain = null;
+        /* El contexto y los canales MÚSICA / EFECTOS son del estándar (EST); aquí
+           cuelgan dos ganancias con el 0,3 de mezcla que tenía el volumen */
+        let audioContext = null;
+        let musicGain = null, sfxGain = null;
                                     let isMusicPlaying = false;
                                     
                                     // Frecuencias exactas para la melodía original de Tetris (Korobeiniki)
@@ -844,44 +1155,25 @@
                                     let melodyTimeout = null;
                                     
                                     
-                                    // Inicialización del AudioContext sólo tras interacción del usuario
-                                    function initAudio() {
-                                        try {
-                                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                                            masterGain = audioContext.createGain();
-                                            masterGain.connect(audioContext.destination);
-                                            masterGain.gain.value = 0.3;
-                                        } catch (e) {
-                                            console.warn("Web Audio API no soportado");
-                                            audioContext = null;
-                                        }
-                                    }
-                                    
-                                    // Solo crear AudioContext tras evento user
-                                    if (!audioContext) {
-                                        document.addEventListener('pointerdown', () => {
-                                            if (!audioContext) {
-                                                initAudio();
-                                                if (!isMusicPlaying && !isGameOver) startMusic();
-                                            }
-                                        }, { once: true });
-                                        document.addEventListener('keydown', () => {
-                                            if (!audioContext) {
-                                                initAudio();
-                                                if (!isMusicPlaying && !isGameOver) startMusic();
-                                            }
-                                        }, { once: true });
-                                    }
-                                    
-                                    
+        function initAudio() {
+            if (audioContext) return true;
+            const c = EST.contexto();
+            if (!c) return false;
+            audioContext = c;
+            musicGain = c.createGain(); musicGain.gain.value = 0.3; musicGain.connect(EST.audio.busMusica);
+            sfxGain = c.createGain(); sfxGain.gain.value = 0.3; sfxGain.connect(EST.audio.busEfectos);
+            return true;
+        }
+
                                     function playSound(frequency, duration, type = 'square', volume = 0.1) {
-                                        if (!audioContext || isPaused) return; 
+                                        if (!EST.audio.efectos || isPaused || !initAudio()) return;
                                         
                                         const oscillator = audioContext.createOscillator();
                                         const gainNode = audioContext.createGain();
                                         
                                         oscillator.connect(gainNode);
-                                        gainNode.connect(masterGain);
+                                        gainNode.connect(sfxGain);
+                                        oscillator.onended = () => { oscillator.disconnect(); gainNode.disconnect(); };
                                         
                                         oscillator.type = type;
                                         oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
@@ -901,7 +1193,7 @@
                                     function playGameOverSound() { playSound(100, 1.5, 'triangle', 0.5); playSound(50, 1.5, 'triangle', 0.5); }
                                     
                                     function playMelodyNote() {
-                                        if (!audioContext || isPaused || (isGameOver && !isDoublesMode) || (isDoublesMode && isGameOver && isGameOver2)) {
+                                        if (!audioContext || !EST.audio.musica || isPaused || (isGameOver && !isDoublesMode) || (isDoublesMode && isGameOver && isGameOver2)) {
                                             return;
                                         }
                                         
@@ -918,7 +1210,8 @@
                                             const noteGain = audioContext.createGain();
                                             
                                             oscillator.connect(noteGain);
-                                            noteGain.connect(masterGain);
+                                            noteGain.connect(musicGain);
+                                            oscillator.onended = () => { oscillator.disconnect(); noteGain.disconnect(); };
                                             
                                             oscillator.type = 'square';
                                             oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
@@ -937,17 +1230,15 @@
                                         melodyTimeout = setTimeout(playMelodyNote, durationMs);
                                     }
                                     
-                                    function startMusic() {
-                                        isMusicPlaying = true;
-                                        melodyIndex = 0;
-                                        if (audioContext && audioContext.state === "suspended") {
-                                            audioContext.resume().then(playMelodyNote);
-                                        } else {
-                                            playMelodyNote();
-                                        }
-                                    }
-                                    
-                                    
+        function startMusic() {
+            // Con la música apagada no se programa nada (antes sonaba al primer toque)
+            stopMusic();
+            if (!EST.audio.musica || !initAudio()) return;
+            isMusicPlaying = true;
+            melodyIndex = 0;
+            playMelodyNote();
+        }
+
                                     function stopMusic() {
                                         isMusicPlaying = false;
                                         if (melodyTimeout) {
@@ -956,176 +1247,71 @@
                                         }
                                     }
                                     
-                                    window.toggleMusic = function() {
-                                        if (isMusicPlaying) {
-                                            stopMusic();
-                                        } else {
-                                            startMusic();
-                                        }
-                                    }
-                                    
-                                    document.addEventListener('click', () => {
-                                        if (audioContext && audioContext.state === 'suspended') {
-                                            audioContext.resume();
-                                        }
-                                        if (!isMusicPlaying && !isGameOver) {
-                                            startMusic();
-                                        }
-                                    }, { once: true });
-                                    
-                                    // --- SISTEMA DE PUNTUACIONES ALTAS (LOCAL STORAGE) ---
-                                    // Respaldo en memoria: si localStorage está bloqueado (modo
-                                    // privado, iframe con sandbox) o el contenido está corrupto, el
-                                    // JSON.parse sin protección tiraba el juego entero.
-                                    let scoresMemory = [];
-                                    const storageOK = (() => {
-                                        try {
-                                            localStorage.setItem('__t', '1');
-                                            localStorage.removeItem('__t');
-                                            return true;
-                                        } catch (e) {
-                                            return false;
-                                        }
-                                    })();
+        function alCambiarMusica(on) {
+            if (on && enPartida && !isPaused && !finMostrado) startMusic();
+            else stopMusic();
+        }
 
-                                    function escapeHtml(str) {
-                                        return String(str).replace(/[&<>"']/g, c => ({
-                                            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-                                        }[c]));
-                                    }
+        // --- RÉCORDS (estándar) ---
+        /* Misma clave y campos de siempre: los récords de antes siguen.
+           El estándar ya escapa el nombre y resiste el modo privado. */
+        const ranking = EST.ranking({ clave: 'tetrisHighScores', nombre: 'name', puntos: 'score' });
 
-                                    function getHighScores() {
-                                        if (!storageOK) return scoresMemory.slice();
-                                        try {
-                                            const scores = localStorage.getItem('tetrisHighScores');
-                                            const parsed = scores ? JSON.parse(scores) : [];
-                                            return Array.isArray(parsed) ? parsed : [];
-                                        } catch (e) {
-                                            return [];
-                                        }
-                                    }
-                                    
-                                    function saveHighScores(scores) {
-                                        scoresMemory = scores.slice();
-                                        if (!storageOK) return;
-                                        try {
-                                            localStorage.setItem('tetrisHighScores', JSON.stringify(scores));
-                                        } catch (e) {
-                                            console.warn('No se pudo guardar el ranking:', e);
-                                        }
-                                    }
-                                    
-                                    function isTopScore(newScore) {
-                                        const highScores = getHighScores();
-                                        return highScores.length < 10 || newScore > highScores[highScores.length - 1].score;
-                                    }
-                                    
-                                    // Guardar una entrada en el Top 10 incluyendo el nivel
-                                    window.submitScore = function () {
-                                        const playerNameRaw = playerNameInput.value;
-                                        const playerName = playerNameRaw.trim();
-                                        if (!playerName) {
-                                            const existingWarning = nameInputGroup.querySelector('.warning-message');
-                                            if (existingWarning) existingWarning.remove();
-                                            const warning = document.createElement('p');
-                                            warning.className = 'warning-message';
-                                            warning.textContent = 'Por favor, ingresa tu nombre.';
-                                            nameInputGroup.appendChild(warning);
-                                            setTimeout(() => {
-                                                const warning = nameInputGroup.querySelector('.warning-message');
-                                                if (warning) warning.remove();
-                                            }, 2000);
-                                            playerNameInput.focus();
-                                            return;
-                                        }
-                                        
-                                        // Determinar qué puntuación guardar
-                                        let finalScore, finalLevel, finalLines;
-                                        if (isDoublesMode) {
-                                            // Guardar la mejor puntuación
-                                            if (score >= score2) {
-                                                finalScore = score;
-                                                finalLevel = level;
-                                                finalLines = lines;
-                                            } else {
-                                                finalScore = score2;
-                                                finalLevel = level2;
-                                                finalLines = lines2;
-                                            }
-                                        } else {
-                                            finalScore = score;
-                                            finalLevel = level;
-                                            finalLines = lines;
-                                        }
-                                        
-                                        // Recuperar ranking actual
-                                        const highScores = getHighScores();
-                                        // Añadir nueva entrada con nivel alcanzado
-                                        highScores.push({
-                                            name: playerNameRaw,  
-                                            score: finalScore,
-                                            lines: finalLines,
-                                            level: finalLevel
-                                        });
-                                        // Ordenar y recortar a top10
-                                        highScores.sort((a, b) => b.score - a.score);
-                                        highScores.splice(10);
-                                        saveHighScores(highScores);
-                                        
-                                        nameInputGroup.style.display = "none";
-                                        submissionMessage.style.display = "block";
-                                        isNameInputVisible = false;
-                                        displayRanking();
-                                        displayGameOverRanking();
-                                    };
-                                    
-                                    // Mostrar listado Top 10 en la sidebar principal incluyendo nivel
-                                    function displayRanking() {
-                                        const highScores = getHighScores();
-                                        if (highScores.length === 0) {
-                                            highScoresList.innerHTML = `<li>No hay puntuaciones</li>`;
-                                            return;
-                                        }
-                                        let html = "";
-                                        highScores.forEach((entry, index) => {
-                                            html += `<li class="highscore-item">
-      <span class="highscore-rank">${index + 1}.</span>
-      <span>${escapeHtml(entry.name.substring(0, 8))}</span>
-      <span>${entry.score}</span>
-      <span>Nivel: ${entry.level || 1}</span>
-    </li>`;
-                                            });
-                                            highScoresList.innerHTML = html;
-                                        }
-                                        
-                                        // Mostrar el ranking cuando termina la partida, incluyendo el nivel alcanzado por cada jugador
-                                        function displayGameOverRanking() {
-                                            const highScores = getHighScores();
-                                            if (highScores.length === 0) {
-                                                gameOverRankingList.innerHTML = `<p>No hay puntuaciones guardadas</p>`;
-                                                return;
-                                            }
-                                            let html = "";
-                                            const currentName = playerNameInput.value.trim();
-                                            
-                                            let finalScore;
-                                            if (isDoublesMode) {
-                                                finalScore = score >= score2 ? score : score2;
-                                            } else {
-                                                finalScore = score;
-                                            }
-                                            
-                                            highScores.forEach((entry, index) => {
-                                                const isCurrentScore = entry.score === finalScore && currentName === entry.name;
-                                                const className = isCurrentScore ? "ranking-entry highlight" : "ranking-entry";
-                                                html += `<div class="${className}">
-      ${index + 1}. ${escapeHtml(entry.name)} - ${Number(entry.score) || 0} - Nivel: ${Number(entry.level) || 1}
-    </div>`;
-                                                });
-                                                gameOverRankingList.innerHTML = html;
-                                            }
-                                            
-                                            
+        let enPartida = false;
+        let finMostrado = false;
+
+        /* Barra estándar: se escribe solo lo que cambia; antes draw() reescribía
+           los tres marcadores en cada fotograma */
+        const barraCache = {};
+        function poner(el, valor) {
+            const t = String(valor);
+            if (barraCache[el.id] === t) return;
+            barraCache[el.id] = t;
+            el.textContent = t;
+        }
+
+        // En dobles se guarda la mejor de las dos, como antes
+        function mejorMarca() {
+            if (isDoublesMode && score2 > score) return { score: score2, level: level2, lines: lines2 };
+            return { score, level, lines };
+        }
+
+        function mostrarFin() {
+            if (finMostrado) return;
+            finMostrado = true;
+            releaseAllButtons();
+            const m = mejorMarca();
+            if (isDoublesMode) {
+                document.getElementById('finTitulo').textContent =
+                    score > score2 ? '🏆 GANA EL JUGADOR 1' : (score2 > score ? '🏆 GANA EL JUGADOR 2' : '🤝 EMPATE');
+                document.getElementById('finMarcador').textContent = score.toLocaleString('es-ES') + ' – ' + score2.toLocaleString('es-ES');
+                document.getElementById('finDetalle').textContent = 'J1 nivel ' + level + ' · J2 nivel ' + level2;
+            } else {
+                document.getElementById('finTitulo').textContent = '¡GAME OVER!';
+                document.getElementById('finMarcador').textContent = score.toLocaleString('es-ES');
+                document.getElementById('finDetalle').textContent = 'Nivel ' + level + ' · ' + lines + (lines === 1 ? ' línea' : ' líneas');
+            }
+            document.getElementById('playerName').value = '';
+            /* Sin foco automático: en el móvil abriría el teclado tapando el marcador */
+            document.getElementById('zonaNombre').style.display = ranking.entra(m.score) ? '' : 'none';
+            EST.abrir('capaFin');
+        }
+
+        function saveScore() {
+            const input = document.getElementById('playerName');
+            const name = input.value.trim();
+            if (name === '') { EST.avisar('Escribe tu nombre', true); input.focus(); return; }
+            const m = mejorMarca();
+            ranking.anadir({ name, score: m.score, lines: m.lines, level: m.level });
+            document.getElementById('zonaNombre').style.display = 'none';
+            EST.avisar('¡Guardado!');
+        }
+
+        function showRanking() {
+            ranking.pintar(document.getElementById('rankingList'), (e) => ' · nv ' + (Number(e.level) || 1));
+            EST.abrir('capaRanking');
+        }
+
                                             // --- FUNCIONES DEL JUEGO ---
                                             
                                             function getCurrentBeat() {
@@ -1189,9 +1375,9 @@
                                                     });
                                                 }
                                                 
-                                                scoreSpan.textContent = score;
-                                                linesSpan.textContent = lines;
-                                                levelSpan.textContent = level;
+                                                poner(scoreSpan, score);
+                                                poner(linesSpan, lines);
+                                                poner(levelSpan, level);
                                             }
                                             
                                             function draw2() {
@@ -1224,9 +1410,9 @@
                                                     });
                                                 }
                                                 
-                                                scoreSpan2.textContent = score2;
-                                                linesSpan2.textContent = lines2;
-                                                levelSpan2.textContent = level2;
+                                                poner(scoreSpan2, score2);
+                                                poner(linesSpan2, lines2);
+                                                poner(levelSpan2, level2);
                                             }
                                             
                                             function drawNextPiece() {
@@ -1501,8 +1687,9 @@
                                             
                                             // --- BUCLE PRINCIPAL DEL JUEGO ---
                                             function update(time = 0) {
-                                                if (isPaused || (!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2)) {
-                                                    gameLoopId = requestAnimationFrame(update);
+                                                if (!enPartida || isPaused || (!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2)) {
+                                                    // Antes seguía pidiendo fotogramas en pausa, en el fin y con el menú delante
+                                                    gameLoopId = null;
                                                     return;
                                                 }
                                                 
@@ -1547,6 +1734,7 @@
                                             function resetGame() {
                                                 if (gameLoopId) {
                                                     cancelAnimationFrame(gameLoopId);
+                                                    gameLoopId = null;
                                                 }
                                                 
                                                 // Restablecer estado del juego - Jugador 1
@@ -1560,7 +1748,6 @@
                                                 isSavingScore = false;
                                                 dropCounter = 0;
                                                 lastTime = 0;
-                                                isNameInputVisible = false;
                                                 
                                                 nextPiece = getRandomPiece();
                                                 spawnPiece(1);
@@ -1580,194 +1767,133 @@
                                                     spawnPiece(2);
                                                 }
                                                 
-                                                // Ocultar overlays
-                                                gameOverOverlay.style.display = 'none';
-                                                pauseOverlay.style.display = 'none';
+                                                finMostrado = false;
+                                                ['capaFin', 'capaPausa'].forEach(EST.cerrar);
                                                 document.getElementById('gameOver1Indicator').style.display = 'none';
                                                 document.getElementById('gameOver2Indicator').style.display = 'none';
-                                                
-                                                // Resetear Game Over UI
-                                                nameInputGroup.style.display = 'none';
-                                                playerNameInput.value = '';
-                                                submissionMessage.style.display = 'none';
-                                                errorSubmission.style.display = 'none';
-                                                
+                                                for (const k in barraCache) delete barraCache[k];
+
                                                 update();
                                                 if (!isMusicPlaying) {
                                                     startMusic();
                                                 }
                                             }
                                             
-                                            function gameOver(player = 1) {
-                                                if (player === 1) {
-                                                    isGameOver = true;
-                                                    document.getElementById('gameOver1Indicator').style.display = 'block';
-                                                } else {
-                                                    isGameOver2 = true;
-                                                    document.getElementById('gameOver2Indicator').style.display = 'block';
-                                                }
-                                                
-                                                // En modo individual, termina inmediatamente
-                                                if (!isDoublesMode) {
-                                                    stopMusic(); 
-                                                    playGameOverSound(); 
-                                                    
-                                                    document.getElementById('singleResults').style.display = 'block';
-                                                    document.getElementById('doublesResults').style.display = 'none';
-                                                    document.getElementById('finalScore').textContent = score;
-                                                    document.getElementById('finalLevel').textContent = level;
-                                                    
-                                                    if (isTopScore(score)) {
-                                                        nameInputGroup.style.display = 'block';
-                                                        isNameInputVisible = true;
-                                                        playerNameInput.focus();
-                                                    } else {
-                                                        isNameInputVisible = false;
-                                                    }
-                                                    
-                                                    displayGameOverRanking();
-                                                    gameOverOverlay.style.display = 'flex';
-                                                }
-                                                // En modo dobles, esperar a que ambos pierdan
-                                                else if (isGameOver && isGameOver2) {
-                                                    stopMusic(); 
-                                                    playGameOverSound(); 
-                                                    
-                                                    document.getElementById('singleResults').style.display = 'none';
-                                                    document.getElementById('doublesResults').style.display = 'block';
-                                                    document.getElementById('finalScoreP1').textContent = score;
-                                                    document.getElementById('finalLevelP1').textContent = level;
-                                                    document.getElementById('finalScoreP2').textContent = score2;
-                                                    document.getElementById('finalLevelP2').textContent = level2;
-                                                    
-                                                    const winner = score > score2 ? 'Jugador 1' : (score2 > score ? 'Jugador 2' : 'Empate');
-                                                    document.getElementById('winnerName').textContent = winner;
-                                                    
-                                                    const bestScore = Math.max(score, score2);
-                                                    if (isTopScore(bestScore)) {
-                                                        nameInputGroup.style.display = 'block';
-                                                        isNameInputVisible = true;
-                                                        playerNameInput.focus();
-                                                    } else {
-                                                        isNameInputVisible = false;
-                                                    }
-                                                    
-                                                    displayGameOverRanking();gameOverOverlay.style.display = 'flex';
-                                                }
-                                            }
-                                            
-                                            function togglePause() {
-                                                if ((!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2)) return;
-                                                
-                                                isPaused = !isPaused;
-                                                if (isPaused) {
-                                                    pauseOverlay.style.display = 'flex';
-                                                    if (melodyTimeout) clearTimeout(melodyTimeout); 
-                                                } else {
-                                                    pauseOverlay.style.display = 'none';
-                                                    if (isMusicPlaying) {
-                                                        playMelodyNote(); 
-                                                    }
-                                                }
-                                            }
-                                            
-                                            // --- MANEJO DE EVENTOS ---
-                                            
-                                            document.addEventListener('keydown', (e) => {
-                                                // Prevenir scroll
-                                                if ([' ', 'ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) {
-                                                    e.preventDefault();
-                                                }
-                                                
-                                                // 1. Manejar Pausa 'P'
-                                                if (e.key === 'p' || e.key === 'P') {
-                                                    if (!isNameInputVisible) {
-                                                        togglePause();
-                                                    }
-                                                    return;
-                                                }
-                                                
-                                                // 2. Manejar Reinicio 'R'
-                                                if (e.key === 'r' || e.key === 'R') {
-                                                    if ((!isDoublesMode && isGameOver && !isNameInputVisible) || 
-                                                    (isDoublesMode && isGameOver && isGameOver2 && !isNameInputVisible)) {
-                                                        resetGame();
-                                                    } else if (isNameInputVisible) {
-                                                        // Permitir que la R se escriba en el input
-                                                        return;
-                                                    }
-                                                    return;
-                                                }
-                                                
-                                                // 3. Manejar Enter para enviar puntuación
-                                                if ((e.key === 'Enter') && isNameInputVisible) {
-                                                    submitScore();
-                                                    return;
-                                                }
-                                                
-                                                // 4. Si está pausado o el input de nombre está visible, ignorar movimientos de juego.
-                                                if (isPaused || isNameInputVisible) {
-                                                    return;
-                                                }
-                                                
-                                                // Movimientos de juego - Jugador 1 (flechas y WASD alternativo)
-                                                if (!isGameOver) {
-                                                    switch (e.key) {
-                                                        case 'ArrowLeft':
-                                                        movePiece('left', 1);
-                                                        break;
-                                                        case 'ArrowRight':
-                                                        movePiece('right', 1);
-                                                        break;
-                                                        case 'ArrowDown':
-                                                        movePiece('down', 1);
-                                                        dropCounter = 0; 
-                                                        break;
-                                                        case 'ArrowUp':
-                                                        movePiece('rotate', 1);
-                                                        break;
-                                                        case ' ': // Espacio para Hard Drop
-                                                        hardDrop(1);
-                                                        break;
-                                                    }
-                                                }
-                                                
-                                                // Movimientos de juego - Jugador 2 (WASD) en modo dobles
-                                                if (isDoublesMode && !isGameOver2) {
-                                                    switch (e.key) {
-                                                        case 'a':
-                                                        case 'A':
-                                                        movePiece('left', 2);
-                                                        break;
-                                                        case 'd':
-                                                        case 'D':
-                                                        movePiece('right', 2);
-                                                        break;
-                                                        case 's':
-                                                        case 'S':
-                                                        movePiece('down', 2);
-                                                        dropCounter2 = 0; 
-                                                        break;
-                                                        case 'w':
-                                                        case 'W':
-                                                        movePiece('rotate', 2);
-                                                        break;
-                                                        case 'Shift': // Shift para Hard Drop jugador 2
-                                                        hardDrop(2);
-                                                        break;
-                                                    }
-                                                }
-                                                
-                                                draw();
-                                                if (isDoublesMode) {
-                                                    draw2();
-                                                }
-                                            });
-                                            
+        function gameOver(player = 1) {
+            if (player === 1) {
+                isGameOver = true;
+                document.getElementById('gameOver1Indicator').style.display = 'block';
+            } else {
+                isGameOver2 = true;
+                document.getElementById('gameOver2Indicator').style.display = 'block';
+            }
+
+            // En individual termina ya; en dobles, cuando han perdido los dos
+            if (!isDoublesMode || (isGameOver && isGameOver2)) {
+                stopMusic();
+                playGameOverSound();
+                mostrarFin();
+            }
+        }
+
+        function partidaAcabada() {
+            return (!isDoublesMode && isGameOver) || (isDoublesMode && isGameOver && isGameOver2);
+        }
+
+        function pauseGame() {
+            if (!enPartida || isPaused || finMostrado || partidaAcabada()) return;
+            isPaused = true;
+            releaseAllButtons();
+            if (melodyTimeout) { clearTimeout(melodyTimeout); melodyTimeout = null; }
+            if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
+            EST.abrir('capaPausa');
+        }
+
+        function resumeGame() {
+            if (!isPaused) return;
+            isPaused = false;
+            EST.cerrar('capaPausa');
+            // Sin esto el primer delta valdría todo el tiempo en pausa
+            lastTime = 0;
+            if (EST.audio.musica) {
+                if (isMusicPlaying) playMelodyNote(); else startMusic();
+            }
+            if (!gameLoopId) gameLoopId = requestAnimationFrame(update);
+        }
+
+        function quitToMenu() {
+            enPartida = false;
+            isPaused = false;
+            releaseAllButtons();
+            stopMusic();
+            if (gameLoopId) { cancelAnimationFrame(gameLoopId); gameLoopId = null; }
+            ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+            updateDoublesAvailability();
+            EST.mostrar('pMenu');
+        }
+
+        // --- MANEJO DE EVENTOS ---
+
+        document.addEventListener('keydown', (e) => {
+            /* Escribiendo el nombre las teclas son texto: antes la R reiniciaba
+               y el espacio soltaba la pieza mientras se escribía */
+            if (e.target instanceof HTMLInputElement) {
+                if (e.key === 'Enter') { e.preventDefault(); saveScore(); }
+                return;
+            }
+            if (!enPartida) {
+                if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                return;
+            }
+            if (finMostrado) {
+                if (e.key === 'r' || e.key === 'R') empezar();
+                return;
+            }
+
+            // Prevenir scroll
+            if ([' ', 'ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) {
+                e.preventDefault();
+            }
+
+            if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
+                if (isPaused) resumeGame(); else pauseGame();
+                return;
+            }
+
+            if (isPaused) return;
+
+            // Movimientos de juego - Jugador 1 (flechas)
+            if (!isGameOver) {
+                switch (e.key) {
+                    case 'ArrowLeft': movePiece('left', 1); break;
+                    case 'ArrowRight': movePiece('right', 1); break;
+                    case 'ArrowDown': movePiece('down', 1); dropCounter = 0; break;
+                    case 'ArrowUp': movePiece('rotate', 1); break;
+                    case ' ': hardDrop(1); break; // Espacio para Hard Drop
+                }
+            }
+
+            // Movimientos de juego - Jugador 2 (WASD) en modo dobles
+            if (isDoublesMode && !isGameOver2) {
+                switch (e.key) {
+                    case 'a': case 'A': movePiece('left', 2); break;
+                    case 'd': case 'D': movePiece('right', 2); break;
+                    case 's': case 'S': movePiece('down', 2); dropCounter2 = 0; break;
+                    case 'w': case 'W': movePiece('rotate', 2); break;
+                    case 'Shift': hardDrop(2); break; // Shift para Hard Drop jugador 2
+                }
+            }
+
+            draw();
+            if (isDoublesMode) {
+                draw2();
+            }
+        });
+
                                             // --- CONTROL TÁCTIL ---
                                             // Una acción del juego, se dispare desde teclado o botón.
                                             function doAction(act, player) {
-                                                if (isPaused || isNameInputVisible) return;
+                                                if (isPaused || !enPartida || finMostrado) return;
                                                 if (player === 1 && isGameOver) return;
                                                 if (player === 2 && (!isDoublesMode || isGameOver2)) return;
 
@@ -1846,11 +1972,12 @@
 
                                             // Si se cambia de aplicación con un botón pulsado se pierde el
                                             // evento de soltar y la pieza seguiría moviéndose sola al volver.
-                                            window.addEventListener('blur', releaseAllButtons);
-                                            document.addEventListener('visibilitychange', () => {
-                                                if (document.hidden) releaseAllButtons();
-                                                lastTime = 0;
-                                            });
+        // Irse de la aplicación pausa, además de soltar los botones
+        window.addEventListener('blur', () => { releaseAllButtons(); pauseGame(); });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { releaseAllButtons(); pauseGame(); }
+            lastTime = 0;
+        });
 
                                             // --- DISPONIBILIDAD DEL MODO DOBLES ---
                                             // Dos tableros más sus marcadores no caben en un móvil, en
@@ -1866,164 +1993,78 @@
                                                        window.innerHeight >= DOUBLES_MIN_HEIGHT;
                                             }
 
-                                            function updateDoublesAvailability() {
-                                                const btn = document.getElementById('startDoublesBtn');
-                                                const note = document.getElementById('doublesNote');
-                                                if (!btn || !note) return;
+        function updateDoublesAvailability() {
+            const btn = document.querySelector('#grpModo [data-v="dobles"]');
+            const note = document.getElementById('doublesNote');
+            if (!btn || !note) return;
 
-                                                if (doublesFits()) {
-                                                    btn.disabled = false;
-                                                    note.style.display = 'none';
-                                                } else {
-                                                    btn.disabled = true;
-                                                    note.style.display = 'block';
-                                                    note.textContent = window.innerWidth < DOUBLES_MIN_WIDTH && window.innerHeight >= DOUBLES_MIN_WIDTH
-                                                        ? 'Dobles necesita más ancho: gira el dispositivo o usa una tablet.'
-                                                        : 'Dobles necesita una pantalla mayor (tablet u ordenador).';
-                                                }
-                                            }
+            if (doublesFits()) {
+                btn.disabled = false;
+                note.style.display = 'none';
+            } else {
+                btn.disabled = true;
+                if (btn.getAttribute('aria-pressed') === 'true') EST.elegir('grpModo', 'individual');
+                // 'block' y no '': la hoja de estilos la oculta por defecto
+                note.style.display = 'block';
+                note.textContent = window.innerWidth < DOUBLES_MIN_WIDTH && window.innerHeight >= DOUBLES_MIN_WIDTH
+                    ? 'Dobles necesita más ancho: gira el dispositivo o usa una tablet.'
+                    : 'Dobles necesita una pantalla mayor (tablet u ordenador).';
+            }
+        }
 
                                             window.addEventListener('resize', updateDoublesAvailability);
                                             window.addEventListener('orientationchange', () => setTimeout(updateDoublesAvailability, 200));
 
-                                            // --- INICIALIZACIÓN ---
-                                            
-                                            // Referencias al menú
-                                            const startMenuOverlay = document.getElementById("startMenuOverlay");
-                                            const startGameBtn = document.getElementById("startGameBtn");
-                                            const startDoublesBtn = document.getElementById("startDoublesBtn");
-                                            const showHighScoresBtn = document.getElementById("showHighScoresBtn");
-                                            const showInstructionsBtn = document.getElementById("showInstructionsBtn");
-                                            const volumeSlider = document.getElementById("volumeSlider");
-                                            const gameContainer = document.getElementById("gameContainer");
-                                            const player1Section = document.getElementById("player1Section");
-                                            const player2Section = document.getElementById("player2Section");
-                                            const player1Label = document.getElementById("player1Label");
-                                            const controlsInfo = document.getElementById("controlsInfo");
-                                            
-                                            // Muestra el menú de inicio al cargar
-                                            window.onload = function () {
-                                                initAudio();
-                                                initTouchControls();
-                                                updateDoublesAvailability();
-                                                startMenuOverlay.style.display = "flex";
-                                                displayRanking(); // Actualiza puntuaciones por si acaso
-                                            };
+        // --- MENÚ ESTÁNDAR ---
+        let modoMenu = 'individual';
 
-                                            // Botones de partida: en móvil no existen las teclas P ni R
-                                            document.getElementById('pauseBtn').addEventListener('click', () => {
-                                                if (!isNameInputVisible) togglePause();
-                                            });
+        function empezar() {
+            isDoublesMode = modoMenu === 'dobles' && doublesFits();
+            const dob = isDoublesMode;
 
-                                            document.getElementById('restartBtn').addEventListener('click', () => {
-                                                if (isNameInputVisible) return;
-                                                releaseAllButtons();
-                                                resetGame();
-                                            });
+            document.getElementById('player2Section').style.display = dob ? '' : 'none';
+            document.getElementById('player1Label').style.display = dob ? '' : 'none';
+            document.getElementById('gameContainer').classList.toggle('doubles-mode', dob);
+            document.getElementById('touchP2').style.display = dob ? '' : 'none';
+            document.getElementById('touchP1Label').style.display = dob ? '' : 'none';
+            // Datos del jugador 2 en la barra: '' / 'none' y la clase pone el display
+            document.querySelectorAll('.grupo-j2').forEach(el => { el.style.display = dob ? '' : 'none'; });
+            document.querySelector('.est-barra').classList.toggle('dobles', dob);
+            document.getElementById('lblPuntos').textContent = dob ? 'J1 PUNTOS' : 'PUNTOS';
+            document.getElementById('lblLineas').textContent = dob ? 'J1 LÍNEAS' : 'LÍNEAS';
+            document.getElementById('lblNivel').textContent = dob ? 'J1 NIVEL' : 'NIVEL';
 
-                                            document.getElementById('menuBtn').addEventListener('click', () => {
-                                                releaseAllButtons();
-                                                isPaused = true;
-                                                pauseOverlay.style.display = 'none';
-                                                gameOverOverlay.style.display = 'none';
-                                                updateDoublesAvailability();
-                                                startMenuOverlay.style.display = 'flex';
-                                            });
+            ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+            EST.mostrar('pJuego');
+            enPartida = true;
+            releaseAllButtons();
+            resetGame();
+        }
 
-                                            document.getElementById('playAgainBtn').addEventListener('click', () => {
-                                                releaseAllButtons();
-                                                resetGame();
-                                            });
-                                            
-                                            // Iniciar partida individual
-                                            startGameBtn.onclick = function () {
-                                                isDoublesMode = false;
-                                                
-                                                // Configurar UI para modo individual
-                                                player2Section.style.display = 'none';
-                                                player1Label.style.display = 'none';
-                                                gameContainer.classList.remove('doubles-mode');
-                                                
-                                                // Actualizar controles info
-                                                controlsInfo.innerHTML = `
-                                                    <h3>CONTROLES:</h3>
-                                                    <p>← →: Mover | ↑: Rotar</p>
-                                                    <p>↓: Caída suave | ESPACIO: Caída instantánea</p>
-                                                    <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
-                                                `;
-                                                
-                                                document.getElementById('touchP2').style.display = 'none';
-                                                document.getElementById('touchP1Label').style.display = 'none';
+        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
 
-                                                startMenuOverlay.style.display = "none";
-                                                resetGame();
-                                            };
-                                            
-                                            // Iniciar partida dobles
-                                            startDoublesBtn.onclick = function () {
-                                                isDoublesMode = true;
-                                                
-                                                // Configurar UI para modo dobles
-                                                player2Section.style.display = 'flex';
-                                                player1Label.style.display = 'block';
-                                                gameContainer.classList.add('doubles-mode');
-                                                
-                                                // Actualizar controles info
-                                                controlsInfo.innerHTML = `
-                                                    <h3>CONTROLES:</h3>
-                                                    <p><strong>J1 (Derecha):</strong> ← →: Mover | ↑: Rotar | ↓: Caída suave | ESPACIO: Caída instantánea</p>
-                                                    <p><strong>J2 (Izquierda):</strong> A D: Mover | W: Rotar | S: Caída suave | SHIFT: Caída instantánea</p>
-                                                    <p>P: Pausa/Música | **R: Reiniciar Juego**</p>
-                                                `;
-                                                
-                                                document.getElementById('touchP2').style.display = 'flex';
-                                                document.getElementById('touchP1Label').style.display = 'block';
+        EST.grupo('grpModo', (v) => { modoMenu = v; });
+        btn('btnJugar', empezar);
+        btn('btnPausa', pauseGame);
+        btn('btnSeguir', resumeGame);
+        btn('btnAbandonar', quitToMenu);
+        btn('btnGuardar', saveScore);
+        btn('btnOtra', empezar);
+        btn('btnMenuFin', quitToMenu);
+        btn('btnRanking', showRanking);
+        btn('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+        btn('btnBorrarRanking', () => {
+            if (!confirm('¿Borrar todos los récords?')) return;
+            ranking.borrar();
+            showRanking();
+        });
+        btn('btnAyuda', () => EST.abrir('capaAyuda'));
+        btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
 
-                                                startMenuOverlay.style.display = "none";
-                                                resetGame();
-                                            };
-                                            
-                                            // Ver puntuaciones
-                                            showHighScoresBtn.onclick = function () {
-                                                const highScores = getHighScores();
-                                                const highScoresMenuList = document.getElementById('highScoresMenuList');
-                                                
-                                                if (highScores.length === 0) {
-                                                    highScoresMenuList.innerHTML = '<p style="color: #e0f7fa;">No hay puntuaciones aún.</p>';
-                                                } else {
-                                                    let html = "";
-                                                    highScores.forEach((entry, i) => {
-                                                        html += `<div class="ranking-entry">
-                ${i + 1}. ${escapeHtml(entry.name.substring(0, 8))} - ${Number(entry.score) || 0} puntos - Nivel: ${Number(entry.level) || 1}
-            </div>`;
-                                                        });
-                                                        highScoresMenuList.innerHTML = html;
-                                                    }
-                                                    
-                                                    document.getElementById('highScoresOverlay').style.display = 'flex';
-                                                };
-                                                
-                                                // Instrucciones del juego
-                                                showInstructionsBtn.onclick = function () {
-                                                    document.getElementById('instructionsOverlay').style.display = 'flex';
-                                                };
-                                                
-                                                // Funciones para cerrar los menús
-                                                function closeHighScoresMenu() {
-                                                    document.getElementById('highScoresOverlay').style.display = 'none';
-                                                }
-                                                
-                                                function closeInstructionsMenu() {
-                                                    document.getElementById('instructionsOverlay').style.display = 'none';
-                                                }
-                                                
-                                                // Volumen
-                                                volumeSlider.oninput = function () {
-                                                    if (masterGain) {
-                                                        masterGain.gain.value = volumeSlider.value / 100;
-                                                    }
-                                                };
-                                                
-                                            </script>
-                                        </body>
-                                        </html>
+        initTouchControls();
+        updateDoublesAvailability();
+        EST.iniciar({ claveAudio: 'tetrisAudio', alCambiarMusica });
+    </script>
+
+</body>
+</html>

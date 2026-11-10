@@ -3,29 +3,322 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Tanks! - Juego de estrategia de tanques</title>
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Tanks! - Juego de Tanques</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body { height: 100%; }
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
 
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            display: flex;
-            flex-direction: column; /* MODIFICADO - Para colocar el HUD arriba */
-            justify-content: center;
-            align-items: center;
-            /* dvh tiene en cuenta la barra de direcciones del móvil */
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            overscroll-behavior: none;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE TANKS! ---------- */
+        /* El campo es apaisado (800×600): la partida usa todo el ancho */
+        #pJuego { max-width: 1000px; }
+        #gameStage { margin-top: 6px; }
+        .est-barra #levelName { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #twoPlayersNote { color: #ff8080; font-size: 0.7rem; margin: 8px 2px 0; line-height: 1.5; display: none; }
+
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+            #gameStage { margin-top: 3px; }
         }
 
         /* Zona flexible que reparte la altura entre el HUD y el tablero */
@@ -38,51 +331,13 @@
             justify-content: center;
         }
 
-        /* MODIFICADO - Nuevo contenedor para el HUD */
-        #hudContainer {
-            width: 100%;          /* antes 810px fijos: forzaba el desbordamiento */
-            max-width: 810px;
-            flex: 0 0 auto;
-            background: #111;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px 10px 0 0;
-            border: 5px solid #444;
-            border-bottom: none;
-            display: none;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-        }
-        
-        .hud-section {
-            text-align: center;
-        }
-        
-        #levelName {
-            font-size: 24px;
-            color: #ffd700;
-            margin-bottom: 5px;
-        }
-        
-        #playerInfo, #enemyInfo {
-            font-size: 18px;
-        }
-        
-        #playerLives {
-            font-size: 22px;
-            color: #ff6b6b;
-            letter-spacing: 3px;
-        }
-        
         /* Los canvas conservan su buffer de 800x600 (las coordenadas del juego
            no cambian) y se escalan para caber. El de rastros va en flujo y
            marca el tamaño; el principal se superpone encima. */
         #gameContainer {
             background: #c2b280; /* MODIFICADO - Color de fondo de arena */
             border: 5px solid #444;
-            border-radius: 0 0 10px 10px; /* MODIFICADO */
+            border-radius: 10px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             position: relative;
             display: none;
@@ -115,297 +370,30 @@
         }
         
         
-        #menu {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            padding: 40px;
-            border-radius: 15px;
-            text-align: center;
-            pointer-events: all;
-            max-height: 90vh;
-            overflow-y: auto;
-            z-index: 10;
-            display: block;
-            
-        }
-        
-        #menu h1 {
-            font-size: 48px;
-            color: #ffd700;
-            margin-bottom: 30px;
-            text-shadow: 3px 3px 6px rgba(0,0,0,1);
-        }
-        
-        .menu-button {
-            display: block;
-            width: 250px;
-            padding: 15px;
-            margin: 15px auto;
-            font-size: 20px;
-            font-weight: bold;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            pointer-events: all;
-        }
-        
-        .menu-button:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(102,126,234,0.6);
-        }
-        
-        .ranking-button {
-            background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
-            color: #000;
-        }
-        
-        #instructions, #ranking, #settings {
-            display: none;
-        }
-        
-        #mainMenu {
-            display: block;
-        }
-        
-        
-        /* Estilos de las secciones del menú (sin cambios) */
-        #instructions { max-width: 700px; text-align: left; font-size: 15px; line-height: 1.8; color: #fff; }
-        #instructions h2 { color: #ffd700; margin: 20px 0 10px 0; font-size: 22px; border-bottom: 2px solid #ffd700; padding-bottom: 5px; }
-        #instructions p, #instructions ul { margin-bottom: 15px; }
-        #instructions ul { margin-left: 20px; }
-        #instructions li { margin-bottom: 8px; }
-        /*#ranking h2, #settings h2 { color: #ffd700; margin-bottom: 20px; text-align: center; font-size: 32px; }
-        #rankingList { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 20px; }*/
-        #ranking { 
-            max-width: 650px; 
-            width: 95%; 
-            text-align: left; 
-        }
-        
-        .ranking-item { 
-            display: grid;             
-            grid-template-columns: 60px 1fr 120px 120px;
-            gap: 10px; 
-            align-items: center;
-            padding: 15px 20px; 
-            margin: 10px 0; 
-            background: rgba(0,0,0,0.5); 
-            border-radius: 10px; 
-            font-size: 18px;
-            border: 2px solid transparent;
-        }
-        
-        .ranking-item.top3 {
-            background: linear-gradient(135deg, rgba(255,215,0,0.25) 0%, rgba(255,165,0,0.25) 100%);
-            border: 2px solid #ffd700;
-            padding: 18px 25px;
-        }
-        
-        
-        .rank-position {
-            color: #ffd700;
-            font-weight: bold;
-            font-size: 28px;
-            text-align: center;
-        }
-        
-        .rank-name {
-            color: #fff;
-            font-size: 20px;
-            font-weight: bold;
-            overflow: visible;
-            text-overflow: clip;
-            white-space: normal;
-            display: block;
-            min-width: 150px;
-        }
-        
-        
-        .rank-score {
-            color: #4af;
-            font-weight: bold;
-            font-size: 24px;
-            text-align: right;
-        }
-        
-        #settings { max-width: 500px; text-align: left; }
-        .setting-item { margin: 25px 0; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 10px; }
-        .setting-label { color: #fff; font-size: 18px; margin-bottom: 10px; display: block; }
-        .volume-control { width: 100%; height: 8px; border-radius: 5px; background: rgba(255,255,255,0.2); outline: none; -webkit-appearance: none; }
-        .volume-control::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #ffd700; cursor: pointer; }
-        .volume-control::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #ffd700; cursor: pointer; border: none; }
-        .volume-value { color: #4af; font-size: 20px; font-weight: bold; text-align: center; margin-top: 5px; }
-        .back-button { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        
-        #pauseOverlay {
-            display: none;
+/* ================= CONTROLES TÁCTILES =================
+           El tanque se mueve con el chasis (cuatro direcciones) mientras la
+           torreta apunta de forma independiente, que con ratón es apuntar y
+           con el dedo es tocar el punto del campo al que quieres disparar.
+           Por eso aquí conviven las dos cosas: cruceta para el chasis y
+           puntería directa sobre el campo, que es como funciona el ratón. */
+        #touchControls {
             position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-            pointer-events: all;
-        }
-        #pauseMenu {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95);
-            padding: 40px; border-radius: 15px; text-align: center;
-        }
-        #pauseMenu h2 { color: #ffd700; font-size: 36px; margin-bottom: 30px; }
-        #nameModal {
+            inset: 0;
             display: none;
-            position: absolute;
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.95); padding: 40px; border-radius: 15px; text-align: center;
-            pointer-events: all; z-index: 200;
-        }
-        #nameModal h2 { color: #ffd700; font-size: 32px; margin-bottom: 20px; }
-        #nameModal input {
-            width: 300px; padding: 15px; font-size: 20px; border: 2px solid #ffd700; border-radius: 8px;
-            background: rgba(255,255,255,0.1); color: #fff; text-align: center; margin: 20px 0;
-        }
-        #nameModal input::placeholder { color: rgba(255,255,255,0.5); }
-        
-        
-        #difficultySelect {
-            width: 280px; 
-            padding: 15px; 
-            font-size: 18px; 
-            cursor: pointer;
-            background: rgba(70, 70, 200, 0.9);
-            color: white;
-            border: 2px solid #5555ff;
-            border-radius: 8px;
-            font-weight: bold;
-            text-align: center;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-        }
-        
-        #difficultySelect:hover {
-            background: rgba(90, 90, 220, 1);
-            transform: scale(1.05);
-        }
-        
-        #difficultySelect option {
-            background: rgba(30, 30, 80, 0.95);
-            color: white;
+            justify-content: space-between;
+            align-items: flex-end;
             padding: 10px;
-            font-weight: bold;
-        }
-        
-        #difficultySelect option:hover {
-            background: rgba(70, 70, 200, 1);
-        }
-        
-        #difficultySelect option:checked {
-            background: rgba(70, 70, 200, 1);
-            color: #ffd700;
-        }
-        
-
-        /* ================= CONTROLES TÁCTILES =================
-           El tanque mueve el chasis con la cruceta mientras la torreta apunta
-           de forma independiente: con ratón se apunta moviéndolo, y con el dedo
-           se toca el punto del campo al que quieres disparar.
-
-           Los botones van FUERA del campo de juego. Superpuestos tapaban
-           justamente la zona a la que ibas a apuntar, que en este juego es
-           donde disparas, así que el problema no era estético.
-
-           En apaisado se colocan a los lados, aprovechando las franjas negras
-           que sobran a izquierda y derecha (el campo es 4:3 y la pantalla es
-           mucho más alargada). En vertical se colocan debajo. */
-        #playArea {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex: 1 1 auto;
-            min-height: 0;
-            width: 100%;
+            pointer-events: none;
+            z-index: 5;
         }
 
-        .pad-col {
-            flex: 0 0 auto;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
+        body.touch-device #gameContainer.active #touchControls { display: flex; }
 
-        body.touch-device .pad-col.usada { display: flex; }
-
-        /* Zona de arrastre: el chasis va en la dirección hacia la que empujas
-           el dedo, como el mando de Pac-Man, pero encerrado en su propio círculo
-           para que no se pise con la puntería sobre el campo. */
-        .stick {
-            position: relative;
-            width: 132px;
-            height: 132px;
-            border-radius: 50%;
-            border: 2px dashed rgba(255, 255, 255, 0.35);
-            background: rgba(255, 255, 255, 0.06);
+        .touch-pad {
             display: grid;
-            place-items: center;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .stick-knob {
-            width: 58px;
-            height: 58px;
-            border-radius: 50%;
-            background: rgba(74, 144, 226, 0.55);
-            border: 2px solid rgba(255, 255, 255, 0.85);
-            pointer-events: none;
-            transition: transform 0.09s ease-out;
-        }
-
-        .stick.p2 .stick-knob { background: rgba(231, 76, 60, 0.55); }
-
-        /* Mientras se arrastra no interesa suavizado: debe pegarse al dedo */
-        .stick.activo .stick-knob { transition: none; }
-
-        .stick-label {
-            position: absolute;
-            bottom: -16px;
-            font-size: 10px;
-            color: #fff;
-            text-shadow: 1px 1px 2px #000;
-            pointer-events: none;
-        }
-
-        /* Vertical: el mando abajo a la izquierda, sin tapar el campo */
-        @media (max-aspect-ratio: 1/1) {
-            #playArea {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: 1fr auto;
-                grid-template-areas: "campo campo" "izq der";
-                gap: 8px;
-            }
-            #gameStage { grid-area: campo; min-width: 0; }
-            #colIzq { grid-area: izq; }
-            #colDer { grid-area: der; }
-            .pad-col { flex-direction: row; justify-content: center; }
-        }
-
-        @media (max-height: 420px) {
-            .stick { width: 104px; height: 104px; }
-            .stick-knob { width: 46px; height: 46px; }
+            grid-template-columns: repeat(3, auto);
+            gap: 6px;
+            pointer-events: auto;
         }
 
         .touch-pad .spacer { width: 54px; height: 54px; }
@@ -415,7 +403,7 @@
             height: 54px;
             border-radius: 50%;
             border: 2px solid rgba(255, 255, 255, 0.75);
-            background: rgba(255, 255, 255, 0.10);
+            background: rgba(0, 0, 0, 0.42);
             color: #fff;
             font-family: inherit;
             font-size: 19px;
@@ -431,6 +419,15 @@
         .touch-pad.p2 .touch-btn { border-color: rgba(231, 76, 60, 0.9); color: #ffb0a6; }
         .touch-pad.p1 .touch-btn { border-color: rgba(74, 144, 226, 0.9); color: #b9d8ff; }
 
+        .touch-btn.fire {
+            width: 76px;
+            height: 76px;
+            font-size: 12px;
+            border-color: rgba(255, 200, 0, 0.9);
+            color: #ffd700;
+            background: rgba(60, 45, 0, 0.45);
+        }
+
         .touch-btn:active { background: rgba(255, 255, 255, 0.28); }
 
         .pad-label {
@@ -441,25 +438,6 @@
             text-shadow: 1px 1px 2px #000;
             pointer-events: none;
         }
-
-        /* El botón de pausa vive en la barra superior, que ya está fuera del
-           campo, en lugar de flotar sobre una esquina del tablero. */
-        #pauseTouchBtn {
-            display: none;
-            width: 40px;
-            height: 36px;
-            border-radius: 8px;
-            border: 2px solid rgba(255,255,255,0.75);
-            background: rgba(0,0,0,0.35);
-            color: #fff;
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            touch-action: manipulation;
-            flex: 0 0 auto;
-        }
-
-        body.touch-device #pauseTouchBtn { display: block; }
 
         #aimHint {
             position: absolute;
@@ -480,219 +458,516 @@
 
         body.touch-device #aimHint.visible { display: block; }
 
-        #twoPlayersNote {
-            color: #ff8a80;
-            font-size: 13px;
-            margin: -6px auto 12px;
-            max-width: 280px;
-            text-align: center;
-            display: none;
-            line-height: 1.5;
-        }
-
-        #btn2P:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            filter: grayscale(0.85);
-        }
-
-        /* En táctil el :hover se queda pegado tras tocar */
-        @media (hover: none) {
-            .menu-button:hover { transform: none; }
-        }
-
         @media (max-width: 720px), (max-height: 500px) {
-            #hudContainer { padding: 4px 8px; font-size: 12px; border-width: 3px; }
-            #levelName { font-size: 13px; margin-bottom: 2px; }
-            #playerInfo, #enemyInfo { font-size: 11px; }
-            #playerLives { font-size: 14px; letter-spacing: 1px; }
-            #difficultyDisplay { font-size: 10px !important; }
             #gameContainer { border-width: 3px; }
-
-            #menu { padding: 18px 14px; width: 94%; max-width: 380px; }
-            #menu h1 { font-size: 26px; margin-bottom: 16px; }
-            .menu-button { width: 100%; max-width: 260px; padding: 11px; font-size: 15px; margin: 8px auto; }
-
             .touch-btn { width: 46px; height: 46px; font-size: 16px; }
             .touch-pad .spacer { width: 46px; height: 46px; }
+            .touch-btn.fire { width: 64px; height: 64px; font-size: 11px; }
         }
     </style>
 </head>
 <body>
-    <div id="hudContainer">
-        <div class="hud-section" id="playerInfo">
-            <div>JUGADOR 1</div>
-            <div id="playerLives">❤️❤️❤️</div>
-        </div>
-        <div class="hud-section" id="levelInfo">
-            <div id="levelName">NIVEL 1: BAUTISMO DE FUEGO</div>
-            <div id="difficultyDisplay" style="font-size: 14px; color: #ffd700; margin-top: 3px;">🎖️ RECLUTA</div>
-            <div id="totalScore">PUNTOS: 0</div>
-            <div style="font-size: 16px; color: #4af; margin-top: 5px;">
-                ⏱️ <span id="levelTime">0:00</span>
-            </div>
-        </div>
-        
-        <div class="hud-section" id="enemyInfo">
-            <div>PRÓXIMA VIDA</div>
-            <div id="lifeCounter">0/10</div>
-        </div>
 
-        <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
-        
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">TANKS<span>!</span></div>
+        <p class="est-lema">17 niveles de batalla en el desierto</p>
+
+        <fieldset class="est-grupo">
+            <legend>DIFICULTAD</legend>
+            <div class="opciones iguales" id="grpDif">
+                <button class="opcion" type="button" data-v="recluta" aria-pressed="true">🎖️ RECLUTA<span class="sub">fácil · ×1</span></button>
+                <button class="opcion" type="button" data-v="oficial" aria-pressed="false">⭐ OFICIAL<span class="sub">medio · ×1,5</span></button>
+                <button class="opcion" type="button" data-v="coronel" aria-pressed="false">🏅 CORONEL<span class="sub">difícil · ×2</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>JUGADORES</legend>
+            <div class="opciones iguales" id="grpJugadores">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">1 JUGADOR<span class="sub">solo</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2 JUGADORES<span class="sub">a la vez</span></button>
+            </div>
+            <div id="twoPlayersNote"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
     </div>
-    
-    <div id="playArea">
+</section>
 
-        <!-- Mando izquierdo: jugador 1 (o jugador 2 cuando hay dos) -->
-        <div class="pad-col" id="colIzq">
-            <div class="stick" id="stickP1" role="application" aria-label="Mover el tanque">
-                <div class="stick-knob"></div>
-                <div class="stick-label" id="labelP1" style="display:none;">J1</div>
-            </div>
-        </div>
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="totalScore">0</b><span>PUNTOS</span></div>
+        <div class="dato"><b id="playerLives">3</b><span>VIDAS</span></div>
+        <div class="dato"><b id="levelNum">1</b><span id="levelName">NIVEL</span></div>
+        <div class="dato"><b id="levelTime">0:00</b><span>TIEMPO</span></div>
+        <div class="dato"><b id="lifeCounter">0/10</b><span>VIDA EXTRA</span></div>
+        <div class="hueco"></div>
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
 
     <div id="gameStage">
     <div id="gameContainer">
         <canvas id="tracksCanvas" width="800" height="600"></canvas>
         <canvas id="gameCanvas" width="800" height="600"></canvas>
 
-        <div id="aimHint">Arrastra el mando para moverte · toca el campo para disparar</div>
-        
-        <div id="pauseOverlay">
-            <div id="pauseMenu">
-                <h2>⏸️ PAUSA</h2>
-                
-                <div class="setting-item" style="margin: 20px 0;">
-                    <label class="setting-label">🔊 Efectos</label>
-                    <input type="range" class="volume-control" id="pauseVolumeSlider" min="0" max="100" value="50">
-                    <div class="volume-value"><span id="pauseVolumeDisplay">50</span>%</div>
-                </div>
-                
-                <div class="setting-item" style="margin: 20px 0;">
-                    <label class="setting-label">🎵 Música</label>
-                    <input type="range" class="volume-control" id="pauseMusicSlider" min="0" max="100" value="30">
-                    <div class="volume-value"><span id="pauseMusicDisplay">30</span>%</div>
-                </div>
-                
-                <button class="menu-button" onclick="resumeGame()">CONTINUAR</button>
-                <button class="menu-button back-button" onclick="quitToMenu()">SALIR AL MENÚ</button>
-            </div>
-        </div>
-        
-        
-        <div id="nameModal">
-            <h2>🏆 ¡NUEVO RÉCORD!</h2>
-            <p style="color: #fff; font-size: 18px; margin-bottom: 10px;">Has entrado en el TOP 10</p>
-            <p style="color: #4af; font-size: 24px; font-weight: bold; margin-bottom: 20px;">Puntuación: <span id="finalScoreDisplay">0</span></p>
-            <input type="text" id="playerNameInput" maxlength="15" placeholder="Introduce tu nombre">
-            <button class="menu-button" onclick="saveScore()">GUARDAR</button>
-        </div>
-        
-        
-    </div>
-    </div>
+        <div id="aimHint">Toca el campo para apuntar y disparar</div>
 
-        <!-- Mando derecho: solo se usa en la partida de dos jugadores -->
-        <div class="pad-col" id="colDer">
-            <div class="stick p2" id="stickP2" role="application" aria-label="Mover el tanque del jugador 2">
-                <div class="stick-knob"></div>
-                <div class="stick-label">J2</div>
+        <div id="touchControls">
+            <div class="touch-pad p1" id="padP1">
+                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="1" data-dir="up" aria-label="Arriba">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="1" data-dir="left" aria-label="Izquierda">◀</button>
+                <button class="touch-btn" type="button" data-p="1" data-dir="down" aria-label="Abajo">▼</button>
+                <button class="touch-btn" type="button" data-p="1" data-dir="right" aria-label="Derecha">▶</button>
             </div>
-        </div>
 
+            <div class="touch-pad p2" id="padP2" style="display:none;">
+                <div class="pad-label">J2</div>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
+                <div class="spacer"></div>
+                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
+                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
+            </div>
+
+            <div class="touch-pad" id="padFire">
+                <button class="touch-btn fire" type="button" data-fire="1" aria-label="Disparar">FUEGO</button>
+            </div>
+        </div>
     </div>
-    <div id="menu">
-        <div id="mainMenu">
-            <h1>🎮 TANKS! 🎮</h1>
-            <div style="margin: 30px 0;">
-                <h3 style="color: #ffd700; margin-bottom: 15px;">DIFICULTAD</h3>
-                <select id="difficultySelect" class="menu-button" style="width: 280px; padding: 15px; font-size: 18px; cursor: pointer;">
-                    <option value="recluta">🎖️ RECLUTA (Fácil)</option>
-                    <option value="oficial">⭐ OFICIAL (Medio)</option>
-                    <option value="coronel">🏅 CORONEL GENERAL (Difícil)</option>
-                </select>
-            </div>
-            
-            <button class="menu-button" onclick="startGame(1)">1 JUGADOR</button>
-            <button class="menu-button" id="btn2P" onclick="startGame(2)">2 JUGADORES</button>
-            <div id="twoPlayersNote"></div>
-            <button class="menu-button" onclick="showInstructions()">INSTRUCCIONES</button>
-            <button class="menu-button ranking-button" onclick="showRanking()">🏆 RANKING TOP 10</button>
-            <button class="menu-button" onclick="showSettings()">⚙️ AJUSTES</button>
-        </div>
-        <div id="instructions">
-            <h1>📋 INSTRUCCIONES</h1>
-            <h2>🎯 Objetivo del Juego</h2>
-            <p>Destruye todos los tanques enemigos en cada nivel para avanzar. Gana vidas extra y sobrevive a todos los niveles para conseguir la máxima puntuación.</p>
-            <h2>🕹️ Controles</h2>
-            <p><strong style="color: #4a90e2;">JUGADOR 1 (Azul):</strong></p>
-            <ul style="margin-left: 20px;">
-                <li><strong>Modo Individual:</strong> W/A/S/D para mover, Ratón para apuntar, Clic Izquierdo para disparar.</li>
-                <li><strong>Modo Dobles:</strong> Flechas para mover, Ratón para apuntar, Clic Izquierdo para disparar.</li>
-            </ul>
-            <p><strong style="color: #e74c3c;">JUGADOR 2 (Rojo) - Solo en Modo Dobles:</strong></p>
-            <ul style="margin-left: 20px;">
-                <li>W/A/S/D para mover</li>
-                <li>G para rotar cañón a la izquierda (antihorario)</li>
-                <li>H para rotar cañón a la derecha (horario)</li>
-                <li>Espacio para disparar</li>
-            </ul>
-            
-            <p><strong>GENERAL:</strong> Tecla P para pausar.</p>
-            <h2>💫 Mecánicas de Juego</h2>
-            <ul>
-                <li><strong>Vidas y Salud:</strong> Empiezas con 3 vidas. Cada vida tiene 3 puntos de salud (HP). Perder toda la salud te cuesta una vida. El juego termina si pierdes todas tus vidas.</li>
-                <li><strong>Invencibilidad:</strong> Al empezar un nivel o reaparecer, eres invencible y no puedes disparar durante 5 segundos.</li>
-                <li><strong>Bonus de Vida Extra:</strong> Cada 10 enemigos destruidos, aparecerá un corazón ❤️. ¡Recógelo para ganar una vida!</li>
-                <li><strong>Rebotes de Balas:</strong> Las balas rebotan en las paredes y en los muros indestructibles (grises).</li>
-            </ul>
-            <h2>📊 Sistema de Puntuación</h2>
-            <ul>
-                <li><strong>Destruir enemigos:</strong> 100 puntos base</li>
-                <li><strong>Multiplicador de dificultad:</strong>
-                    <ul style="margin-left: 20px;">
-                        <li>🎖️ Recluta: x1 (puntuación normal)</li>
-                        <li>⭐ Oficial: x1.5 (50% más puntos)</li>
-                        <li>🏅 Coronel General: x2 (doble puntuación)</li>
-                    </ul>
-                </li>
-                <li><strong>⏱️ BONUS POR TIEMPO:</strong>
-                    <ul style="margin-left: 20px;">
-                        <li>Menos de 30 segundos: 500 puntos de bonus en Recluta, 750 en Oficial y 1000 puntos en Coronel General</li>
-                        <li>Entre 30-60 segundos: bonus decreciente</li>
-                        <li>Más de 1 minutos: sin bonus</li>
-                        <li>El tiempo pausado NO cuenta</li>
-                    </ul>
-                </li>
-                <li><strong>💰 Estrategia:</strong> Completa los niveles rápido para maximizar tu puntuación</li>
-            </ul>
-            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
-        </div>
-        <div id="ranking">
-            <h2>🏆 RANKING TOP 10</h2>
-            <div id="rankingList"></div>
-            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
-        </div>
-        <div id="settings">
-            <h2>⚙️ AJUSTES</h2>
-            
-            <div class="setting-item">
-                <label class="setting-label">🔊 Volumen de Efectos de Sonido</label>
-                <input type="range" class="volume-control" id="volumeSlider" min="0" max="100" value="50">
-                <div class="volume-value"><span id="volumeDisplay">50</span>%</div>
-            </div>
-            
-            <div class="setting-item">
-                <label class="setting-label">🎵 Volumen de Música</label>
-                <input type="range" class="volume-control" id="musicSlider" min="0" max="100" value="30">
-                <div class="volume-value"><span id="musicDisplay">30</span>%</div>
-            </div>
-            
-            <button class="menu-button back-button" onclick="showMainMenu()">VOLVER</button>
-        </div>
-        
     </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj del nivel está parado.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
+        <div class="marcador" id="finalScoreDisplay">0</div>
+        <p id="finDetalle"></p>
+        <div id="nameModal" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="playerNameInput" maxlength="15" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="rankingList"></div>
+        <p style="font-size:0.7rem;">nv = nivel · R recluta · O oficial · C coronel general</p>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Destruye todos los tanques enemigos de cada nivel para pasar al siguiente. Son 17.</p>
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> la cruceta mueve el tanque; toca el campo donde quieras apuntar y disparar. También vale el botón FUEGO.</li>
+                <li><b>Ordenador, 1 jugador:</b> <b>W A S D</b> para moverte, el ratón para apuntar y clic para disparar.</li>
+                <li><b>Ordenador, 2 jugadores:</b> el azul se mueve con las flechas y apunta con el ratón; el rojo, <b>W A S D</b>, gira el cañón con <b>G / H</b> y dispara con <b>espacio</b>.</li>
+                <li><b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+            <h3>VIDAS</h3>
+            <ul>
+                <li>Empiezas con 3 vidas, de 3 puntos de salud cada una.</li>
+                <li>Al empezar un nivel o reaparecer eres invencible 5 segundos, pero no puedes disparar.</li>
+                <li>Cada 10 enemigos sale un corazón ❤️: cógelo y ganas una vida.</li>
+                <li>Las balas rebotan en las paredes y en los muros grises.</li>
+            </ul>
+            <h3>PUNTOS</h3>
+            <ul>
+                <li>Cada enemigo, 100 puntos, ×1,5 en Oficial y ×2 en Coronel general.</li>
+                <li><b>Bonus por rapidez:</b> nivel en menos de 30 s, 500 / 750 / 1000 según la dificultad; de 30 a 60 s, menos; más de un minuto, nada. El tiempo en pausa no cuenta.</li>
+            </ul>
+            <h3>DOS JUGADORES</h3>
+            <ul><li>En el móvil hacen falta dos crucetas a la vez: solo cabe en tableta u ordenador.</li></ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -720,8 +995,7 @@
         let totalPausedTime = 0;
         let pauseStartTime = 0;
         
-        let masterVolume = 0.5;
-        let musicVolume = 0.3;
+        const masterVolume = 0.5;   // el valor por defecto que tenía el deslizador
         
         
         // NUEVO - Lógica de vidas y bonus
@@ -1350,11 +1624,18 @@
     
     let players=[],enemies=[],allTanks=[],obstacles=[],particles=[],lastTime=0;
     
-    const audioContext=new(window.AudioContext||window.webkitAudioContext)();
+    /* Audio por los canales del estándar: efectos por EFECTOS, la marcha por
+       MÚSICA. Antes el contexto se creaba al cargar (y nacía suspendido) y
+       todo iba directo a los altavoces con el volumen de los deslizadores. */
+    let audioContext = null;
     function playSound(t){
+        if (!EST.audio.efectos) return;
+        audioContext = EST.contexto();
+        if (!audioContext) return;
         const o=audioContext.createOscillator(),g=audioContext.createGain();
         o.connect(g);
-        g.connect(audioContext.destination);
+        g.connect(EST.audio.busEfectos);
+        o.onended = () => { try { o.disconnect(); g.disconnect(); } catch (e) {} };
         if(t==='shoot'){
             o.frequency.value=200;
             g.gain.setValueAtTime(.1*masterVolume,audioContext.currentTime);
@@ -1386,6 +1667,11 @@
         console.log('🎵 PLAY: musicGain existe:', !!musicGain);
         console.log('🎵 PLAY: musicTimeoutId:', musicTimeoutId);
         
+        // Con la música apagada no se arranca nada
+        if (!EST.audio.musica) return;
+        audioContext = EST.contexto();
+        if (!audioContext) return;
+
         // Protección reforzada: si ya está sonando, no hacer nada
         if (backgroundMusicPlaying) {
             console.log('🎵 PLAY: ABORTADO - Música ya está reproduciéndose');
@@ -1406,8 +1692,8 @@
         
         // Crear ganancia para control de volumen
         musicGain = audioContext.createGain();
-        musicGain.gain.value = masterVolume * 0.15;
-        musicGain.connect(audioContext.destination);
+        musicGain.gain.value = 0.15;   // lo que daba el deslizador de música por defecto
+        musicGain.connect(EST.audio.busMusica);
         console.log('🎵 PLAY: musicGain creado y conectado');
         
         // Melodía principal (estilo marcha militar)
@@ -1518,10 +1804,10 @@
     }
     
     
-    function updateMusicVolume() {
-        if (musicGain) {
-            musicGain.gain.value = musicVolume * 0.5; // Usa musicVolume en lugar de masterVolume
-        }
+    /* Encender o apagar la música a mitad de partida */
+    function alCambiarMusica(on) {
+        if (on && gameState === GAME_STATES.PLAYING) playBackgroundMusic();
+        else stopBackgroundMusic();
     }
     
     
@@ -2318,7 +2604,19 @@
     
     const keys = {};
     
+    const enPartida = () => document.getElementById('pJuego').classList.contains('activa');
+
     document.addEventListener('keydown', e => {
+        /* Escribiendo el nombre, las teclas son texto: antes la P pausaba y
+           WASD movía el tanque mientras se escribía */
+        if (e.target instanceof HTMLInputElement) {
+            if (e.key === 'Enter') { e.preventDefault(); saveScore(); }
+            return;
+        }
+        if (!enPartida()) {
+            if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+            return;
+        }
         // Sin esto las flechas y el espacio hacen scroll de la página
         if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key) &&
             !(e.target instanceof HTMLInputElement)) {
@@ -2327,7 +2625,7 @@
 
         keys[e.key.toLowerCase()] = true;
         
-        if (e.key.toLowerCase() === 'p') {
+        if (e.key.toLowerCase() === 'p' || e.key === 'Escape') {
             if (gameState === GAME_STATES.PLAYING) pauseGame();
             else if (gameState === GAME_STATES.PAUSED) resumeGame();
             return;
@@ -2431,74 +2729,12 @@
     // Apuntar con el dedo sobre el campo es el equivalente exacto del ratón:
     // la torreta gira hacia el punto tocado. Tocar dispara, y arrastrar sigue
     // apuntando sin gastar más disparos, igual que mover el ratón.
-    /* Aplica un vector de empuje a los controles de un jugador. */
-    function aplicarVector(playerIndex, dx, dy) {
+    const dirKeys = { up: 'up', down: 'down', left: 'left', right: 'right' };
+
+    function setTouchDir(playerIndex, dir, value) {
         const p = players[playerIndex];
         if (!p) return;
-        p.controls.left  = dx < 0;
-        p.controls.right = dx > 0;
-        p.controls.up    = dy < 0;
-        p.controls.down  = dy > 0;
-    }
-
-    const RADIO_STICK = 46;      // hasta dónde llega la bola del mando
-    const ZONA_MUERTA = 14;      // por debajo de esto no se mueve: evita giros
-                                 // involuntarios al apoyar el pulgar
-
-    function crearStick(el, playerIndex) {
-        if (!el) return;
-
-        const knob = el.querySelector('.stick-knob');
-        let punteroActivo = null;
-        let ox = 0, oy = 0;
-
-        function soltar() {
-            aplicarVector(playerIndex, 0, 0);
-            knob.style.transform = 'translate(0px, 0px)';
-            el.classList.remove('activo');
-            punteroActivo = null;
-        }
-
-        el.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            if (gameState !== GAME_STATES.PLAYING) return;
-            punteroActivo = e.pointerId;
-            ox = e.clientX;
-            oy = e.clientY;
-            el.classList.add('activo');
-            try { el.setPointerCapture(e.pointerId); } catch (err) {}
-        });
-
-        el.addEventListener('pointermove', (e) => {
-            if (e.pointerId !== punteroActivo) return;
-            e.preventDefault();
-
-            let dx = e.clientX - ox;
-            let dy = e.clientY - oy;
-
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > RADIO_STICK) {
-                dx = dx / dist * RADIO_STICK;
-                dy = dy / dist * RADIO_STICK;
-            }
-
-            knob.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
-
-            aplicarVector(playerIndex,
-                Math.abs(dx) > ZONA_MUERTA ? dx : 0,
-                Math.abs(dy) > ZONA_MUERTA ? dy : 0);
-        });
-
-        ['pointerup', 'pointercancel'].forEach((tipo) => {
-            el.addEventListener(tipo, (e) => {
-                if (e.pointerId !== punteroActivo) return;
-                e.preventDefault();
-                soltar();
-            });
-        });
-
-        /* Devuelve la función de limpieza para la pérdida de foco */
-        el._soltar = soltar;
+        p.controls[dirKeys[dir]] = value;
     }
 
     function releaseAllTouchDirs() {
@@ -2506,10 +2742,6 @@
             if (!p) continue;
             p.controls.up = p.controls.down = p.controls.left = p.controls.right = false;
         }
-        ['stickP1', 'stickP2'].forEach((id) => {
-            const el = document.getElementById(id);
-            if (el && el._soltar) el._soltar();
-        });
     }
 
     function initTouchControls() {
@@ -2517,22 +2749,32 @@
             document.body.classList.add('touch-device');
         }
 
-        /* Zona de arrastre. La dirección sale del vector entre el punto donde
-           aterrizó el dedo y donde está ahora, no de qué botón se ha tocado.
-           Como el vector se descompone en los dos ejes por separado, las
-           diagonales salen solas: el juego ya normaliza el vector resultante. */
-        crearStick(document.getElementById('stickP1'), 0);
-        crearStick(document.getElementById('stickP2'), 1);
+        document.querySelectorAll('#touchControls [data-dir]').forEach(btn => {
+            const idx = parseInt(btn.dataset.p, 10) - 1;
+            const dir = btn.dataset.dir;
+
+            const press = (e) => { e.preventDefault(); if (gameState === GAME_STATES.PLAYING) setTouchDir(idx, dir, true); };
+            const release = (e) => { e.preventDefault(); setTouchDir(idx, dir, false); };
+
+            btn.addEventListener('pointerdown', press);
+            btn.addEventListener('pointerup', release);
+            btn.addEventListener('pointercancel', release);
+            btn.addEventListener('pointerleave', release);
+        });
+
+        document.querySelectorAll('#touchControls [data-fire]').forEach(btn => {
+            btn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
+            });
+        });
 
         // Puntería sobre el campo
         const container = document.getElementById('gameContainer');
         let aiming = false;
 
         const aim = (e, fire) => {
-            /* Los mandos están fuera del campo, así que aquí solo llegan toques
-               sobre el propio tablero. Se mantiene la comprobación por si algún
-               día vuelve a haber algo superpuesto (los menús, por ejemplo). */
-            if (e.target.closest('button')) return;
+            if (e.target.closest('#touchControls') || e.target.closest('button')) return;
             if (gameState !== GAME_STATES.PLAYING || !players[0]) return;
 
             const p = toCanvasPos(e.clientX, e.clientY);
@@ -2567,13 +2809,9 @@
     }
 
     function showTouchPadsFor(count) {
-        /* Con un jugador solo se usa la columna izquierda; la derecha se oculta
-           para que el tablero aproveche todo el espacio sobrante. */
-        document.getElementById('colIzq').classList.add('usada');
-        document.getElementById('colDer').classList.toggle('usada', count === 2);
+        document.getElementById('padP2').style.display = count === 2 ? 'grid' : 'none';
         document.getElementById('labelP1').style.display = count === 2 ? 'block' : 'none';
         document.getElementById('aimHint').classList.add('visible');
-        releaseAllTouchDirs();
     }
 
     // ================= DISPONIBILIDAD DE 2 JUGADORES =================
@@ -2589,7 +2827,7 @@
     }
 
     function updateTwoPlayersAvailability() {
-        const btn = document.getElementById('btn2P');
+        const btn = document.querySelector('#grpJugadores [data-v="2"]');
         const note = document.getElementById('twoPlayersNote');
         if (!btn || !note) return;
 
@@ -2598,6 +2836,7 @@
             note.style.display = 'none';
         } else {
             btn.disabled = true;
+            if (btn.getAttribute('aria-pressed') === 'true') EST.elegir('grpJugadores', '1');
             note.style.display = 'block';
             note.textContent = window.innerHeight > window.innerWidth
                 ? 'Dos jugadores necesita más ancho: gira el dispositivo o usa una tablet.'
@@ -2616,23 +2855,29 @@
         releaseAllTouchDirs();
     }
 
-    window.addEventListener('blur', clearKeys);
+    /* Al irse de la aplicación: teclas sueltas y pausa, para que los
+       enemigos no sigan disparando sin nadie mirando */
+    window.addEventListener('blur', () => { clearKeys(); pauseGame(); });
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) clearKeys();
+        if (document.hidden) { clearKeys(); pauseGame(); }
     });
 
     initTouchControls();
     updateTwoPlayersAvailability();
     
     // MODIFICADO - Actualizar el nuevo HUD
+    /* Barra estándar: se escribe solo lo que cambia (antes, cada fotograma) */
+    const barraCache = {};
+    function poner(id, texto) {
+        if (barraCache[id] === texto) return;
+        barraCache[id] = texto;
+        document.getElementById(id).textContent = texto;
+    }
+
     function updateUI() {
-        document.getElementById('levelName').textContent = `NIVEL ${currentLevel}: ${levelNames[currentLevel-1] || ''}`.toUpperCase();
-        // Actualizar display de dificultad
-        const diffIcon = gameDifficulty === 'recluta' ? '🎖️' : (gameDifficulty === 'oficial' ? '⭐' : '🏅');
-        const diffText = gameDifficulty === 'recluta' ? 'RECLUTA' : (gameDifficulty === 'oficial' ? 'OFICIAL' : 'CORONEL GENERAL');
-        document.getElementById('difficultyDisplay').textContent = `${diffIcon} ${diffText}`;
-        
-        document.getElementById('totalScore').textContent = `PUNTOS: ${totalScore}`;
+        poner('levelName', (levelNames[currentLevel-1] || '').toUpperCase());
+        poner('levelNum', String(currentLevel));
+        poner('totalScore', totalScore.toLocaleString('es-ES'));
         // Cuando todos los enemigos están muertos
         if (enemies.filter(e => !e.dead).length === 0) {
             if (!levelComplete) {
@@ -2672,10 +2917,7 @@
                     setTimeout(() => loadLevel(currentLevel + 1), 2000);
                 } else {
                     // Juego completado
-                    gameState = GAME_STATES.MENU;
-                    if (isTopScore(totalScore)) {
-                        showNameModal();
-                    } 
+                    mostrarFin(true);
                     //else {
                     //    alert('¡HAS GANADO!\nPuntuación final: ' + totalScore);
                     //    document.getElementById('menu').style.display = 'block';
@@ -2684,15 +2926,15 @@
             }
         }
         
-        document.getElementById('playerLives').innerHTML = '❤️'.repeat(playerLives) + '🖤'.repeat(Math.max(0, 5 - playerLives));
+        poner('playerLives', String(playerLives));
         // Mostrar tiempo del nivel (opcional)
         const playedTime = Date.now() - levelStartTime - totalPausedTime;
         const seconds = Math.floor(playedTime / 1000);
         const minutes = Math.floor(seconds / 60);
         const displaySeconds = seconds % 60;
-        document.getElementById('levelTime').textContent = `${minutes}:${displaySeconds.toString().padStart(2, '0')}`;
+        poner('levelTime', `${minutes}:${displaySeconds.toString().padStart(2, '0')}`);
         // Actualizar contador de vida extra
-        document.getElementById('lifeCounter').textContent = `${killCounter}/${KILLS_FOR_LIFE}`;
+        poner('lifeCounter', `${killCounter}/${KILLS_FOR_LIFE}`);
         
     }
     
@@ -2701,8 +2943,21 @@
         messageTimer = duration;
     }
     
+    /* El bucle corre solo con la partida en pantalla: antes giraba también en
+       el menú, limpiando y repintando un tablero que no se veía */
+    let rafId = null;
+    function arrancarBucle() {
+        if (rafId !== null) return;
+        lastTime = 0;
+        rafId = requestAnimationFrame(gameLoop);
+    }
+    function pararBucle() {
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = null;
+    }
+
     function gameLoop(currentTime) {
-        requestAnimationFrame(gameLoop);
+        rafId = requestAnimationFrame(gameLoop);
         // requestAnimationFrame llama con currentTime undefined si el bucle se
         // arranca a mano, y en el primer frame real lastTime vale 0, así que
         // el delta era el tiempo transcurrido desde que cargó la página.
@@ -2729,20 +2984,12 @@
                         levelCompleting=false;
                     },2000);
                 }else{
-                    gameState=GAME_STATES.MENU;
-                    stopBackgroundMusic();
-                    if(isTopScore(totalScore))showNameModal();
-                    //else alert('¡HAS GANADO!');
+                    mostrarFin(true);
                 }
             }
             if (gameState === GAME_STATES.GAME_OVER) {
-                setTimeout(() => { 
-                    gameState=GAME_STATES.MENU; 
-                    stopBackgroundMusic();
-                    if(isTopScore(totalScore))showNameModal();
-                    else document.getElementById('menu').style.display='block'; 
-                    //alert('GAME OVER\nPuntuación final: '+totalScore); 
-                }, 2000);
+                stopBackgroundMusic();
+                setTimeout(() => mostrarFin(false), 2000);
             }
             updateUI();
         }
@@ -2762,375 +3009,139 @@
         }
     }
     
-    function startGame(playerCount) {
-        if (playerCount === 2 && !twoPlayersFits()) return;
-        showTouchPadsFor(playerCount);
+    const DIF = {
+        recluta: { icono: '🎖️', nombre: 'Recluta', letra: 'R' },
+        oficial: { icono: '⭐', nombre: 'Oficial', letra: 'O' },
+        coronel: { icono: '🏅', nombre: 'Coronel general', letra: 'C' }
+    };
+    let dificultadMenu = 'recluta';
 
-        console.log('===================================');
-        console.log('🎮 START GAME: Iniciando nueva partida');
-        console.log('===================================');
-        document.getElementById('hudContainer').style.display = 'flex';
+    function startGame(playerCount) {
+        if (playerCount === 2 && !twoPlayersFits()) { EST.avisar('Dos jugadores no caben en esta pantalla', true); return; }
+        ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+        showTouchPadsFor(playerCount);
+        EST.mostrar('pJuego');
         document.getElementById('gameContainer').classList.add('active');
-        
-        gameDifficulty = document.getElementById('difficultySelect').value;
+        for (const k in barraCache) delete barraCache[k];
+
+        gameDifficulty = dificultadMenu;
         numPlayers = playerCount;
         gameState = GAME_STATES.PLAYING;
-        document.getElementById('menu').style.display = 'none';
         totalScore = 0;
+        killCounter = 0;
         playerLives = 3;
-        killCounter=0;
-        playerLives = 3; // Reiniciar vidas
+        levelCompleting = false;
+        levelComplete = false;
+        finMostrado = false;
         players=[];enemies=[];allTanks=[];obstacles=[];particles=[];powerUps=[];
-        
-        // NUEVO - Limpiar el canvas de rastros
         tracksCtx.clearRect(0, 0, WIDTH, HEIGHT);
-        
+
         players.push(new PlayerTank(100, HEIGHT/2, 1, '#4a90e2'));
         if (playerCount === 2) players.push(new PlayerTank(100, HEIGHT/2+60,2,'#e74c3c'));
         allTanks=[...players];
         loadLevel(1);
-        console.log('🎮 START GAME: Llamando a stopBackgroundMusic antes de iniciar');
         stopBackgroundMusic();
-        console.log('🎮 START GAME: Llamando a playBackgroundMusic');
         playBackgroundMusic();
-        
-        
+        arrancarBucle();
     }
-    
-    function showInstructions() {
-        document.getElementById('menu').style.display = 'block';
-        document.getElementById('mainMenu').style.display = 'none';
-        document.getElementById('instructions').style.display = 'block';
-        document.getElementById('ranking').style.display = 'none';
-        document.getElementById('settings').style.display = 'none';
-    }
-    function showRanking() {
-        document.getElementById('menu').style.display = 'block';
-        document.getElementById('mainMenu').style.display = 'none';
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('ranking').style.display = 'block';
-        document.getElementById('settings').style.display = 'none';
-        
-        const rankings = JSON.parse(safeGetItem('tankRankings') || '[]');
-        const rankingList = document.getElementById('rankingList');
-        rankingList.innerHTML = '';
-        
-        if (rankings.length === 0) {
-            rankingList.innerHTML = '<p style="color: #fff; text-align: center; padding: 20px;">No hay puntuaciones todavía.<br>¡Sé el primero en jugar!</p>';
-            return;
-        }
-        
-        rankings.forEach((entry, index) => {
-            const diffIcon = entry.difficulty === 'coronel' ? '🏅' : (entry.difficulty === 'oficial' ? '⭐' : '🎖️');
-            const diffText = (entry.difficulty || 'recluta').toUpperCase();
-            const levelText = `Nivel ${entry.level || 1}`;
-            
-            const rankItem = document.createElement('div');
-            rankItem.className = 'ranking-item' + (index < 3 ? ' top3' : '');
-            
-            const position = document.createElement('span');
-            position.className = 'rank-position';
-            position.textContent = `#${index + 1}`;
-            
-            const name = document.createElement('span');
-            name.className = 'rank-name';
-            name.textContent = entry.name;
-            
-            const difficulty = document.createElement('div');
-            difficulty.style.color = '#ffd700';
-            difficulty.style.fontSize = '14px';
-            difficulty.innerHTML = `${diffIcon} ${diffText}<br><span style="color: #fff; font-size: 12px;">${levelText}</span>`;
-            
-            const score = document.createElement('span');
-            score.className = 'rank-score';
-            score.textContent = entry.score;
-            
-            rankItem.appendChild(position);
-            rankItem.appendChild(name);
-            rankItem.appendChild(difficulty);
-            rankItem.appendChild(score);
-            rankingList.appendChild(rankItem);
-        });
-    }
-    
-    
-    
-    
-    function showSettings() {
-        document.getElementById('menu').style.display = 'block';
-        document.getElementById('mainMenu').style.display = 'none';
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('ranking').style.display = 'none';
-        document.getElementById('settings').style.display = 'block';
-    }
-    function showMainMenu() {
-        updateTwoPlayersAvailability();
-        document.getElementById('menu').style.display = 'block';
-        
-        document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').classList.remove('active');
-        
-        document.getElementById('mainMenu').style.display = 'block';
-        document.getElementById('instructions').style.display = 'none';
-        document.getElementById('ranking').style.display = 'none';
-        document.getElementById('settings').style.display = 'none';
-    }
+
     function pauseGame() {
         if (gameState === GAME_STATES.PLAYING) {
             gameState = GAME_STATES.PAUSED;
             pauseStartTime = Date.now(); // Guardar cuándo se pausó
-            document.getElementById('pauseOverlay').style.display = 'block';
+            stopBackgroundMusic();
+            EST.abrir('capaPausa');
         }
     }
-    
+
     function resumeGame() {
         if (gameState === GAME_STATES.PAUSED) {
             gameState = GAME_STATES.PLAYING;
             // Acumular tiempo pausado
             totalPausedTime += (Date.now() - pauseStartTime);
-            document.getElementById('pauseOverlay').style.display = 'none';
+            EST.cerrar('capaPausa');
+            playBackgroundMusic();
         }
     }
-    
-    
+
     function quitToMenu() {
-        console.log('===================================');
-        console.log('🏠 QUIT TO MENU: Volviendo al menú principal');
-        console.log('===================================');
-        document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').classList.remove('active');
         gameState = GAME_STATES.MENU;
         stopBackgroundMusic();
-        document.getElementById('pauseOverlay').style.display = 'none';
-        document.getElementById('menu').style.display = 'block';
-        showMainMenu();
-    }
-    
-    // Respaldo en memoria: si localStorage está bloqueado (modo privado,
-    // iframe con sandbox) o el contenido está corrupto, el JSON.parse sin
-    // protección tiraba el juego al abrir el ranking.
-    let rankingMemory = [];
-    const storageOK = (() => {
-        try {
-            localStorage.setItem('__t', '1');
-            localStorage.removeItem('__t');
-            return true;
-        } catch (e) {
-            return false;
-        }
-    })();
-
-    function safeGetItem(key) {
-        if (!storageOK) return null;
-        try { return localStorage.getItem(key); } catch (e) { return null; }
+        clearKeys();
+        pararBucle();
+        ['capaPausa', 'capaFin'].forEach(EST.cerrar);
+        document.getElementById('gameContainer').classList.remove('active');
+        updateTwoPlayersAvailability();
+        EST.mostrar('pMenu');
     }
 
-    function safeSetItem(key, value) {
-        if (!storageOK) return;
-        try { localStorage.setItem(key, value); } catch (e) { console.warn('No se pudo guardar:', e); }
-    }
-
-    function loadRanking() {
-        if (!storageOK) return rankingMemory.slice();
-        const rankingData = safeGetItem('tankRankings'); // <-- Corregido
-        if (rankingData) {
-            try {
-                const parsed = JSON.parse(rankingData);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return [];
-            }
-        }
-        return [];
-    }
-    function saveRanking(ranking) {
-        rankingMemory = ranking.slice();
-        safeSetItem('tankRankings', JSON.stringify(ranking)); // <-- Corregido
-    }
-    function isTopScore(score) {
-        const ranking = loadRanking();
-        if (ranking.length < 10) return true;
-        return score > ranking[ranking.length - 1].score;
-    }
-    function addToRanking(name, score) {
-        let ranking = loadRanking();
-        ranking.push({ name: name, score: score });
-        ranking.sort((a, b) => b.score - a.score);
-        ranking = ranking.slice(0, 10);
-        saveRanking(ranking);
-    }
-    function displayRanking() {
-        const ranking = loadRanking();
-        const rankingList = document.getElementById('rankingList');
-        rankingList.innerHTML = '';
-        
-        if (ranking.length === 0) {
-            rankingList.innerHTML = '<p style="color: #fff; text-align: center; padding: 20px;">No hay puntuaciones todavía.<br>¡Sé el primero en jugar!</p>';
-            return;
-        }
-        
-        ranking.forEach((entry, index) => {
-            const rankItem = document.createElement('div');
-            rankItem.className = 'rank-item' + (index < 3 ? ' top3' : '');
-            
-            const position = document.createElement('span');
-            position.className = 'rank-position';
-            position.textContent = `#${index + 1}`;
-            
-            const name = document.createElement('span');
-            name.className = 'rank-name';
-            name.textContent = entry.name;
-            
-            const score = document.createElement('span');
-            score.className = 'rank-score';
-            score.textContent = entry.score;
-            
-            rankItem.appendChild(position);
-            rankItem.appendChild(name);
-            rankItem.appendChild(score);
-            rankingList.appendChild(rankItem);
-        });
-    }
-    
-    function showNameModal() {
-        document.getElementById('finalScoreDisplay').textContent = totalScore;
-        document.getElementById('nameModal').style.display = 'block';
+    /* Capa de fin, tanto al perder como al pasar los 17 niveles. La victoria
+       se detecta por dos caminos (el marcador y el bucle): se pinta una vez. */
+    let finMostrado = false;
+    function mostrarFin(victoria) {
+        if (finMostrado) return;
+        finMostrado = true;
+        gameState = GAME_STATES.GAME_OVER;
+        stopBackgroundMusic();
+        clearKeys();
+        document.getElementById('finTitulo').textContent = victoria ? '🏆 ¡17 NIVELES SUPERADOS!' : '💥 FIN DE LA PARTIDA';
+        document.getElementById('finalScoreDisplay').textContent = totalScore.toLocaleString('es-ES');
+        document.getElementById('finDetalle').textContent = 'Nivel ' + currentLevel + ' · ' + DIF[gameDifficulty].icono + ' ' + DIF[gameDifficulty].nombre;
         document.getElementById('playerNameInput').value = '';
-        document.getElementById('playerNameInput').focus();
+        /* Sin foco automático: en el móvil abriría el teclado tapando el marcador */
+        document.getElementById('nameModal').style.display = isTopScore(totalScore) ? '' : 'none';
+        EST.abrir('capaFin');
     }
+
+    // La misma clave y los mismos campos que antes del menú nuevo: así no
+    // se pierden los récords que ya hubiera en el móvil
+    const ranking = EST.ranking({ clave: 'tankRankings', nombre: 'name', puntos: 'score' });
+    // Con 0 puntos ya no se pide nombre
+    const isTopScore = (score) => ranking.entra(score);
+
+    function showRanking() {
+        ranking.pintar(document.getElementById('rankingList'), (e) =>
+            ' · nv ' + (e.level || 1) + ' · ' + ((DIF[e.difficulty] || DIF.recluta).letra));
+        EST.abrir('capaRanking');
+    }
+
     function saveScore() {
-        
         const nameInput = document.getElementById('playerNameInput');
-        
         const name = nameInput.value.trim();
-        
-        // Validar PRIMERO antes de guardar
-        if (name === '') {
-            console.log('ERROR: Nombre vacío');
-            alert('Por favor, introduce tu nombre');
-            return;
-        }
-        
-        
-        // Obtener rankings actuales
-        const rankingDataRaw = safeGetItem('tankRankings');
-        
-        const rankings = JSON.parse(rankingDataRaw || '[]');
-        
-        // Agregar nueva puntuación
-        const newEntry = {
+        if (name === '') { EST.avisar('Escribe tu nombre', true); nameInput.focus(); return; }
+        ranking.anadir({
             name: name,
             score: totalScore,
             difficulty: gameDifficulty,
             level: currentLevel,
             date: new Date().toLocaleDateString()
-        };
-        
-        rankings.push(newEntry);
-        
-        // Ordenar por puntuación descendente
-        rankings.sort((a, b) => b.score - a.score);
-        
-        // Mantener solo top 10
-        rankings.splice(10);
-        
-        // Guardar en localStorage
-        const rankingsJSON = JSON.stringify(rankings);
-        
-        safeSetItem('tankRankings', rankingsJSON);
-        
-        // Verificar que se guardó
-        const verification = safeGetItem('tankRankings');
-        
-        // Ocultar modal
+        });
         document.getElementById('nameModal').style.display = 'none';
-        
-        
-        gameState = GAME_STATES.MENU;
-        
-        stopBackgroundMusic();
-        // Ocultar containers del juego
-        document.getElementById('hudContainer').style.display = 'none';
-        document.getElementById('gameContainer').classList.remove('active');
-        
-        showRanking();
+        EST.avisar('¡Guardado!');
     }
-    
-    
-    
-    
-    // Control de volumen de efectos de sonido
-    const volumeSlider = document.getElementById('volumeSlider');
-    const volumeDisplay = document.getElementById('volumeDisplay');
-    const pauseVolumeSlider = document.getElementById('pauseVolumeSlider');
-    const pauseVolumeDisplay = document.getElementById('pauseVolumeDisplay');
-    
-    volumeSlider.addEventListener('input', e => {
-        const v = e.target.value;
-        volumeDisplay.textContent = v;
-        pauseVolumeDisplay.textContent = v;
-        pauseVolumeSlider.value = v;
-        masterVolume = v / 100;
-        safeSetItem('tanksVolume', v);
-    });
-    
-    pauseVolumeSlider.addEventListener('input', e => {
-        const v = e.target.value;
-        pauseVolumeDisplay.textContent = v;
-        volumeDisplay.textContent = v;
-        volumeSlider.value = v;
-        masterVolume = v / 100;
-        safeSetItem('tanksVolume', v);
-    });
-    
-    // Control de volumen de música
-    const musicSlider = document.getElementById('musicSlider');
-    const musicDisplay = document.getElementById('musicDisplay');
-    const pauseMusicSlider = document.getElementById('pauseMusicSlider');
-    const pauseMusicDisplay = document.getElementById('pauseMusicDisplay');
-    
-    musicSlider.addEventListener('input', e => {
-        const v = e.target.value;
-        musicDisplay.textContent = v;
-        pauseMusicDisplay.textContent = v;
-        pauseMusicSlider.value = v;
-        musicVolume = v / 100;
-        updateMusicVolume();
-        safeSetItem('tanksMusicVolume', v);
-    });
-    
-    pauseMusicSlider.addEventListener('input', e => {
-        const v = e.target.value;
-        pauseMusicDisplay.textContent = v;
-        musicDisplay.textContent = v;
-        musicSlider.value = v;
-        musicVolume = v / 100;
-        updateMusicVolume();
-        safeSetItem('tanksMusicVolume', v);
-    });
-    
-    // Cargar valores guardados
-    const savedVolume = safeGetItem('tanksVolume');
-    if (savedVolume) {
-        volumeSlider.value = savedVolume;
-        pauseVolumeSlider.value = savedVolume;
-        volumeDisplay.textContent = savedVolume;
-        pauseVolumeDisplay.textContent = savedVolume;
-        masterVolume = savedVolume / 100;
-    }
-    
-    const savedMusicVolume = safeGetItem('tanksMusicVolume');
-    if (savedMusicVolume) {
-        musicSlider.value = savedMusicVolume;
-        pauseMusicSlider.value = savedMusicVolume;
-        musicDisplay.textContent = savedMusicVolume;
-        pauseMusicDisplay.textContent = savedMusicVolume;
-        musicVolume = savedMusicVolume / 100;
-    }
-    
-    document.getElementById('playerNameInput').addEventListener('keypress',e=>{if(e.key==='Enter')saveScore();});
 
-    requestAnimationFrame(gameLoop);
+    // ---------- MENÚ Y CAPAS ----------
+    let jugadoresMenu = 1;
+    EST.grupo('grpDif', (v) => { dificultadMenu = v; });
+    EST.grupo('grpJugadores', (v) => { jugadoresMenu = +v; });
+    const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+    btn('btnJugar', () => startGame(jugadoresMenu));
+    btn('btnSeguir', resumeGame);
+    btn('btnAbandonar', quitToMenu);
+    btn('btnOtra', () => startGame(numPlayers));
+    btn('btnMenuFin', quitToMenu);
+    btn('btnGuardar', saveScore);
+    btn('btnRanking', showRanking);
+    btn('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+    btn('btnBorrarRanking', () => {
+        if (!confirm('¿Borrar todos los récords?')) return;
+        ranking.borrar();
+        showRanking();
+    });
+    btn('btnAyuda', () => EST.abrir('capaAyuda'));
+    btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+
+    EST.iniciar({ claveAudio: 'tanksAudio', alCambiarMusica });
 </script>
 </body>
 </html>
