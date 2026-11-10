@@ -1000,7 +1000,15 @@ const EST = (() => {
         worldMapImage.onload = function() {
             worldMapLoaded = true;
         };
-        worldMapImage.src = '../images/world-map.png';
+        /* images/ está junto a webs/ en GitHub (../images) y junto a HomePage/
+           en la copia local (../../images). Se prueba la de GitHub y, si no
+           está, la local: así funciona en los dos sitios sin tocar nada. */
+        const RUTAS_MAPA = ['../images/world-map.png', '../../images/world-map.png'];
+        let rutaMapa = 0;
+        worldMapImage.onerror = function () {
+            if (++rutaMapa < RUTAS_MAPA.length) worldMapImage.src = RUTAS_MAPA[rutaMapa];
+        };
+        worldMapImage.src = RUTAS_MAPA[0];
         
         const sfxVolume = 0.7;   // el valor por defecto que tenía el deslizador
 
