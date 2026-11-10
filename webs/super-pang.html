@@ -3,34 +3,338 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Super Pang - Retro Game</title>
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Super Pang</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body { height: 100%; }
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
 
-        body {
-            background: #000;
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE SUPER PANG ---------- */
+        /* El tablero es apaisado (960×600): la partida usa todo el ancho */
+        #pJuego { max-width: 1100px; }
+        #zonaJuego {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            margin-top: 6px;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            /* dvh tiene en cuenta la barra de direcciones del móvil */
-            height: 100vh;
-            height: 100dvh;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            overscroll-behavior: none;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+            justify-content: center;
+        }
+        /* El jugador 2 va en la misma barra; la visibilidad la pone el código
+           con display '' o 'none' para que mande esta clase */
+        .grupo-j2 { display: contents; }
+        #twoPlayersNote { color: #ff8080; font-size: 0.7rem; margin: 8px 2px 0; line-height: 1.5; display: none; }
+        #grpDif .sub { font-size: 0.6rem; }
+        /* Cuatro dificultades: dos por fila en el móvil */
+        #grpDif .opcion { flex: 1 1 40%; }
+
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+            #zonaJuego { margin-top: 3px; }
+            #grpDif .opcion { flex: 1 1 20%; }
         }
 
-        /* El canvas conserva su buffer de 960x600 (las coordenadas del juego no
-           cambian) y se escala para caber. El contenedor se ajusta al canvas,
-           así que las capas con inset:0 siguen encajando exactamente. */
         #gameContainer {
             position: relative;
             background: #111;
@@ -51,141 +355,25 @@
             touch-action: none;
         }
         
-        #menu {
+        #touchControls {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(180deg, #001a33 0%, #003366 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            z-index: 10;
-            overflow-y: auto;
-            padding: 20px 0;
-        }
-        
-        
-        .menu-title {
-            font-size: clamp(24px, 7vw, 52px);
-            color: #00ffff;
-            text-shadow: 3px 3px 0 #ff00ff, 6px 6px 0 #000;
-            margin-bottom: 15px;
-            margin-top: 10px;
-            animation: pulse 2s infinite;
-        }
-        
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        /* ---------- CONTROLES TÁCTILES ---------- */
-        /* En este juego hay que moverse y disparar A LA VEZ, así que los gestos
-           no valen: un dedo deslizando no puede expresar dos acciones continuas
-           simultáneas. Con botones, el pulgar izquierdo camina y el derecho
-           dispara sin soltar. Van superpuestos al tablero para no robarle
-           altura, y semitransparentes para tapar lo mínimo. */
-        /* Los mandos van FUERA del campo: superpuestos tapaban al personaje
-           cada vez que caminaba por la franja inferior, que es justo donde pasa
-           la mayor parte del juego.
-
-           En apaisado se colocan a los lados, aprovechando las franjas negras
-           que sobran (el campo es 8:5 y la pantalla del móvil es mucho más
-           alargada). En vertical se colocan debajo. */
-        #playArea {
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            height: 100%;
-            min-height: 0;
-        }
-
-        #stageWrap {
-            flex: 1 1 auto;
-            min-width: 0;
-            min-height: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .pad-col {
-            flex: 0 0 auto;
+            inset: 0;
             display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px;
+            pointer-events: none;
+            z-index: 8;
         }
 
-        body.touch-device .pad-col.usada { display: flex; }
+        body.touch-device #touchControls { display: flex; }
 
-        /* Zona de arrastre: se camina y se suben escaleras empujando el dedo
-           en la dirección deseada, como el mando de Pac-Man. El arpón queda en
-           un botón aparte porque hay que poder disparar SIN dejar de moverse. */
-        .stick {
-            position: relative;
-            width: 128px;
-            height: 128px;
-            border-radius: 50%;
-            border: 2px dashed rgba(0, 255, 255, 0.4);
-            background: rgba(0, 40, 60, 0.35);
+        .touch-pad {
             display: grid;
-            place-items: center;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .stick-knob {
-            width: 56px;
-            height: 56px;
-            border-radius: 50%;
-            background: rgba(0, 200, 255, 0.5);
-            border: 2px solid rgba(255, 255, 255, 0.85);
-            pointer-events: none;
-            transition: transform 0.09s ease-out;
-        }
-
-        .stick.p2 .stick-knob { background: rgba(255, 150, 0, 0.5); }
-        .stick.activo .stick-knob { transition: none; }
-
-        .stick-label {
-            position: absolute;
-            bottom: -16px;
-            font-size: 10px;
-            color: #fff;
-            text-shadow: 1px 1px 2px #000;
-            pointer-events: none;
-        }
-
-        /* Vertical: mando abajo a la izquierda, arpón abajo a la derecha.
-           Antes quedaban en dos filas apiladas y no se llegaba con los pulgares. */
-        @media (max-aspect-ratio: 1/1) {
-            #playArea {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                grid-template-rows: 1fr auto;
-                grid-template-areas: "campo campo" "izq der";
-                gap: 8px;
-            }
-            #stageWrap { grid-area: campo; min-width: 0; }
-            #colIzq { grid-area: izq; }
-            #colDer { grid-area: der; }
-            .pad-col { flex-direction: row; justify-content: center; }
-        }
-
-        @media (max-height: 420px) {
-            .stick { width: 100px; height: 100px; }
-            .stick-knob { width: 44px; height: 44px; }
+            grid-template-columns: repeat(3, auto);
+            gap: 6px;
+            pointer-events: auto;
+            align-items: end;
         }
 
         .touch-pad .spacer { width: 56px; }
@@ -220,41 +408,12 @@
         .touch-btn:active { background: rgba(0, 255, 255, 0.3); }
         .touch-btn.fire:active { background: rgba(255, 80, 80, 0.35); }
 
-        /* Al estar fuera del campo ya no necesitan ser translúcidos */
-        .touch-btn { background: rgba(0, 60, 90, 0.7); }
-        .touch-btn.fire { background: rgba(90, 0, 0, 0.7); }
-
         .pad-label {
             grid-column: 1 / -1;
             text-align: center;
             font-size: 10px;
             color: #00ffff;
             pointer-events: none;
-        }
-
-        /* Botón de pausa: en móvil no existe la tecla P */
-        /* Barra propia fuera del campo para el botón de pausa */
-        #topBar {
-            display: none;
-            flex: 0 0 auto;
-            justify-content: flex-end;
-            width: 100%;
-            padding: 4px 6px;
-        }
-
-        body.touch-device #topBar { display: flex; }
-
-        #pauseTouchBtn {
-            width: 44px;
-            height: 34px;
-            border-radius: 8px;
-            border: 2px solid rgba(0, 255, 255, 0.75);
-            background: rgba(0, 30, 45, 0.6);
-            color: #00ffff;
-            font-size: 14px;
-            font-family: inherit;
-            cursor: pointer;
-            touch-action: manipulation;
         }
 
         #rotateHint {
@@ -287,423 +446,517 @@
             line-height: 1.5;
         }
 
-        #btnStart2P:disabled {
-            opacity: 0.45;
-            cursor: not-allowed;
-            filter: grayscale(0.8);
-        }
-
-        /* En táctil el :hover se queda pegado tras tocar */
-        @media (hover: none) {
-            .menu-button:hover,
-            .difficulty-btn:hover,
-            .modal-close:hover {
-                transform: none;
-            }
-        }
-
-        /* Pantallas pequeñas: el menú y los diálogos viven dentro del tablero,
-           que aquí puede quedarse en 390 px de ancho. */
+        /* Pantallas pequeñas: botones táctiles más pequeños */
         @media (max-width: 720px), (max-height: 460px) {
-            .menu-button { font-size: 13px; padding: 7px 16px; margin: 3px; }
-            .difficulty-btn { font-size: 11px; padding: 6px 10px; min-width: 0; }
-            .difficulty-label { font-size: 11px; margin-bottom: 4px; }
-            .difficulty-selector { margin: 6px 0 8px 0; }
-            .menu-title { margin-bottom: 6px; margin-top: 4px; }
-            #menu { padding: 8px 0; }
-
             .touch-btn { width: 46px; height: 46px; font-size: 16px; }
             .touch-btn.fire { width: 68px; height: 68px; font-size: 11px; }
             .touch-pad .spacer { width: 46px; }
         }
 
-        @keyframes fallingConfeti {
-            to { transform: translateY(70vh) rotate(720deg);}
-        }
-        
-        
-        .menu-button {
-            background: linear-gradient(180deg, #00ff00 0%, #008800 100%);
-            border: 3px solid #fff;
-            color: #000;
-            font-size: 20px;
-            font-weight: bold;
-            padding: 10px 30px;
-            margin: 6px;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 5px 0 #004400;
-            transition: all 0.1s;
-        }
-        
-        
-        .menu-button:hover {
-            background: linear-gradient(180deg, #00ff88 0%, #00aa44 100%);
-            transform: translateY(2px);
-            box-shadow: 0 4px 0 #004400;
-        }
-        
-        .menu-button:active {
-            transform: translateY(6px);
-            box-shadow: 0 0 0 #004400;
-        }
-        
-        .difficulty-selector {
-            margin: 10px 0 15px 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        
-        
-        .difficulty-label {
-            color: #00ffff;
-            font-size: 16px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        
-        .difficulty-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        
-        .difficulty-btn {
-            background: linear-gradient(180deg, #444 0%, #222 100%);
-            border: 3px solid #888;
-            color: #fff;
-            font-size: 16px;
-            font-weight: bold;
-            padding: 10px 20px;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            min-width: 120px;
-        }
-        
-        .difficulty-btn:hover {
-            background: linear-gradient(180deg, #666 0%, #444 100%);
-            border-color: #aaa;
-            transform: scale(1.05);
-        }
-        
-        .difficulty-btn.selected {
-            background: linear-gradient(180deg, #00ff00 0%, #008800 100%);
-            border-color: #00ffff;
-            color: #000;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
-        }
-        
-        .difficulty-btn.principiante.selected {
-            background: linear-gradient(180deg, #ff69b4 0%, #ff1493 100%);
-        }
-        
-        .difficulty-btn.avanzado.selected {
-            background: linear-gradient(180deg, #ffff00 0%, #cccc00 100%);
-        }
-        
-        .difficulty-btn.experto.selected {
-            background: linear-gradient(180deg, #ff9900 0%, #cc6600 100%);
-        }
-        
-        .difficulty-btn.rambo.selected {
-            background: linear-gradient(180deg, #ff0000 0%, #aa0000 100%);
-        }
-        
-        .volume-control {
-            margin: 8px 20px;
-            color: #fff;
-        }
-        
-        .volume-control label {
-            display: block;
-            margin-bottom: 3px;
-            font-size: 14px;
-        }
-        
-        
-        .volume-control input {
-            width: 180px;
-        }
-        
-        .modal {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #000;
-            border: 6px solid #0ff;
-            padding: 30px;
-            z-index: 20;
-            min-width: 520px;
-            max-width: 95%;
-            max-height: 80%;
-            overflow-y: auto;
-            display: none;
-        }
-        
-        
-        .modal.active {
-            display: block;
-        }
-        
-        .modal h2 {
-            color: #00ffff;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 32px;
-        }
-        
-        .modal p, .modal ul {
-            color: #fff;
-            line-height: 1.6;
-            margin-bottom: 10px;
-        }
-        
-        .modal ul {
-            list-style-position: inside;
-        }
-        
-        .modal-close {
-            background: #ff0000;
-            color: #fff;
-            border: 3px solid #fff;
-            padding: 10px 30px;
-            font-size: 18px;
-            cursor: pointer;
-            display: block;
-            margin: 20px auto 0;
-        }
-        
-        .modal-close:hover {
-            background: #ff4444;
-        }
-        
-        .top10-list {
-            list-style: none;
-            color: #ffff00;
-        }
-        
-        .top10-list li {
-            padding: 8px;
-            border-bottom: 1px solid #333;
-            font-size: 18px;
-        }
-        
-        .top10-list li:nth-child(1) {
-            color: #ffd700;
-        }
-        
-        .top10-list li:nth-child(2) {
-            color: #c0c0c0;
-        }
-        
-        .top10-list li:nth-child(3) {
-            color: #cd7f32;
-        }
-        
-        #gameOver {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 15;
-        }
-        
-        #gameOver.active {
-            display: flex;
-        }
-        
-        .gameover-title {
-            font-size: 72px;
-            color: #ff0000;
-            text-shadow: 4px 4px 0 #000;
-            margin-bottom: 30px;
-        }
-        
-        .gameover-score {
-            font-size: 36px;
-            color: #ffff00;
-            margin-bottom: 40px;
-        }
-        
-        .name-input {
-            background: #000;
-            border: 4px solid #00ffff;
-            color: #fff;
-            font-size: 24px;
-            padding: 10px 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            font-family: 'Courier New', monospace;
-        }
-        
-        #pauseMenu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 15;
-        }
-        
-        #pauseMenu.active {
-            display: flex;
-        }
-        
-        .pause-title {
-            font-size: 64px;
-            color: #ffff00;
-            text-shadow: 4px 4px 0 #ff8800, 8px 8px 0 #000;
-            margin-bottom: 40px;
-        }
     </style>
 </head>
 <body>
 
-<div id="topBar">
-    <button id="pauseTouchBtn" type="button" aria-label="Pausar">⏸</button>
-</div>
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">SUPER <span>PANG</span></div>
+        <p class="est-lema">Revienta las bolas por medio mundo</p>
 
-<div id="playArea">
-
-    <!-- Columna izquierda: jugador 1, y jugador 2 cuando hay dos -->
-    <!-- Columna izquierda: movimiento. En dos jugadores, el segundo se sienta
-         a este lado y tiene aquí su mando y su arpón. -->
-    <div class="pad-col" id="colIzq">
-        <div class="stick p2" id="stickP2" style="display:none;" role="application" aria-label="Mover al jugador 2">
-            <div class="stick-knob"></div>
-            <div class="stick-label">J2</div>
-        </div>
-        <button class="touch-btn fire" type="button" data-shoot="2" id="fireP2" style="display:none;" aria-label="Disparar J2">ARPÓN</button>
-
-        <div class="stick" id="stickP1" role="application" aria-label="Mover al jugador">
-            <div class="stick-knob"></div>
-            <div class="stick-label" id="labelP1" style="display:none;">J1</div>
-        </div>
-    </div>
-
-    <div id="stageWrap">
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="960" height="600"></canvas>
-
-        <div id="rotateHint">↻ Gira el móvil a horizontal</div>
-        
-        <div id="menu">
-            <div class="menu-title">SUPER PANG</div>
-            <div class="difficulty-selector">
-                <div class="difficulty-label">Selecciona Dificultad</div>
-                <div class="difficulty-buttons">
-                    <button class="difficulty-btn principiante" data-difficulty="principiante">Principiante</button>
-                    <button class="difficulty-btn avanzado selected" data-difficulty="avanzado">Avanzado</button>
-                    <button class="difficulty-btn experto" data-difficulty="experto">Experto</button>
-                    <button class="difficulty-btn rambo" data-difficulty="rambo">Rambo</button>
-                </div>
+        <fieldset class="est-grupo">
+            <legend>DIFICULTAD</legend>
+            <div class="opciones" id="grpDif">
+                <button class="opcion" type="button" data-v="principiante" aria-pressed="false">PRINCIPIANTE<span class="sub">bolas lentas</span></button>
+                <button class="opcion" type="button" data-v="avanzado" aria-pressed="true">AVANZADO<span class="sub">la de siempre</span></button>
+                <button class="opcion" type="button" data-v="experto" aria-pressed="false">EXPERTO<span class="sub">más rápidas</span></button>
+                <button class="opcion" type="button" data-v="rambo" aria-pressed="false">RAMBO<span class="sub">el doble de rápidas</span></button>
             </div>
-            
-            <button class="menu-button" id="btnStart1P">1 Jugador</button>
-            <button class="menu-button" id="btnStart2P">2 Jugadores</button>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>JUGADORES</legend>
+            <div class="opciones iguales" id="grpJugadores">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">1 JUGADOR<span class="sub">solo</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2 JUGADORES<span class="sub">a la vez</span></button>
+            </div>
             <div id="twoPlayersNote"></div>
-            <button class="menu-button" id="btnTop10">Ver Top 10</button>
-            <button class="menu-button" id="btnInstructions">Instrucciones</button>
-            <div class="volume-control">
-                <label>Volumen Música</label>
-                <input type="range" id="musicVolume" min="0" max="100" value="50">
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
             </div>
-            <div class="volume-control">
-                <label>Volumen Efectos</label>
-                <input type="range" id="sfxVolume" min="0" max="100" value="70">
-            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnTop10" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnInstructions" type="button">📖 CÓMO SE JUEGA</button>
         </div>
-        
-        <div id="modalTop10" class="modal">
-            <h2>★ TOP 10 ★</h2>
-            <ul id="top10List" class="top10-list"></ul>
-            <div style="margin-top: 20px; padding: 10px; border-top: 2px solid #333;">
-                <p style="color: #00ffff; font-size: 14px; margin-bottom: 10px; text-align: center;">DIFICULTAD</p>
-                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                    <span style="color: #ff69b4; font-weight: bold; border: 2px solid #ff69b4; padding: 3px 8px; border-radius: 4px;">P - Principiante</span>
-                    <span style="color: #ffff00; font-weight: bold; border: 2px solid #ffff00; padding: 3px 8px; border-radius: 4px;">A - Avanzado</span>
-                    <span style="color: #ff9900; font-weight: bold; border: 2px solid #ff9900; padding: 3px 8px; border-radius: 4px;">E - Experto</span>
-                    <span style="color: #ff0000; font-weight: bold; border: 2px solid #ff0000; padding: 3px 8px; border-radius: 4px;">R - Rambo</span>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="bS1">0</b><span>J1 PUNTOS</span></div>
+        <div class="dato"><b id="bV1">3</b><span>J1 VIDAS</span></div>
+        <div class="grupo-j2" id="barraJ2" style="display:none">
+            <div class="dato"><b id="bS2">0</b><span>J2 PUNTOS</span></div>
+            <div class="dato"><b id="bV2">3</b><span>J2 VIDAS</span></div>
+        </div>
+        <div class="dato"><b id="bNivel">1</b><span>NIVEL</span></div>
+        <div class="hueco"></div>
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zonaJuego">
+        <div id="gameContainer">
+            <canvas id="gameCanvas" width="960" height="600"></canvas>
+
+            <div id="rotateHint">↻ Gira el móvil a horizontal</div>
+
+            <div id="touchControls">
+                <div class="touch-pad" id="padP1">
+                    <div class="pad-label" id="labelP1" style="display:none;">J1</div>
+                    <div class="spacer"></div>
+                    <button class="touch-btn" type="button" data-player="1" data-key="ArrowUp" aria-label="Subir">▲</button>
+                    <div class="spacer"></div>
+                    <button class="touch-btn" type="button" data-player="1" data-key="ArrowLeft" aria-label="Izquierda">◀</button>
+                    <button class="touch-btn" type="button" data-player="1" data-key="ArrowDown" aria-label="Bajar">▼</button>
+                    <button class="touch-btn" type="button" data-player="1" data-key="ArrowRight" aria-label="Derecha">▶</button>
+                </div>
+
+                <div class="touch-pad" id="padP2" style="display:none;">
+                    <div class="pad-label">J2</div>
+                    <div class="spacer"></div>
+                    <button class="touch-btn" type="button" data-player="2" data-key="w" aria-label="Subir J2">▲</button>
+                    <div class="spacer"></div>
+                    <button class="touch-btn" type="button" data-player="2" data-key="a" aria-label="Izquierda J2">◀</button>
+                    <button class="touch-btn" type="button" data-player="2" data-key="s" aria-label="Bajar J2">▼</button>
+                    <button class="touch-btn" type="button" data-player="2" data-key="d" aria-label="Derecha J2">▶</button>
+                </div>
+
+                <div class="touch-pad" id="padFire">
+                    <button class="touch-btn fire" type="button" data-shoot="1" aria-label="Disparar">ARPÓN</button>
+                </div>
+
+                <div class="touch-pad" id="padFire2" style="display:none;">
+                    <button class="touch-btn fire" type="button" data-shoot="2" aria-label="Disparar J2">ARPÓN J2</button>
                 </div>
             </div>
-            
-            <button class="modal-close" id="closeTop10">Cerrar</button>
-        </div>
-        
-        <div id="modalInstructions" class="modal">
-            <h2>INSTRUCCIONES</h2>
-            <p><strong>Objetivo:</strong> Destruye todas las bolas en cada nivel para avanzar.</p>
-            <p><strong>Controles Jugador 1:</strong></p>
-            <ul>
-                <li>Flechas ←/→: Mover izquierda/derecha</li>
-                <li>Flechas ↑/↓: Subir/bajar escaleras</li>
-                <li>ESPACIO: Disparar arpón (modo individual)</li>
-                <li>ENTER: Disparar arpón (modo doble)</li>
-            </ul>
-            <p><strong>Controles Jugador 2:</strong></p>
-            <ul>
-                <li>A/D: Mover izquierda/derecha</li>
-                <li>W/S: Subir/bajar escaleras</li>
-                <li>ESPACIO: Disparar arpón</li>
-            </ul>
-            <p><strong>Pausa:</strong></p>
-            <ul>
-                <li>P: Pausar/Reanudar</li>
-            </ul>
-            <p><strong>Power-ups:</strong></p>
-            <ul>
-                <li>🛡️ Escudo: Protección temporal</li>
-                <li>⚡ Doble Disparo: Lanza dos arpones</li>
-                <li>❤️ Vida Extra: Añade una vida</li>
-                <li>❄️ Tiempo Congelado: Detiene las bolas</li>
-            </ul>
-            <button class="modal-close" id="closeInstructions">Cerrar</button>
-        </div>
-        
-        <div id="pauseMenu">
-            <div class="pause-title">PAUSA</div>
-            <button class="menu-button" id="btnResume">Reanudar (P)</button>
-            <button class="menu-button" id="btnPauseToMenu">Menú Principal</button>
-        </div>
-        
-        <div id="gameOver">
-            <div class="gameover-title">GAME OVER</div>
-            <div class="gameover-score" id="finalScore">Puntuación: 0</div>
-            <div id="nameInputContainer" style="display: none;">
-                <p style="color: #fff; font-size: 24px; margin-bottom: 10px;">¡Nuevo récord! Introduce tu nombre:</p>
-                <input type="text" id="playerName" class="name-input" maxlength="20" placeholder="Tu nombre">
-                <button class="menu-button" id="btnSaveName">Guardar</button>
-            </div>
-            <button class="menu-button" id="btnRestart">Volver a jugar</button>
-            <button class="menu-button" id="btnMenu">Menú principal</button>
         </div>
     </div>
-    </div>
+</section>
 
-    <!-- Columna derecha: el arpón del jugador 1 -->
-    <div class="pad-col" id="colDer">
-        <button class="touch-btn fire" type="button" data-shoot="1" aria-label="Disparar">ARPÓN</button>
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>Las bolas están quietas.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnResume" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnPauseToMenu" type="button">ABANDONAR</button>
+        </div>
     </div>
-
 </div>
-    
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
+        <div class="marcador" id="finalScore">0</div>
+        <p id="finDetalle"></p>
+        <div id="nameInputContainer" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="playerName" maxlength="20" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnSaveName" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnRestart" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenu" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="top10List"></div>
+        <p style="font-size:0.7rem;">nv = nivel · P principiante · A avanzado · E experto · R rambo</p>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="closeTop10" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Revienta todas las bolas de cada nivel con el arpón. Cada bola se parte en dos más pequeñas hasta desaparecer. Que no te toque ninguna.</p>
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> la cruceta para moverte y subir o bajar escaleras, y ARPÓN para disparar. Se juega mejor en horizontal.</li>
+                <li><b>Jugador 1:</b> ← → para moverte, ↑ ↓ en las escaleras. Dispara con <b>espacio</b> si juegas solo, o con <b>Intro</b> si sois dos.</li>
+                <li><b>Jugador 2:</b> <b>A / D</b> para moverte, <b>W / S</b> en las escaleras, <b>espacio</b> para disparar.</li>
+                <li><b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+            <h3>BONUS</h3>
+            <ul>
+                <li>🛡️ Escudo: te protege un rato.</li>
+                <li>⚡ Doble disparo: dos arpones a la vez.</li>
+                <li>❤️ Vida extra.</li>
+                <li>❄️ Tiempo congelado: las bolas se paran.</li>
+            </ul>
+            <h3>DOS JUGADORES</h3>
+            <ul><li>En el móvil hacen falta dos botoneras a la vez: solo cabe en tableta u ordenador.</li></ul>
+        </div>
+        <button class="principal" id="closeInstructions" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -749,8 +1002,19 @@
         };
         worldMapImage.src = '../images/world-map.png';
         
-        let musicVolume = 0.5;
-        let sfxVolume = 0.7;
+        const sfxVolume = 0.7;   // el valor por defecto que tenía el deslizador
+
+        /* Súper Pang no traía música (el deslizador de música no movía nada):
+           un bucle en Do mayor, Do-Lam-Fa-Sol, alegre y de recreativa */
+        const musicaFondo = EST.musica({
+            bpm: 132,
+            acordes: [
+                { bajo: 65.41, notas: [261.63, 329.63, 392.00] },   // C
+                { bajo: 55.00, notas: [220.00, 261.63, 329.63] },   // Am
+                { bajo: 87.31, notas: [174.61, 220.00, 261.63] },   // F
+                { bajo: 98.00, notas: [196.00, 246.94, 293.66] }    // G
+            ]
+        });
         
         let transitionProgress = 0;
         let transitionStartPos = {x: 0, y: 0};
@@ -1066,28 +1330,18 @@
             drawTransition();
         }
         
+        /* Un contexto de audio para todo el juego. Antes se creaba uno NUEVO en
+           cada sonido y no se cerraba nunca: los navegadores admiten pocos a la
+           vez (Safari, 4) y al rato los disparos dejaban de sonar. */
         function generateTone(frequency, duration, type = 'sine') {
-            try {
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = frequency;
-                oscillator.type = type;
-                
-                gainNode.gain.setValueAtTime(0.3 * sfxVolume, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + duration);
-            } catch(e) {}
+            if (!EST.audio.efectos) return;
+            const c = EST.contexto();
+            if (!c) return;
+            EST.voz(EST.audio.busEfectos, frequency, c.currentTime, duration, type, 0.3 * sfxVolume);
         }
         
         function playSound(soundName) {
-            if (sfxVolume === 0) return;
+            if (!EST.audio.efectos) return;
             
             if (soundName === 'shoot') {
                 generateTone(800, 0.1, 'square');
@@ -2783,182 +3037,28 @@
             }
         }
         
-        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
-        // iframe con sandbox) o el contenido está corrupto, el JSON.parse sin
-        // protección tiraba el juego al abrir el Top 10.
-        let top10Memory = [];
-        const storageOK = (() => {
-            try {
-                localStorage.setItem('__t', '1');
-                localStorage.removeItem('__t');
-                return true;
-            } catch (e) {
-                return false;
-            }
-        })();
+        // La misma clave y los mismos campos que antes del menú nuevo (en
+        // castellano: nombre, puntuacion, nivel, dificultad, fecha), para no
+        // perder los récords que ya hubiera en el móvil
+        const ranking = EST.ranking({ clave: 'superPangTop10', nombre: 'nombre', puntos: 'puntuacion' });
+        const INICIAL_DIF = { principiante: 'P', avanzado: 'A', experto: 'E', rambo: 'R' };
+        const ETIQUETA_DIF = { principiante: 'Principiante', avanzado: 'Avanzado', experto: 'Experto', rambo: 'Rambo' };
 
-        function loadTop10() {
-            if (!storageOK) return top10Memory.slice();
-            try {
-                const data = localStorage.getItem('superPangTop10');
-                const parsed = data ? JSON.parse(data) : [];
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return [];
-            }
-        }
-        
-        function saveTop10(top10) {
-            top10Memory = top10.slice();
-            if (!storageOK) return;
-            try {
-                localStorage.setItem('superPangTop10', JSON.stringify(top10));
-            } catch (e) {
-                console.warn('No se pudo guardar el Top 10:', e);
-            }
-        }
-        
         function addToTop10(name, scoreToAdd, level, difficulty) {
-            const top10 = loadTop10();
-            const date = new Date();
-            const formattedDate = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
-            
-            top10.push({
-                nombre: name,
-                puntuacion: scoreToAdd,
-                nivel: level,
-                dificultad: difficulty,
-                fecha: formattedDate
-            });
-            
-            top10.sort((a, b) => b.puntuacion - a.puntuacion);
-            const finalTop10 = top10.slice(0, 10);
-            saveTop10(finalTop10);
+            const d = new Date();
+            const fecha = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+            ranking.anadir({ nombre: name, puntuacion: scoreToAdd, nivel: level, dificultad: difficulty, fecha });
             playSound('confirm');
         }
-        
-        
-        
-        function isTop10Score(score) {
-            const top10 = loadTop10();
-            if (top10.length < 10) return true;
-            return score > top10[top10.length - 1].puntuacion;
-        }
-        
+
+        // Una puntuación de 0 ya no pide nombre
+        const isTop10Score = (score) => ranking.entra(score);
+
         function displayTop10() {
-            const top10 = loadTop10();
-            const list = document.getElementById('top10List');
-            list.innerHTML = '';
-            
-            if (top10.length === 0) {
-                list.innerHTML = '<li style="color: #888">No hay puntuaciones registradas</li>';
-                return;
-            }
-            
-            top10.forEach((entry, index) => {
-                const li = document.createElement('li');
-                li.style.display = 'flex';
-                li.style.justifyContent = 'space-between';
-                li.style.alignItems = 'center';
-                li.style.padding = '10px 5px';
-                
-                const nivel = entry.nivel || '?';
-                const dificultad = entry.dificultad || '?';
-                
-                let difficultyColor = '#ffffff';
-                let difficultyLabel = dificultad.charAt(0).toUpperCase();
-                
-                if (dificultad === 'principiante') {
-                    difficultyColor = '#ff69b4';
-                    difficultyLabel = 'P';
-                } else if (dificultad === 'avanzado') {
-                    difficultyColor = '#ffff00';
-                    difficultyLabel = 'A';
-                } else if (dificultad === 'experto') {
-                    difficultyColor = '#ff9900';
-                    difficultyLabel = 'E';
-                } else if (dificultad === 'rambo') {
-                    difficultyColor = '#ff0000';
-                    difficultyLabel = 'R';
-                }
-                
-                
-                const rankSpan = document.createElement('span');
-                rankSpan.textContent = `${index + 1}.`;
-                rankSpan.style.width = '30px';
-                rankSpan.style.fontWeight = 'bold';
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = entry.nombre;
-                nameSpan.style.flex = '1';
-                nameSpan.style.minWidth = '80px';
-                
-                const scoreSpan = document.createElement("span");
-                scoreSpan.textContent = entry.puntuacion + " pts";
-                scoreSpan.style.width = "110px";
-                scoreSpan.style.marginRight = "12px";
-                scoreSpan.style.textAlign = "right";
-                scoreSpan.style.color = "#ffff00";
-                
-                const levelSpan = document.createElement("span");
-                levelSpan.textContent = "Nv." + entry.nivel;
-                levelSpan.style.width = "80px";
-                levelSpan.style.marginRight = "12px";
-                levelSpan.style.textAlign = "center";
-                levelSpan.style.color = "#00ff00";
-                levelSpan.style.fontWeight = "bold";
-                
-                const difficultySpan = document.createElement("span");
-                difficultySpan.textContent = difficultyLabel;
-                difficultySpan.style.width = "38px";
-                difficultySpan.style.padding = "4px 8px";
-                difficultySpan.style.border = "2px solid " + difficultyColor;
-                difficultySpan.style.borderRadius = "4px";
-                difficultySpan.style.fontWeight = "bold";
-                difficultySpan.style.fontSize = "16px";
-                if (difficultyLabel === "P") {
-                    difficultySpan.style.color = "#ff69b4";
-                    difficultySpan.style.backgroundColor = "transparent";
-                }
-                
-                // Opcionalmente añade para otros casos:
-                if (difficultyLabel === "A") {
-                    difficultySpan.style.color = "#ffff00";
-                    difficultySpan.style.backgroundColor = "transparent";
-                }
-                if (difficultyLabel === "E") {
-                    difficultySpan.style.color = "#ff9900";
-                    difficultySpan.style.backgroundColor = "transparent";
-                }
-                if (difficultyLabel === "R") {
-                    difficultySpan.style.color = "#ff0000";
-                    difficultySpan.style.backgroundColor = "transparent";
-                }
-                
-                
-                
-                
-                const dateSpan = document.createElement('span');
-                dateSpan.textContent = entry.fecha;
-                dateSpan.style.width = '90px';
-                dateSpan.style.textAlign = 'right';
-                dateSpan.style.color = '#aaa';
-                dateSpan.style.fontSize = '14px';
-                // Y en el li:
-                li.style.gap = "18px";          
-                li.appendChild(rankSpan);
-                li.appendChild(nameSpan);
-                li.appendChild(scoreSpan);
-                li.appendChild(levelSpan);
-                li.appendChild(difficultySpan);
-                li.appendChild(dateSpan);
-                
-                list.appendChild(li);
-            });
+            ranking.pintar(document.getElementById('top10List'), (e) =>
+                ' · nv ' + (e.nivel || '?') + ' · ' + (INICIAL_DIF[e.dificultad] || '?'));
         }
-        
-        
-        
+
         function initGame(numberOfPlayers) {
             numPlayers = numberOfPlayers;
             currentLevel = 0;
@@ -3323,17 +3423,10 @@
                 document.body.appendChild(winScreen);
                 
                 // Oculta la pantalla tras cinco segundos y ejecuta la lógica de Top 10/menú
+                musicaFondo.parar();
                 setTimeout(() => {
-                    document.body.removeChild(winScreen);
-                    // Lógica: mostrar Top 10 o volver a menú
-                    if (isTop10Score(globalFinalScore)) {
-                        document.getElementById('gameOver').classList.add('active');
-                        document.getElementById('nameInputContainer').style.display='block';
-                        document.getElementById('playerName').focus();
-                    } else {
-                        document.getElementById('menu').style.display='flex';
-                        gameState = 'menu';
-                    }
+                    if (winScreen.parentNode) winScreen.parentNode.removeChild(winScreen);
+                    mostrarFin(true);
                 }, 5000);
             }
             
@@ -3385,6 +3478,7 @@
                 ctx.textAlign = 'center';
                 const levelName = levelEnvironments[currentLevel % levelEnvironments.length].name;
                 ctx.fillText(`${levelName}`, canvas.width / 2, 23);
+                pintarBarra();
                 
                 ctx.font = 'bold 12px Courier New';
                 ctx.fillText(`(Nivel ${currentLevel + 1}/9)`, canvas.width / 2, 35);
@@ -3456,305 +3550,132 @@
             function gameOver() {
                 gameState = 'gameover';
                 cancelAnimationFrame(animationId);
-                
-                let finalScore;
-                let scoreText;
-                
-                finalScore = Math.max(score1, score2);
-                globalFinalScore = finalScore; // AÑADIR ESTA LÍNEA AQUÍ
-                scoreText = `P1: ${score1} pts - P2: ${score2} pts`;
-                if (score1 > score2) {
-                    scoreText += ' - ¡Gana P1!';
-                } else if (score2 > score1) {
-                    scoreText += ' - ¡Gana P2!';
-                } else {
-                    scoreText += ' - ¡Empate!';
-                }
-                
-                document.getElementById('finalScore').textContent = `Puntuación: ${finalScore} pts`; // CAMBIAR globalFinalScore por finalScore
-                
-                
-                const gameOverDiv = document.getElementById('gameOver');
-                
-                // Eliminar elementos dinámicos previos
-                const existingLevelText = document.getElementById('dynamicLevelText');
-                const existingDifficultyText = document.getElementById('dynamicDifficultyText');
-                if (existingLevelText) existingLevelText.remove();
-                if (existingDifficultyText) existingDifficultyText.remove();
-                
-                // Crear elemento de nivel
-                const levelText = document.createElement('div');
-                levelText.id = 'dynamicLevelText';
-                levelText.style.fontSize = '24px';
-                levelText.style.color = '#00ff00';
-                levelText.style.marginBottom = '20px';
-                levelText.textContent = `Nivel alcanzado: ${currentLevel + 1}`;
-                
-                // Determinar color de dificultad
-                let difficultyColor = '#ffffff';
-                let difficultyLabel = selectedDifficulty.charAt(0).toUpperCase() + selectedDifficulty.slice(1);
-                
-                if (selectedDifficulty === 'principiante') {
-                    difficultyColor = '#ff69b4';
-                } else if (selectedDifficulty === 'avanzado') {
-                    difficultyColor = '#ffff00';
-                } else if (selectedDifficulty === 'experto') {
-                    difficultyColor = '#ff9900';
-                } else if (selectedDifficulty === 'rambo') {
-                    difficultyColor = '#ff0000';
-                }
-                
-                // Crear elemento de dificultad
-                const difficultyDisplayText = document.createElement('div');
-                difficultyDisplayText.id = 'dynamicDifficultyText';
-                difficultyDisplayText.style.fontSize = '20px';
-                difficultyDisplayText.style.color = difficultyColor;
-                difficultyDisplayText.style.marginBottom = '20px';
-                difficultyDisplayText.textContent = `Dificultad: ${difficultyLabel}`;
-                
-                // Insertar elementos después de finalScore
-                const finalScoreDiv = document.getElementById('finalScore');
-                if (finalScoreDiv.nextSibling) {
-                    gameOverDiv.insertBefore(levelText, finalScoreDiv.nextSibling);
-                    gameOverDiv.insertBefore(difficultyDisplayText, levelText.nextSibling);
-                } else {
-                    gameOverDiv.appendChild(levelText);
-                    gameOverDiv.appendChild(difficultyDisplayText);
-                }
-                
-                // Verificar si es Top 10
-                if (isTop10Score(finalScore)) {
-                    document.getElementById('nameInputContainer').style.display = 'block';
-                    document.getElementById('playerName').value = '';
-                    document.getElementById('playerName').focus();
-                } else {
-                    document.getElementById('nameInputContainer').style.display = 'none';
-                }
-                // AÑADIR ESTAS LÍNEAS PARA DEBUG (opcional, puedes quitarlas después):
-                console.log('Puntuación final:', finalScore);
-                console.log('Global final score:', globalFinalScore);
-                document.getElementById('gameOver').classList.add('active');
+                globalFinalScore = Math.max(score1, score2);
+                mostrarFin(false);
             }
-            
-            document.querySelectorAll('.difficulty-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedDifficulty = btn.getAttribute('data-difficulty');
-                    
-                    if (selectedDifficulty === 'principiante') {
-                        difficultyMultiplier = 0.5;
-                    } else if (selectedDifficulty === 'avanzado') {
-                        difficultyMultiplier = 1.0;
-                    } else if (selectedDifficulty === 'experto') {
-                        difficultyMultiplier = 1.5;
-                    } else if (selectedDifficulty === 'rambo') {
-                        difficultyMultiplier = 2.0;
-                    }
-                    
-                    playSound('confirm');
-                });
-            });
-            
-            document.getElementById('btnStart1P').addEventListener('click', () => {
-                showTouchPadsFor(1);
-                document.getElementById('menu').style.display = 'none';
+
+            /* Capa de fin estándar, para la derrota y para la victoria. Con dos
+               jugadores se guarda la mejor de las dos puntuaciones, como antes.
+               Sin foco automático: en el móvil abriría el teclado tapándolo todo. */
+            function mostrarFin(victoria) {
+                gameState = 'gameover';
+                musicaFondo.parar();
+                keys = {};
+                document.getElementById('finTitulo').textContent = victoria ? '🏆 ¡ERES UN SUPER-PANG!' : '🎈 FIN DE LA PARTIDA';
+                document.getElementById('finalScore').textContent = globalFinalScore.toLocaleString('es-ES');
+                let det = 'Nivel ' + (currentLevel + 1) + ' · ' + ETIQUETA_DIF[selectedDifficulty];
+                if (numPlayers === 2) {
+                    det = 'J1: ' + score1.toLocaleString('es-ES') + ' · J2: ' + score2.toLocaleString('es-ES') +
+                        (score1 > score2 ? ' · gana J1' : score2 > score1 ? ' · gana J2' : ' · empate') + ' · ' + det;
+                }
+                document.getElementById('finDetalle').textContent = det;
+                document.getElementById('playerName').value = '';
+                document.getElementById('nameInputContainer').style.display = isTop10Score(globalFinalScore) ? '' : 'none';
+                EST.abrir('capaFin');
+            }
+
+            function guardarNombre() {
+                const campo = document.getElementById('playerName');
+                const playerName = campo.value.trim();
+                if (!playerName) { EST.avisar('Escribe tu nombre', true); campo.focus(); return; }
+                addToTop10(playerName, globalFinalScore, currentLevel + 1, selectedDifficulty);
+                document.getElementById('nameInputContainer').style.display = 'none';
+                EST.avisar('¡Guardado!');
+            }
+
+            function empezarPartida(n) {
+                if (n === 2 && !twoPlayersFits()) { EST.avisar('Dos jugadores no caben en esta pantalla', true); return; }
+                ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+                showTouchPadsFor(n);
+                EST.mostrar('pJuego');
+                barraCache = {};
                 gameState = 'playing';
-                playSound('confirm');
-                initGame(1);
+                keys = {};
+                initGame(n);
                 gameLoop();
-            });
-            
-            document.getElementById('btnStart2P').addEventListener('click', () => {
-                if (!twoPlayersFits()) return;
-                showTouchPadsFor(2);
-                document.getElementById('menu').style.display = 'none';
+                musicaFondo.arrancar();
+            }
+
+            function volverAlMenu() {
+                gameState = 'menu';
+                cancelAnimationFrame(animationId);
+                musicaFondo.parar();
+                keys = {};
+                ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+                const win = document.getElementById('superPangWinScreen');
+                if (win) win.remove();
+                updateTwoPlayersAvailability();
+                EST.mostrar('pMenu');
+            }
+
+            function reanudar() {
+                if (gameState !== 'paused') return;
+                EST.cerrar('capaPausa');
                 gameState = 'playing';
-                playSound('confirm');
-                initGame(2);
                 gameLoop();
+                musicaFondo.arrancar();
+            }
+
+            /* Barra estándar: se escribe solo lo que cambia, no 60 veces por
+               segundo (el marcador del canvas sigue como estaba) */
+            let barraCache = {};
+            function pintarBarra() {
+                const v = {
+                    bS1: score1.toLocaleString('es-ES'), bV1: lives1,
+                    bS2: score2.toLocaleString('es-ES'), bV2: lives2, bNivel: currentLevel + 1
+                };
+                for (const k in v) {
+                    if (barraCache[k] === v[k]) continue;
+                    barraCache[k] = v[k];
+                    document.getElementById(k).textContent = v[k];
+                }
+                const j2 = numPlayers === 2 ? '' : 'none';
+                if (barraCache.j2 !== j2) { barraCache.j2 = j2; document.getElementById('barraJ2').style.display = j2; }
+            }
+
+            /* Encender o apagar la música a mitad de partida */
+            function alCambiarMusica(on) {
+                if (on && gameState === 'playing') musicaFondo.arrancar();
+                else musicaFondo.parar();
+            }
+
+            const MULT_DIF = { principiante: 0.5, avanzado: 1.0, experto: 1.5, rambo: 2.0 };
+            EST.grupo('grpDif', (v) => {
+                selectedDifficulty = v;
+                difficultyMultiplier = MULT_DIF[v];
             });
-            
-            document.getElementById('btnTop10').addEventListener('click', () => {
+            let jugadoresMenu = 1;
+            EST.grupo('grpJugadores', (v) => { jugadoresMenu = +v; });
+
+            const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+            btn('btnJugar', () => empezarPartida(jugadoresMenu));
+            btn('btnTop10', () => { displayTop10(); EST.abrir('capaRanking'); });
+            btn('closeTop10', () => EST.cerrar('capaRanking'));
+            btn('btnBorrarRanking', () => {
+                if (!confirm('¿Borrar todos los récords?')) return;
+                ranking.borrar();
                 displayTop10();
-                document.getElementById('modalTop10').classList.add('active');
-                playSound('confirm');
             });
-            
-            document.getElementById('btnInstructions').addEventListener('click', () => {
-                document.getElementById('modalInstructions').classList.add('active');
-                playSound('confirm');
-            });
-            
-            document.getElementById('closeTop10').addEventListener('click', () => {
-                document.getElementById('modalTop10').classList.remove('active');
-                playSound('confirm');
-            });
-            
-            document.getElementById('closeInstructions').addEventListener('click', () => {
-                document.getElementById('modalInstructions').classList.remove('active');
-                playSound('confirm');
-            });
-            
-            document.getElementById('btnRestart').addEventListener('click', () => {
-                document.getElementById('gameOver').classList.remove('active');
-                gameState = 'playing';
-                playSound('confirm');
-                initGame(numPlayers);
-                gameLoop();
-            });
-            
-            document.getElementById('btnMenu').addEventListener('click', () => {
-                updateTwoPlayersAvailability();
-                document.getElementById('gameOver').classList.remove('active');
-                document.getElementById('menu').style.display = 'flex';
-                gameState = 'menu';
-                playSound('confirm');
-            });
-            
-            document.getElementById('btnResume').addEventListener('click', () => {
-                document.getElementById('pauseMenu').classList.remove('active');
-                gameState = 'playing';
-                playSound('confirm');
-                gameLoop();
-            });
-            
-            document.getElementById('btnPauseToMenu').addEventListener('click', () => {
-                updateTwoPlayersAvailability();
-                document.getElementById('pauseMenu').classList.remove('active');
-                document.getElementById('menu').style.display = 'flex';
-                gameState = 'menu';
-                playSound('confirm');
-            });
-            
-            document.getElementById('btnSaveName').addEventListener('click', () => {
-                const playerName = document.getElementById('playerName').value.trim();
-                if (playerName) {
-                    // Usar directamente globalFinalScore que ya está calculado
-                    addToTop10(playerName, globalFinalScore, currentLevel + 1, selectedDifficulty);
-                    document.getElementById('nameInputContainer').style.display = 'none';
-                    playSound('confirm'); // AÑADIR SONIDO DE CONFIRMACIÓN
-                }
-            });
-            
-            
-            document.getElementById('playerName').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    document.getElementById('btnSaveName').click();
-                }
-            });
-            
-            document.getElementById('musicVolume').addEventListener('input', (e) => {
-                musicVolume = e.target.value / 100;
-            });
-            
-            document.getElementById('sfxVolume').addEventListener('input', (e) => {
-                sfxVolume = e.target.value / 100;
-            });
-            
+            btn('btnInstructions', () => EST.abrir('capaAyuda'));
+            btn('closeInstructions', () => EST.cerrar('capaAyuda'));
+            btn('btnRestart', () => empezarPartida(numPlayers));
+            btn('btnMenu', volverAlMenu);
+            btn('btnResume', reanudar);
+            btn('btnPauseToMenu', volverAlMenu);
+            btn('btnSaveName', guardarNombre);
+
             // ============================
             // CONTROL TÁCTIL
             // ============================
-            // El mando escribe en el MISMO objeto `keys` que usa el teclado,
+            // Los botones escriben en el MISMO objeto `keys` que usa el teclado,
             // así que la lógica del jugador no se entera de la diferencia.
-
-            /* Teclas que escribe cada mando de arrastre. */
-            const TECLAS_STICK = [
-                { left: 'ArrowLeft', right: 'ArrowRight', up: 'ArrowUp', down: 'ArrowDown' },
-                { left: 'a', right: 'd', up: 'w', down: 's' }
-            ];
-
-            const RADIO_STICK = 46;   // hasta dónde llega la bola del mando
-            const ZONA_MUERTA = 14;   // por debajo de esto no se mueve: evita
-                                      // desplazamientos al apoyar el pulgar
-
-            function aplicarVector(idx, dx, dy) {
-                const t = TECLAS_STICK[idx];
-                if (!t) return;
-
-                function poner(tecla, valor) {
-                    keys[tecla] = valor;
-                    if (tecla.length === 1) keys[tecla.toUpperCase()] = valor;
-                }
-
-                poner(t.left,  dx < 0);
-                poner(t.right, dx > 0);
-                poner(t.up,    dy < 0);
-                poner(t.down,  dy > 0);
-            }
-
-            /* Zona de arrastre: la dirección sale del vector entre el punto
-               donde aterrizó el dedo y donde está ahora, como el mando de
-               Pac-Man, pero encerrada en su propio círculo para que el pulgar
-               derecho quede libre para el arpón. */
-            function crearStick(el, idx) {
-                if (!el) return;
-
-                const knob = el.querySelector('.stick-knob');
-                let punteroActivo = null;
-                let ox = 0, oy = 0;
-
-                function soltar() {
-                    aplicarVector(idx, 0, 0);
-                    knob.style.transform = 'translate(0px, 0px)';
-                    el.classList.remove('activo');
-                    punteroActivo = null;
-                }
-
-                el.addEventListener('pointerdown', (e) => {
-                    e.preventDefault();
-                    if (gameState !== 'playing') return;
-                    punteroActivo = e.pointerId;
-                    ox = e.clientX;
-                    oy = e.clientY;
-                    el.classList.add('activo');
-                    try { el.setPointerCapture(e.pointerId); } catch (err) {}
-                });
-
-                el.addEventListener('pointermove', (e) => {
-                    if (e.pointerId !== punteroActivo) return;
-                    e.preventDefault();
-
-                    let dx = e.clientX - ox;
-                    let dy = e.clientY - oy;
-
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist > RADIO_STICK) {
-                        dx = dx / dist * RADIO_STICK;
-                        dy = dy / dist * RADIO_STICK;
-                    }
-
-                    knob.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
-
-                    aplicarVector(idx,
-                        Math.abs(dx) > ZONA_MUERTA ? dx : 0,
-                        Math.abs(dy) > ZONA_MUERTA ? dy : 0);
-                });
-
-                ['pointerup', 'pointercancel'].forEach((tipo) => {
-                    el.addEventListener(tipo, (e) => {
-                        if (e.pointerId !== punteroActivo) return;
-                        e.preventDefault();
-                        soltar();
-                    });
-                });
-
-                el._soltar = soltar;
-            }
-
-            function soltarTodosLosSticks() {
-                ['stickP1', 'stickP2'].forEach((id) => {
-                    const el = document.getElementById(id);
-                    if (el && el._soltar) el._soltar();
-                });
-            }
-
             function pauseGame() {
                 if (gameState !== 'playing') return;
                 gameState = 'paused';
                 cancelAnimationFrame(animationId);
+                musicaFondo.parar();
                 keys = {};
-                document.getElementById('pauseMenu').classList.add('active');
+                EST.abrir('capaPausa');
             }
 
             function initTouchControls() {
@@ -3762,10 +3683,28 @@
                     document.body.classList.add('touch-device');
                 }
 
-                crearStick(document.getElementById('stickP1'), 0);
-                crearStick(document.getElementById('stickP2'), 1);
+                document.querySelectorAll('#touchControls [data-key]').forEach(btn => {
+                    const key = btn.dataset.key;
 
-                document.querySelectorAll('[data-shoot]').forEach(btn => {
+                    const press = (e) => {
+                        e.preventDefault();
+                        if (gameState !== 'playing') return;
+                        keys[key] = true;
+                        if (key.length === 1) keys[key.toUpperCase()] = true;
+                    };
+                    const release = (e) => {
+                        e.preventDefault();
+                        keys[key] = false;
+                        if (key.length === 1) keys[key.toUpperCase()] = false;
+                    };
+
+                    btn.addEventListener('pointerdown', press);
+                    btn.addEventListener('pointerup', release);
+                    btn.addEventListener('pointercancel', release);
+                    btn.addEventListener('pointerleave', release);
+                });
+
+                document.querySelectorAll('#touchControls [data-shoot]').forEach(btn => {
                     const player = parseInt(btn.dataset.shoot, 10);
                     btn.addEventListener('pointerdown', (e) => {
                         e.preventDefault();
@@ -3774,26 +3713,15 @@
                 });
 
                 document.getElementById('pauseTouchBtn').addEventListener('click', () => {
-                    if (gameState === 'playing') {
-                        pauseGame();
-                    } else if (gameState === 'paused') {
-                        document.getElementById('pauseMenu').classList.remove('active');
-                        gameState = 'playing';
-                        gameLoop();
-                    }
+                    if (gameState === 'playing') pauseGame();
+                    else if (gameState === 'paused') reanudar();
                 });
             }
 
             function showTouchPadsFor(players) {
-                /* Con dos jugadores, el segundo se sienta a la izquierda del
-                   aparato, así que tiene su cruceta y su arpón en esa misma
-                   columna en vez de tener que cruzar el brazo. */
-                document.getElementById('colIzq').classList.add('usada');
-                document.getElementById('colDer').classList.add('usada');
-                document.getElementById('stickP2').style.display = players === 2 ? 'grid' : 'none';
-                document.getElementById('fireP2').style.display = players === 2 ? 'block' : 'none';
+                document.getElementById('padP2').style.display = players === 2 ? 'grid' : 'none';
+                document.getElementById('padFire2').style.display = players === 2 ? 'grid' : 'none';
                 document.getElementById('labelP1').style.display = players === 2 ? 'block' : 'none';
-                soltarTodosLosSticks();
             }
 
             // ============================
@@ -3812,7 +3740,7 @@
             }
 
             function updateTwoPlayersAvailability() {
-                const btn = document.getElementById('btnStart2P');
+                const btn = document.querySelector('#grpJugadores [data-v="2"]');
                 const note = document.getElementById('twoPlayersNote');
                 if (!btn || !note) return;
 
@@ -3821,6 +3749,9 @@
                     note.style.display = 'none';
                 } else {
                     btn.disabled = true;
+                    /* Si estaba elegida, se vuelve a 1 jugador */
+                    if (btn.getAttribute('aria-pressed') === 'true') EST.elegir('grpJugadores', '1');
+                    /* 'block' y no '': el CSS la tiene en none y un '' le devolvería el mando */
                     note.style.display = 'block';
                     note.textContent = window.innerHeight > window.innerWidth
                         ? 'Dos jugadores necesita más ancho: gira el dispositivo o usa una tablet.'
@@ -3834,7 +3765,18 @@
             initTouchControls();
             updateTwoPlayersAvailability();
 
+            const enPartida = () => document.getElementById('pJuego').classList.contains('activa');
+
             document.addEventListener('keydown', (e) => {
+                /* Escribiendo el nombre, las teclas son texto */
+                if (e.target instanceof HTMLInputElement) {
+                    if (e.key === 'Enter') { e.preventDefault(); guardarNombre(); }
+                    return;
+                }
+                if (!enPartida()) {
+                    if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                    return;
+                }
                 keys[e.key] = true;
 
                 // Sin esto las flechas y el espacio hacen scroll de la página
@@ -3861,23 +3803,14 @@
                         }
                     
                     
-                } else if (e.key === 'p' || e.key === 'P') {
+                } else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
                     e.preventDefault();
-                    gameState = 'paused';
-                    cancelAnimationFrame(animationId);
-                    document.getElementById('pauseMenu').classList.add('active');
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    gameState = 'paused';
-                    cancelAnimationFrame(animationId);
-                    document.getElementById('pauseMenu').classList.add('active');
+                    pauseGame();
                 }
             } else if (gameState === 'paused') {
                 if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
                     e.preventDefault();
-                    document.getElementById('pauseMenu').classList.remove('active');
-                    gameState = 'playing';
-                    gameLoop();
+                    reanudar();
                 }
             }
         });
@@ -3888,25 +3821,17 @@
         
         window.addEventListener('blur', () => {
             keys = {};
-            if (typeof soltarTodosLosSticks === 'function') soltarTodosLosSticks();
-            if (gameState === 'playing') {
-                gameState = 'paused';
-                cancelAnimationFrame(animationId);
-                document.getElementById('pauseMenu').classList.add('active');
-            }
+            pauseGame();
         });
+        /* Al irse de la aplicación en el móvil, también pausa */
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) { keys = {}; pauseGame(); }
+        });
+
+        EST.iniciar({ claveAudio: 'superPangAudio', alCambiarMusica });
         
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-

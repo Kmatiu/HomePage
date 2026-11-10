@@ -2,45 +2,321 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
     <title>Arkanoid Retro</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        html, body { height: 100%; }
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
 
-        body {
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(180deg, #000428 0%, #004e92 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            /* dvh tiene en cuenta la barra de direcciones del móvil */
-            height: 100vh;
-            height: 100dvh;
-            color: #fff;
-            overflow: hidden;
-            overscroll-behavior: none;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-        }
+* { box-sizing: border-box; }
 
-        #mainContainer {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            width: 100%;
-            height: 100%;
-            padding: 8px;
-            align-items: center;
-        }
+html, body { height: 100%; }
 
-        /* El canvas conserva su buffer de 800x600 (las coordenadas del juego no
-           cambian) y se escala para caber. max-width + max-height sobre un
-           elemento reemplazado conservan la proporción automáticamente. */
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE ARKANOID ---------- */
+        /* En un ordenador ancho caben las dos barras de bonus a los lados */
+        #pJuego { max-width: 1280px; }
+        #gameRow { margin-top: 8px; }
+        /* El jugador 2 va en la misma barra: sus dos datos se meten entre los
+           demás. La visibilidad la pone el código con display '' o 'none'; con
+           un 'block' en línea esta clase no mandaría. */
+        .grupo-j2 { display: contents; }
+        .est-barra #levelName { max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
         #gameRow {
             display: flex;
             flex-direction: row;
@@ -75,43 +351,6 @@
             box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
         }
 
-        #hud {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            background: rgba(0, 0, 0, 0.8);
-            border: 3px solid #0ff;
-            border-radius: 5px;
-            box-shadow: 0 0 15px #0ff;
-            /* min-width: 800px obligaba a la página a medir 800px como mínimo */
-            width: 100%;
-            max-width: 1280px;
-            flex: 0 0 auto;
-            flex-wrap: wrap;
-        }
-        
-        .hud-section {
-            background: rgba(0, 255, 255, 0.1);
-            padding: 10px 20px;
-            border: 2px solid #0ff;
-            border-radius: 5px;
-            font-size: 18px;
-            color: #0ff;
-            text-shadow: 0 0 5px #0ff;
-            text-align: center;
-        }
-        
-        .hud-section div {
-            margin: 3px 0;
-        }
-        
-        .hud-section span {
-            font-weight: bold;
-            font-size: 22px;
-        }
-        
         #gameContainer {
             background: #000;
             border: 4px solid #0ff;
@@ -133,80 +372,8 @@
             touch-action: none;
         }
         
-        #menu, #pauseMenu, #gameOverScreen, #top10Screen, #instructionsScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-        
         .hidden {
             display: none !important;
-        }
-        
-        h1 {
-            font-size: 48px;
-            color: #0ff;
-            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
-            margin-bottom: 30px;
-            letter-spacing: 4px;
-        }
-        
-        h2 {
-            font-size: 32px;
-            color: #ff0;
-            text-shadow: 0 0 10px #ff0;
-            margin-bottom: 20px;
-        }
-        
-        .btn {
-            background: linear-gradient(180deg, #0ff 0%, #008b8b 100%);
-            color: #000;
-            border: 2px solid #0ff;
-            padding: 15px 40px;
-            margin: 10px;
-            font-size: 20px;
-            font-family: 'Courier New', monospace;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.3s;
-            box-shadow: 0 0 10px #0ff;
-        }
-        
-        /* En táctil el :hover se queda pegado tras tocar y el botón se
-           quedaría ampliado hasta que tocases otra cosa. */
-        @media (hover: hover) {
-            .btn:hover {
-                background: #0ff;
-                box-shadow: 0 0 20px #0ff;
-                transform: scale(1.05);
-            }
-        }
-
-        .btn:active { background: #0ff; }
-        
-        .volume-control {
-            margin: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .volume-control label {
-            color: #0ff;
-            font-size: 18px;
-            min-width: 100px;
-        }
-        
-        .volume-control input[type="range"] {
-            width: 200px;
         }
         
         #powerUpIndicators, #powerUpIndicatorsP2 {
@@ -286,93 +453,6 @@
             border-radius: 3px;
         }
         
-        #top10List {
-            max-width: 600px;
-            width: 90%;
-            background: rgba(0, 20, 40, 0.8);
-            border: 2px solid #0ff;
-            padding: 20px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        
-        .top10-entry {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #0ff;
-            color: #0ff;
-        }
-        
-        .top10-entry:nth-child(1) {
-            color: #ffd700;
-        }
-        
-        .top10-entry:nth-child(2) {
-            color: #c0c0c0;
-        }
-        
-        .top10-entry:nth-child(3) {
-            color: #cd7f32;
-        }
-        
-        #instructionsContent {
-            max-width: 700px;
-            padding: 30px;
-            background: rgba(0, 20, 40, 0.9);
-            border: 2px solid #0ff;
-            text-align: left;
-            line-height: 1.8;
-            /* --- LÍNEAS AÑADIDAS --- */
-            max-height: 85%;      /* Limita la altura al 85% de la pantalla */
-            overflow-y: auto;   /* Muestra la barra de scroll vertical si es necesario */
-        }
-        
-        #instructionsContent h3 {
-            color: #ff0;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-        
-        #instructionsContent ul {
-            margin-left: 20px;
-        }
-        
-        #instructionsContent li {
-            margin: 8px 0;
-            color: #0ff;
-        }
-        
-        #nameInputModal {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.98);
-            border: 3px solid #0ff;
-            padding: 30px;
-            z-index: 30;
-            box-shadow: 0 0 30px #0ff;
-        }
-        
-        #nameInputModal input {
-            font-size: 24px;
-            padding: 10px;
-            margin: 15px 0;
-            background: #000;
-            color: #0ff;
-            border: 2px solid #0ff;
-            font-family: 'Courier New', monospace;
-            width: 300px;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        
         #bonusNotification {
             position: absolute;
             top: 50%;
@@ -389,26 +469,6 @@
             pointer-events: none;
         }
         
-        /* Botones de partida: en móvil no existen las teclas P ni ESC */
-        .hud-buttons {
-            display: flex;
-            gap: 6px;
-            flex: 0 0 auto;
-        }
-
-        .hud-buttons button {
-            background: rgba(0, 255, 255, 0.1);
-            color: #0ff;
-            border: 2px solid #0ff;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 18px;
-            line-height: 1;
-            padding: 8px 12px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-
         #touchHint {
             position: absolute;
             left: 50%;
@@ -481,47 +541,6 @@
             .powerup-bar { display: none; }
         }
 
-        @media (max-width: 720px) {
-            #mainContainer { padding: 4px; gap: 4px; }
-
-            #hud {
-                padding: 5px 6px;
-                gap: 6px;
-                font-size: 12px;
-            }
-
-            .hud-section {
-                padding: 4px 8px;
-                font-size: 12px;
-            }
-
-            .hud-section span { font-size: 15px; }
-            .hud-section div { margin: 1px 0; }
-
-            h1 { font-size: clamp(24px, 8vw, 48px); margin-bottom: 14px; letter-spacing: 2px; }
-            h2 { font-size: clamp(20px, 6vw, 32px); margin-bottom: 10px; }
-
-            .btn {
-                padding: 10px 20px;
-                font-size: 15px;
-                margin: 5px;
-            }
-
-            .volume-control { margin: 6px; gap: 8px; }
-            .volume-control label { font-size: 14px; min-width: 62px; }
-            .volume-control input[type="range"] { width: 120px; }
-
-            /* Los menús van dentro del tablero, que en móvil es pequeño */
-            #menu, #pauseMenu, #gameOverScreen, #top10Screen, #instructionsScreen {
-                overflow-y: auto;
-                padding: 10px;
-            }
-
-            #instructionsContent { padding: 14px; font-size: 13px; line-height: 1.5; }
-            #nameInputModal { padding: 18px; }
-            #nameInputModal input { width: min(260px, 70vw); font-size: 16px; }
-        }
-
         @keyframes bonusPop {
             0% {
                 transform: translate(-50%, -50%) scale(0);
@@ -538,159 +557,478 @@
     </style>
 </head>
 <body>
-    <div id="mainContainer">
-        <div id="hud" class="hidden">
-            
-            <div class="hud-section" id="player2Hud" style="display:none">
-                <div>JUGADOR 2</div>
-                <div>Puntos: <span id="score2">0</span></div>
-                <div>Vidas: <span id="lives2">3</span></div>
-            </div>
-            <div class="hud-section">
-                <div>NIVEL</div>
-                <div><span id="level" style="font-size: 24px;">1/17</span></div>
-                <div style="font-size: 12px; margin-top: 5px; color: #0ff;"><span id="levelName">Inicio</span></div>
-            </div>
-            <div class="hud-section">
-                <div>JUGADOR 1</div>
-                <div>Puntos: <span id="score1">0</span></div>
-                <div>Vidas: <span id="lives1">3</span></div>
-            </div>
-            <div class="hud-buttons">
-                <button id="pauseBtn" type="button" aria-label="Pausar">⏸</button>
-            </div>
-        </div>
 
-        <div id="gameRow">
-            <div id="powerUpSidebarP2" class="hidden">
-                <div class="bonus-header">BONUS ACTIVOS:</div>
-                <div id="powerUpIndicatorsP2"></div>
-            </div>
-            <div id="gameContainer">
-                <canvas id="gameCanvas" width="800" height="600"></canvas>
-                <div id="bonusNotification" class="hidden"></div>
-                <div id="touchHint">Arrastra el dedo para mover la pala · toca para lanzar</div>
-            
-                <div id="menu">
-                    <h1>ARKANOID</h1>
-                    <button class="btn" onclick="startGame(1)">1 JUGADOR</button>
-                    <button class="btn" onclick="startGame(2)">2 JUGADORES</button>
-                    <button class="btn" onclick="showTop10()">TOP 10</button>
-                    <button class="btn" onclick="showInstructions()">INSTRUCCIONES</button>
-                    
-                    <div class="volume-control">
-                        <label>Música:</label>
-                        <input type="range" id="musicVolume" min="0" max="100" value="50" onchange="updateVolume()" oninput="updateVolume()">
-                    </div>
-                    <div class="volume-control">
-                        <label>Efectos:</label>
-                        <input type="range" id="sfxVolume" min="0" max="100" value="70" onchange="updateVolume()" oninput="updateVolume()">
-                    </div>
-                </div>
-                
-                <div id="pauseMenu" class="hidden">
-                    <h2>PAUSA</h2>
-                    <p style="color: #0ff; font-size: 16px; margin: 12px;">Pulsa P o el botón de abajo para continuar</p>
-                    <button class="btn" onclick="togglePause()">CONTINUAR</button>
-                    <div class="volume-control">
-                        <label>Música:</label>
-                        <input type="range" id="musicVolumePause" min="0" max="100" value="50" onchange="updateVolume()" oninput="updateVolume()">
-                    </div>
-                    <div class="volume-control">
-                        <label>Efectos:</label>
-                        <input type="range" id="sfxVolumePause" min="0" max="100" value="70" onchange="updateVolume()" oninput="updateVolume()">
-                    </div>
-                    <button class="btn" onclick="returnToMenu()">VOLVER AL MENÚ</button>
-                </div>
-                
-                <div id="gameOverScreen" class="hidden">
-                    <h2>GAME OVER</h2>
-                    <div id="finalScores" style="margin: 30px 0; font-size: 24px; color: #0ff;"></div>
-                    <button class="btn" onclick="returnToMenu()">MENÚ PRINCIPAL</button>
-                </div>
-                
-                <div id="top10Screen" class="hidden">
-                    <h2>TOP 10</h2>
-                    <div id="top10List"></div>
-                    <button class="btn" style="margin-top: 20px;" onclick="hideTop10()">VOLVER</button>
-                </div>
-                
-                <div id="instructionsScreen" class="hidden">
-                    <div id="instructionsContent">
-                        <h2 style="text-align: center;">INSTRUCCIONES</h2>
-                        
-                        <h3>OBJETIVO</h3>
-                        <ul>
-                            <li>Destruye todos los ladrillos de cada nivel</li>
-                            <li>No dejes caer la bola por debajo de tu pala</li>
-                            <li>Completa los 8 niveles con dificultad creciente</li>
-                            <li>¡NUEVO! Los bloques descienden lentamente - ¡Date prisa!</li>
-                        </ul>
-                        
-                        <h3>CONTROLES JUGADOR 1</h3>
-                        <ul>
-                            <li>← → Mover pala</li>
-                            <li>ESPACIO: Lanzar/Soltar bola</li>
-                        </ul>
-                        
-                        <h3>CONTROLES JUGADOR 2</h3>
-                        <ul>
-                            <li>A / D: Mover pala</li>
-                            <li>W: Lanzar/Soltar bola</li>
-                        </ul>
-                        
-                        <h3>CONTROLES TÁCTILES (MÓVIL)</h3>
-                        <ul>
-                            <li>Arrastra el dedo sobre el tablero para mover la pala</li>
-                            <li>Toca sin arrastrar para lanzar la bola o disparar el láser</li>
-                            <li>Con 2 jugadores, cada dedo controla la pala más cercana</li>
-                        </ul>
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">ARKA<span>NOID</span></div>
+        <p class="est-lema">17 niveles · los ladrillos bajan</p>
 
-                        <h3>CONTROLES GENERALES</h3>
-                        <ul>
-                            <li>P: Pausar / Reanudar</li>
-                            <li>ESC: Volver al menú (en pausa)</li>
-                        </ul>
-                        
-                        <h3>POWER-UPS</h3>
-                        <ul>
-                            <li style="color: #ff0;">AMARILLO [V]: Vida extra (+50 pts)</li>
-                            <li style="color: #0f0;">VERDE [A]: Agrandar pala - 15s</li>
-                            <li style="color: #f00;">ROJO [M]: Multiball x3</li>
-                            <li style="color: #f0f;">MAGENTA [P]: Pegamento - 12s</li>
-                            <li style="color: #0ff;">CIAN [L]: Láser - 20s</li>
-                        </ul>
-                        
-                        <h3>TIPOS DE LADRILLOS</h3>
-                        <ul>
-                            <li>Normales (verde): 1 golpe = 10 puntos</li>
-                            <li>Resistentes (amarillo): 2 golpes = 20 puntos</li>
-                            <li>Muy resistentes (naranja): 3 golpes = 30 puntos</li>
-                            <li>Indestructibles (gris): No se pueden romper</li>
-                        </ul>
-                        
-                        <button class="btn" style="display: block; margin: 20px auto 0;" onclick="hideInstructions()">VOLVER</button>
-                    </div>
-                </div>
+        <fieldset class="est-grupo">
+            <legend>JUGADORES</legend>
+            <div class="opciones iguales" id="grpJugadores">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">1 JUGADOR<span class="sub">solo</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2 JUGADORES<span class="sub">a la vez, una pala cada uno</span></button>
             </div>
-            <div id="powerUpSidebar" class="hidden">
-                <div class="bonus-header">BONUS ACTIVOS:</div>
-                <div id="powerUpIndicators"></div>
-            </div>
-        </div>
+        </fieldset>
 
-        
-        <div id="nameInputModal" class="hidden">
-            <h2 style="color: #ff0;">¡NUEVO RÉCORD!</h2>
-            <p style="color: #0ff; margin: 15px 0;">Introduce tu nombre:</p>
-            <input type="text" id="playerName" maxlength="20" placeholder="TU NOMBRE">
-            <div class="modal-buttons">
-                <button class="btn" onclick="submitScore()">GUARDAR</button>
-                <button class="btn" onclick="skipScoreAndReturnToMenu()">MENÚ</button>
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
             </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
         </div>
     </div>
+</section>
 
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="score1">0</b><span>J1 PUNTOS</span></div>
+        <div class="dato"><b id="lives1">3</b><span>J1 VIDAS</span></div>
+        <div class="grupo-j2" id="player2Hud" style="display:none">
+            <div class="dato"><b id="score2">0</b><span>J2 PUNTOS</span></div>
+            <div class="dato"><b id="lives2">3</b><span>J2 VIDAS</span></div>
+        </div>
+        <div class="dato"><b id="level">1/17</b><span id="levelName">Inicio</span></div>
+        <div class="hueco"></div>
+        <button id="pauseBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+
+    <div id="gameRow">
+        <div id="powerUpSidebarP2" class="hidden">
+            <div class="bonus-header">BONUS J2:</div>
+            <div id="powerUpIndicatorsP2"></div>
+        </div>
+        <div id="gameContainer">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div id="bonusNotification" class="hidden"></div>
+            <div id="touchHint">Arrastra el dedo para mover la pala · toca para lanzar</div>
+        </div>
+        <div id="powerUpSidebar" class="hidden">
+            <div class="bonus-header">BONUS ACTIVOS:</div>
+            <div id="powerUpIndicators"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>La bola está quieta y los bonus no se gastan.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
+        <div class="marcador" id="finalScores">0</div>
+        <p id="finDetalle"></p>
+        <div id="nameInputModal" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="playerName" maxlength="20" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="top10List"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Rompe todos los ladrillos de cada nivel sin dejar caer la bola. Son 17 niveles, y los ladrillos bajan poco a poco: date prisa.</p>
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> arrastra el dedo por el tablero para mover la pala; toca sin arrastrar para lanzar la bola o disparar el láser. Con 2 jugadores, cada dedo mueve la pala más cercana.</li>
+                <li><b>Jugador 1:</b> ← → para mover, <b>espacio</b> para lanzar.</li>
+                <li><b>Jugador 2:</b> <b>A / D</b> para mover, <b>W</b> para lanzar.</li>
+                <li><b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+            <h3>BONUS</h3>
+            <ul>
+                <li style="color:#ff0;">AMARILLO [V]: vida extra (+50 puntos)</li>
+                <li style="color:#0f0;">VERDE [A]: pala grande, 15 s</li>
+                <li style="color:#f55;">ROJO [M]: tres bolas</li>
+                <li style="color:#f0f;">MAGENTA [P]: pegamento, 12 s</li>
+                <li style="color:#0ff;">CIAN [L]: láser, 20 s</li>
+            </ul>
+            <h3>LADRILLOS</h3>
+            <ul>
+                <li>Verdes: 1 golpe, 10 puntos. Amarillos: 2 golpes, 20. Naranjas: 3 golpes, 30.</li>
+                <li>Grises: no se rompen.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
         // ============================
         // CONFIGURACIÓN Y CONSTANTES
@@ -726,57 +1064,34 @@
             brickDescentInterval: 20
         };
         
-        // --- INICIO DE LA MODIFICACIÓN DE AUDIO ---
-        let audioContext = null;
-        let bgMusicSource = null;
+        // Audio por los dos canales del estándar: la melodía de fondo por
+        // MÚSICA y los golpes por EFECTOS. Antes iba todo directo a los
+        // altavoces con el volumen de los deslizadores.
         let bgMusicInterval = null;
-        
-        // Función para inicializar el audio context
-        function initAudioContext() {
-            if (!audioContext) {
-                try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                } catch (error) {
-                    console.warn('Web Audio API no soportada:', error);
-                }
-            }
-        }
-
-
-        // Funciones para generar sonidos usando la Web Audio API
+        const VOL_EFECTOS = 0.7;   // el valor por defecto que tenía el deslizador
+        const VOL_MUSICA = 0.5;
 
         /**
          * Genera un sonido simple con un oscilador.
-         * @param {number} frequency - Frecuencia en Hz.
-         * @param {number} duration - Duración en segundos.
-         * @param {string} type - Tipo de onda ('sine', 'square', 'sawtooth', 'triangle').
-         * @param {number} volume - Ganancia (0 a 1).
+         * @param {string} canal - 'efectos' o 'musica'
          */
-        function generateSound(frequency, duration, type, volume) {
-            if (!audioContext) {
-                initAudioContext();
-            }
-            
-            if (!audioContext) {
-                return; // No se puede crear audio
-            }
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            
+        function generateSound(frequency, duration, type, volume, canal) {
+            canal = canal || 'efectos';
+            if (!EST.audio[canal]) return;
+            const audioContext = EST.contexto();
+            if (!audioContext) return;
+
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
-            
             oscillator.type = type;
             oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-            
-            // Configuración del volumen y envolvente (Attack/Decay)
-            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            // Envolvente: exponentialRamp no admite 0 y lanza; 0.0001 sí
+            gainNode.gain.setValueAtTime(Math.max(0.0001, volume), audioContext.currentTime);
             gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
-            
             oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-            
+            gainNode.connect(canal === 'musica' ? EST.audio.busMusica : EST.audio.busEfectos);
+            // Desconectar al acabar: la música toca una nota cada 150 ms
+            oscillator.onended = () => { try { oscillator.disconnect(); gainNode.disconnect(); } catch (e) {} };
             oscillator.start();
             oscillator.stop(audioContext.currentTime + duration);
         }
@@ -816,6 +1131,9 @@
                 clearInterval(bgMusicInterval);
                 bgMusicInterval = null;
             }
+            // Con la música apagada no se deja un temporizador sonando en vacío
+            if (!EST.audio.musica) return;
+            vol = VOL_MUSICA;
             
             // Define la melodía: pares de [frecuencia_Hz, duración_segundos]
             const melody = [
@@ -841,7 +1159,7 @@
                     const [freq, durationFactor] = melody[noteIndex];
                     
                     // Generar la nota con un tipo de onda y duración específicos
-                    generateSound(freq, durationFactor * 0.9, 'triangle', finalVolume); 
+                    generateSound(freq, durationFactor * 0.9, 'triangle', finalVolume, 'musica');
                     
                     noteIndex = (noteIndex + 1) % melody.length; // Ciclo continuo
                 };
@@ -1782,7 +2100,7 @@
                 player2.powerUpTimers = {};
                 player2.powerUpStartTimes = {};
                 
-                document.getElementById('player2Hud').style.display = 'block';
+                document.getElementById('player2Hud').style.display = '';
                 document.getElementById('powerUpIndicatorsP2').classList.remove('hidden');
             } else {
                 player2.paddle = null;
@@ -2160,168 +2478,58 @@
         
         function gameOver(victory) {
             gameState.gameRunning = false;
+            gameState.currentScreen = 'gameover';
             cancelAnimationFrame(gameState.animationId);
             sounds.bgMusic.pause();
+            if (!victory) playSound('gameOver');
 
-            if (!victory) {
-                playSound('gameOver');
-            }
-
-            let finalScoresDiv = document.getElementById('finalScores');
-
-            if (gameState.numPlayers === 1) {
-                finalScoresDiv.innerHTML = `
-                    <div>Tu puntuación: ${player1.score}</div>
-                    <div style="margin-top: 10px;">Nivel alcanzado: ${gameState.currentLevel}</div>
-                `;
-            } else {
-                finalScoresDiv.innerHTML = `
-                    <div>Jugador 1: ${player1.score}</div>
-                    <div>Jugador 2: ${player2.score}</div>
-                    <div style="margin-top: 10px;">Nivel alcanzado: ${gameState.currentLevel}</div>
-                `;
-            }
-
-            if (victory) {
-                finalScoresDiv.innerHTML = `
-                    <div style="color: #ff0; font-size: 28px; margin-bottom: 20px;">¡VICTORIA!</div>
-                ` + finalScoresDiv.innerHTML;
-            }
-
-            // Siempre mostramos la pantalla de Game Over
-            document.getElementById('gameOverScreen').classList.remove('hidden');
-
-            let bestScore = gameState.numPlayers === 2 ? Math.max(player1.score, player2.score) : player1.score;
-            checkTop10(bestScore);
+            const best = gameState.numPlayers === 2 ? Math.max(player1.score, player2.score) : player1.score;
+            document.getElementById('finTitulo').textContent = victory ? '🏆 ¡VICTORIA!' : '🧱 FIN DE LA PARTIDA';
+            document.getElementById('finalScores').textContent = best.toLocaleString('es-ES');
+            document.getElementById('finDetalle').textContent = gameState.numPlayers === 2
+                ? 'Jugador 1: ' + player1.score.toLocaleString('es-ES') + ' · Jugador 2: ' + player2.score.toLocaleString('es-ES') + ' · nivel ' + gameState.currentLevel
+                : 'Nivel alcanzado: ' + gameState.currentLevel + ' de ' + LEVELS.length;
+            checkTop10(best);
+            EST.abrir('capaFin');
         }
 
+        /* Con dos jugadores se guarda la mejor de las dos, como antes. Sin
+           foco automático: en el móvil abriría el teclado tapando el marcador. */
         function checkTop10(score) {
-            let top10 = loadTop10();
-            
-            let entraEnTop10 = false;
-            if (top10.length < 10 || score > top10[top10.length - 1].score) {
-                entraEnTop10 = true;
-            }
-
-            if (entraEnTop10) {
-                scoreToSave = score; // Guardamos la puntuación en nuestra nueva variable
-                document.getElementById('nameInputModal').classList.remove('hidden');
-                document.getElementById('playerName').value = '';
-                document.getElementById('playerName').focus();
-            }
-            // Ya no hay 'else', porque la pantalla de Game Over ya está visible.
-        }
-
-        function skipScoreAndReturnToMenu() {
-            document.getElementById('nameInputModal').classList.add('hidden');
-            // No hace falta hacer nada más, la pantalla de Game Over ya está visible.
+            scoreToSave = score;
+            document.getElementById('playerName').value = '';
+            document.getElementById('nameInputModal').style.display = ranking.entra(score) ? '' : 'none';
         }
 
         function submitScore() {
-            let name = document.getElementById('playerName').value.trim();
-
-            if (!name) {
-                alert('Por favor, introduce un nombre');
-                return;
-            }
-            
-            let score = scoreToSave; // Usamos la puntuación que guardamos
-            let top10 = loadTop10();
-            
-            let date = new Date();
-            let dateStr = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
-            
-            top10.push({ name: name, score: score, date: dateStr });
-            top10.sort((a, b) => b.score - a.score);
-            top10 = top10.slice(0, 10);
-            
-            saveTop10(top10);
-            document.getElementById('nameInputModal').classList.add('hidden');
-            // Ya no es necesario mostrar la pantalla de Game Over ni usar un temporizador.
+            const campo = document.getElementById('playerName');
+            const name = campo.value.trim();
+            if (!name) { EST.avisar('Escribe tu nombre', true); campo.focus(); return; }
+            const d = new Date();
+            const dateStr = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+            ranking.anadir({ name: name, score: scoreToSave, date: dateStr });
+            document.getElementById('nameInputModal').style.display = 'none';
+            EST.avisar('¡Guardado!');
         }
 
-        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
-        // iframe con sandbox) el guardado lanzaba y cortaba el fin de partida.
-        let top10Memory = [];
-        const storageOK = (() => {
-            try {
-                localStorage.setItem('__t', '1');
-                localStorage.removeItem('__t');
-                return true;
-            } catch (e) {
-                return false;
-            }
-        })();
-
-        function escapeHtml(str) {
-            return String(str).replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
-
-        function loadTop10() {
-            if (!storageOK) return top10Memory.slice();
-            let data = null;
-            try {
-                data = localStorage.getItem('arkanoidTop10');
-            } catch (e) {
-                data = null;
-            }
-            if (data) {
-                try {
-                    return JSON.parse(data);
-                } catch (e) {
-                    return [];
-                }
-            }
-            return [];
-        }
-
-        function saveTop10(top10) {
-            top10Memory = top10.slice();
-            if (!storageOK) return;
-            try {
-                localStorage.setItem('arkanoidTop10', JSON.stringify(top10));
-            } catch (e) {
-                console.warn('No se pudo guardar el Top 10:', e);
-            }
-        }        
+        // La misma clave y los mismos campos que antes del menú nuevo: así no
+        // se pierden los récords que ya hubiera en el móvil
+        const ranking = EST.ranking({ clave: 'arkanoidTop10', nombre: 'name', puntos: 'score' });
 
         function showTop10() {
-            let top10 = loadTop10();
-            let listDiv = document.getElementById('top10List');
-            
-            if (top10.length === 0) {
-                listDiv.innerHTML = '<div style="text-align: center; color: #0ff; padding: 30px;">No hay registros aún</div>';
-            } else {
-                let html = '';
-                top10.forEach((entry, index) => {
-                    html += `
-                        <div class="top10-entry">
-                            <span>${index + 1}. ${escapeHtml(entry.name)}</span>
-                            <span>${Number(entry.score) || 0} pts - ${escapeHtml(entry.date)}</span>
-                        </div>
-                    `;
-                });
-                listDiv.innerHTML = html;
-            }
-            
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('top10Screen').classList.remove('hidden');
+            ranking.pintar(document.getElementById('top10List'), (e) => (e.date ? ' · ' + e.date : ''));
+            EST.abrir('capaRanking');
         }
-        
-        function hideTop10() {
-            document.getElementById('top10Screen').classList.add('hidden');
-            document.getElementById('menu').classList.remove('hidden');
-        }
-        
+
+        function hideTop10() { EST.cerrar('capaRanking'); }
+
         // ============================
         // FUNCIONES DE MENÚ
         // ============================
         
         function startGame(numPlayers) {
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
+            ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+            EST.mostrar('pJuego');
             
             initGame(numPlayers);
                         
@@ -2336,17 +2544,10 @@
             gameState.gameRunning = true;
 
             gameState.currentScreen = 'playing';
-            initAudioContext();
             gameState.lastTime = performance.now();
+            accumulator = 0;
+            sounds.bgMusic.play();
 
-            // -> AÑADE ESTA LÍNEA para obtener el volumen:
-            let musicVol = parseInt(document.getElementById('musicVolume').value) / 100;
-
-        
-            sounds.bgMusic.currentTime = 0;
-            // -> MODIFICA ESTA LÍNEA para pasar el volumen:
-            sounds.bgMusic.play(musicVol); 
-    
             gameState.animationId = requestAnimationFrame(gameLoop);
         }
         
@@ -2355,15 +2556,12 @@
             cancelAnimationFrame(gameState.animationId);
             sounds.bgMusic.pause();
             
-            document.getElementById('hud').classList.add('hidden');
-            document.getElementById('pauseMenu').classList.add('hidden');
-            document.getElementById('gameOverScreen').classList.add('hidden');
-            document.getElementById('nameInputModal').classList.add('hidden');
+            ['capaPausa', 'capaFin'].forEach(EST.cerrar);
             document.getElementById('powerUpIndicators').innerHTML = '';
             document.getElementById('powerUpIndicatorsP2').innerHTML = '';
             document.getElementById('powerUpSidebarP2').classList.add('hidden');
             document.getElementById('powerUpSidebar').classList.add('hidden');
-            document.getElementById('menu').classList.remove('hidden');
+            EST.mostrar('pMenu');
             
             gameState.currentScreen = 'menu';
             
@@ -2383,25 +2581,18 @@
             }
         });
 
-        function showInstructions() {
-            document.getElementById('menu').classList.add('hidden');
-            document.getElementById('instructionsScreen').classList.remove('hidden');
-        }
-        
-        function hideInstructions() {
-            document.getElementById('instructionsScreen').classList.add('hidden');
-            document.getElementById('menu').classList.remove('hidden');
-        }
+        function showInstructions() { EST.abrir('capaAyuda'); }
+        function hideInstructions() { EST.cerrar('capaAyuda'); }
         
         function updateHUD() {
-            document.getElementById('score1').textContent = player1.score;
+            document.getElementById('score1').textContent = player1.score.toLocaleString('es-ES');
             document.getElementById('lives1').textContent = player1.lives;
             document.getElementById('level').textContent = gameState.currentLevel + '/17';
             let currentLevelData = LEVELS[gameState.currentLevel - 1];
             document.getElementById('levelName').textContent = currentLevelData ? currentLevelData.name.replace(/^Nivel \d+ - /, '') : '';
             
             if (gameState.numPlayers === 2) {
-                document.getElementById('score2').textContent = player2.score;
+                document.getElementById('score2').textContent = player2.score.toLocaleString('es-ES');
                 document.getElementById('lives2').textContent = player2.lives;
             }
         }
@@ -2411,41 +2602,33 @@
         // ============================
         
         function playSound(soundName) {
-            if (!audioContext) {
-               initAudioContext();    
-            }
-            if (sounds[soundName] && typeof sounds[soundName] === 'function') {
-                let sfxVol = parseInt(document.getElementById('sfxVolume').value) / 100;
-                // Llama a la función generadora de sonido con el volumen de SFX
-                sounds[soundName](sfxVol); 
-            }
-            // No hace falta el .catch(e => {}) ya que no es una Promise como el .play() de un Audio HTML
-        }
-        
-        function updateVolume() {
-            const isHidden = (el) => el ? el.closest('.hidden') !== null : true;
-            const musicMenu = document.getElementById('musicVolume');
-            const sfxMenu = document.getElementById('sfxVolume');
-            const musicPause = document.getElementById('musicVolumePause');
-            const sfxPause = document.getElementById('sfxVolumePause');
-
-            const pauseVisible = musicPause && !isHidden(musicPause) && sfxPause && !isHidden(sfxPause);
-
-            const musicVal = pauseVisible && musicPause ? musicPause.value : (musicMenu ? musicMenu.value : '50');
-            const sfxVal = pauseVisible && sfxPause ? sfxPause.value : (sfxMenu ? sfxMenu.value : '70');
-
-            if (musicMenu) musicMenu.value = musicVal;
-            if (musicPause) musicPause.value = musicVal;
-            if (sfxMenu) sfxMenu.value = sfxVal;
-            if (sfxPause) sfxPause.value = sfxVal;
+            if (sounds[soundName] && typeof sounds[soundName] === 'function') sounds[soundName](VOL_EFECTOS);
         }
 
+        /* Encender la música a mitad de partida la arranca; apagarla la para */
+        function alCambiarMusica(on) {
+            if (on && gameState.currentScreen === 'playing') sounds.bgMusic.play();
+            else sounds.bgMusic.pause();
+        }
         
         // ============================
         // CONTROL DE TECLADO
         // ============================
         
+        const enPartida = () => document.getElementById('pJuego').classList.contains('activa');
+
         document.addEventListener('keydown', (e) => {
+            /* Escribiendo el nombre, las teclas son texto: antes el espacio y
+               las flechas se los quedaba el juego y no se podía escribir un
+               nombre con espacio */
+            if (document.activeElement instanceof HTMLInputElement) {
+                if (e.key === 'Enter') { e.preventDefault(); submitScore(); }
+                return;
+            }
+            if (!enPartida()) {
+                if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                return;
+            }
             switch(e.key) {
                 case 'ArrowLeft':
                     keys.left = true;
@@ -2508,14 +2691,7 @@
                     }
                     break;
                 case 'Escape':
-                    if (gameState.currentScreen === 'paused') {
-                        returnToMenu();
-                    }
-                    break;
-                case 'Enter':
-                    if (!document.getElementById('nameInputModal').classList.contains('hidden')) {
-                        submitScore();
-                    }
+                    if (gameState.currentScreen === 'playing' || gameState.currentScreen === 'paused') togglePause();
                     break;
             }
         });
@@ -2687,10 +2863,7 @@
         }
 
         function resumeAudio() {
-            if (!audioContext) initAudioContext();
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume().catch(() => {});
-            }
+            if (EST.audio.musica || EST.audio.efectos) EST.contexto();
         }
 
         function savePowerUpState(player, playerKey) {
@@ -2759,11 +2932,10 @@
                     savePowerUpState(player2, 'player2');
                 }
                 
-                document.getElementById('pauseMenu').classList.remove('hidden');
+                EST.abrir('capaPausa');
             } else if (gameState.currentScreen === 'paused') {
                 gameState.currentScreen = 'playing';
                 gameState.gameRunning = true;
-                initAudioContext();
                 gameState.lastTime = performance.now();
                 
                 // Restaurar estado de power-ups del jugador 1
@@ -2774,10 +2946,8 @@
                     restorePowerUpState(player2, 'player2');
                 }
                 
-                let musicVol = parseInt(document.getElementById('musicVolume').value) / 100;
-                sounds.bgMusic.play(musicVol);
-                
-                document.getElementById('pauseMenu').classList.add('hidden');
+                sounds.bgMusic.play();
+                EST.cerrar('capaPausa');
                 gameState.animationId = requestAnimationFrame(gameLoop);
             }
         }
@@ -2797,11 +2967,40 @@
             keys.left = keys.right = keys.a = keys.d = keys.space = keys.w = false;
         });
 
+        /* Al irse de la pestaña o de la aplicación, pausa: si no, la bola
+           seguiría y los ladrillos bajando sin nadie mirando */
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameState.currentScreen === 'playing') togglePause();
+        });
+
+        // ---------- MENÚ Y CAPAS ----------
+        let jugadoresMenu = 1;
+        EST.grupo('grpJugadores', (v) => { jugadoresMenu = +v; });
+        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+        btn('btnJugar', () => startGame(jugadoresMenu));
+        btn('btnSeguir', () => { if (gameState.currentScreen === 'paused') togglePause(); });
+        btn('btnAbandonar', returnToMenu);
+        /* Pasando por returnToMenu se cancelan los temporizadores de los
+           power-ups de la partida anterior: si no, uno pendiente podía
+           encoger la pala en la partida nueva */
+        btn('btnOtra', () => { const n = gameState.numPlayers; returnToMenu(); startGame(n); });
+        btn('btnMenuFin', returnToMenu);
+        btn('btnGuardar', submitScore);
+        btn('btnRanking', showTop10);
+        btn('btnCerrarRanking', hideTop10);
+        btn('btnBorrarRanking', () => {
+            if (!confirm('¿Borrar todos los récords?')) return;
+            ranking.borrar();
+            showTop10();
+        });
+        btn('btnAyuda', showInstructions);
+        btn('btnCerrarAyuda', hideInstructions);
+
         window.addEventListener('load', () => {
+            EST.iniciar({ claveAudio: 'arkanoidAudio', alCambiarMusica });
             initTouchControls();
             const hint = document.getElementById('touchHint');
             if (hint) hint.classList.add('visible');
-            updateVolume();
         });
     </script>
 </body>

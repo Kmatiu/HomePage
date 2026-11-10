@@ -2,198 +2,335 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
     <title>Pac-Man (Comecocos)</title>
     <style>
-        :root {
-            --amarillo: #ff0;
-        }
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
 
-        * { box-sizing: border-box; }
+* { box-sizing: border-box; }
 
-        html, body { height: 100%; }
+html, body { height: 100%; }
 
-        body {
-            margin: 0;
-            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
-            background: #000;
-            color: #fff;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            /* dvh tiene en cuenta la barra de direcciones del móvil */
-            height: 100vh;
-            height: 100dvh;
-            flex-direction: column;
-            font-size: 14px;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
 
-        .container {
-            border: 5px solid var(--amarillo);
-            box-shadow: 0 0 20px var(--amarillo);
-            background: #000;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            border-radius: 10px;
-            /* La tarjeta ocupa la altura disponible y reparte: info arriba,
-               laberinto flexible en medio, controles abajo. */
-            height: 100%;
-            width: 100%;
-            max-width: 560px;
-            gap: 6px;
-        }
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
 
-        /* Zona del laberinto: el canvas conserva su buffer de 500x600 (las
-           coordenadas del juego no cambian) y se escala para caber. */
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(0, 255, 200, 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(0, 255, 200, 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: #0a0820;
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(0, 0, 0, 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(5, 3, 20, 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: #130f33;
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE PAC-MAN ---------- */
+        /* El laberinto conserva su buffer de 500×600 (las coordenadas del juego
+           no cambian) y se escala para caber en lo que deja la barra */
         #stage {
             position: relative;
             flex: 1 1 auto;
             min-height: 0;
             width: 100%;
+            margin-top: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             touch-action: none;
         }
 
-        canvas {
+        #gameCanvas {
             display: block;
             background: #000;
-            border-radius: 5px;
+            border: 3px solid #ff0;
+            border-radius: 8px;
+            box-shadow: 0 0 14px rgba(255, 255, 0, 0.45);
             max-width: 100%;
             max-height: 100%;
             touch-action: none;
-        }
-
-        .game-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 8px;
-            width: 100%;
-            padding: 4px 0;
-            font-size: clamp(11px, 3vw, 16px);
-            flex: 0 0 auto;
-            flex-wrap: wrap;
-        }
-
-        .info-left, .info-right {
-            text-align: left;
-            padding: 0 4px;
-        }
-
-        .info-right { text-align: right; }
-
-        .controls {
-            margin-top: 4px;
-            text-align: center;
-            font-size: 12px;
-            color: #aaa;
-            flex: 0 0 auto;
-        }
-
-        .controls p { margin: 4px 0; }
-
-        .audio-controls {
-            margin-top: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            flex: 0 0 auto;
-        }
-
-        .volume-slider {
-            background: #000;
-            color: #0f0;
-            cursor: pointer;
-            max-width: 120px;
-        }
-
-        button {
-            background: #222;
-            color: #fff;
-            border: 2px solid #fff;
-            padding: 6px 10px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: background-color 0.2s, color 0.2s;
-            white-space: nowrap;
-            font-family: inherit;
-            font-size: 13px;
-            touch-action: manipulation;
-        }
-
-        /* En táctil el :hover se queda pegado tras tocar */
-        @media (hover: hover) {
-            button:hover { background: #444; }
-        }
-
-        button:active { background: #555; }
-
-        /* Botones de partida (pausa y reinicio), visibles siempre porque en
-           móvil no existen las teclas P ni R. */
-        .game-buttons {
-            display: flex;
-            gap: 6px;
-            flex: 0 0 auto;
-        }
-
-        .game-buttons button {
-            border-color: var(--amarillo);
-            color: var(--amarillo);
-            padding: 6px 12px;
-            font-size: 15px;
-            line-height: 1;
-        }
-
-        /* Overlays: fixed para que cubran de verdad, no el bloque contenedor */
-        .overlay {
-            position: fixed;
-            inset: 0;
-            background-color: rgba(0, 0, 0, 0.85);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            z-index: 100;
-            padding: 16px;
-        }
-
-        .overlay-content {
-            background: #111;
-            border: 3px solid var(--amarillo);
-            padding: 20px;
-            text-align: center;
-            border-radius: 10px;
-            box-shadow: 0 0 15px var(--amarillo);
-            max-width: 100%;
-            max-height: 100%;
-            overflow-y: auto;
-        }
-
-        .overlay-content h1 { font-size: clamp(1.2rem, 6vw, 2rem); margin: 0 0 10px; }
-        .overlay-content h2 { font-size: clamp(0.9rem, 4vw, 1.4rem); margin: 8px 0; }
-
-        #playerName {
-            border: 2px solid var(--amarillo);
-            background: #000;
-            color: #fff;
-            font-family: inherit;
-            /* 16px evita que iOS haga zoom al enfocar el campo */
-            font-size: 16px;
-        }
-
-        #highScoresTable th, #highScoresTable td {
-            padding: 6px;
-            border-bottom: 1px dashed #444;
-            font-size: clamp(13px, 3.5vw, 18px);
         }
 
         /* Aviso de deslizamiento, solo en táctil y solo al empezar */
@@ -203,84 +340,462 @@
             bottom: 12%;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.75);
-            border: 2px solid var(--amarillo);
-            color: var(--amarillo);
+            border: 2px solid #ff0;
+            color: #ff0;
             padding: 8px 14px;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 0.8rem;
             text-align: center;
             pointer-events: none;
             z-index: 10;
             display: none;
         }
-
         body.touch-device #swipeHint.visible { display: block; }
-
-        /* El texto de teclas no sirve en móvil y roba altura */
-        body.touch-device .controls { display: none; }
-
-        @media (max-height: 700px) {
-            .container { padding: 6px; border-width: 3px; }
-            .audio-controls { gap: 6px; }
-            button { padding: 5px 8px; font-size: 12px; }
-        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="game-info">
-            <div class="info-left">
-                Nivel: <span id="level">1</span> | Puntuación: <span id="score">0</span>
-            </div>
-            <div class="info-right">
-                Vidas: <span id="lives">3</span> | Récord Global: <span id="highScore">0</span> (<span id="highScoreName">---</span>)
-            </div>
-        </div>
-        <div id="stage">
-            <canvas id="gameCanvas" width="500" height="600"></canvas>
-            <div id="swipeHint">Desliza el dedo para girar</div>
-        </div>
-        <div class="controls">
-            <p>Flechas: Mover | P: Pausar/Reanudar | R: Reiniciar Juego</p>
-        </div>
-        <div class="audio-controls">
-            <div class="game-buttons">
-                <button id="pauseBtn" type="button" aria-label="Pausar">⏸</button>
-                <button id="restartBtn" type="button" aria-label="Reiniciar">↺</button>
-            </div>
-            <label for="volumeSlider">Vol:</label>
-            <input type="range" id="volumeSlider" class="volume-slider" min="0" max="1" step="0.01" value="0.5">
-            <button id="muteBtn">Silenciar</button>
-            <button id="showLeaderboardBtn">Récords</button>
-        </div>
-    </div>
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">PAC-<span>MAN</span></div>
+        <p class="est-lema">Cómete todos los cocos sin que te pillen</p>
 
-    <div id="overlay" class="overlay" style="display: none;">
-        <div id="overlayContent" class="overlay-content">
-            <h1 id="overlayTitle">GAME OVER</h1>
-            <p id="overlayMessage">¡Has perdido todas tus vidas!</p>
-            <h2 id="finalScore">Puntuación Final: 0</h2>
-            <h2 id="highScoreMessage" style="color: #0f0;"></h2>
-             <div id="nameInputContainer" style="margin-top: 15px; display: none; flex-direction: column; align-items: center;">
-                <label for="playerName">Tu Nombre/Iniciales (Máx. 10 car.):</label>
-                <input type="text" id="playerName" maxlength="10" style="font-size: 20px; text-align: center; width: 150px; margin-bottom: 10px;">
-                <button id="saveNameBtn">Guardar y Reiniciar</button>
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
             </div>
-            <button id="playAgainBtn" type="button" style="margin-top: 20px; border-color: #ff0; color: #ff0; padding: 10px 18px; font-size: 16px;">JUGAR DE NUEVO</button>
-            <p style="margin-top: 12px; font-size: 12px; color: #aaa;">También puedes pulsar R.</p>
-        </div>
-    </div>
-    
-    <div id="leaderboardOverlay" class="overlay" style="display: none;">
-        <div class="overlay-content" style="max-width: 450px;">
-            <h1 style="color: #ff0;">PUNTUACIONES MÁXIMAS (TOP 10)</h1>
-            <table id="highScoresTable" style="width: 100%; margin-top: 20px; border-collapse: collapse; color: #fff; text-align: left;">
-                </table>
-            <button id="closeLeaderboardBtn" style="margin-top: 20px;">Cerrar</button>
-        </div>
-    </div>
+            <p class="est-nota">Música: las sintonías y la sirena de los fantasmas azules. Efectos: el waka-waka y los golpes.</p>
+        </fieldset>
 
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="showLeaderboardBtn" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="score">0</b><span>PUNTOS</span></div>
+        <div class="dato"><b id="lives">3</b><span>VIDAS</span></div>
+        <div class="dato"><b id="level">1</b><span>NIVEL</span></div>
+        <div class="dato"><b id="highScore">0</b><span>RÉCORD</span></div>
+        <div class="hueco"></div>
+        <button id="pauseBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="stage">
+        <canvas id="gameCanvas" width="500" height="600"></canvas>
+        <div id="swipeHint">Desliza el dedo para girar</div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>Los fantasmas están quietos.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnReiniciar" type="button">🔄 EMPEZAR DE NUEVO</button>
+            <button class="secundario" id="btnAbandonar" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2>🟡 FIN DE LA PARTIDA</h2>
+        <div class="marcador" id="finalScore">0</div>
+        <p id="finDetalle"></p>
+        <div id="nameInputContainer" style="display:none;">
+            <p class="destacado">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="playerName" maxlength="10" autocomplete="off" placeholder="Tu nombre o iniciales">
+            <button class="principal" id="saveNameBtn" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="playAgainBtn" type="button">🔄 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 TOP 10</h2>
+        <div class="est-lista" id="highScoresTable"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="closeLeaderboardBtn" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Cómete todos los cocos del laberinto sin que te toque un fantasma. Al acabar un nivel ganas una vida y empieza el siguiente.</p>
+            <h3>CONTROLES</h3>
+            <ul>
+                <li><b>Móvil:</b> desliza el dedo hacia donde quieras girar. No hace falta levantarlo: puedes encadenar giros arrastrando.</li>
+                <li><b>Ordenador:</b> flechas o <b>W A S D</b>; <b>P</b> o <b>Esc</b> pausa; <b>R</b> empieza de nuevo.</li>
+            </ul>
+            <h3>TRUCOS</h3>
+            <ul>
+                <li>Las <b>píldoras grandes</b> vuelven azules a los fantasmas un rato: entonces te los puedes comer.</li>
+                <li>Los túneles de los lados te llevan al otro extremo.</li>
+                <li>Empiezas con <b>3 vidas</b>.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
     <script>
         // --- CONSTANTES ---
         const canvas = document.getElementById('gameCanvas');
@@ -514,78 +1029,23 @@
 
         // --- FUNCIONES DE UTILIDAD (LOCAL STORAGE) ---
         
-        // Respaldo en memoria: si localStorage está bloqueado (modo privado,
-        // iframe con sandbox) el guardado lanzaba y cortaba la partida.
-        let scoresMemory = [];
-        const storageOK = (() => {
-            try {
-                localStorage.setItem('__t', '1');
-                localStorage.removeItem('__t');
-                return true;
-            } catch (e) {
-                return false;
-            }
-        })();
-
-        function escapeHtml(str) {
-            return String(str).replace(/[&<>"']/g, c => ({
-                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-            }[c]));
-        }
+        // La misma clave y los mismos campos que antes del menú nuevo: así no
+        // se pierden los récords que ya hubiera en el móvil
+        const ranking = EST.ranking({ clave: 'pacmanHighScoresList', nombre: 'name', puntos: 'score' });
 
         function loadHighScoresList() {
-            if (!storageOK) {
-                highScoresList = scoresMemory.slice();
-            } else {
-                let storedList = null;
-                try {
-                    storedList = localStorage.getItem('pacmanHighScoresList');
-                } catch (e) {
-                    storedList = null;
-                }
-
-                if (storedList) {
-                    try {
-                        const parsed = JSON.parse(storedList);
-                        highScoresList = Array.isArray(parsed) ? parsed : [];
-                    } catch (e) {
-                        highScoresList = [];
-                    }
-                } else {
-                     highScoresList = [];
-                }
-            }
-            
-            highScore = highScoresList.length > 0 ? highScoresList[0].score : 0;
+            highScoresList = ranking.lista();
+            highScore = highScoresList.length > 0 ? Number(highScoresList[0].score) : 0;
             highScoreName = highScoresList.length > 0 ? highScoresList[0].name : '---';
         }
-        
+
         function saveNewHighScoreEntry(name) {
-            const newEntry = { score: score, name: name };
-            
-            highScoresList.push(newEntry);
-            
-            highScoresList.sort((a, b) => b.score - a.score);
-            highScoresList = highScoresList.slice(0, 10);
-
-            scoresMemory = highScoresList.slice();
-            if (storageOK) {
-                try {
-                    localStorage.setItem('pacmanHighScoresList', JSON.stringify(highScoresList));
-                } catch (e) {
-                    console.warn('No se pudo guardar el récord:', e);
-                }
-            }
-
-            
-            highScore = highScoresList[0].score;
-            highScoreName = highScoresList[0].name;
+            ranking.anadir({ score: score, name: name, level: currentLevel });
+            loadHighScoresList();
         }
 
-        function qualifiesForTop10() {
-            if (highScoresList.length < 10) return true;
-            return score > highScoresList[highScoresList.length - 1].score;
-        }
+        // Una puntuación de 0 no pide nombre (antes sí, con menos de 10 récords)
+        const qualifiesForTop10 = () => ranking.entra(score);
 
         // --- LÓGICA DEL JUEGO ---
 
@@ -1304,101 +1764,58 @@
         // --- UI Y MANEJO DE EVENTOS ---
         
         function updateUI() {
-            document.getElementById('score').textContent = score;
+            document.getElementById('score').textContent = score.toLocaleString('es-ES');
             document.getElementById('lives').textContent = lives;
-            document.getElementById('highScore').textContent = highScore;
-            document.getElementById('highScoreName').textContent = highScoreName;
+            document.getElementById('highScore').textContent = Number(highScore).toLocaleString('es-ES');
             document.getElementById('level').textContent = currentLevel;
         }
         
         function showGameOverOverlay() {
-            const overlay = document.getElementById('overlay');
-            const overlayTitle = document.getElementById('overlayTitle');
-            const finalScoreElement = document.getElementById('finalScore');
-            const highScoreMessageElement = document.getElementById('highScoreMessage');
-            const nameInputContainer = document.getElementById('nameInputContainer');
-            const playerNameInput = document.getElementById('playerName');
-            const saveNameBtn = document.getElementById('saveNameBtn');
+            document.getElementById('finalScore').textContent = score.toLocaleString('es-ES');
+            document.getElementById('finDetalle').textContent = 'Nivel ' + currentLevel +
+                (highScore > 0 ? ' · récord ' + Number(highScore).toLocaleString('es-ES') + ' (' + highScoreName + ')' : '');
+            const campo = document.getElementById('playerName');
+            campo.value = '';
+            /* Sin foco automático: en el móvil abriría el teclado tapando la
+               puntuación. Se toca el campo cuando se quiere. */
+            document.getElementById('nameInputContainer').style.display = qualifiesForTop10() ? '' : 'none';
+            EST.abrir('capaFin');
+            // La partida ha acabado: se pinta la última imagen y se para el bucle
+            draw();
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = null;
+        }
 
-            overlayTitle.textContent = 'GAME OVER';
-            finalScoreElement.textContent = `Puntuación Final: ${score}`;
-            playerNameInput.value = ''; 
-
-            if (qualifiesForTop10()) {
-                highScoreMessageElement.textContent = `¡RÉCORD! Has entrado al Top 10. Introduce tu nombre:`;
-                nameInputContainer.style.display = 'flex';
-                playerNameInput.focus();
-
-                saveNameBtn.onclick = () => {
-                    let name = playerNameInput.value.trim() || 'JUGADOR';
-                    if (name.length > 10) name = name.substring(0, 10);
-                    
-                    saveNewHighScoreEntry(name);
-                    updateUI();
-                    
-                    nameInputContainer.style.display = 'none';
-                    hideGameOverOverlay();
-                    resetGame();
-                };
-
-            } else {
-                highScoreMessageElement.textContent = `Puntuación Máxima Actual: ${highScore} (${highScoreName})`;
-                nameInputContainer.style.display = 'none';
-            }
-
-            overlay.style.display = 'flex';
+        function saveScore() {
+            const campo = document.getElementById('playerName');
+            const name = campo.value.trim();
+            if (!name) { EST.avisar('Escribe tu nombre', true); campo.focus(); return; }
+            saveNewHighScoreEntry(name);
+            updateUI();
+            document.getElementById('nameInputContainer').style.display = 'none';
+            EST.avisar('¡Guardado!');
         }
 
         function showLeaderboardOverlay() {
-            loadHighScoresList(); 
-            
-            const table = document.getElementById('highScoresTable');
-            table.innerHTML = `
-                <tr style="border-bottom: 2px solid #ff0;">
-                    <th style="padding: 5px; text-align: left;">#</th>
-                    <th style="padding: 5px; text-align: left;">NOMBRE</th>
-                    <th style="padding: 5px; text-align: right;">PUNTUACIÓN</th>
-                </tr>
-            `;
-            
-            // Se construye la cadena y se asigna una sola vez: con `innerHTML +=`
-            // dentro del bucle el navegador reanaliza toda la tabla en cada vuelta.
-            let filas = '';
-
-            if (highScoresList.length === 0) {
-                filas = `<tr><td colspan="3" style="text-align: center; padding: 10px;">Aún no hay récords guardados. ¡Juega para establecer uno!</td></tr>`;
-            } else {
-                highScoresList.forEach((entry, index) => {
-                    const isNewRecord = (index === 0) ? 'style="color: #0f0; font-weight: bold;"' : '';
-                    // El nombre lo escribe el jugador y se inyecta con innerHTML
-                    filas += `
-                        <tr ${isNewRecord}>
-                            <td style="padding: 5px; text-align: left;">${index + 1}</td>
-                            <td style="padding: 5px; text-align: left;">${escapeHtml(entry.name)}</td>
-                            <td style="padding: 5px; text-align: right;">${Number(entry.score) || 0}</td>
-                        </tr>
-                    `;
-                });
-            }
-
-            table.innerHTML += filas;
-
-            document.getElementById('leaderboardOverlay').style.display = 'flex';
+            ranking.pintar(document.getElementById('highScoresTable'), (e) => (e.level ? ' · nivel ' + e.level : ''));
+            EST.abrir('capaRanking');
         }
-        
-        function hideLeaderboardOverlay() {
-            document.getElementById('leaderboardOverlay').style.display = 'none';
-        }
-        
-        function hideGameOverOverlay() {
-            document.getElementById('overlay').style.display = 'none';
-        }
+
+        function hideLeaderboardOverlay() { EST.cerrar('capaRanking'); }
+
+        function hideGameOverOverlay() { EST.cerrar('capaFin'); }
 
         // --- SISTEMA DE AUDIO MEJORADO (ESTILO PAC-MAN CLÁSICO) ---
-        let audioContext;
-        let isAudioInitialized = false;
-        let isMuted = false;
-        let volumeGain;
+        // Audio por los dos canales del estándar. MÚSICA: las sintonías (empezar,
+        // subir de nivel, morir) y la sirena de los fantasmas azules. EFECTOS:
+        // el waka-waka, la píldora, comerse un fantasma y el golpe al morir.
+        // Cada función toma el contexto y el canal en local con los mismos
+        // nombres de antes (audioContext, volumeGain): el resto no cambia.
+        function canal(cual) {
+            if (!EST.audio[cual]) return null;
+            const c = EST.contexto();
+            return c ? { audioContext: c, volumeGain: cual === 'musica' ? EST.audio.busMusica : EST.audio.busEfectos } : null;
+        }
 
         // Melodías mejoradas
         const START_TUNE_NOTES = [
@@ -1437,22 +1854,10 @@
             { freq: 523, dur: 0.2 }  // C5 (más largo)
         ];
 
-        function initAudio() {
-            if (isAudioInitialized) return;
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                volumeGain = audioContext.createGain();
-                volumeGain.connect(audioContext.destination);
-                volumeGain.gain.value = document.getElementById('volumeSlider').value;
-                isAudioInitialized = true;
-            } catch (e) {
-                console.error("Web Audio API no soportada", e);
-            }
-        }
-        
         // Sonido Chomp mejorado (waka-waka característico)
         function playEffect(name) {
-            if (!isAudioInitialized || isMuted) return;
+            const k = canal('efectos'); if (!k) return;
+            const { audioContext, volumeGain } = k;
             
             const currentTime = audioContext.currentTime;
 
@@ -1536,7 +1941,8 @@
 
         // Melodía mejorada
         function playMelody(notes) {
-            if (!isAudioInitialized || isMuted) return;
+            const k = canal('musica'); if (!k) return;
+            const { audioContext, volumeGain } = k;
             
             let currentTime = audioContext.currentTime;
             
@@ -1567,7 +1973,8 @@
         // Música de modo asustado mejorada (siren characteristic)
         function startFrightenedMusic() {
             if (frightenedLoop) return;
-            if (!isAudioInitialized || isMuted) return;
+            const k = canal('musica'); if (!k) return;
+            const { audioContext, volumeGain } = k;
 
             const currentTime = audioContext.currentTime;
 
@@ -1601,10 +2008,12 @@
         function stopFrightenedMusic() {
             if (frightenedLoop) {
                 try {
-                    const stopTime = audioContext.currentTime + 0.1;
+                    const stopTime = EST.audio.ctx.currentTime + 0.1;
                     frightenedGain.gain.exponentialRampToValueAtTime(0.01, stopTime);
                     frightenedLoop.stop(stopTime);
                     frightenedLFO.stop(stopTime);
+                    const [o, l, g] = [frightenedLoop, frightenedLFO, frightenedGain];
+                    o.onended = () => { try { o.disconnect(); l.disconnect(); g.disconnect(); } catch (e) {} };
                 } catch(e) {
                     // Ignorar error si ya fue detenido
                 }
@@ -1614,53 +2023,55 @@
             }
         }
 
-        function updateVolume(event) {
-            const newVolume = parseFloat(event.target.value);
-            if (volumeGain) {
-                volumeGain.gain.value = newVolume;
-            }
-        }
-
-        function toggleMute() {
-            isMuted = !isMuted;
-            const muteBtn = document.getElementById('muteBtn');
-            muteBtn.textContent = isMuted ? 'Desilenciar' : 'Silenciar';
-            
-            if (isMuted) {
-                stopFrightenedMusic();
-                if (volumeGain) volumeGain.gain.value = 0;
-            } else {
-                if (volumeGain) volumeGain.gain.value = document.getElementById('volumeSlider').value;
-            }
+        /* Al encender la música a mitad del modo azul, que suene la sirena;
+           al apagarla, que calle ya */
+        function alCambiarMusica(on) {
+            if (!on) stopFrightenedMusic();
+            else if (gameState === 'RUNNING' && ghosts.some(g => g.isFrightened)) startFrightenedMusic();
         }
 
         // --- MANEJO DE TECLADO ---
 
         // --- ACCIONES COMPARTIDAS POR TECLADO Y BOTONES ---
 
+        /* Se puede pausar también en ¡LISTO!, antes de moverse: en el móvil,
+           con la capa de pausa, es donde más se usa */
+        let estadoAntesDePausa = 'RUNNING';
         function togglePause() {
-            if (gameState === 'RUNNING') {
+            if (gameState === 'RUNNING' || gameState === 'READY') {
+                estadoAntesDePausa = gameState;
                 gameState = 'PAUSED';
                 stopFrightenedMusic();
-                document.getElementById('pauseBtn').textContent = '▶';
+                EST.abrir('capaPausa');
             } else if (gameState === 'PAUSED') {
-                gameState = 'RUNNING';
+                gameState = estadoAntesDePausa;
                 lastTime = performance.now();
-                if (ghosts.some(g => g.isFrightened)) {
+                EST.cerrar('capaPausa');
+                if (gameState === 'RUNNING' && ghosts.some(g => g.isFrightened)) {
                     startFrightenedMusic();
                 }
-                document.getElementById('pauseBtn').textContent = '⏸';
             }
         }
 
         function restartGame() {
-            hideGameOverOverlay();
-            hideLeaderboardOverlay();
+            ['capaFin', 'capaPausa', 'capaRanking'].forEach(EST.cerrar);
             resetGame();
-            document.getElementById('pauseBtn').textContent = '⏸';
             lastTime = performance.now();
             accumulator = 0;
+            if (rafId === null) startLoop();
         }
+
+        function volverAlMenu() {
+            stopFrightenedMusic();
+            gameState = 'GAME_OVER';
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = null;
+            ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+            loadHighScoresList();
+            EST.mostrar('pMenu');
+        }
+
+        const enPartida = () => document.getElementById('pJuego').classList.contains('activa');
 
         function setDirection(dir) {
             if (gameState === 'PAUSED' || gameState === 'GAME_OVER') return;
@@ -1673,7 +2084,17 @@
             const key = e.key.toUpperCase();
 
             const focusedElement = document.activeElement;
-            const isInputFocused = focusedElement && focusedElement.id === 'playerName';
+            const isInputFocused = focusedElement instanceof HTMLInputElement;
+
+            if (isInputFocused) {
+                if (e.key === 'Enter') { e.preventDefault(); saveScore(); }
+                return;
+            }
+            if (!enPartida()) {
+                if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+                return;
+            }
+            if (e.key === 'Escape') { togglePause(); return; }
 
             // Sin esto las flechas hacen scroll de la página
             if (GAME_KEYS.includes(key) && !isInputFocused) {
@@ -1687,7 +2108,7 @@
                 // impedía reiniciar justo cuando el propio cartel decía "Pulsa R
                 // para reiniciar". Si además no entrabas en el Top 10 no había
                 // ningún botón, así que la única salida era recargar la página.
-                restartGame();
+                if (gameState !== 'PAUSED') restartGame();
                 return;
             }
 
@@ -1761,45 +2182,50 @@
             stage.addEventListener('pointercancel', endDrag);
         }
 
-        // Controles de audio y Leaderboard
-        document.getElementById('volumeSlider').addEventListener('input', updateVolume);
-        document.getElementById('muteBtn').addEventListener('click', toggleMute);
-        document.getElementById('showLeaderboardBtn').addEventListener('click', showLeaderboardOverlay);
-        document.getElementById('closeLeaderboardBtn').addEventListener('click', hideLeaderboardOverlay);
+        // ---------- MENÚ Y CAPAS ----------
+        const btn = (id, fn) => document.getElementById(id).addEventListener('click', fn);
+        btn('btnJugar', () => { EST.mostrar('pJuego'); restartGame(); });
+        btn('pauseBtn', () => togglePause());
+        btn('btnSeguir', () => { if (gameState === 'PAUSED') togglePause(); });
+        btn('btnReiniciar', () => restartGame());
+        btn('btnAbandonar', volverAlMenu);
+        btn('playAgainBtn', () => restartGame());
+        btn('btnMenuFin', volverAlMenu);
+        btn('saveNameBtn', saveScore);
+        btn('showLeaderboardBtn', showLeaderboardOverlay);
+        btn('closeLeaderboardBtn', hideLeaderboardOverlay);
+        btn('btnBorrarRanking', () => {
+            if (!confirm('¿Borrar todos los récords?')) return;
+            ranking.borrar();
+            loadHighScoresList();
+            showLeaderboardOverlay();
+        });
+        btn('btnAyuda', () => EST.abrir('capaAyuda'));
+        btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
 
-        // Botones de partida (necesarios en móvil, donde no hay teclas P ni R)
-        document.getElementById('pauseBtn').addEventListener('click', () => { resumeAudio(); togglePause(); });
-        document.getElementById('restartBtn').addEventListener('click', () => { resumeAudio(); restartGame(); });
-        document.getElementById('playAgainBtn').addEventListener('click', () => { resumeAudio(); restartGame(); });
+        /* Al irse de la pestaña o de la aplicación, pausa: si no, los
+           fantasmas seguirían persiguiendo sin nadie mirando */
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && enPartida() && (gameState === 'RUNNING' || gameState === 'READY')) togglePause();
+        });
 
         // Activar contexto de audio. Antes solo escuchaba 'click' una vez; en
         // móvil conviene reintentarlo en cada gesto, porque el contexto puede
         // volver a suspenderse al cambiar de aplicación.
         function resumeAudio() {
-            if (!isAudioInitialized) initAudio();
-            if (audioContext && audioContext.state === 'suspended') {
-                audioContext.resume().catch(() => {});
-            }
+            if (EST.audio.musica || EST.audio.efectos) EST.contexto();
         }
 
         document.addEventListener('pointerdown', resumeAudio);
         document.addEventListener('keydown', resumeAudio);
 
         // --- INICIALIZACIÓN ---
+        // Arranca en el menú: la partida empieza con JUGAR
         function init() {
-            initAudio();
-            loadHighScoresList(); 
-            
+            EST.iniciar({ claveAudio: 'pacmanAudio', alCambiarMusica });
+            loadHighScoresList();
             countPellets(true);
-            initEntities();
-            updateUI();
-            
             initTouch();
-            startLoop();
-
-            if (!isAudioInitialized) {
-                document.body.addEventListener('click', initAudio, { once: true });
-            }
         }
 
         window.onload = init;
