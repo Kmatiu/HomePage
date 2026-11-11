@@ -1,0 +1,2537 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="menus">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Peluchines</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/peluchines (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE PELUCHINES ---------- */
+        #pJuego { max-width: 820px; }
+        .est-barra .dato b { font-variant-numeric: tabular-nums; }
+        #datoDif b { font-size: 0.8rem; }
+        #zona { flex: 1 1 auto; min-height: 0; margin-top: 4px; container-type: size; }
+        /* La disposición va dentro del contenedor y no en él: una consulta de
+           contenedor no puede cambiar al propio contenedor */
+        .disposicion { height: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 6px; }
+        /* El lienzo ocupa lo que dejan los botones; el JS lee su tamaño y
+           dibuja el tablero centrado y lo más grande que quepa */
+        #marco { position: relative; flex: 1 1 auto; min-height: 0; }
+        #lienzo {
+            position: absolute; inset: 0; width: 100%; height: 100%;
+            touch-action: none; -webkit-user-select: none; user-select: none;
+            outline-offset: -3px; border-radius: 10px;
+        }
+        #indicacion {
+            min-height: 1.3em; margin: 0; text-align: center;
+            font-size: 0.85rem; color: var(--acento); font-weight: bold;
+        }
+        .ayudas {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+            /* Más el margen seguro de abajo (sumado, no max(): max() lo sustituía) */
+            padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
+        }
+        .ayudas button {
+            position: relative; margin: 0; padding: 4px 2px; min-height: 3.6rem;
+            border-radius: 12px; border: 1px solid var(--borde);
+            background: var(--panel); color: var(--texto); cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            font: bold 0.72rem/1.1 var(--fuente, sans-serif);
+            touch-action: manipulation;
+        }
+        .ayudas button .ico { font-size: 1.55rem; line-height: 1; }
+        .ayudas button .cuantos {
+            position: absolute; top: 3px; right: 6px; min-width: 1.3em; padding: 1px 4px;
+            border-radius: 99px; background: #ff3d6b; color: #fff; font-size: 0.72rem;
+        }
+        .ayudas button[aria-pressed="true"] { border-color: var(--acento); box-shadow: 0 0 0 2px var(--acento) inset; color: var(--acento); }
+        .ayudas button:disabled { opacity: 0.4; cursor: default; }
+        /* Apaisado: tablero a la izquierda, botones en columna a la derecha */
+        .lado { display: flex; flex-direction: column; gap: 4px; }
+        @container (min-aspect-ratio: 13/10) {
+            .disposicion { flex-direction: row; }
+            .lado { justify-content: center; gap: 6px; width: 10rem; }
+            .ayudas { grid-template-columns: 1fr 1fr; }
+        }
+        .niveles { display: grid; grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr)); gap: 6px; max-height: 55vh; overflow-y: auto; padding: 2px; }
+        .niveles button {
+            margin: 0; min-height: 2.8rem; border-radius: 10px; border: 1px solid var(--borde);
+            background: var(--panel); color: var(--texto); font: bold 1rem var(--fuente, sans-serif); cursor: pointer;
+        }
+        .niveles button.hecho { border-color: var(--acento); color: var(--acento); }
+        .niveles button.actual { background: var(--acento); color: #10102a; }
+        .niveles button:disabled { opacity: 0.3; cursor: default; }
+        .premio { font-size: 1.1rem; margin: 6px 0; }
+    </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">PELU<span>CHINES</span></div>
+        <p class="est-lema">Lleva cada peluchín a su hueco</p>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR · NIVEL 1</button>
+        <button class="secundario" id="btnNiveles" type="button" style="width:100%;margin-top:8px;">🗺️ ELEGIR NIVEL</button>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="dNivel">1</b><span>NIVEL</span></div>
+        <div class="dato" id="datoDif"><b id="dDif">FÁCIL</b><span>DIFICULTAD</span></div>
+        <div class="dato" id="datoBuhos" style="display:none"><b id="dBuhos">0</b><span>🦉 BÚHOS</span></div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zona"><div class="disposicion">
+        <div id="marco">
+            <canvas id="lienzo" tabindex="0" aria-label="Tablero: arrastra cada peluchín a un hueco de su color"></canvas>
+        </div>
+        <div class="lado">
+            <p id="indicacion" aria-live="polite"></p>
+            <div class="ayudas">
+                <button id="btnDeshacer" type="button"><span class="ico">↶</span>DESHACER</button>
+                <button id="btnIman" type="button" aria-pressed="false"><span class="ico">🧲</span>IMÁN<span class="cuantos" id="nIman">0</span></button>
+                <button id="btnGarra" type="button" aria-pressed="false"><span class="ico">🪝</span>GARRA<span class="cuantos" id="nGarra">0</span></button>
+                <button id="btnPistola" type="button" aria-pressed="false"><span class="ico">🔫</span>PISTOLA<span class="cuantos" id="nPistola">0</span></button>
+            </div>
+        </div>
+    </div></div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnReiniciar" type="button">↻ EMPEZAR EL NIVEL OTRA VEZ</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">← MENÚ (SE GUARDA)</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">🎉 ¡NIVEL 1 SUPERADO!</h2>
+        <p id="finDetalle"></p>
+        <p class="premio" id="finPremio"></p>
+        <button class="principal" id="btnSiguiente" type="button">SIGUIENTE NIVEL →</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaNiveles">
+    <div class="caja">
+        <h2>🗺️ ELEGIR NIVEL</h2>
+        <p style="font-size:0.8rem;margin:0 0 8px;">Puedes repetir los que ya has pasado.</p>
+        <div class="niveles" id="listaNiveles"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnCerrarNiveles" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <h3>EL OBJETIVO</h3>
+            <ul>
+                <li>Cada pieza de color con borde brillante es un <b>hueco</b>. Su número dice cuántos peluchines de ese color le faltan.</li>
+                <li>Lleva cada peluchín a un hueco de <b>su color</b>. Lleno, el hueco desaparece y deja paso.</li>
+                <li>Se gana al llenar todos los huecos. <b>No hay límite</b> de movimientos ni de tiempo.</li>
+            </ul>
+            <h3>MOVER</h3>
+            <ul>
+                <li><b>Arrastra</b> el peluchín con el dedo: va por las casillas libres, doblando esquinas. Si no hay camino, vuelve a su sitio.</li>
+                <li>Puedes dejarlo en cualquier casilla libre a la que llegue, para apartarlo.</li>
+                <li><b>Tocarlo</b> sin arrastrar lo manda solo a su hueco, si tiene camino.</li>
+                <li>Los <b>bloques grises</b> con ✥ se empujan arrastrándolos.</li>
+                <li>Los <b>dispensadores</b> del borde sueltan su siguiente peluchín cuando la casilla de delante queda libre. Su número es cuántos le quedan.</li>
+                <li>Los peluchines <b>con estrellas</b> van a los huecos con estrellas. Los <b>búhos</b> son azules y van a los huecos azules.</li>
+            </ul>
+            <h3>SI TE ATASCAS</h3>
+            <ul>
+                <li><b>↶ DESHACER:</b> sin límite.</li>
+                <li><b>🧲 IMÁN:</b> toca un peluchín y todos los de su color se van a sus huecos, sin buscar camino.</li>
+                <li><b>🪝 GARRA:</b> toca un peluchín y luego dónde dejarlo (una casilla libre o su hueco), sin buscar camino.</li>
+                <li><b>🔫 PISTOLA:</b> toca un hueco y le faltará uno menos.</li>
+                <li>Cada nivel superado te da una ayuda más.</li>
+            </ul>
+            <h3>ORDENADOR</h3>
+            <ul>
+                <li><b>Flechas</b> para moverte, <b>Intro</b> para coger y soltar, <b>Z</b> deshacer, <b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnCerrarAyuda" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="est-aviso" id="aviso" role="status"></div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ==========================================================
+   PELUCHINES — reglas del juego, sin pantalla (se prueba en Node)
+
+   Un tablero de casillas. En él hay:
+   - huecos: piezas de un color con forma de tetris; caben tantos
+     peluchines como casillas tienen (el número que se ve es lo que falta).
+     Lleno, el hueco desaparece y sus casillas quedan libres;
+   - peluchines: bolitas de un color que se llevan, por casillas libres, a
+     un hueco de su color. También se pueden dejar en cualquier casilla
+     libre a la que se llegue («aparcar»);
+   - bloques móviles: piezas grises que se empujan casilla a casilla;
+   - dispensadores en el borde: sueltan su siguiente peluchín en la casilla
+     de delante en cuanto queda libre.
+   Se gana al llenar todos los huecos. No hay límite de movimientos ni de
+   tiempo.
+
+   Casillas por índice: i = f * ancho + c.
+   ocup[i]: VACIA, un peluchín (0…), un hueco (HUECO + h) o un bloque
+   (BLOQUE + k).
+   ========================================================== */
+(function (raiz) {
+    'use strict';
+    const VACIA = -1, HUECO = 10000, BLOQUE = 20000;
+
+    /* Colores. Los de estrella son otro color a efectos de juego (van a
+       huecos de estrella del mismo tono): se distinguen por el traje */
+    const COLORES = {
+        r: { nombre: 'rojo', hex: '#ff4d5e' },
+        n: { nombre: 'naranja', hex: '#ff9a2e' },
+        a: { nombre: 'amarillo', hex: '#ffd93b' },
+        v: { nombre: 'verde', hex: '#4fd65a' },
+        c: { nombre: 'turquesa', hex: '#2fd9d0' },
+        z: { nombre: 'azul', hex: '#3d8bff' },
+        m: { nombre: 'morado', hex: '#a35cff' },
+        p: { nombre: 'rosa', hex: '#ff7cc8' },
+        b: { nombre: 'blanco', hex: '#eef1f8' },
+        N: { nombre: 'naranja con estrellas', hex: '#ff9a2e', estrella: true },
+        M: { nombre: 'morado con estrellas', hex: '#a35cff', estrella: true },
+        A: { nombre: 'amarillo con estrellas', hex: '#ffd93b', estrella: true }
+    };
+    const LADOS = ['arr', 'aba', 'izq', 'der'];
+    const DIRS = { arr: [0, -1], aba: [0, 1], izq: [-1, 0], der: [1, 0] };
+
+    /* ---------- CREAR UNA PARTIDA A PARTIR DE LA DEFINICIÓN ----------
+       def = { ancho, alto,
+               huecos: [{ color, celdas: [i, …] }],
+               bolitas: [{ color, i, buho? }],
+               bloques: [{ forma: [[dc, df], …], c, f }],
+               dispensadores: [{ lado, pos, cola: 'rrz…' }] }  */
+    function crear(def) {
+        const e = {
+            ancho: def.ancho, alto: def.alto,
+            huecos: def.huecos.map(h => ({ color: h.color, celdas: h.celdas.slice(), llenas: 0, quitadas: 0, completo: false })),
+            bolitas: [],
+            bloques: (def.bloques || []).map(k => ({ forma: k.forma.map(x => x.slice()), c: k.c, f: k.f })),
+            disp: (def.dispensadores || []).map(d => ({ lado: d.lado, pos: d.pos, cola: d.cola, sacadas: 0, salida: salidaDe(def, d) })),
+            ocup: new Int32Array(def.ancho * def.alto).fill(VACIA),
+            ayudas: Object.assign({ iman: 0, garra: 0, pistola: 0 }, def.ayudas || {}),
+            eventos: []
+        };
+        for (const b of def.bolitas) nuevaBolita(e, b.color, b.i, !!b.buho);
+        rehacerOcup(e);
+        asentar(e);
+        e.eventos.length = 0;
+        return e;
+    }
+    function salidaDe(e, d) {
+        if (d.lado === 'arr') return d.pos;
+        if (d.lado === 'aba') return (e.alto - 1) * e.ancho + d.pos;
+        if (d.lado === 'izq') return d.pos * e.ancho;
+        return d.pos * e.ancho + e.ancho - 1;
+    }
+    function nuevaBolita(e, color, i, buho) {
+        const b = { color, i, buho, h: -1, celda: -1 };
+        e.bolitas.push(b);
+        return e.bolitas.length - 1;
+    }
+    function celdasBloque(e, k, c = e.bloques[k].c, f = e.bloques[k].f) {
+        return e.bloques[k].forma.map(([dc, df]) => [c + dc, f + df]);
+    }
+    function rehacerOcup(e) {
+        e.ocup.fill(VACIA);
+        e.huecos.forEach((h, n) => { if (!h.completo) for (const i of h.celdas) e.ocup[i] = HUECO + n; });
+        e.bloques.forEach((k, n) => { for (const [c, f] of celdasBloque(e, n)) e.ocup[f * e.ancho + c] = BLOQUE + n; });
+        e.bolitas.forEach((b, n) => { if (b.i >= 0) e.ocup[b.i] = n; });
+    }
+    const resta = (h) => h.celdas.length - h.llenas - h.quitadas;
+
+    /* ---------- DESPUÉS DE CADA JUGADA ----------
+       Los huecos llenos desaparecen y los dispensadores sacan peluchín si
+       tienen la salida libre. Se repite hasta que nada cambia */
+    function asentar(e) {
+        let cambio = true;
+        while (cambio) {
+            cambio = false;
+            e.huecos.forEach((h, n) => {
+                if (h.completo || resta(h) > 0) return;
+                h.completo = true;
+                for (const i of h.celdas) if (e.ocup[i] === HUECO + n) e.ocup[i] = VACIA;
+                e.eventos.push({ tipo: 'completo', h: n });
+                cambio = true;
+            });
+            e.disp.forEach((d, n) => {
+                if (d.sacadas >= d.cola.length || e.ocup[d.salida] !== VACIA) return;
+                const color = d.cola[d.sacadas++];
+                const b = nuevaBolita(e, color, d.salida, false);
+                e.ocup[d.salida] = b;
+                e.eventos.push({ tipo: 'sale', d: n, b });
+                cambio = true;
+            });
+        }
+        if (ganado(e) && !e.ganado) {
+            e.ganado = true;
+            e.eventos.push({ tipo: 'ganado' });
+        }
+    }
+    const ganado = (e) => e.huecos.every(h => h.completo);
+
+    /* ---------- CAMINOS ----------
+       Desde la casilla de un peluchín, por casillas libres (en cruz).
+       Devuelve prev (de dónde se llega a cada casilla alcanzada; -2 = no
+       alcanzada) y la lista de alcanzadas */
+    function alcance(e, desde) {
+        const prev = new Int32Array(e.ocup.length).fill(-2);
+        const lista = [desde];
+        prev[desde] = -1;
+        for (let k = 0; k < lista.length; k++) {
+            const i = lista[k], c = i % e.ancho, f = (i - c) / e.ancho;
+            if (c > 0) mirar(i - 1);
+            if (c < e.ancho - 1) mirar(i + 1);
+            if (f > 0) mirar(i - e.ancho);
+            if (f < e.alto - 1) mirar(i + e.ancho);
+            function mirar(j) { if (prev[j] === -2 && e.ocup[j] === VACIA) { prev[j] = i; lista.push(j); } }
+        }
+        return { prev, lista };
+    }
+    function vecinas(e, i) {
+        const c = i % e.ancho, f = (i - c) / e.ancho, r = [];
+        if (c > 0) r.push(i - 1);
+        if (c < e.ancho - 1) r.push(i + 1);
+        if (f > 0) r.push(i - e.ancho);
+        if (f < e.alto - 1) r.push(i + e.ancho);
+        return r;
+    }
+    /* Adónde puede ir el peluchín b: casillas libres y huecos de su color
+       con sitio que toquen alguna casilla alcanzable (por cualquier lado).
+       Para cada hueco se guarda por qué casilla se entra */
+    function destinos(e, b) {
+        const bo = e.bolitas[b];
+        if (!bo || bo.i < 0) return null;
+        const a = alcance(e, bo.i);
+        const huecos = new Map();   // h → casilla alcanzable pegada a él
+        for (const i of a.lista) for (const j of vecinas(e, i)) {
+            const o = e.ocup[j];
+            if (o >= HUECO && o < BLOQUE) {
+                const h = o - HUECO, H = e.huecos[h];
+                if (H.color === bo.color && !H.completo && resta(H) > 0 && !huecos.has(h)) huecos.set(h, i);
+            }
+        }
+        return { alcance: a, huecos };
+    }
+    function caminoHasta(a, i) {
+        const r = [];
+        for (let k = i; k >= 0; k = a.prev[k]) r.push(k);
+        return r.reverse();
+    }
+
+    /* ---------- JUGADAS ----------
+       Mover el peluchín b a la casilla «destino»: libre y alcanzable
+       (aparcar) o de un hueco de su color con sitio (entregar). Devuelve el
+       camino recorrido (para la animación) o null si no se puede */
+    function mover(e, b, destino) {
+        const d = destinos(e, b);
+        if (!d) return null;
+        const o = e.ocup[destino];
+        if (o >= HUECO && o < BLOQUE) {
+            const h = o - HUECO;
+            if (!d.huecos.has(h)) return null;
+            const camino = caminoHasta(d.alcance, d.huecos.get(h));
+            entregar(e, b, h, destino);
+            camino.push(destino);
+            asentar(e);
+            return camino;
+        }
+        if (o !== VACIA || d.alcance.prev[destino] === -2) return null;
+        const camino = caminoHasta(d.alcance, destino);
+        const bo = e.bolitas[b];
+        e.ocup[bo.i] = VACIA;
+        bo.i = destino;
+        e.ocup[destino] = b;
+        e.eventos.push({ tipo: 'aparca', b });
+        asentar(e);
+        return camino;
+    }
+    /* Mete el peluchín en el hueco. Ocupa la primera casilla libre del hueco
+       empezando por la que se tocó (solo para dibujarlo) */
+    function entregar(e, b, h, tocada) {
+        const bo = e.bolitas[b], H = e.huecos[h];
+        if (bo.i >= 0) e.ocup[bo.i] = VACIA;
+        bo.i = -1; bo.h = h;
+        const usadas = new Set(e.bolitas.filter(x => x.h === h && x !== bo).map(x => x.celda));
+        bo.celda = (tocada !== undefined && H.celdas.includes(tocada) && !usadas.has(tocada)) ? tocada : H.celdas.find(i => !usadas.has(i));
+        H.llenas++;
+        e.eventos.push({ tipo: 'entra', b, h, buho: bo.buho });
+    }
+
+    /* Empuja el bloque k una casilla en la dirección dada si todas las
+       casillas nuevas están libres o son suyas. Devuelve si se movió */
+    function moverBloque(e, k, dir) {
+        const [dc, df] = DIRS[dir];
+        const K = e.bloques[k];
+        const nuevas = celdasBloque(e, k, K.c + dc, K.f + df);
+        for (const [c, f] of nuevas) {
+            if (c < 0 || f < 0 || c >= e.ancho || f >= e.alto) return false;
+            const o = e.ocup[f * e.ancho + c];
+            if (o !== VACIA && o !== BLOQUE + k) return false;
+        }
+        for (const [c, f] of celdasBloque(e, k)) e.ocup[f * e.ancho + c] = VACIA;
+        K.c += dc; K.f += df;
+        for (const [c, f] of nuevas) e.ocup[f * e.ancho + c] = BLOQUE + k;
+        e.eventos.push({ tipo: 'bloque', k, dir });
+        asentar(e);
+        return true;
+    }
+
+    /* ---------- AYUDAS ----------
+       Imán: todos los peluchines del tablero de ese color se van a sus
+       huecos, sin mirar caminos (primero a los que menos les falta).
+       Garra: coge un peluchín y lo deja en cualquier casilla libre o en un
+       hueco de su color, sin mirar caminos.
+       Pistola: a un hueco le falta uno menos (el peluchín que sobre se va
+       contento al acabar el nivel) */
+    function iman(e, color) {
+        if (e.ayudas.iman <= 0) return 0;
+        let n = 0;
+        for (let b = 0; b < e.bolitas.length; b++) {
+            const bo = e.bolitas[b];
+            if (bo.i < 0 || bo.color !== color) continue;
+            const libres = e.huecos.map((h, k) => k).filter(k => e.huecos[k].color === color && !e.huecos[k].completo && resta(e.huecos[k]) > 0);
+            if (!libres.length) break;
+            libres.sort((x, y) => resta(e.huecos[x]) - resta(e.huecos[y]));
+            entregar(e, b, libres[0]);
+            n++;
+            asentar(e);   // un hueco lleno puede soltar al siguiente del dispensador
+        }
+        if (n) { e.ayudas.iman--; e.eventos.push({ tipo: 'iman', color, n }); }
+        return n;
+    }
+    function garra(e, b, destino) {
+        if (e.ayudas.garra <= 0) return false;
+        const bo = e.bolitas[b];
+        if (!bo || bo.i < 0 || bo.i === destino) return false;
+        const o = e.ocup[destino];
+        if (o >= HUECO && o < BLOQUE) {
+            const H = e.huecos[o - HUECO];
+            if (H.color !== bo.color || H.completo || resta(H) <= 0) return false;
+            entregar(e, b, o - HUECO, destino);
+        } else if (o === VACIA) {
+            e.ocup[bo.i] = VACIA; bo.i = destino; e.ocup[destino] = b;
+        } else return false;
+        e.ayudas.garra--;
+        e.eventos.push({ tipo: 'garra', b });
+        asentar(e);
+        return true;
+    }
+    function pistola(e, h) {
+        const H = e.huecos[h];
+        if (e.ayudas.pistola <= 0 || !H || H.completo || resta(H) <= 0) return false;
+        H.quitadas++;
+        e.ayudas.pistola--;
+        e.eventos.push({ tipo: 'pistola', h });
+        asentar(e);
+        return true;
+    }
+
+    /* ---------- DESHACER ----------
+       Se guarda lo que cambia; el resto (formas, colas) no cambia nunca */
+    function foto(e) {
+        return {
+            n: e.bolitas.length,
+            b: e.bolitas.map(b => [b.i, b.h, b.celda, b.color, b.buho ? 1 : 0]),
+            h: e.huecos.map(h => [h.llenas, h.quitadas, h.completo]),
+            k: e.bloques.map(k => [k.c, k.f]),
+            d: e.disp.map(d => d.sacadas),
+            a: Object.assign({}, e.ayudas),
+            g: !!e.ganado
+        };
+    }
+    function volver(e, s) {
+        /* Se rehacen enteros: así una foto guardada vale también sobre una
+           partida recién creada, que aún no tiene los que soltaron los
+           dispensadores (lo usa CONTINUAR) */
+        e.bolitas = s.b.map(([i, h, celda, color, buho]) => ({ i, h, celda, color, buho: !!buho }));
+        s.h.forEach(([llenas, quitadas, completo], n) => Object.assign(e.huecos[n], { llenas, quitadas, completo }));
+        s.k.forEach(([c, f], n) => Object.assign(e.bloques[n], { c, f }));
+        s.d.forEach((x, n) => { e.disp[n].sacadas = x; });
+        e.ayudas = Object.assign({}, s.a);
+        e.ganado = s.g;
+        rehacerOcup(e);
+    }
+
+    /* ---------- PARA EL GENERADOR Y LAS PISTAS ---------- */
+    /* Todas las entregas posibles ahora: [peluchín, hueco] */
+    /* Rápida (la usan el resolutor y el generador miles de veces): en vez
+       de un recorrido por peluchín, se etiquetan una vez las zonas de
+       casillas libres y qué huecos toca cada zona. Un peluchín llega a los
+       huecos que tocan las zonas pegadas a él, o que toca él mismo */
+    function entregas(e) {
+        const N = e.ocup.length, W = e.ancho, nh = e.huecos.length;
+        const zona = new Int32Array(N).fill(-1);
+        const tocan = [];                          // por zona, huecos que toca
+        const sello = new Int32Array(nh).fill(-1); // para no repetir hueco en una zona
+        const pila = new Int32Array(N);
+        for (let i0 = 0; i0 < N; i0++) {
+            if (e.ocup[i0] !== VACIA || zona[i0] >= 0) continue;
+            const z = tocan.length, lista = [];
+            tocan.push(lista);
+            let tope = 0;
+            zona[i0] = z; pila[tope++] = i0;
+            while (tope) {
+                const i = pila[--tope], c = i % W;
+                for (let k = 0; k < 4; k++) {
+                    const j = k === 0 ? (c > 0 ? i - 1 : -1) : k === 1 ? (c < W - 1 ? i + 1 : -1) : k === 2 ? i - W : i + W;
+                    if (j < 0 || j >= N) continue;
+                    const o = e.ocup[j];
+                    if (o === VACIA) { if (zona[j] < 0) { zona[j] = z; pila[tope++] = j; } }
+                    else if (o >= HUECO && o < BLOQUE && sello[o - HUECO] !== z) { sello[o - HUECO] = z; lista.push(o - HUECO); }
+                }
+            }
+        }
+        const r = [];
+        const visto = new Int32Array(nh).fill(-1);
+        for (let b = 0; b < e.bolitas.length; b++) {
+            const bo = e.bolitas[b];
+            if (bo.i < 0) continue;
+            const i = bo.i, c = i % W;
+            for (let k = 0; k < 4; k++) {
+                const j = k === 0 ? (c > 0 ? i - 1 : -1) : k === 1 ? (c < W - 1 ? i + 1 : -1) : k === 2 ? i - W : i + W;
+                if (j < 0 || j >= N) continue;
+                const o = e.ocup[j];
+                if (o === VACIA) { for (const h of tocan[zona[j]]) mirar(h); }
+                else if (o >= HUECO && o < BLOQUE) mirar(o - HUECO);
+            }
+            function mirar(h) {
+                if (visto[h] === b) return;
+                visto[h] = b;
+                const H = e.huecos[h];
+                if (H.color === bo.color && !H.completo && H.celdas.length - H.llenas - H.quitadas > 0) r.push([b, h]);
+            }
+        }
+        return r;
+    }
+    /* «seguro»: quien llama ya sabe que se puede (viene de entregas()) y se
+       ahorra el recorrido de comprobarlo */
+    function hacerEntrega(e, b, h, seguro) {
+        if (!seguro) {
+            const d = destinos(e, b);
+            if (!d || !d.huecos.has(h)) return false;
+        }
+        entregar(e, b, h);
+        asentar(e);
+        return true;
+    }
+    const clave = (e) => e.bolitas.map(b => b.i).join(',') + '|' + e.huecos.map(h => h.llenas).join(',') + '|' + e.bloques.map(k => k.c + ':' + k.f).join(',');
+
+    /* Busca una solución solo con entregas y empujones de bloque (sin
+       aparcar: si así sale, el nivel tiene solución seguro). Búsqueda en
+       profundidad con memoria de posiciones ya vistas. Devuelve la lista de
+       jugadas o null; nodos = posiciones exploradas */
+    function resolver(e0, maxNodos = 200000) {
+        const e = clonarPartida(e0);
+        const vistas = new Set();
+        const pasos = [];
+        let nodos = 0;
+        function buscar() {
+            if (ganado(e)) return true;
+            if (++nodos > maxNodos) return false;
+            const k = clave(e);
+            if (vistas.has(k)) return false;
+            vistas.add(k);
+            /* Primero lo que completa un hueco: suele ser lo bueno */
+            const lista = entregas(e).sort((x, y) => resta(e.huecos[x[1]]) - resta(e.huecos[y[1]]));
+            for (const [b, h] of lista) {
+                const s = foto(e);
+                hacerEntrega(e, b, h, true);
+                pasos.push({ tipo: 'entrega', b, h });
+                if (buscar()) return true;
+                pasos.pop(); volver(e, s);
+            }
+            for (let kb = 0; kb < e.bloques.length; kb++) for (const dir of LADOS) {
+                const s = foto(e);
+                if (!moverBloque(e, kb, dir)) continue;
+                pasos.push({ tipo: 'bloque', k: kb, dir });
+                if (buscar()) return true;
+                pasos.pop(); volver(e, s);
+            }
+            return false;
+        }
+        const ok = buscar();
+        return { ok, pasos: ok ? pasos : null, nodos };
+    }
+    function clonarPartida(e) {
+        const c = {
+            ancho: e.ancho, alto: e.alto,
+            huecos: e.huecos.map(h => Object.assign({}, h, { celdas: h.celdas })),
+            bolitas: e.bolitas.map(b => Object.assign({}, b)),
+            bloques: e.bloques.map(k => ({ forma: k.forma, c: k.c, f: k.f })),
+            disp: e.disp.map(d => Object.assign({}, d)),
+            ocup: Int32Array.from(e.ocup),
+            ayudas: Object.assign({}, e.ayudas),
+            eventos: [], ganado: e.ganado
+        };
+        return c;
+    }
+
+    /* Cómo de traicionero es: jugando entregas al azar (sin pensar ni
+       aparcar), en cuántas partidas de cada 100 se llega a un callejón sin
+       entregas posibles. 0 = da igual el orden */
+    function trampas(e0, azar, partidas = 100) {
+        let atascos = 0;
+        for (let p = 0; p < partidas; p++) {
+            const e = clonarPartida(e0);
+            for (let paso = 0; paso < 500 && !ganado(e); paso++) {
+                const l = entregas(e);
+                if (!l.length) {
+                    /* Si hay bloque, se prueba a empujarlo una vez al azar */
+                    let movido = false;
+                    if (e.bloques.length) for (let t = 0; t < 8 && !movido; t++) movido = moverBloque(e, Math.floor(azar() * e.bloques.length), LADOS[Math.floor(azar() * 4)]);
+                    if (!movido) { atascos++; break; }
+                    continue;
+                }
+                const [b, h] = l[Math.floor(azar() * l.length)];
+                hacerEntrega(e, b, h, true);
+            }
+        }
+        return atascos / partidas;
+    }
+
+    /* Una pista: la primera jugada de una solución desde aquí */
+    function pista(e) {
+        const r = resolver(e, 60000);
+        return r.ok && r.pasos.length ? r.pasos[0] : null;
+    }
+
+    const api = {
+        VACIA, HUECO, BLOQUE, COLORES, LADOS, DIRS,
+        crear, salidaDe, celdasBloque, resta, alcance, destinos, caminoHasta, vecinas,
+        mover, moverBloque, iman, garra, pistola, foto, volver, ganado,
+        entregas, hacerEntrega, resolver, trampas, pista, clonarPartida
+    };
+    if (typeof module !== 'undefined' && module.exports) module.exports = api;
+    else raiz.Peluchines = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* GENERADO por generar.js (100 niveles, semilla 1). No editar a mano. */
+const NIVELES_PELUCHINES = [
+    {"a":5,"h":6,"H":[["z",[6]],["v",[4,9,14]],["a",[0]],["z",[18,23]],["a",[25]],["v",[7,8]]],"B":[["a",13],["z",5],["a",29],["z",21],["z",17],["v",10],["v",20],["v",16],["v",24],["v",27]],"t":0},
+    {"a":5,"h":6,"H":[["z",[18,17]],["r",[10]],["a",[7]],["a",[29,28]],["r",[11]],["a",[1]],["r",[4]]],"B":[["r",26],["a",22],["a",0],["r",2],["a",9],["z",6],["r",5],["a",14],["z",8]],"t":0},
+    {"a":5,"h":6,"H":[["a",[28]],["z",[22,27,21]],["v",[5,6]],["z",[15]],["v",[13]],["a",[20]]],"B":[["v",24],["a",3],["v",2],["v",29],["z",0],["a",1],["z",8],["z",17],["z",26]],"t":0},
+    {"a":6,"h":7,"H":[["r",[35,29]],["a",[6,7]],["z",[41]],["v",[18]],["v",[13]],["a",[30,24]],["a",[15,16]],["z",[36]],["r",[17]],["v",[26,20,27,21]]],"B":[["v",22],["r",3],["v",38],["a",33],["z",34],["v",31],["v",32],["a",11],["a",2],["z",10],["v",1],["r",5],["r",14],["a",19],["a",39],["v",0]],"D":[["arr",4,"a"]],"t":13},
+    {"a":6,"h":7,"H":[["m",[35,34]],["v",[37]],["r",[13]],["z",[15,21]],["z",[8,9]],["v",[10,11,16,17]],["r",[27,28]],["z",[36,30,31,25]]],"B":[["z",39],["v",1],["z",7],["m",22],["r",38],["z",26],["v",5],["r",18],["m",4],["z",24],["v",3],["z",2],["v",32],["z",40],["v",41]],"D":[["der",3,"rzz"]],"t":13},
+    {"a":6,"h":7,"H":[["z",[8]],["r",[26]],["m",[3,9,15,16]],["a",[21,22,28,29]],["a",[33,32,31,37]],["z",[25,19]]],"B":[["a",18],["a",27],["m",38],["z",10],["m",36],["r",11],["m",1],["a",39],["a",5],["a",4],["a",40],["z",35],["a",14],["a",17]],"D":[["izq",4,"zm"]],"t":8},
+    {"a":6,"h":7,"H":[["r",[38,32,26]],["v",[33,27,34]],["a",[7]],["m",[28,29]],["a",[22,16]],["v",[4,10,3,9]]],"B":[["r",17],["r",8],["m",39],["v",41],["a",19],["v",6],["a",35],["v",31],["v",15],["m",21],["v",30],["r",25],["v",23],["v",11]],"D":[["aba",1,"a"]],"t":14},
+    {"a":6,"h":7,"H":[["v",[32,26]],["r",[13]],["z",[25]],["m",[15,16,17]],["z",[34,40,33,39]],["r",[0,1,6]],["v",[22,28,21,27]]],"B":[["r",29],["v",11],["v",12],["m",9],["z",36],["z",14],["r",41],["m",3],["r",37],["z",18],["r",8],["z",7],["v",2],["v",38],["z",31]],"D":[["arr",4,"vvm"]],"t":14},
+    {"a":6,"h":7,"H":[["m",[38,37,31,30]],["r",[4,5,10]],["v",[22,16]],["a",[28]],["m",[33,27,21,20]],["m",[2,8,14]]],"B":[["m",15],["m",9],["a",35],["r",32],["v",40],["m",17],["r",0],["v",6],["m",13],["m",7],["m",3],["r",29],["m",18],["m",26],["m",19]],"D":[["der",3,"mm"]],"t":8},
+    {"a":6,"h":7,"H":[["v",[12,6]],["r",[33,27,21]],["z",[32,31,30,36]],["m",[0]],["z",[2]],["m",[13,14]],["m",[7]],["r",[17,16,10,9]]],"B":[["z",15,1],["r",20],["z",26,1],["m",22],["r",19],["r",23],["z",41,1],["r",1],["r",11],["v",34],["r",40],["r",28],["m",4],["v",25],["z",5],["m",38]],"D":[["aba",3,"mz"]],"t":16},
+    {"a":6,"h":8,"H":[["a",[28,34,40,41]],["v",[21,15]],["m",[19,25]],["n",[22,16,23]],["r",[43,42]],["v",[17,11]],["n",[33,32,31,37]]],"B":[["r",13],["n",8],["n",38],["v",39],["v",14],["m",20],["v",35],["n",26],["r",12],["a",5],["n",27],["n",44],["v",4],["m",47],["a",45],["a",1]],"D":[["izq",5,"ann"]],"t":31},
+    {"a":6,"h":8,"H":[["a",[14,8]],["v",[21,15,22]],["m",[46,47]],["n",[39,40]],["z",[13,19]],["z",[41,35,29]],["m",[11,10]],["z",[16,17]],["n",[24,18]]],"B":[["m",4],["m",38],["v",27],["n",1],["z",6,1],["z",23],["a",3],["v",37],["z",26],["m",44],["n",34],["a",7],["z",28],["n",2]],"D":[["aba",3,"vzznmz"]],"t":25},
+    {"a":6,"h":8,"H":[["n",[25,31]],["m",[16,15]],["v",[7,6,1]],["z",[44,43]],["a",[29,35,28,34]],["z",[23,22,17]],["n",[32,26]],["z",[14,20,13]]],"B":[["z",19,1],["n",0],["a",18],["z",47,1],["z",37,1],["m",4],["v",12],["n",10],["z",5],["a",9],["a",2],["z",38,1],["z",33,1],["m",27]],"D":[["izq",5,"nnvavzz"]],"t":29},
+    {"a":6,"h":8,"H":[["n",[10,4]],["r",[20,14,8,15]],["v",[45,39,46]],["z",[7,6]],["a",[27,28]],["n",[24,18]],["v",[31,37]],["v",[33,32]]],"B":[["n",30],["n",25],["n",13],["z",41],["r",29],["v",21],["a",1],["v",26],["r",2],["v",35],["r",34],["n",17],["v",11],["a",3]],"D":[["aba",2,"vvvzr"]],"t":31},
+    {"a":6,"h":8,"H":[["r",[5,4]],["v",[21,15,9,8]],["n",[14,20,26]],["z",[6,0,7]],["m",[35,41,34]],["z",[31,32]],["n",[38,44]]],"B":[["v",16],["r",27],["n",33],["v",11],["z",22],["m",37],["m",24],["n",2],["n",40],["z",30],["n",1],["m",25],["z",28],["v",3],["z",10,1],["z",42,1],["r",36],["v",46]],"D":[["aba",1,"n"]],"t":29},
+    {"a":6,"h":8,"H":[["v",[37,38,43]],["z",[34,40]],["a",[29,28,27]],["m",[5,11,4]],["n",[19,13]],["m",[9,3]],["a",[21,20,15]],["n",[45,46,47,41]]],"B":[["a",23],["m",18],["v",17],["z",44],["a",22],["n",12],["m",25],["n",32],["z",8,1],["a",26],["n",24],["a",39],["v",10],["n",7],["n",31],["m",0],["v",16]],"D":[["arr",2,"mnmaa"]],"t":30},
+    {"a":6,"h":8,"H":[["a",[45,39,46]],["r",[26,20]],["m",[2,3,4,5]],["z",[37,36,31]],["v",[21,22,27,28]],["z",[7,1]],["z",[13,19,25,18]]],"B":[["z",38],["m",32],["v",11],["v",16],["z",41,1],["z",15,1],["z",47],["m",6],["v",29],["v",17],["z",34,1],["m",33],["a",42],["r",23],["r",40],["m",9],["z",43,1]],"D":[["izq",4,"zazaz"]],"t":30},
+    {"a":6,"h":8,"H":[["v",[41,47]],["a",[12,18]],["r",[45,46]],["m",[9,8,3]],["z",[2,1,0,6]],["r",[25,26]],["r",[10,16,15,21]]],"B":[["v",14],["z",24,1],["a",32],["m",34],["m",31],["z",11,1],["a",7],["r",27],["m",33],["r",20],["v",38],["r",28],["r",44],["r",22],["r",39],["z",42],["r",30]],"D":[["der",3,"zr"]],"t":30},
+    {"a":6,"h":8,"H":[["v",[44,38]],["r",[32,31,26,25]],["m",[43,42,37]],["n",[13,14,19,20]],["z",[35,41]],["m",[40,46]],["v",[6,0]]],"B":[["z",1],["r",24],["n",11],["m",9],["m",4],["v",39],["n",45],["r",27],["v",47],["m",7],["v",36],["m",12],["n",34]],"K":[["cruz",3,1]],"D":[["arr",3,"nvrrmz"]],"t":29},
+    {"a":6,"h":8,"H":[["a",[14,8,2]],["n",[32,26]],["r",[1,0]],["z",[16,17]],["v",[39,40,46,47]],["z",[18,12]],["v",[19,13]],["z",[37,31]]],"B":[["v",5],["z",25],["v",35],["a",3],["r",4],["z",7],["v",36],["v",24],["a",9],["v",43],["z",30,1],["v",33]],"K":[["cruz",2,2]],"D":[["aba",3,"nzarzzn"]],"t":33},
+    {"a":6,"h":8,"H":[["a",[40,41]],["r",[32,38,31]],["m",[35,29]],["z",[23,17]],["v",[7,1,8]],["m",[27,21]],["v",[18,19]],["r",[39,45]],["v",[26,20]]],"B":[["z",5,1],["r",30],["v",33],["r",36],["v",25],["m",42],["r",43],["v",13],["r",34],["m",28],["v",37],["m",46],["r",6],["m",2]],"K":[["te",3,1]],"D":[["izq",2,"aavvvz"]],"t":33},
+    {"a":6,"h":8,"H":[["z",[18,19,20]],["a",[8,2]],["r",[31,30]],["m",[1,7,0,6]],["n",[47,46,45]],["m",[35,41]],["r",[15,14,13]]],"B":[["z",10],["n",37],["m",36],["m",26],["z",12],["r",21],["r",9],["m",42],["a",24],["m",43],["m",5],["r",40],["m",22]],"K":[["te",3,4]],"D":[["aba",2,"nznrar"]],"t":29},
+    {"a":6,"h":8,"H":[["n",[3,2,1,0]],["m",[45,44,39]],["r",[12,13]],["v",[40,46]],["a",[17,16]],["r",[9,15]],["r",[24,25]],["a",[30,36]]],"B":[["v",27],["n",42],["a",21],["r",11],["m",35],["r",5],["v",34],["a",10],["r",29],["n",6],["r",22],["m",4],["r",43],["a",18],["r",14]],"K":[["cruz",1,4]],"D":[["der",3,"nnam"]],"t":33},
+    {"a":6,"h":8,"H":[["m",[7,1,8]],["a",[11,10]],["n",[22,23]],["z",[18,12]],["v",[36,37]],["v",[2,3]],["v",[26,25,20,19]],["v",[29,28]]],"B":[["v",17],["v",5],["v",21],["v",15],["m",16],["n",42],["v",40],["n",6],["z",47,1],["v",0],["v",41],["v",46],["m",38]],"K":[["cruz",2,4]],"D":[["izq",4,"zvmaav"]],"t":30},
+    {"a":6,"h":8,"H":[["m",[43,42]],["z",[31,32,37]],["a",[4,10,3]],["n",[0,6]],["r",[8,7,2]],["z",[34,33]],["n",[28,27]],["z",[29,35]]],"B":[["z",22,1],["n",26],["n",20],["z",23],["m",30],["n",40],["m",38],["z",12],["z",13,1],["r",25],["a",11],["n",24],["z",36]],"K":[["cruz",2,1]],"D":[["aba",3,"rzraaz"]],"t":28},
+    {"a":7,"h":8,"H":[["r",[12,13]],["m",[40,39,33]],["z",[15,16,17,10]],["v",[32,25,18,11]],["c",[4,5]],["a",[50,43]],["a",[34,27,20,19]],["a",[38,37,31]]],"B":[["a",2],["m",52],["r",6],["m",47],["a",29],["a",1],["z",24],["a",8],["c",35],["a",51],["z",26,1],["a",23],["r",14],["z",0],["z",48],["v",45],["v",53]],"D":[["izq",4,"mvca"],["aba",5,"vaa"]],"t":45},
+    {"a":7,"h":8,"H":[["v",[37,38]],["n",[46,53]],["r",[39,32]],["z",[24,31]],["a",[22,23]],["c",[16,17]],["c",[8,15,14,21]],["c",[47,54]],["n",[12,19]],["r",[41,34]],["z",[13,6]]],"B":[["c",30],["n",36],["r",43],["r",33],["v",3],["z",44,1],["z",9],["n",7],["a",27],["z",48,1],["z",50],["n",29],["c",18],["r",35],["v",1],["c",4],["c",45]],"D":[["izq",6,"ccan"],["arr",2,"rcc"]],"t":48},
+    {"a":7,"h":8,"H":[["z",[13,12,11]],["c",[21,22,28]],["v",[24,17]],["a",[46,45,44,51]],["n",[27,26,19,18]],["m",[15,8]],["a",[1,2]],["v",[16,23]],["z",[29,30]]],"B":[["z",43],["a",54],["a",49],["a",38],["v",14],["n",5],["a",53],["a",9],["z",4],["z",10,1],["z",36,1],["c",37],["n",48],["v",55],["n",42],["m",34]],"K":[["te",4,5]],"D":[["der",2,"vcn"],["aba",1,"vamzc"]],"t":44},
+    {"a":7,"h":8,"H":[["a",[26,25,18,17]],["v",[9,16,23,24]],["m",[38,37,31,30]],["r",[28,21,14]],["n",[52,51]],["c",[5,12]],["r",[15,22,29,36]]],"B":[["m",10],["r",4],["v",0],["v",27],["a",13],["r",32],["a",6],["m",34],["r",3],["v",7],["n",11],["r",55],["v",40],["m",39],["r",49],["n",8],["a",43],["a",20],["c",41]],"D":[["der",6,"mrcr"]],"t":46},
+    {"a":7,"h":8,"H":[["z",[55,48]],["n",[36,37]],["r",[41,34]],["c",[10,3,11,4]],["a",[23,24,31,32]],["m",[38,39,40]],["a",[44,51,43]],["r",[26,25,19]]],"B":[["z",52],["a",1],["a",28],["a",30],["m",2],["n",9],["c",20],["z",14,1],["r",29],["a",15],["c",42],["r",46],["a",54],["n",7],["a",18],["c",35],["c",27],["m",12],["a",0],["r",33]],"D":[["aba",1,"r"],["arr",5,"mr"]],"t":45},
+    {"a":7,"h":8,"H":[["z",[4,5]],["a",[39,46,38]],["M",[33,32,26]],["v",[43,44,50]],["A",[18,11]],["N",[40,41]],["v",[15,16]],["A",[45,52]],["A",[10,3]],["v",[21,14]]],"B":[["v",49],["A",54],["v",48],["M",24],["a",47],["N",0],["M",7],["v",12],["z",1,1],["M",55],["A",31],["A",53],["v",6],["v",17],["A",27],["N",42],["v",37]],"K":[["cruz",0,3]],"D":[["der",2,"Avaz"],["arr",2,"Aa"]],"t":39},
+    {"a":7,"h":8,"H":[["c",[31,30]],["m",[53,46]],["A",[41,48]],["z",[27,20]],["N",[52,51]],["n",[36,37,38,39]],["n",[10,17,24]],["N",[47,40,33]],["z",[18,11,4]]],"B":[["A",23],["n",28],["N",45],["N",55],["z",19],["n",5],["c",25],["n",26],["z",12,1],["z",8,1],["n",22],["m",1],["n",6],["m",14],["N",0],["N",21],["z",54]],"D":[["izq",1,"zn"],["izq",5,"cANn"]],"t":40},
+    {"a":7,"h":8,"H":[["n",[37,36,30]],["A",[41,48]],["M",[4,5]],["c",[10,3]],["z",[38,31,24,17]],["a",[39,46,53,54]],["a",[19,26,33,40]],["n",[16,23]]],"B":[["a",1],["z",7,1],["n",11],["a",45],["a",43],["a",50],["z",18,1],["a",32],["c",6],["A",52],["a",20],["c",21],["n",51],["z",25],["n",0],["M",35],["n",29],["a",13],["n",47],["A",49],["M",12]],"D":[["arr",2,"a"],["izq",2,"z"]],"t":46},
+    {"a":7,"h":8,"H":[["A",[25,24,23,22]],["a",[31,30]],["n",[27,20,13]],["v",[38,45,52,53]],["r",[43,44]],["M",[3,4]],["a",[14,21]],["A",[46,47]],["r",[33,26]]],"B":[["n",17],["r",5],["v",18],["v",50],["v",36],["r",16],["M",51],["a",29],["n",54],["M",0],["A",12],["A",28],["A",48],["r",34],["a",35]],"K":[["te",0,1]],"D":[["der",5,"AvrAa"],["arr",1,"nAa"]],"t":50},
+    {"a":7,"h":8,"H":[["n",[11,12,13]],["M",[39,38]],["m",[24,23]],["r",[2,9,16,8]],["a",[49,42,35]],["v",[43,44,51,52]],["a",[34,41,48,40]],["m",[29,30,31,32]]],"B":[["a",25],["n",45],["m",0],["a",47],["r",10],["m",50],["v",17],["n",5],["n",54],["r",19],["a",4],["m",21],["a",15],["M",36],["M",37],["v",14],["v",28]],"D":[["aba",4,"mamaa"],["arr",3,"vrmr"]],"t":44},
+    {"a":7,"h":8,"H":[["m",[23,22,21]],["A",[9,10,11]],["N",[29,30]],["a",[32,33]],["n",[27,26,20,19]],["z",[50,43]],["a",[38,37]],["N",[40,47,39]],["A",[8,15]]],"B":[["z",3,1],["n",31],["n",24],["N",5],["a",41],["a",16],["A",28],["N",18],["A",12],["N",46],["z",48],["N",34],["m",45],["A",13],["A",1],["A",14],["n",0],["m",44],["m",6],["N",17]],"D":[["aba",3,"a"],["arr",4,"an"]],"t":45},
+    {"a":7,"h":8,"H":[["r",[25,18]],["N",[12,11,10]],["M",[41,40,39]],["c",[16,15]],["m",[47,46,45,44]],["n",[53,52]],["m",[28,21]],["c",[42,49]],["c",[14,7,0]]],"B":[["N",51],["m",6],["m",48],["c",13],["c",8],["M",55],["m",3],["c",34],["N",26],["c",43],["r",37],["M",32],["r",9],["c",5],["m",27],["M",19],["c",54]],"K":[["te",1,3]],"D":[["izq",5,"cnmmNn"]],"t":46},
+    {"a":7,"h":8,"H":[["M",[21,28,35,36]],["r",[34,33,26,25]],["A",[51,44,37,30]],["v",[23,24]],["a",[7,8]],["n",[47,46]],["a",[19,12,5]],["M",[49,42]]],"B":[["n",52],["M",9],["r",50],["M",48],["a",54],["a",45],["n",55],["A",32],["M",40],["A",27],["r",2],["r",38],["r",6],["M",53],["a",18]],"D":[["der",1,"aMAa"],["arr",3,"MAvv"]],"t":40},
+    {"a":7,"h":8,"H":[["A",[29,28]],["m",[25,24]],["z",[44,37,30]],["c",[8,7]],["v",[34,33]],["M",[55,54]],["m",[18,11]],["A",[38,45]],["z",[19,12]],["z",[48,41]],["v",[14,15,21]]],"B":[["z",0,1],["v",49],["c",26],["m",42],["v",17],["c",39],["A",3],["z",46],["v",32],["M",51],["A",16],["z",43,1],["z",27],["m",13],["m",20],["v",1],["A",35],["A",10],["z",31]],"D":[["arr",2,"Mz"],["aba",3,"mvz"]],"t":40},
+    {"a":7,"h":8,"H":[["v",[20,27,34]],["c",[42,43,44,50]],["r",[41,48]],["n",[16,15]],["a",[38,39,45]],["N",[54,53,47]],["v",[17,24,31,32]],["n",[12,11]]],"B":[["N",7],["r",51],["v",28],["v",40],["c",35],["v",9],["N",49],["n",46],["N",37],["r",36],["n",55],["v",19],["v",13],["c",25],["c",8],["a",52],["n",33]],"K":[["te",0,3]],"D":[["arr",4,"vav"],["arr",1,"acn"]],"t":48},
+    {"a":7,"h":8,"H":[["c",[23,16,17,10]],["N",[38,37]],["m",[18,11]],["A",[46,39]],["z",[36,43,35,42]],["v",[19,26]],["A",[1,2]],["z",[54,47]],["m",[52,51]],["m",[33,32]]],"B":[["A",34],["A",20],["m",40],["c",45],["v",50],["z",5],["c",0],["m",53],["N",15],["N",8],["c",27],["z",6],["c",49],["m",30],["A",55],["v",28],["z",24],["A",29]],"D":[["izq",2,"m"],["der",1,"mzzzm"]],"t":45},
+    {"a":7,"h":8,"H":[["c",[15,16,22]],["N",[32,25]],["z",[46,45]],["v",[50,49]],["n",[43,36,44,37]],["A",[28,21]],["v",[11,12]],["c",[7,14]],["v",[40,47,39]],["N",[24,31]]],"B":[["N",5],["n",34],["n",10],["A",27],["A",51],["N",19],["z",41,1],["v",20],["c",48],["c",0],["c",9],["z",42,1],["c",55],["N",6],["v",17],["N",54],["v",53],["v",8],["c",3]],"D":[["arr",4,"nnvvv"]],"t":48},
+    {"a":7,"h":8,"H":[["A",[42,43,44,50]],["a",[12,19]],["c",[47,46]],["z",[34,33,27,26]],["N",[15,16,17]],["v",[0,1,2]],["z",[52,45,38]],["z",[7,8]]],"B":[["A",9],["v",49],["z",18],["A",25],["z",32],["N",6],["z",40],["z",39,1],["A",14],["z",51],["z",28,1],["v",11],["A",53],["v",54],["c",36]],"K":[["cruz",1,3]],"D":[["izq",5,"N"],["der",5,"azcNzaz"]],"t":50},
+    {"a":7,"h":8,"H":[["A",[39,38]],["z",[55,54]],["r",[16,9,17]],["v",[31,24,32]],["m",[53,52,51]],["M",[43,36,44]],["A",[7,8]],["A",[19,12]],["m",[50,49]],["v",[33,26,34]]],"B":[["v",27],["m",37],["v",42],["v",41],["A",28],["A",35],["r",6],["A",30],["A",3],["v",23],["M",13],["z",21],["z",14],["r",11],["A",25],["M",29],["A",5],["v",2],["m",20]],"D":[["arr",4,"Mmmr"],["arr",1,"vm"]],"t":48},
+    {"a":7,"h":8,"H":[["z",[0,7,14]],["m",[37,30]],["r",[29,22]],["c",[5,12,19]],["M",[20,27]],["A",[38,31,39]],["r",[47,46,40]],["m",[17,16]],["M",[32,33]],["z",[42,35]]],"B":[["M",34],["c",50],["z",6,1],["r",21],["c",25],["z",49,1],["M",8],["A",36],["r",26],["M",28],["r",15],["c",53],["m",1],["m",23],["A",18],["z",24,1]],"D":[["der",5,"zmzmM"],["aba",5,"Arr"]],"t":45},
+    {"a":7,"h":8,"H":[["N",[53,52,46]],["m",[35,28]],["r",[5,12]],["a",[0,1]],["M",[27,26]],["v",[55,48,41]],["N",[9,10]],["m",[47,40,33]],["r",[31,32]],["m",[7,8]]],"B":[["r",29],["N",38],["m",49],["v",42],["m",44],["M",34],["N",22],["m",51],["a",39],["v",6],["M",30],["N",45],["m",4],["m",13]],"K":[["cruz",3,1]],"D":[["aba",5,"rm"],["aba",1,"NvraNrm"]],"t":50},
+    {"a":7,"h":8,"H":[["A",[18,11,4]],["r",[53,46,39,32]],["m",[47,48]],["c",[36,35]],["M",[17,16]],["z",[15,8,1]],["A",[51,52]],["M",[41,40]],["z",[20,27]],["A",[42,49]]],"B":[["A",38],["A",24],["r",2],["m",7],["r",12],["z",31,1],["M",33],["z",50,1],["A",10],["r",3],["M",19],["c",30],["A",9],["z",0,1],["z",6],["c",43],["A",45],["A",44],["M",5]],"D":[["der",1,"mAzrM"]],"t":44},
+    {"a":7,"h":8,"H":[["c",[30,23,16]],["n",[25,32]],["m",[46,47]],["r",[28,29,35]],["z",[7,8]],["v",[33,34,40,41]],["z",[52,53]],["r",[26,19]],["v",[12,11,10,17]]],"B":[["r",43],["v",15],["r",24],["r",27],["z",2,1],["n",20],["v",49],["v",18],["v",9],["c",6],["r",55],["z",31,1],["n",45],["m",37],["v",0]],"D":[["arr",5,"crvvc"],["aba",2,"zvmz"]],"t":46},
+    {"a":7,"h":8,"H":[["z",[43,36,29,28]],["A",[30,31]],["c",[25,24,18,17]],["M",[10,3,11,4]],["n",[46,53]],["N",[16,15,14]],["A",[22,21]],["n",[6,13]]],"B":[["A",12],["c",26],["z",42],["N",55],["n",52],["M",34],["M",54],["c",51],["z",20],["N",44],["M",41],["z",19,1],["n",9],["c",33],["N",2],["M",27],["n",40],["A",32]],"K":[["te",2,5]],"D":[["der",6,"ncA"],["arr",1,"Az"]],"t":44},
+    {"a":7,"h":8,"H":[["N",[42,35,43]],["n",[45,52,44]],["M",[48,41,34,33]],["A",[32,31]],["a",[25,18,19,12]],["r",[10,9]],["A",[36,29,37]],["A",[40,47,39]]],"B":[["M",22],["n",1],["a",46],["A",30],["M",24],["n",14],["N",53],["M",55],["a",50],["n",0],["A",5],["a",6],["N",51],["M",20],["A",7],["A",49],["A",15],["N",28],["r",13],["a",54]],"D":[["arr",2,"rAAA"]],"t":45},
+    {"a":7,"h":9,"H":[["z",[30,37,44,36]],["v",[46,53]],["p",[61,60]],["r",[38,31]],["M",[15,22,21,28]],["A",[12,5]],["N",[59,52]],["N",[58,57]],["z",[11,4]],["z",[26,33,40]],["p",[42,35]]],"B":[["p",49],["r",20],["z",9],["z",39,1],["p",32],["M",0],["z",14],["z",25],["z",3],["M",43],["A",47],["M",19],["z",8],["N",41],["z",13,1],["N",54],["p",27],["z",45,1]],"K":[["cruz",2,1]],"D":[["arr",1,"zpvMrN"],["der",4,"NAv"]],"t":59},
+    {"a":7,"h":9,"H":[["z",[45,38,39,32]],["v",[26,33,40,41]],["A",[62,61,60]],["m",[24,17,10,18]],["a",[48,55,47]],["M",[13,6]],["n",[53,54]],["M",[51,50,49]],["z",[43,36,44,37]]],"B":[["n",42],["z",9,1],["A",27],["z",2,1],["m",16],["z",11,1],["v",35],["a",59],["m",20],["M",31],["n",21],["A",46],["a",1],["m",22],["z",4,1],["v",8],["z",56,1]],"D":[["arr",5,"zMmMMvzz"],["aba",1,"AaMv"]],"t":60},
+    {"a":7,"h":9,"H":[["N",[34,27,20]],["a",[51,52,59,60]],["c",[9,2]],["M",[0,7,14,21]],["p",[12,19,26,33]],["A",[40,39]],["n",[47,54]],["p",[22,23,29]],["c",[49,50]],["M",[25,32]]],"B":[["M",5],["M",42],["N",16],["A",8],["p",55],["M",4],["p",10],["A",46],["p",53],["p",13],["c",28],["p",58],["n",62],["c",57],["M",56],["c",44],["N",38],["p",41]],"K":[["te",0,5]],"D":[["arr",3,"Mapaaca"],["aba",5,"nMN"]],"t":64},
+    {"a":7,"h":9,"H":[["n",[32,31,30]],["N",[0,7]],["A",[43,42]],["a",[24,23,22,16]],["m",[60,59,53]],["p",[11,4,12]],["r",[55,54,47,46]],["A",[28,29]],["N",[27,26,25]],["p",[38,37]]],"B":[["p",36],["N",14],["p",35],["m",49],["N",51],["r",40],["m",33],["n",17],["a",1],["N",8],["A",52],["p",44],["N",39],["r",50],["A",41],["n",19],["N",6],["m",62]],"D":[["arr",2,"Aaa"],["aba",2,"pnparAr"]],"t":60},
+    {"a":7,"h":9,"H":[["z",[32,25]],["v",[5,4]],["M",[51,52]],["p",[47,54]],["c",[11,12,18]],["N",[60,53]],["m",[20,27]],["M",[36,37,38,44]],["z",[62,61,55]],["z",[7,8,14]],["M",[50,43]]],"B":[["M",1],["z",33],["z",34],["M",35],["z",22,1],["N",57],["M",21],["z",28],["c",46],["M",40],["M",10],["z",29,1],["p",41],["M",39],["v",56],["c",31],["M",13],["m",45]],"K":[["te",1,2]],"D":[["aba",2,"MzNpzz"],["arr",2,"cmv"]],"t":56},
+    {"a":7,"h":9,"H":[["z",[17,10,3]],["n",[31,38]],["v",[29,22,15]],["a",[60,61]],["A",[40,41]],["N",[44,51]],["r",[12,19]],["n",[49,42]],["r",[9,16,8]],["a",[35,28,21,14]],["r",[0,1]]],"B":[["r",59],["z",46,1],["v",6],["r",26],["A",2],["r",48],["r",62],["r",30],["n",32],["n",45],["a",39],["a",27],["z",5],["v",58],["z",36],["r",54],["a",23],["a",24],["a",37],["r",55],["N",52],["n",11]],"D":[["aba",1,"AN"],["arr",4,"avn"]],"t":56},
+    {"a":7,"h":9,"H":[["z",[55,62,54,61]],["m",[24,17]],["a",[39,40,41]],["c",[33,34]],["r",[15,16]],["p",[7,0]],["M",[29,22]],["c",[31,38]],["a",[56,57]],["m",[58,59]],["m",[43,50,42]],["c",[44,37]]],"B":[["z",5,1],["r",52],["a",26],["p",3],["z",30,1],["m",8],["c",48],["m",28],["M",13],["m",14],["c",19],["m",25],["a",20],["z",11,1],["c",35],["m",49],["c",32],["z",36,1]],"K":[["te",3,6]],"D":[["izq",3,"cmcaa"],["arr",2,"pmrMa"]],"t":60},
+    {"a":7,"h":9,"H":[["m",[13,12]],["N",[37,44,36,43]],["v",[50,51,52,45]],["n",[8,1,9]],["r",[59,58,57]],["z",[19,18,17,16]],["p",[62,61,55,54]],["p",[42,49,56]]],"B":[["p",6],["z",15],["p",27],["p",46],["r",38],["m",2],["N",47],["v",23],["p",22],["p",10],["v",4],["p",40],["p",25],["v",24],["r",14],["m",30],["r",0],["n",60],["n",26],["v",11]],"D":[["izq",5,"NnzzNz"],["der",5,"N"]],"t":66},
+    {"a":7,"h":9,"H":[["A",[17,18,24]],["p",[37,44]],["a",[30,29,28,35]],["m",[33,40,47,54]],["c",[48,55]],["n",[39,46]],["z",[36,43]],["a",[49,50]],["a",[9,10]],["a",[20,27]],["a",[14,21]]],"B":[["a",6],["a",8],["a",2],["A",38],["a",23],["a",26],["a",16],["m",32],["m",53],["p",60],["a",31],["n",52],["a",15],["a",62],["m",59],["n",34],["z",25],["m",4]],"K":[["te",4,1]],"D":[["der",5,"caaAzAa"],["arr",5,"cp"]],"t":63},
+    {"a":7,"h":9,"H":[["c",[54,61]],["p",[8,15]],["r",[46,45,38,37]],["N",[4,3]],["M",[10,17]],["A",[25,32]],["a",[50,51]],["N",[26,19,12,20]],["A",[48,47,41]],["a",[0,1]],["p",[58,59,60,53]]],"B":[["c",36],["c",35],["r",31],["N",2],["N",57],["p",39],["p",62],["N",56],["A",13],["A",30],["N",27],["A",11],["p",43],["A",9],["N",28],["M",55],["a",34],["p",14],["M",6],["A",18],["p",33]],"D":[["izq",3,"raa"],["izq",7,"arrpN"]],"t":63},
+    {"a":7,"h":9,"H":[["a",[9,2,10,3]],["m",[55,48]],["p",[11,4]],["r",[35,42]],["z",[47,54]],["A",[40,39,33]],["c",[20,19,13,12]],["A",[37,36]],["z",[25,24]],["r",[57,50,43,51]]],"B":[["A",16],["a",31],["A",26],["z",21],["r",8],["p",7],["p",28],["A",5],["A",1],["z",30],["a",49],["a",56],["r",0],["m",53],["c",34],["c",61],["c",29],["r",32]],"K":[["cruz",2,5]],"D":[["aba",3,"armA"],["der",3,"rrzzc"]],"t":59},
+    {"a":7,"h":9,"H":[["n",[51,52]],["A",[2,1,0]],["N",[22,15,8]],["p",[36,37]],["M",[53,54]],["a",[32,39,46]],["z",[60,59,58]],["n",[34,33]],["a",[23,24,30,31]],["a",[18,17,11,10]]],"B":[["A",7],["n",21],["A",45],["a",5],["A",43],["a",35],["a",29],["a",26],["a",25],["p",44],["a",50],["p",49],["N",48],["n",38],["n",13],["n",27],["M",14],["z",55],["N",16],["a",41]],"D":[["izq",4,"azaMza"],["der",2,"Na"]],"t":63},
+    {"a":7,"h":9,"H":[["n",[61,54,47,55]],["c",[20,27]],["M",[23,24,30]],["r",[26,33,25]],["m",[53,60]],["p",[44,43,42]],["a",[57,56]],["n",[10,11,12]],["c",[37,38,39]],["n",[51,52]]],"B":[["p",31],["p",18],["c",19],["a",50],["r",45],["n",32],["M",0],["n",62],["r",13],["c",28],["c",21],["c",46],["M",6],["p",9],["n",29],["n",40],["n",35],["m",3]],"K":[["cruz",0,1]],"D":[["der",6,"ncnm"],["arr",1,"Mnnar"]],"t":63},
+    {"a":7,"h":9,"H":[["A",[25,26,27]],["z",[34,33]],["v",[56,57,58,51]],["n",[48,47]],["M",[59,52]],["a",[50,49]],["N",[29,22,15,23]],["v",[60,53,46,45]],["A",[39,40,41]],["M",[13,20]]],"B":[["v",44],["a",1],["v",17],["A",30],["n",18],["v",0],["A",55],["M",54],["M",28],["v",37],["n",62],["v",14],["A",6],["z",24],["a",16],["N",38],["v",21],["N",32],["z",19],["v",9],["N",3],["M",11]],"D":[["izq",1,"AA"],["aba",5,"NMAv"]],"t":55},
+    {"a":7,"h":9,"H":[["m",[39,46,45,52]],["A",[51,44]],["r",[33,40]],["c",[56,49]],["a",[34,41,48]],["n",[25,18,26]],["z",[29,36,43]],["A",[37,30,38]],["n",[61,62]],["m",[9,10,11]]],"B":[["z",6,1],["m",19],["m",7],["r",60],["c",32],["n",3],["n",47],["r",58],["A",0],["a",27],["A",21],["c",2],["m",50],["n",57],["m",31],["m",23],["m",4],["A",17]],"K":[["cruz",0,1]],"D":[["arr",1,"Anan"],["arr",5,"Aazmz"]],"t":59},
+    {"a":7,"h":9,"H":[["M",[31,30,24,23]],["v",[20,19,13]],["N",[1,2]],["n",[43,50,57]],["A",[52,45]],["r",[25,26,33,34]],["z",[36,37,38,44]],["M",[61,54]],["N",[55,48]],["z",[35,42]]],"B":[["N",5],["z",18],["M",0],["N",47],["N",27],["r",53],["M",3],["n",15],["n",22],["z",51,1],["v",29],["M",41],["M",10],["r",39],["n",7],["v",59],["z",28],["r",62],["M",12],["A",21],["z",4,1]],"D":[["aba",4,"zAv"],["aba",2,"NMrz"]],"t":57},
+    {"a":7,"h":9,"H":[["n",[53,52,46,45]],["M",[15,8]],["A",[35,42]],["c",[12,19]],["N",[50,57]],["p",[3,4]],["a",[7,0]],["n",[5,6]],["A",[25,24]],["N",[16,9]],["c",[13,20]],["a",[21,22,28]]],"B":[["N",51],["a",47],["N",48],["n",41],["n",18],["a",49],["a",1],["a",40],["M",59],["A",17],["c",56],["A",32],["c",23],["A",43],["p",60],["n",29],["n",27],["N",14]],"K":[["te",1,5]],"D":[["arr",2,"cac"],["der",4,"MAnpNn"]],"t":59},
+    {"a":7,"h":9,"H":[["n",[44,51]],["A",[39,38,37,31]],["r",[53,46]],["m",[10,3]],["p",[26,25,18,17]],["M",[47,48]],["v",[50,43,36]],["A",[21,22,23]],["m",[20,27,34]],["m",[1,8]]],"B":[["r",15],["r",61],["m",13],["v",49],["A",6],["A",56],["m",55],["p",57],["m",54],["M",52],["A",42],["p",7],["m",0],["A",45],["n",59],["A",16],["p",40],["p",58],["A",41]],"D":[["izq",2,"vvmm"],["arr",4,"AMnm"]],"t":64},
+    {"a":7,"h":9,"H":[["N",[60,59,58,57]],["M",[43,36]],["p",[42,35,28]],["v",[2,3]],["r",[20,13]],["a",[38,39,40,41]],["c",[6,5,4]],["r",[54,53,52,51]],["v",[25,26]],["p",[12,11,10]]],"B":[["N",16],["r",19],["M",55],["a",31],["N",47],["p",21],["a",29],["r",46],["N",8],["c",17],["p",37],["r",1],["p",48],["c",45]],"K":[["te",1,3]],"D":[["izq",2,"vaNrMrv"],["der",3,"vrcpppav"]],"t":60},
+    {"a":7,"h":9,"H":[["M",[35,28,29,22]],["n",[32,25,18]],["v",[47,40,48]],["z",[53,46,54]],["a",[51,52,58,59]],["A",[6,13]],["N",[43,36,44,37]],["M",[17,24,31]],["z",[61,60]]],"B":[["z",9,1],["M",45],["M",34],["a",20],["a",62],["v",27],["z",26],["M",23],["z",14],["z",57,1],["N",41],["A",55],["N",21],["A",30],["n",50],["v",8],["M",0],["z",4],["v",12],["M",10],["n",19]],"D":[["arr",5,"Nn"],["arr",1,"aMNaM"]],"t":55},
+    {"a":7,"h":9,"H":[["N",[6,13,20,27]],["z",[36,35]],["r",[1,2]],["m",[30,31,37]],["v",[14,15]],["p",[12,19]],["c",[54,61,53]],["m",[58,57]],["r",[4,3]],["N",[17,10]],["m",[52,45,38]]],"B":[["m",39],["v",47],["m",56],["r",46],["c",22],["m",8],["N",41],["r",42],["N",33],["N",50],["m",55],["N",5],["m",44],["c",29],["c",11]],"K":[["cruz",3,2]],"D":[["aba",4,"vNppmmNr"],["izq",7,"zmzr"]],"t":63},
+    {"a":7,"h":9,"H":[["M",[32,33]],["A",[53,52,51,58]],["m",[23,22]],["a",[7,0,8,1]],["N",[17,10,3]],["c",[49,56]],["r",[41,48,55,47]],["c",[18,19,25]],["m",[60,61,62]]],"B":[["a",57],["m",9],["r",50],["A",54],["c",31],["A",6],["c",29],["N",59],["a",42],["N",44],["r",16],["m",5],["c",30],["c",40],["a",24],["r",43],["N",45],["r",11],["A",12],["m",35],["m",38]],"D":[["izq",2,"m"],["arr",4,"aMMAc"]],"t":59},
+    {"a":7,"h":9,"H":[["N",[16,9,17]],["A",[56,49,42]],["r",[4,11,3]],["M",[22,23]],["p",[39,40,41,34]],["n",[0,7,14,21]],["z",[46,53]],["N",[33,26]],["r",[19,18]],["p",[37,30]]],"B":[["M",58],["r",50],["r",48],["N",27],["z",32],["z",61],["p",24],["N",29],["A",25],["n",13],["A",10],["N",28],["n",2],["p",6],["p",38],["N",55],["A",5],["r",20],["p",62]],"K":[["te",1,6]],"D":[["arr",1,"nMNprprn"]],"t":64},
+    {"a":7,"h":9,"H":[["M",[59,58]],["a",[37,30]],["N",[47,40]],["z",[26,25,18,17]],["n",[39,32]],["c",[36,43,50,57]],["m",[8,9,10]],["a",[45,46]],["M",[34,41]],["a",[24,23]],["M",[1,0]]],"B":[["z",29],["M",54],["z",38],["M",22],["z",6],["M",56],["a",62],["M",53],["n",55],["a",44],["a",52],["c",16],["N",31],["M",19],["N",49],["z",11],["c",5],["m",14],["a",2],["c",15],["m",60],["a",4]],"D":[["arr",3,"Mcm"],["der",3,"na"]],"t":61},
+    {"a":7,"h":9,"H":[["a",[20,19,12,11]],["A",[51,58]],["n",[42,35]],["v",[27,34,41]],["r",[10,9,3]],["m",[22,15,8,1]],["z",[61,60,54]],["z",[25,32]],["v",[40,33]],["r",[45,52,44]]],"B":[["v",47],["m",13],["m",7],["m",46],["a",5],["r",26],["v",23],["a",29],["z",56,1],["r",31],["r",36],["A",53],["r",48],["n",57],["v",2],["r",37],["v",62],["r",21]],"K":[["te",2,2]],"D":[["arr",4,"avmz"],["aba",3,"zzznaA"]],"t":56},
+    {"a":8,"h":10,"H":[["r",[49,50,51]],["n",[69,61]],["v",[63,71,62]],["p",[30,38,37,45]],["a",[67,59,68]],["N",[13,5,14,6]],["b",[54,53]],["c",[77,76]],["v",[8,0]],["r",[41,40]],["r",[74,73]],["b",[65,64]],["a",[7,15,23]],["n",[34,33,32]]],"B":[["b",70],["r",2],["b",36],["p",4],["n",47],["r",42],["v",79],["r",10],["n",48],["a",72],["b",25],["c",19],["N",55],["v",12],["b",43],["v",46],["r",3],["r",1],["v",78],["r",9],["v",56],["N",29],["c",24]],"K":[["te",2,3]],"D":[["aba",3,"NpapnrnN"],["der",4,"naaapa"]],"t":73},
+    {"a":8,"h":10,"H":[["A",[28,20]],["p",[21,13,14,6]],["r",[49,57,48]],["b",[9,17,8]],["N",[22,30]],["c",[37,38,46,47]],["m",[70,78]],["n",[23,31]],["b",[69,68]],["A",[32,24,16]],["c",[52,51,44,43]],["A",[18,10,2]],["c",[67,59]]],"B":[["N",36],["N",72],["c",62],["A",3],["A",0],["b",19],["b",53],["r",27],["p",63],["c",79],["n",74],["p",56],["r",64],["c",71],["A",45],["m",50],["c",61],["n",4],["b",39],["b",77],["p",66],["c",25],["A",26],["c",33],["c",65]],"D":[["arr",1,"Arc"],["der",1,"mbccAA"],["aba",3,"pA"]],"t":71},
+    {"a":8,"h":10,"H":[["m",[68,67,66,59]],["c",[10,11]],["b",[13,12,5,4]],["n",[36,28]],["A",[44,52,43]],["N",[56,57]],["a",[7,6]],["z",[61,60]],["a",[46,45]],["a",[54,62,70,78]],["a",[8,9]],["b",[27,19]],["z",[21,22,29]],["a",[73,72]]],"B":[["a",32],["a",3],["a",74],["m",69],["m",38],["m",17],["b",71],["n",30],["a",64],["b",53],["c",1],["z",25],["m",51],["z",63,1],["z",14,1],["z",79,1],["a",2],["a",37],["a",65],["a",58],["a",18]],"K":[["te",1,4]],"D":[["izq",5,"aNzncb"],["der",4,"aAbb"],["aba",5,"NbAaA"]],"t":73},
+    {"a":8,"h":10,"H":[["m",[30,22,14,23]],["M",[43,51,59]],["z",[0,8]],["n",[24,25,32,33]],["a",[26,34]],["A",[69,68]],["p",[3,4,5]],["c",[18,19]],["p",[50,49,48,41]],["c",[44,36]],["p",[66,67,74]],["z",[10,2]],["p",[45,46,53]]],"B":[["p",27],["m",28],["a",7],["p",37],["p",9],["A",20],["p",17],["n",61],["n",73],["c",55],["n",15],["p",71],["m",42],["A",78],["c",29],["M",47],["c",35],["n",75],["p",1],["m",60],["M",13],["p",64],["m",31],["p",40],["p",65],["p",57],["p",16]],"D":[["izq",7,"azzpp"],["arr",6,"zMc"],["aba",4,"z"]],"t":73},
+    {"a":8,"h":10,"H":[["p",[21,13,22]],["v",[2,1,0]],["n",[20,28,36,37]],["M",[5,4]],["r",[50,51,58]],["z",[49,57]],["a",[59,67,75]],["N",[43,42,41]],["r",[46,38,30,39]],["p",[62,61,60,68]],["v",[8,9]],["M",[65,66,73,74]]],"B":[["M",31],["a",79],["z",45],["N",44],["v",29],["M",76],["n",27],["M",23],["n",15],["p",71],["r",53],["r",55],["v",16],["M",56],["N",72],["r",69],["v",12],["r",52],["p",35],["a",47],["v",24]],"K":[["cruz",1,1]],"D":[["arr",6,"npN"],["aba",6,"nMMppz"],["izq",8,"rprvrpa"]],"t":73},
+    {"a":8,"h":10,"H":[["v",[71,70,62,61]],["m",[59,67,75,76]],["n",[4,12]],["r",[34,33,32]],["M",[31,39]],["A",[48,40]],["a",[36,35,28]],["z",[44,43,42,41]],["n",[25,24]],["r",[50,58]],["z",[68,60]],["m",[22,14]],["z",[1,0]],["n",[21,29,20]]],"B":[["r",64],["m",27],["r",56],["z",8],["v",72],["m",30],["z",3],["n",66],["m",37],["z",65],["n",79],["r",16],["A",26],["A",19],["v",13],["n",73],["n",53],["m",57],["M",38],["n",9],["a",49],["z",5],["m",7],["z",63,1],["n",18]],"D":[["aba",5,"zarmz"],["aba",2,"vrMzavn"]],"t":71},
+    {"a":8,"h":10,"H":[["r",[50,51,52]],["z",[20,19,12,11]],["N",[59,67,75]],["a",[26,34,25]],["m",[44,36]],["c",[7,15,23,14]],["v",[71,70]],["A",[8,9]],["m",[77,69,78]],["m",[32,40]],["c",[64,72]],["m",[43,42,41]],["N",[45,53,61]]],"B":[["r",5],["N",6],["z",66,1],["A",27],["c",39],["A",55],["N",60],["m",13],["m",16],["m",35],["m",37],["c",21],["z",47,1],["c",48],["m",30],["c",54],["a",4],["N",29],["m",62],["z",1],["r",28],["N",33]],"K":[["cruz",0,6]],"D":[["arr",2,"NmcN"],["der",7,"maz"],["izq",3,"mvmacvr"]],"t":73},
+    {"a":8,"h":10,"H":[["M",[52,51]],["c",[70,69]],["v",[58,59,60]],["z",[43,35]],["p",[64,56,65,57]],["A",[6,14,5]],["m",[23,31,30,38]],["N",[74,73,72]],["v",[13,21,12]],["N",[0,8]],["N",[34,33,26]],["M",[55,54,47]],["v",[50,49,48]]],"B":[["M",41],["v",45],["N",27],["A",71],["m",39],["v",36],["v",24],["A",62],["N",42],["v",7],["c",15],["N",22],["N",40],["N",67],["c",1],["N",44],["p",66],["z",37,1],["z",16],["m",20],["v",11]],"D":[["aba",5,"pmpp"],["arr",4,"NvmvMMvMA"],["der",7,"NMv"]],"t":74},
+    {"a":8,"h":10,"H":[["c",[69,68,67]],["A",[0,1,2,3]],["N",[43,51,59]],["m",[35,27,36]],["v",[79,78,77]],["z",[73,74,75]],["r",[45,53]],["b",[57,65]],["z",[20,19,18,17]],["N",[42,34]],["m",[50,49]],["b",[54,62,70]],["m",[10,9]]],"B":[["z",14],["b",41],["m",66],["A",61],["r",60],["c",39],["z",11,1],["m",58],["N",12],["v",5],["z",6],["z",32],["A",55],["z",64,1],["c",29],["A",48],["z",16],["A",8],["r",4],["b",63],["b",23],["m",46]],"K":[["te",0,3]],"D":[["izq",7,"bbvN"],["der",1,"vzN"],["izq",5,"mcmmNNm"]],"t":78},
+    {"a":8,"h":10,"H":[["z",[50,51,58,59]],["A",[26,34]],["m",[65,73]],["M",[19,11,3]],["a",[1,9,17]],["r",[74,66]],["p",[60,61]],["v",[54,53]],["v",[5,6,7,14]],["A",[43,35]],["v",[21,22,23,15]],["r",[27,28]],["a",[29,37,45,36]]],"B":[["p",44],["A",4],["v",55],["z",64],["v",33],["v",75],["M",63],["a",71],["a",76],["v",70],["M",78],["m",40],["a",2],["v",72],["a",18],["v",69],["A",56],["m",42],["v",12],["A",20],["v",48],["a",41],["a",8],["M",32],["z",49],["p",79],["r",52],["z",46,1]],"D":[["izq",2,"rv"],["der",5,"z"],["aba",5,"rvAra"]],"t":80},
+    {"a":8,"h":10,"H":[["m",[63,71,62]],["c",[44,43,42,41]],["r",[26,25,17,16]],["N",[67,68,75,76]],["a",[27,19]],["n",[55,47,39,38]],["v",[53,54,61]],["A",[66,74]],["N",[34,35,36]],["n",[40,32,24,33]],["v",[56,64,72,73]]],"B":[["v",52],["v",10],["v",58],["n",5],["N",8],["m",12],["c",59],["n",51],["n",14],["r",57],["v",48],["v",69],["N",18],["N",3],["r",15],["a",6],["N",37],["N",7],["n",1],["m",11],["n",23],["r",0],["m",65]],"K":[["cruz",4,1]],"D":[["aba",6,"cnvnvAN"],["arr",2,"arcnAcN"]],"t":69},
+    {"a":8,"h":10,"H":[["a",[68,60,69]],["N",[75,74,73]],["b",[11,19,18,26]],["M",[51,59,58,66]],["v",[5,4]],["A",[54,62,53]],["m",[28,29,30]],["z",[32,40]],["a",[46,38]],["a",[71,70]],["v",[1,9]],["a",[65,64,57,56]],["N",[0,8,16,17]]],"B":[["b",78],["N",15],["v",24],["M",41],["A",72],["N",14],["N",3],["b",77],["m",36],["N",10],["M",33],["a",50],["a",39],["a",61],["z",22,1],["a",21],["N",55],["a",34],["b",25],["M",7],["v",49],["v",23],["v",45]],"D":[["der",5,"Aba"],["der",7,"NaAmNaz"],["der",3,"Mmaaa"]],"t":73},
+    {"a":8,"h":10,"H":[["z",[62,61]],["M",[29,30]],["b",[65,73]],["N",[70,78]],["p",[49,48,41]],["A",[68,67,66]],["a",[14,13,12,11]],["m",[60,52]],["a",[55,47]],["z",[28,27,26]],["p",[69,77]],["M",[15,7]],["b",[1,2,3,10]],["m",[9,17,8]]],"B":[["a",21],["z",53,1],["z",34],["p",57],["b",5],["b",4],["b",58],["a",22],["m",25],["p",45],["b",33],["A",40],["p",71],["b",31],["z",0],["p",6],["z",36],["A",56],["a",74],["a",19],["p",50]],"K":[["cruz",2,4]],"D":[["izq",4,"mAMMm"],["izq",8,"mMaNa"],["izq",2,"NmzMb"]],"t":73},
+    {"a":8,"h":10,"H":[["c",[49,57,65]],["N",[37,29,30,22]],["b",[1,0]],["m",[36,44,35]],["a",[55,63,54]],["r",[19,20]],["z",[43,42]],["n",[79,78,71]],["z",[59,67]],["z",[23,31]],["m",[10,11,12]],["a",[60,61]],["c",[69,68]],["m",[48,40]],["c",[16,8]]],"B":[["b",50],["r",73],["a",21],["m",70],["r",75],["n",66],["a",47],["m",38],["z",51,1],["m",18],["m",24],["c",14],["c",58],["N",62],["b",64],["z",33],["m",72],["z",25],["a",7],["c",4],["N",26],["N",52],["c",17],["n",15],["m",76],["m",53],["m",3]],"D":[["aba",5,"czn"],["arr",6,"ca"],["arr",2,"zazNc"]],"t":73},
+    {"a":8,"h":10,"H":[["m",[24,32,40,41]],["c",[57,65,56]],["a",[71,63]],["r",[1,9,17]],["M",[21,22,29]],["n",[35,36]],["z",[19,27,18]],["v",[4,3]],["r",[68,69]],["z",[39,38,37]],["n",[58,50,59]],["n",[47,46]],["m",[7,6]],["v",[14,15]]],"B":[["c",10],["m",16],["m",62],["a",55],["n",66],["n",51],["v",77],["m",44],["v",28],["n",5],["M",13],["c",67],["n",78],["m",20],["m",60],["n",25],["z",79],["n",48],["z",49,1],["z",34],["v",8],["z",12]],"K":[["cruz",4,5]],"D":[["aba",4,"zrrvr"],["der",3,"cna"],["arr",2,"MrzrMm"]],"t":74},
+    {"a":8,"h":10,"H":[["p",[36,28,37]],["a",[64,65,66,73]],["m",[52,53,54,46]],["b",[23,22]],["M",[3,11]],["c",[18,26]],["v",[2,10]],["r",[61,60]],["c",[71,79]],["M",[34,42,41,49]],["M",[7,15]],["p",[4,5,6]],["b",[33,25,17]],["r",[75,67,59]]],"B":[["c",56],["p",48],["v",51],["a",31],["r",70],["M",20],["m",29],["p",13],["a",72],["M",76],["p",78],["M",24],["c",57],["M",27],["r",47],["m",62],["c",40],["M",45],["r",68],["b",43],["M",69],["r",44],["p",8],["b",74],["M",1],["p",50]],"D":[["izq",4,"cbMmbrm"],["der",6,"bpaav"]],"t":75},
+    {"a":8,"h":10,"H":[["a",[29,30,31,23]],["r",[25,26,33]],["z",[2,10,18]],["c",[39,38]],["A",[28,36]],["v",[42,43]],["m",[72,64,73,65]],["b",[75,74,67]],["b",[70,62,71,63]],["c",[13,21]],["A",[69,77]],["b",[53,52,51]],["c",[49,41]]],"B":[["b",5],["m",3],["A",1],["a",11],["c",12],["m",79],["b",8],["A",48],["v",76],["v",47],["c",54],["c",17],["A",45],["c",44],["a",16],["z",55,1],["b",68],["b",7],["b",60],["m",78],["A",27],["b",56]],"K":[["cruz",1,6]],"D":[["arr",6,"cbabbbr"],["izq",5,"zzrrcma"]],"t":74},
+    {"a":8,"h":10,"H":[["n",[33,25]],["N",[73,65]],["b",[51,52,59,60]],["m",[36,28,20,29]],["p",[9,1]],["A",[46,47]],["M",[69,61,53]],["r",[6,7,14]],["p",[78,77]],["p",[34,42,50,41]],["n",[22,23,30]],["n",[27,19]],["n",[56,48,40,32]]],"B":[["n",63],["p",18],["M",3],["N",37],["A",11],["n",35],["m",17],["m",39],["A",12],["n",4],["n",26],["n",54],["r",62],["b",45],["n",31],["r",68],["p",15],["m",64],["n",70],["n",57],["p",67],["n",66],["b",24]],"D":[["aba",3,"MMbppnpnN"],["izq",1,"bpmrp"]],"t":75},
+    {"a":8,"h":10,"H":[["r",[16,17]],["M",[30,31,38]],["A",[35,34,27,26]],["m",[47,39]],["v",[78,77]],["n",[18,10,2,11]],["p",[5,6,13]],["z",[59,51,60,52]],["m",[0,1,8]],["z",[12,4]],["n",[41,33,25]],["z",[43,44,45]],["m",[67,75]]],"B":[["v",14],["p",72],["n",32],["M",79],["z",3,1],["n",57],["p",21],["m",22],["n",74],["r",48],["m",53],["M",23],["p",68],["z",19],["z",64],["z",55,1],["z",9],["z",65],["n",37],["A",49],["M",71],["m",7]],"K":[["cruz",5,6]],"D":[["izq",5,"nzmmvA"],["izq",7,"Azz"],["izq",3,"Ammnrn"]],"t":74},
+    {"a":8,"h":10,"H":[["r",[22,21,14]],["A",[5,6]],["c",[47,46]],["p",[40,32,24]],["N",[70,62,63,55]],["m",[19,27]],["M",[58,57]],["v",[2,3]],["M",[79,71]],["v",[68,69]],["A",[73,65]],["A",[26,25]],["M",[45,53,61]],["N",[42,43]],["M",[37,36,35,28]]],"B":[["M",13],["M",11],["A",67],["p",56],["p",29],["M",72],["r",4],["N",31],["M",44],["m",54],["c",10],["v",41],["A",30],["M",60],["c",77],["N",64],["M",74],["r",59],["N",66],["N",48],["v",18],["M",17],["M",51]],"D":[["izq",2,"NMMAvp"],["der",4,"ANmv"],["aba",6,"MrAA"]],"t":70},
+    {"a":8,"h":10,"H":[["p",[2,1]],["v",[45,46,47]],["A",[59,67]],["M",[12,20,28,36]],["N",[17,16,9]],["a",[70,69,68]],["z",[73,65]],["c",[52,53,60,61]],["v",[25,26,33]],["p",[21,13]],["a",[40,32]],["N",[7,15]],["c",[5,6]],["A",[62,54]]],"B":[["M",14],["v",48],["a",38],["p",4],["v",23],["N",43],["N",8],["v",37],["c",55],["v",34],["c",63],["A",75],["c",0],["N",64],["a",74],["M",44],["a",78],["A",24],["M",79],["c",57],["v",41],["N",19],["p",22]],"K":[["cruz",1,5]],"D":[["der",8,"pANzvcMa"],["aba",5,"pAcza"]],"t":81},
+    {"a":8,"h":10,"H":[["r",[21,29,37]],["b",[68,67,60,59]],["m",[6,7]],["a",[25,17,26,18]],["M",[38,30]],["N",[54,55]],["p",[51,50,49]],["v",[76,75]],["r",[64,65]],["a",[52,53]],["m",[44,45]],["M",[42,43]],["v",[9,1]],["M",[35,34]],["N",[58,57]]],"B":[["a",69],["a",41],["M",20],["v",15],["v",47],["a",10],["N",3],["r",4],["r",48],["M",22],["a",31],["v",32],["M",63],["M",16],["b",66],["r",13],["m",72],["N",62],["b",27],["m",33],["r",78],["p",74],["M",71],["a",2]],"D":[["izq",1,"N"],["der",4,"Nmmpb"],["izq",3,"prMvab"]],"t":71},
+    {"a":8,"h":10,"H":[["z",[49,48]],["n",[64,65,66]],["p",[74,75]],["A",[77,69,78]],["M",[9,17,16,24]],["r",[62,54,55,47]],["N",[61,60,53,52]],["a",[39,38]],["A",[12,13,20,21]],["n",[71,79]],["p",[31,30]],["A",[32,33,40,41]]],"B":[["p",34],["n",45],["a",36],["p",7],["A",14],["M",72],["n",10],["A",27],["n",5],["A",25],["r",2],["A",46],["p",58],["N",50],["A",0],["A",19],["M",57],["z",3],["n",15],["n",73],["A",56],["A",70]],"K":[["cruz",2,4]],"D":[["arr",6,"zMrN"],["der",7,"pNNaMr"],["arr",1,"ArAA"]],"t":74},
+    {"a":8,"h":10,"H":[["N",[33,25,34]],["c",[63,62]],["m",[10,18,26,27]],["b",[58,66,74]],["r",[37,45,53,54]],["a",[48,56,64,72]],["M",[28,20]],["z",[59,67]],["z",[13,12]],["c",[41,42,43]],["z",[78,70]],["M",[76,68]],["b",[77,69,61,60]]],"B":[["N",47],["b",7],["M",57],["r",5],["b",4],["z",30,1],["c",36],["r",49],["a",2],["m",46],["a",32],["b",31],["c",38],["c",0],["M",3],["a",44],["z",35,1],["m",24],["c",39],["r",65],["c",22],["z",6],["b",71],["M",21],["z",79,1]],"D":[["der",1,"NMb"],["arr",1,"mbzN"],["der",6,"azbrm"]],"t":71},
+    {"a":8,"h":10,"H":[["M",[43,51]],["m",[29,30]],["N",[35,27]],["v",[50,42,34]],["p",[41,49,48,56]],["r",[36,37,38]],["n",[9,17,8]],["A",[71,70,63]],["v",[68,76,67]],["r",[22,21]],["p",[12,20]],["A",[5,6,7]],["p",[58,66,65,73]]],"B":[["v",16],["p",69],["r",40],["r",19],["p",72],["p",74],["A",47],["r",14],["p",79],["n",62],["v",11],["r",75],["p",10],["A",60],["N",24],["v",55],["M",31],["A",61],["n",3],["p",54],["p",78],["n",1],["A",33],["v",18]],"K":[["te",4,5]],"D":[["der",4,"MvAAv"],["der",2,"mNpr"],["izq",8,"ppm"]],"t":76}
+];
+if (typeof module !== 'undefined' && module.exports) module.exports = NIVELES_PELUCHINES;
+
+</script>
+<script>
+/* ==========================================================
+   PELUCHINES — pantalla, arrastre, ayudas y progreso
+   Las reglas están en motor-peluchines.js; los niveles, ya comprobados,
+   en niveles.js. Aquí no se decide nada del juego.
+   ========================================================== */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const lienzo = $('lienzo');
+const ctx = lienzo.getContext('2d');
+const P = Peluchines;
+const NIV = NIVELES_PELUCHINES;
+
+/* ---------- ESTADO ---------- */
+let e = null;              // la partida del motor
+let nivel = 0;             // índice en NIV
+let historial = [];        // fotos para deshacer
+let modo = null;           // null | 'iman' | 'garra' | 'garra2' | 'pistola'
+let garraB = -1;
+let arrastre = null;       // lo que lleva el dedo
+let cursor = null;         // teclado: { i, cogido: b | 'k'+n | null }
+let anims = [];            // peluchines viajando: { b, pts: [[x, y]…], t, dur, retraso }
+let efectos = [];          // chispas, anillos, textos
+let desapareciendo = [];   // huecos llenos que se van: { h, t }
+let fiesta = null;         // confeti al ganar
+let finPendiente = null;   // segundos hasta enseñar la capa de fin
+let pintando = null;       // id del único requestAnimationFrame
+let ultimo = 0;
+let L = null;              // tablero en pantalla: { s, ox, oy, W, H, dpr }
+
+/* ---------- GUARDADO (todo en try/catch dentro de EST.leer/guardar) ---------- */
+const CLAVE_PROGRESO = 'peluchinesProgreso';
+const CLAVE_PARTIDA = 'peluchinesPartida';
+const CLAVE_AYUDAS = 'peluchinesAyudas';
+const AYUDAS_INICIO = { iman: 2, garra: 2, pistola: 2 };
+const AYUDAS_TOPE = 9;
+function progreso() {
+    const p = EST.leer(CLAVE_PROGRESO, null);
+    return p && Number.isInteger(p.max) ? p : { max: 0 };   // max: índice del último desbloqueado
+}
+function ayudasGuardadas() {
+    const a = EST.leer(CLAVE_AYUDAS, null);
+    if (!a || typeof a !== 'object') return Object.assign({}, AYUDAS_INICIO);
+    const r = {};
+    for (const k in AYUDAS_INICIO) r[k] = Math.max(0, Math.min(AYUDAS_TOPE, Number(a[k]) || 0));
+    return r;
+}
+
+/* ---------- SONIDO ---------- */
+const musica = EST.musica({
+    bpm: 92,
+    acordes: [
+        { bajo: 87.31, notas: [349.23, 440.00, 523.25] },
+        { bajo: 98.00, notas: [392.00, 493.88, 587.33] },
+        { bajo: 65.41, notas: [329.63, 392.00, 523.25] },
+        { bajo: 73.42, notas: [293.66, 349.23, 440.00] }
+    ]
+});
+const sonar = {
+    coger() { EST.efecto('coger', 60, [[660, 0.06, 'sine', 0.08, 0, 880]]); },
+    aparcar() { EST.efecto('aparcar', 60, [[440, 0.08, 'triangle', 0.08, 0, 330]]); },
+    entra(lleno) { const f = 520 + lleno * 90; EST.efecto('entra', 40, [[f, 0.09, 'sine', 0.12, 0, f * 1.5], [f * 2, 0.05, 'triangle', 0.04, 0.05]]); },
+    completo() { EST.efecto('completo', 120, [[784, 0.1, 'triangle', 0.08], [988, 0.1, 'triangle', 0.08, 0.08], [1319, 0.22, 'triangle', 0.08, 0.16]]); },
+    sale() { EST.efecto('sale', 80, [[300, 0.07, 'sine', 0.07, 0, 600]]); },
+    no() { EST.efecto('no', 200, [[180, 0.12, 'square', 0.04], [150, 0.14, 'square', 0.04, 0.1]]); },
+    bloque() { EST.efecto('bloque', 70, [[120, 0.06, 'square', 0.05, 0, 90]]); EST.ruido(0.06, 0.06, 900, 300); },
+    ayuda() { EST.efecto('ayuda', 200, [[523, 0.08, 'sine', 0.08], [784, 0.08, 'sine', 0.08, 0.07], [1047, 0.15, 'sine', 0.08, 0.14]]); },
+    pistola() { EST.ruido(0.18, 0.18, 3000, 600); EST.efecto('pistola', 100, [[900, 0.12, 'sawtooth', 0.05, 0, 200]]); },
+    ganar() { EST.efecto('ganar', 900, [[523, 0.14, 'triangle', 0.09], [659, 0.14, 'triangle', 0.09, 0.14], [784, 0.14, 'triangle', 0.09, 0.28], [1047, 0.5, 'triangle', 0.09, 0.42]]); },
+    buho() { EST.efecto('buho', 300, [[392, 0.16, 'sine', 0.1, 0, 330], [392, 0.22, 'sine', 0.1, 0.22, 300]]); }
+};
+
+/* ==========================================================
+   NIVELES: del formato compacto a la definición del motor
+   ========================================================== */
+const FORMAS_BLOQUE = { cruz: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]], te: [[0, 0], [1, 0], [2, 0], [1, 1]] };
+function definicion(n, ayudas) {
+    const N = NIV[n];
+    return {
+        ancho: N.a, alto: N.h,
+        huecos: N.H.map(([color, celdas]) => ({ color, celdas })),
+        bolitas: N.B.map(([color, i, buho]) => ({ color, i, buho: !!buho })),
+        bloques: (N.K || []).map(([forma, c, f]) => ({ forma: FORMAS_BLOQUE[forma], c, f, nombre: forma })),
+        dispensadores: (N.D || []).map(([lado, pos, cola]) => ({ lado, pos, cola })),
+        ayudas
+    };
+}
+function etiqueta(t) { return t < 15 ? 'FÁCIL' : t < 40 ? 'NORMAL' : t < 65 ? 'DIFÍCIL' : 'MUY DIFÍCIL'; }
+
+/* ==========================================================
+   MEDIDAS
+   El tablero se encaja en el lienzo dejando alrededor sitio para los
+   dispensadores (MARGEN casillas por cada lado)
+   ========================================================== */
+const MARGEN = 0.68;
+function medir() {
+    const r = lienzo.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const bw = Math.round(r.width * dpr), bh = Math.round(r.height * dpr);
+    if (lienzo.width !== bw || lienzo.height !== bh) { lienzo.width = bw; lienzo.height = bh; }
+    if (!e) return;
+    const s = Math.min(r.width / (e.ancho + 2 * MARGEN), r.height / (e.alto + 2 * MARGEN));
+    const nuevo = { s, ox: (r.width - e.ancho * s) / 2, oy: (r.height - e.alto * s) / 2, W: r.width, H: r.height, dpr };
+    if (!L || L.s !== nuevo.s || L.dpr !== dpr) sprites.clear();   // otro tamaño: se rehacen
+    L = nuevo;
+    pedirPintar();
+}
+const centro = (i) => [L.ox + (i % e.ancho + 0.5) * L.s, L.oy + (Math.floor(i / e.ancho) + 0.5) * L.s];
+function casillaEn(x, y) {
+    const c = Math.floor((x - L.ox) / L.s), f = Math.floor((y - L.oy) / L.s);
+    return c >= 0 && f >= 0 && c < e.ancho && f < e.alto ? f * e.ancho + c : -1;
+}
+
+/* ==========================================================
+   DIBUJO DE UN PELUCHÍN (propio: bolita de pelo con ojos)
+   Se pinta una vez por color y tamaño en un lienzo aparte y luego solo se
+   copia: el pelo son cientos de trazos y no se puede repintar cada vez
+   ========================================================== */
+const sprites = new Map();
+function azarFijo(s) { return () => { s = (Math.imul(s, 1103515245) + 12345) & 0x7fffffff; return s / 0x80000000; }; }
+function mezclar(hex, k) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (v) => Math.round(Math.min(255, Math.max(0, k > 0 ? v + (255 - v) * k : v * (1 + k))));
+    return `rgb(${f(n >> 16)},${f((n >> 8) & 255)},${f(n & 255)})`;
+}
+function estrella(c, x, y, r, color) {
+    c.fillStyle = color; c.beginPath();
+    for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    c.closePath(); c.fill();
+}
+function sprite(color, buho, lado) {
+    const clave = color + (buho ? 'B' : '') + Math.round(lado * L.dpr);
+    let sp = sprites.get(clave);
+    if (sp) return sp;
+    const px = Math.max(8, Math.round(lado * L.dpr));
+    sp = document.createElement('canvas');
+    sp.width = sp.height = px;
+    const c = sp.getContext('2d');
+    const R = px * 0.4, cx = px / 2, cy = px * 0.52;
+    const col = P.COLORES[color], base = col.hex;
+    const az = azarFijo(color.charCodeAt(0) * 977 + (buho ? 13 : 0));
+    /* Sombra en el suelo */
+    c.fillStyle = 'rgba(0,0,0,0.28)';
+    c.beginPath(); c.ellipse(cx, cy + R * 1.02, R * 0.75, R * 0.16, 0, 0, 7); c.fill();
+    /* Orejas de búho: dos mechones */
+    if (buho) {
+        c.fillStyle = mezclar(base, -0.25);
+        for (const s of [-1, 1]) { c.beginPath(); c.moveTo(cx + s * R * 0.35, cy - R * 0.7); c.lineTo(cx + s * R * 0.78, cy - R * 1.12); c.lineTo(cx + s * R * 0.8, cy - R * 0.45); c.fill(); }
+    }
+    /* Cuerpo */
+    const g = c.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R);
+    g.addColorStop(0, mezclar(base, 0.45)); g.addColorStop(0.6, base); g.addColorStop(1, mezclar(base, -0.35));
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, R * 0.9, 0, 7); c.fill();
+    /* Pelo: trazos cortos hacia fuera, más claros arriba */
+    c.lineCap = 'round';
+    const pelos = Math.round(110 + px * 1.2);
+    for (let k = 0; k < pelos; k++) {
+        const a = az() * Math.PI * 2, r0 = R * (0.55 + az() * 0.3), r1 = R * (0.92 + az() * 0.16);
+        const luz = -Math.sin(a) * 0.25 + (az() - 0.5) * 0.3;
+        c.strokeStyle = mezclar(base, luz);
+        c.lineWidth = Math.max(1, R * 0.07);
+        const torc = (az() - 0.5) * 0.3;
+        c.beginPath(); c.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); c.lineTo(cx + Math.cos(a + torc) * r1, cy + Math.sin(a + torc) * r1); c.stroke();
+    }
+    /* Pies */
+    c.fillStyle = mezclar(base, -0.3);
+    for (const s of [-1, 1]) { c.beginPath(); c.ellipse(cx + s * R * 0.32, cy + R * 0.86, R * 0.2, R * 0.12, 0, 0, 7); c.fill(); }
+    /* Traje de estrellas */
+    if (col.estrella) {
+        c.fillStyle = 'rgba(40,20,90,0.55)';
+        c.beginPath(); c.ellipse(cx, cy + R * 0.42, R * 0.7, R * 0.42, 0, 0, Math.PI); c.fill();
+        for (const [dx, dy, r] of [[-0.45, 0.45, 0.17], [0, 0.62, 0.19], [0.45, 0.45, 0.17], [-0.62, 0.05, 0.13], [0.62, 0.05, 0.13]]) estrella(c, cx + dx * R, cy + dy * R, r * R, '#ffe14d');
+    }
+    /* Ojos */
+    const ojoY = cy - R * 0.08, ojoX = R * 0.3, ojoR = buho ? R * 0.22 : R * 0.18;
+    for (const s of [-1, 1]) {
+        c.fillStyle = '#fff'; c.beginPath(); c.ellipse(cx + s * ojoX, ojoY, ojoR, ojoR * 1.18, 0, 0, 7); c.fill();
+        if (buho) { c.fillStyle = '#ffc93c'; c.beginPath(); c.arc(cx + s * ojoX, ojoY + ojoR * 0.1, ojoR * 0.7, 0, 7); c.fill(); }
+        c.fillStyle = '#1b1530'; c.beginPath(); c.arc(cx + s * ojoX + s * ojoR * 0.12, ojoY + ojoR * 0.22, ojoR * 0.5, 0, 7); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(cx + s * ojoX - ojoR * 0.1, ojoY - ojoR * 0.05, ojoR * 0.18, 0, 7); c.fill();
+    }
+    if (buho) {
+        /* Cejas de enfado y pico */
+        c.strokeStyle = '#1b1530'; c.lineWidth = Math.max(1.5, R * 0.1);
+        for (const s of [-1, 1]) { c.beginPath(); c.moveTo(cx + s * R * 0.58, ojoY - R * 0.36); c.lineTo(cx + s * R * 0.1, ojoY - R * 0.18); c.stroke(); }
+        c.fillStyle = '#ff9a2e'; c.beginPath(); c.moveTo(cx - R * 0.1, cy + R * 0.18); c.lineTo(cx + R * 0.1, cy + R * 0.18); c.lineTo(cx, cy + R * 0.36); c.fill();
+    } else {
+        /* Coloretes y boquita */
+        c.fillStyle = 'rgba(255,110,150,0.45)';
+        for (const s of [-1, 1]) { c.beginPath(); c.ellipse(cx + s * R * 0.52, cy + R * 0.2, R * 0.13, R * 0.08, 0, 0, 7); c.fill(); }
+        c.strokeStyle = 'rgba(40,20,40,0.7)'; c.lineWidth = Math.max(1, R * 0.06);
+        c.beginPath(); c.arc(cx, cy + R * 0.18, R * 0.1, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+    }
+    sprites.set(clave, sp);
+    return sp;
+}
+function pintarPeluchin(c, color, buho, x, y, lado, alfa = 1, escala = 1) {
+    const sp = sprite(color, buho, lado);
+    const t = lado * escala;
+    c.globalAlpha = alfa;
+    c.drawImage(sp, x - t / 2, y - t / 2, t, t);
+    c.globalAlpha = 1;
+}
+
+/* ==========================================================
+   PIEZAS (huecos y bloques): la forma unida de sus casillas
+   Se pinta la unión metida «hacia dentro» una distancia: el cuerpo de cada
+   casilla, las tiras hacia las vecinas de la misma pieza y las esquinas
+   solo si también está la casilla en diagonal. Así los rincones de una L
+   salen bien sin calcular contornos.
+   ========================================================== */
+function formaUnida(c, celdas, dentro) {
+    const S = L.s, set = new Set(celdas), W = e.ancho;
+    const tiene = (cc, ff) => cc >= 0 && ff >= 0 && cc < W && ff < e.alto && set.has(ff * W + cc);
+    c.beginPath();
+    for (const i of celdas) {
+        const cc = i % W, ff = (i - cc) / W, x = L.ox + cc * S, y = L.oy + ff * S, d = dentro;
+        c.rect(x + d, y + d, S - 2 * d, S - 2 * d);
+        const iz = tiene(cc - 1, ff), de = tiene(cc + 1, ff), ar = tiene(cc, ff - 1), ab = tiene(cc, ff + 1);
+        if (iz) c.rect(x, y + d, d, S - 2 * d);
+        if (de) c.rect(x + S - d, y + d, d, S - 2 * d);
+        if (ar) c.rect(x + d, y, S - 2 * d, d);
+        if (ab) c.rect(x + d, y + S - d, S - 2 * d, d);
+        if (iz && ar && tiene(cc - 1, ff - 1)) c.rect(x, y, d, d);
+        if (de && ar && tiene(cc + 1, ff - 1)) c.rect(x + S - d, y, d, d);
+        if (iz && ab && tiene(cc - 1, ff + 1)) c.rect(x, y + S - d, d, d);
+        if (de && ab && tiene(cc + 1, ff + 1)) c.rect(x + S - d, y + S - d, d, d);
+    }
+    c.fill();
+}
+function pintarHueco(c, h, t, brillo, escala, alfa) {
+    const H = e.huecos[h], col = P.COLORES[H.color], S = L.s;
+    c.save();
+    if (escala !== 1) {
+        /* Al llenarse se hincha y se desvanece desde su centro */
+        const xs = H.celdas.map(i => centro(i)[0]), ys = H.celdas.map(i => centro(i)[1]);
+        const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+        c.translate(mx, my); c.scale(escala, escala); c.translate(-mx, -my);
+    }
+    c.globalAlpha = alfa;
+    /* Borde de neón con resplandor y, encima, el interior oscuro teñido */
+    c.shadowColor = col.hex; c.shadowBlur = S * (0.18 + brillo * 0.25);
+    c.fillStyle = col.hex; formaUnida(c, H.celdas, S * 0.06);
+    c.shadowBlur = 0;
+    c.fillStyle = mezclar(col.hex, -0.72); formaUnida(c, H.celdas, S * 0.11);
+    c.fillStyle = col.hex; c.globalAlpha = alfa * (0.18 + brillo * 0.25); formaUnida(c, H.celdas, S * 0.11);
+    c.globalAlpha = alfa;
+    if (col.estrella) {
+        /* Huecos de estrellas: fondo morado oscuro con estrellas, como sus peluchines */
+        c.save(); c.beginPath();
+        for (const i of H.celdas) { const [x, y] = centro(i); c.rect(x - S * 0.39, y - S * 0.39, S * 0.78, S * 0.78); }
+        c.clip();
+        const az = azarFijo(h * 31 + 7);
+        for (const i of H.celdas) { const [x, y] = centro(i); for (let k = 0; k < 4; k++) estrella(c, x + (az() - 0.5) * S * 0.7, y + (az() - 0.5) * S * 0.7, S * (0.06 + az() * 0.05), 'rgba(255,225,77,0.85)'); }
+        c.restore();
+    }
+    /* Los que ya entraron, sentados en sus casillas */
+    for (let b = 0; b < e.bolitas.length; b++) {
+        const bo = e.bolitas[b];
+        if (bo.h !== h || viajando(b)) continue;
+        const [x, y] = centro(bo.celda);
+        pintarPeluchin(c, bo.color, bo.buho, x, y, S * 0.92, alfa * 0.95, 0.86);
+    }
+    /* Las que quitó la pistola: una cruz */
+    if (H.quitadas) {
+        const libres = H.celdas.filter(i => !e.bolitas.some(bo => bo.h === h && bo.celda === i));
+        for (const i of libres.slice(-H.quitadas)) {
+            const [x, y] = centro(i);
+            c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = S * 0.06; c.lineCap = 'round';
+            c.beginPath(); c.moveTo(x - S * 0.15, y - S * 0.15); c.lineTo(x + S * 0.15, y + S * 0.15); c.moveTo(x + S * 0.15, y - S * 0.15); c.lineTo(x - S * 0.15, y + S * 0.15); c.stroke();
+        }
+    }
+    /* El número: lo que falta, en la casilla de más abajo a la derecha */
+    const falta = H.celdas.length - H.llenas - H.quitadas + enCamino(h);
+    if (falta > 0) {
+        const ult = H.celdas.reduce((a, i) => (Math.floor(i / e.ancho) * 100 + i % e.ancho > Math.floor(a / e.ancho) * 100 + a % e.ancho ? i : a));
+        const [x, y] = centro(ult), t2 = S * 0.34;
+        const bx = x + S * 0.5 - t2 - S * 0.05, by = y + S * 0.5 - t2 - S * 0.05;
+        c.fillStyle = col.hex;
+        c.beginPath(); c.roundRect ? c.roundRect(bx, by, t2, t2, t2 * 0.25) : c.rect(bx, by, t2, t2); c.fill();
+        c.fillStyle = H.color === 'b' || H.color === 'a' || H.color === 'A' ? '#2a2140' : '#fff';
+        c.font = `bold ${Math.round(t2 * 0.78)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(String(falta), bx + t2 / 2, by + t2 / 2 + 1);
+    }
+    c.restore();
+}
+function pintarBloque(c, k, dx = 0, dy = 0) {
+    const K = e.bloques[k], S = L.s;
+    const celdas = P.celdasBloque(e, k).map(([cc, ff]) => ff * e.ancho + cc);
+    c.save(); c.translate(dx, dy);
+    c.fillStyle = '#5d6275'; formaUnida(c, celdas, S * 0.05);
+    const g = c.createLinearGradient(0, L.oy + K.f * S, 0, L.oy + (K.f + 3) * S);
+    g.addColorStop(0, '#e6e8ef'); g.addColorStop(1, '#a9aec0');
+    c.fillStyle = g; formaUnida(c, celdas, S * 0.1);
+    /* El símbolo de mover en la casilla del centro de la pieza */
+    const mc = K.forma.reduce((a, [x]) => a + x, 0) / K.forma.length, mf = K.forma.reduce((a, [, y]) => a + y, 0) / K.forma.length;
+    const x = L.ox + (K.c + mc + 0.5) * S, y = L.oy + (K.f + mf + 0.5) * S;
+    c.strokeStyle = '#5d6275'; c.fillStyle = '#5d6275'; c.lineWidth = S * 0.05; c.lineCap = 'round';
+    const r = S * 0.24;
+    c.beginPath(); c.moveTo(x - r, y); c.lineTo(x + r, y); c.moveTo(x, y - r); c.lineTo(x, y + r); c.stroke();
+    for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        c.beginPath(); c.moveTo(x + ax * r * 1.25, y + ay * r * 1.25);
+        c.lineTo(x + ax * r * 0.75 - ay * r * 0.32, y + ay * r * 0.75 - ax * r * 0.32);
+        c.lineTo(x + ax * r * 0.75 + ay * r * 0.32, y + ay * r * 0.75 + ax * r * 0.32); c.fill();
+    }
+    c.restore();
+}
+function pintarDispensador(c, n) {
+    const d = e.disp[n], S = L.s, quedan = d.cola.length - d.sacadas;
+    const [sx, sy] = centro(d.salida);
+    const [vx, vy] = P.DIRS[d.lado];           // hacia fuera del tablero
+    const x = sx + vx * S * (0.5 + MARGEN / 2), y = sy + vy * S * (0.5 + MARGEN / 2);
+    const w = vx ? S * MARGEN * 0.92 : S * 0.9, h = vy ? S * MARGEN * 0.92 : S * 0.9;
+    c.save();
+    c.globalAlpha = quedan ? 1 : 0.4;
+    c.fillStyle = '#3a2f7a'; c.strokeStyle = '#8f7dff'; c.lineWidth = 2;
+    c.beginPath(); c.roundRect ? c.roundRect(x - w / 2, y - h / 2, w, h, S * 0.12) : c.rect(x - w / 2, y - h / 2, w, h); c.fill(); c.stroke();
+    /* Flechitas hacia el tablero */
+    c.fillStyle = '#c9c0ff';
+    for (const k of [-1, 0, 1]) {
+        const px = x - vx * h * 0.38 + (vy ? k * w * 0.18 : 0), py = y - vy * w * 0.38 * (vx ? 0 : 1) - (vx ? 0 : 0) + (vx ? k * h * 0.18 : 0);
+        const qx = vx ? x - vx * w * 0.42 : px, qy = vy ? y - vy * h * 0.42 : py;
+        c.beginPath(); c.moveTo(qx - vx * S * 0.05, qy - vy * S * 0.05);
+        c.lineTo(qx + vx * S * 0.03 + vy * S * 0.04, qy + vy * S * 0.03 + vx * S * 0.04);
+        c.lineTo(qx + vx * S * 0.03 - vy * S * 0.04, qy + vy * S * 0.03 - vx * S * 0.04); c.fill();
+    }
+    if (quedan) {
+        pintarPeluchin(c, d.cola[d.sacadas], false, x, y, Math.min(w, h) * 1.05);
+        const r = S * 0.17, bx = x + w / 2 - r * 0.6, by = y + h / 2 - r * 0.6;
+        c.fillStyle = '#ff3d6b'; c.beginPath(); c.arc(bx, by, r, 0, 7); c.fill();
+        c.fillStyle = '#fff'; c.font = `bold ${Math.round(r * 1.25)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(String(quedan), bx, by + 1);
+    }
+    c.restore();
+}
+
+/* ==========================================================
+   ANIMACIONES
+   El motor ya hizo la jugada; aquí solo se enseña el viaje. Mientras un
+   peluchín viaja, se pinta en el camino y no en su sitio final
+   ========================================================== */
+const viajando = (b) => anims.some(a => a.b === b);
+/* Cuántos van camino de este hueco (para no restarlos antes de llegar) */
+const enCamino = (h) => anims.filter(a => a.h === h).length;
+function viajar(b, pts, h, retraso = 0, rapido = false) {
+    const largo = pts.reduce((s, p, k) => k ? s + Math.hypot(p[0] - pts[k - 1][0], p[1] - pts[k - 1][1]) : 0, 0);
+    const dur = Math.min(0.9, 0.08 + largo / L.s * (rapido ? 0.035 : 0.055));
+    anims.push({ b, pts, h, t: -retraso, dur });
+    return dur + retraso;
+}
+function posAnim(a) {
+    const k = Math.max(0, Math.min(1, a.t / a.dur));
+    const sk = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;    // sale y llega despacio
+    const pts = a.pts;
+    let total = 0;
+    const tramos = [];
+    for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); tramos.push(d); total += d; }
+    let falta = sk * total;
+    for (let i = 0; i < tramos.length; i++) {
+        if (falta <= tramos[i] || i === tramos.length - 1) {
+            const u = tramos[i] ? Math.min(1, falta / tramos[i]) : 1;
+            return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u, sk];
+        }
+        falta -= tramos[i];
+    }
+    return [pts[0][0], pts[0][1], 1];
+}
+function efecto(tipo, datos) { efectos.push(Object.assign({ tipo, t: 0 }, datos)); pedirPintar(); }
+function chispas(x, y, color, n = 14) {
+    for (let k = 0; k < n; k++) {
+        const a = Math.random() * Math.PI * 2, v = L.s * (1.5 + Math.random() * 3);
+        efecto('chispa', { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - L.s, col: k % 3 ? color : '#fff', dur: 0.5 + Math.random() * 0.4, r: L.s * (0.03 + Math.random() * 0.04) });
+    }
+}
+
+/* ==========================================================
+   PINTAR
+   Un solo requestAnimationFrame, y solo mientras algo se mueve
+   ========================================================== */
+function pedirPintar() {
+    if (pintando === null) { ultimo = performance.now(); pintando = requestAnimationFrame(fotograma); }
+}
+function fotograma(ahora) {
+    pintando = null;
+    const dt = Math.min(0.1, (ahora - ultimo) / 1000);
+    ultimo = ahora;
+    for (const a of anims) a.t += dt;
+    anims = anims.filter(a => a.t < a.dur);
+    for (const d of desapareciendo) d.t += dt;
+    desapareciendo = desapareciendo.filter(d => d.t < 0.5);
+    pintar(dt);
+    if (finPendiente !== null) {
+        finPendiente -= dt;
+        if (finPendiente <= 0) { finPendiente = null; mostrarFin(); }
+    }
+    const tiempo = performance.now() / 1000;
+    if (anims.length || efectos.length || desapareciendo.length || arrastre || fiesta || finPendiente !== null || (modo && $('pJuego').classList.contains('activa')) || brillaAlgo(tiempo)) pedirPintar();
+}
+const brillaAlgo = () => !!arrastre;
+function pintar(dt) {
+    if (!L || !e) return;
+    const c = ctx, S = L.s, t = performance.now() / 1000;
+    c.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+    c.clearRect(0, 0, L.W, L.H);
+    /* Marco y fondo de casillas */
+    const pad = S * 0.12;
+    c.fillStyle = '#2b2370'; c.strokeStyle = '#6f5cff'; c.lineWidth = 2;
+    c.beginPath(); c.roundRect ? c.roundRect(L.ox - pad, L.oy - pad, e.ancho * S + 2 * pad, e.alto * S + 2 * pad, S * 0.2) : c.rect(L.ox - pad, L.oy - pad, e.ancho * S + 2 * pad, e.alto * S + 2 * pad); c.fill(); c.stroke();
+    c.fillStyle = '#1d1752';
+    for (let f = 0; f < e.alto; f++) for (let cc = 0; cc < e.ancho; cc++) {
+        const x = L.ox + cc * S + S * 0.04, y = L.oy + f * S + S * 0.04;
+        c.beginPath(); c.roundRect ? c.roundRect(x, y, S * 0.92, S * 0.92, S * 0.12) : c.rect(x, y, S * 0.92, S * 0.92); c.fill();
+    }
+    for (let n = 0; n < e.disp.length; n++) pintarDispensador(c, n);
+    /* Huecos (los que brillan: a los que puede ir lo que lleva el dedo) */
+    const validos = arrastre && arrastre.tipo === 'peluchin' ? arrastre.d.huecos : null;
+    e.huecos.forEach((H, h) => {
+        const d = desapareciendo.find(x => x.h === h);
+        if (H.completo && !d && !anims.some(a => a.h === h)) return;
+        if (d && d.t > 0) { const k = d.t / 0.5; pintarHueco(c, h, t, 1, 1 + k * 0.25, 1 - k); return; }
+        const brillo = validos && validos.has(h) ? 0.5 + 0.5 * Math.sin(t * 8) : 0;
+        pintarHueco(c, h, t, brillo, 1, 1);
+    });
+    /* Bloques */
+    e.bloques.forEach((K, k) => {
+        const ar = arrastre && arrastre.tipo === 'bloque' && arrastre.k === k ? arrastre : null;
+        pintarBloque(c, k, ar ? ar.dx : 0, ar ? ar.dy : 0);
+    });
+    /* Peluchines en el tablero */
+    const elegido = modo === 'garra2' ? garraB : cursor && typeof cursor.cogido === 'number' ? cursor.cogido : -1;
+    e.bolitas.forEach((bo, b) => {
+        if (bo.i < 0 || viajando(b) || (arrastre && arrastre.b === b)) return;
+        const [x, y] = centro(bo.i);
+        if (b === elegido) { c.strokeStyle = '#00ffc8'; c.lineWidth = S * 0.06; c.beginPath(); c.arc(x, y, S * 0.46, 0, 7); c.stroke(); }
+        const bota = modo && modo !== 'pistola' ? 1 + Math.sin(t * 6 + b) * 0.04 : 1;
+        pintarPeluchin(c, bo.color, bo.buho, x, y, S * 0.98, 1, bota);
+    });
+    /* Lo que va de viaje */
+    for (const a of anims) {
+        const bo = e.bolitas[a.b];
+        if (a.t < 0) {
+            /* Aún no ha salido: se queda en su primer punto */
+            pintarPeluchin(c, bo.color, bo.buho, a.pts[0][0], a.pts[0][1], S * 0.98);
+            continue;
+        }
+        const [x, y, k] = posAnim(a);
+        const salto = Math.sin(k * Math.PI) * S * 0.12;
+        pintarPeluchin(c, bo.color, bo.buho, x, y - salto, S * 0.98, 1, a.h >= 0 ? 1 - k * 0.14 : 1);
+    }
+    /* El arrastre: el camino en puntos y el peluchín bajo el dedo */
+    if (arrastre && arrastre.tipo === 'peluchin') {
+        const bo = e.bolitas[arrastre.b];
+        if (arrastre.camino) {
+            c.fillStyle = 'rgba(0,255,200,0.75)';
+            for (let k = 1; k < arrastre.camino.length; k++) { const [x, y] = centro(arrastre.camino[k]); c.beginPath(); c.arc(x, y, S * 0.07, 0, 7); c.fill(); }
+        }
+        if (arrastre.objetivo >= 0) {
+            const [x, y] = centro(arrastre.objetivo);
+            c.strokeStyle = arrastre.camino ? '#00ffc8' : '#ff5c7a'; c.lineWidth = S * 0.06;
+            c.beginPath(); c.roundRect ? c.roundRect(x - S * 0.44, y - S * 0.44, S * 0.88, S * 0.88, S * 0.15) : c.rect(x - S * 0.44, y - S * 0.44, S * 0.88, S * 0.88); c.stroke();
+        }
+        const [ox, oy] = centro(bo.i);
+        c.globalAlpha = 0.25; pintarPeluchin(c, bo.color, bo.buho, ox, oy, S * 0.98); c.globalAlpha = 1;
+        pintarPeluchin(c, bo.color, bo.buho, arrastre.x, arrastre.y - S * 0.3, S * 0.98, arrastre.camino ? 1 : 0.75, 1.15);
+    }
+    /* Cursor del teclado */
+    if (cursor && document.activeElement === lienzo) {
+        const cc = cursor.i % e.ancho, ff = Math.floor(cursor.i / e.ancho);
+        c.strokeStyle = '#ffd54f'; c.lineWidth = 3; c.setLineDash([6, 4]);
+        c.strokeRect(L.ox + cc * S + 2, L.oy + ff * S + 2, S - 4, S - 4); c.setLineDash([]);
+    }
+    pintarEfectos(c, dt);
+    if (fiesta) pintarFiesta(c, dt);
+}
+function pintarEfectos(c, dt) {
+    for (let k = efectos.length - 1; k >= 0; k--) {
+        const f = efectos[k];
+        f.t += dt;
+        const u = f.t / f.dur;
+        if (u >= 1) { efectos.splice(k, 1); continue; }
+        if (u < 0) continue;
+        if (f.tipo === 'chispa') {
+            f.vy += L.s * 9 * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+            c.globalAlpha = 1 - u; estrella(c, f.x, f.y, f.r * 2, f.col); c.globalAlpha = 1;
+        } else if (f.tipo === 'anillo') {
+            c.globalAlpha = 1 - u; c.strokeStyle = f.col; c.lineWidth = L.s * 0.08 * (1 - u) + 1;
+            c.beginPath(); c.arc(f.x, f.y, L.s * (0.3 + u * 0.7), 0, 7); c.stroke(); c.globalAlpha = 1;
+        } else if (f.tipo === 'texto') {
+            c.globalAlpha = Math.min(1, 2 * (1 - u));
+            c.font = `bold ${Math.round(L.s * 0.42)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+            c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.7)'; c.strokeText(f.txt, f.x, f.y - u * L.s * 0.8);
+            c.fillStyle = f.col; c.fillText(f.txt, f.x, f.y - u * L.s * 0.8); c.globalAlpha = 1;
+        } else if (f.tipo === 'temblor') {
+            /* Peluchín que no puede ir: se dibuja encima temblando */
+            const bo = e.bolitas[f.b];
+            if (bo && bo.i >= 0) { const [x, y] = centro(bo.i); pintarPeluchin(c, bo.color, bo.buho, x + Math.sin(u * 40) * L.s * 0.08 * (1 - u), y, L.s * 0.98); }
+        }
+    }
+}
+function pintarFiesta(c, dt) {
+    fiesta.t += dt;
+    if (!fiesta.trozos) fiesta.trozos = Array.from({ length: 90 }, () => ({ x: Math.random() * L.W, y: -Math.random() * L.H * 0.6, v: L.H * (0.25 + Math.random() * 0.35), a: Math.random() * 6, col: `hsl(${Math.random() * 360},90%,62%)` }));
+    for (const f of fiesta.trozos) {
+        f.y += f.v * dt; f.a += dt * 5;
+        c.save(); c.translate(f.x + Math.sin(f.a) * 8, f.y); c.rotate(f.a); c.fillStyle = f.col; c.fillRect(-5, -3, 10, 6); c.restore();
+    }
+    if (fiesta.t > 3) fiesta = null;
+}
+
+/* ==========================================================
+   JUGADAS
+   ========================================================== */
+function guardarFoto() {
+    historial.push(P.foto(e));
+    if (historial.length > 300) historial.shift();
+}
+function trasJugar() {
+    tratarEventos();
+    EST.guardar(CLAVE_AYUDAS, e.ayudas);
+    if (!e.ganado) EST.guardar(CLAVE_PARTIDA, { nivel, foto: P.foto(e) });
+    pintarBarra();
+    pedirPintar();
+}
+/* Lo que pasó en el motor, con su retardo: lo que se llena o sale tiene
+   que esperar a que llegue el que viaja */
+function tratarEventos(retraso = 0) {
+    let espera = retraso;
+    for (const a of anims) espera = Math.max(espera, a.dur - a.t);
+    for (const ev of e.eventos) {
+        if (ev.tipo === 'entra') {
+            const H = e.huecos[ev.h];
+            setTimeout(() => { sonar.entra(H.llenas); if (ev.buho) sonar.buho(); }, espera * 1000);
+            if (ev.buho) { const [x, y] = centro(e.bolitas[ev.b].celda); efecto('texto', { x, y, txt: '🦉', col: '#9be7ff', dur: 1.1, t: -espera }); }
+        } else if (ev.tipo === 'completo') {
+            desapareciendo.push({ h: ev.h, t: -espera });
+            const H = e.huecos[ev.h], col = P.COLORES[H.color].hex;
+            setTimeout(sonar.completo, espera * 1000);
+            for (const i of H.celdas) { const [x, y] = centro(i); for (let k = 0; k < 5; k++) { const a = Math.random() * 7, v = L.s * (1.5 + Math.random() * 2.5); efecto('chispa', { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - L.s, col: k % 2 ? col : '#fff', dur: 0.6, r: L.s * 0.05, t: -espera }); } }
+        } else if (ev.tipo === 'sale') {
+            const d = e.disp[ev.d], [sx, sy] = centro(d.salida), [vx, vy] = P.DIRS[d.lado];
+            const desde = [sx + vx * L.s * (0.5 + MARGEN / 2), sy + vy * L.s * (0.5 + MARGEN / 2)];
+            viajar(ev.b, [desde, [sx, sy]], -1, espera + 0.05);
+            setTimeout(sonar.sale, (espera + 0.05) * 1000);
+        } else if (ev.tipo === 'ganado') {
+            setTimeout(() => { sonar.ganar(); fiesta = { t: 0 }; pedirPintar(); }, (espera + 0.3) * 1000);
+            finPendiente = espera + 1.6;
+            EST.guardar(CLAVE_PARTIDA, null);
+        }
+    }
+    e.eventos.length = 0;
+}
+/* Mover el peluchín b a la casilla i (entregar o aparcar) */
+function jugarMover(b, i) {
+    const bo = e.bolitas[b], desde = bo.i;
+    const foto = P.foto(e);
+    const camino = P.mover(e, b, i);
+    if (!camino) return false;
+    historial.push(foto);
+    const pts = camino.map(centro);
+    viajar(b, pts, bo.h);
+    if (bo.h < 0) sonar.aparcar();
+    trasJugar();
+    return desde !== bo.i || bo.h >= 0;
+}
+/* Tocar sin arrastrar: a su hueco, el que menos le falte, si tiene camino */
+function mandarSolo(b) {
+    const d = P.destinos(e, b);
+    if (!d || !d.huecos.size) { noPuede(b, 'No tiene camino libre a un hueco de su color'); return; }
+    const h = [...d.huecos.keys()].sort((x, y) => P.resta(e.huecos[x]) - P.resta(e.huecos[y]))[0];
+    /* Entra por la casilla del hueco pegada a la de entrada */
+    const entrada = d.huecos.get(h);
+    const dentro = P.vecinas(e, entrada).find(j => e.ocup[j] === P.HUECO + h) ?? e.huecos[h].celdas[0];
+    jugarMover(b, dentro);
+}
+function noPuede(b, txt) {
+    sonar.no();
+    if (b >= 0) efecto('temblor', { b, dur: 0.35 });
+    if (txt) indicar(txt, 1800);
+}
+function deshacer() {
+    if (!historial.length) { EST.avisar('No hay nada que deshacer'); return; }
+    cancelarModo();
+    P.volver(e, historial.pop());
+    anims = []; desapareciendo = []; efectos = []; finPendiente = null; fiesta = null;
+    e.eventos.length = 0;
+    EST.guardar(CLAVE_AYUDAS, e.ayudas);
+    EST.guardar(CLAVE_PARTIDA, { nivel, foto: P.foto(e) });
+    pintarBarra();
+    pedirPintar();
+}
+
+/* ---------- AYUDAS ---------- */
+let quitarIndicacion = null;
+function indicar(txt, ms) {
+    $('indicacion').textContent = txt || '';
+    clearTimeout(quitarIndicacion);
+    if (ms) quitarIndicacion = setTimeout(() => { $('indicacion').textContent = textoModo(); }, ms);
+}
+function textoModo() {
+    return {
+        iman: '🧲 Toca un peluchín: todos los de su color irán a sus huecos',
+        garra: '🪝 Toca el peluchín que quieres coger',
+        garra2: '🪝 Ahora toca dónde dejarlo: una casilla libre o su hueco',
+        pistola: '🔫 Toca un hueco: le faltará uno menos'
+    }[modo] || '';
+}
+function elegirModo(m) {
+    if (modo === m || (m === 'garra' && modo === 'garra2')) { cancelarModo(); return; }
+    if ((e.ayudas[m] || 0) <= 0) { EST.avisar('No te quedan. Ganas una más con cada nivel', true); return; }
+    modo = m; garraB = -1; arrastre = null;
+    pintarBarra();
+    indicar(textoModo());
+    pedirPintar();
+}
+function cancelarModo() {
+    modo = null; garraB = -1;
+    indicar('');
+    pintarBarra();
+    pedirPintar();
+}
+function usarIman(b) {
+    const color = e.bolitas[b].color;
+    const antes = e.bolitas.map(bo => bo.i);
+    const foto = P.foto(e);
+    const n = P.iman(e, color);
+    if (!n) { noPuede(b, 'Sus huecos ya están llenos'); return; }
+    historial.push(foto);
+    /* Cada uno vuela en línea recta a su casilla del hueco */
+    e.bolitas.forEach((bo, k) => {
+        if (k < antes.length && antes[k] >= 0 && bo.i < 0 && bo.color === color && bo.h >= 0) viajar(k, [centro(antes[k]), centro(bo.celda)], bo.h, k * 0.04, true);
+    });
+    sonar.ayuda();
+    cancelarModo();
+    trasJugar();
+}
+function usarGarra(i) {
+    const bo = e.bolitas[garraB], desde = bo.i;
+    const foto = P.foto(e);
+    if (!P.garra(e, garraB, i)) { noPuede(-1, 'Ahí no: una casilla libre o un hueco de su color'); return; }
+    historial.push(foto);
+    const [x0, y0] = centro(desde), [x1, y1] = centro(bo.i >= 0 ? bo.i : bo.celda);
+    viajar(garraB, [[x0, y0], [(x0 + x1) / 2, Math.min(y0, y1) - L.s], [x1, y1]], bo.h, 0, true);
+    sonar.ayuda();
+    cancelarModo();
+    trasJugar();
+}
+function usarPistola(h) {
+    const foto = P.foto(e);
+    if (!P.pistola(e, h)) { noPuede(-1, 'Ese hueco ya está lleno'); return; }
+    historial.push(foto);
+    const H = e.huecos[h];
+    const [x, y] = centro(H.celdas[H.celdas.length - 1]);
+    efecto('anillo', { x, y, col: '#ffffff', dur: 0.4 });
+    efecto('texto', { x, y, txt: '−1', col: '#ffe14d', dur: 0.9 });
+    sonar.pistola();
+    cancelarModo();
+    trasJugar();
+}
+
+/* ==========================================================
+   DEDO Y RATÓN
+   ========================================================== */
+function puntoDe(ev) { const r = lienzo.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+let dedo = null;
+lienzo.addEventListener('pointerdown', (ev) => {
+    if (!e || e.ganado || dedo !== null) return;
+    ev.preventDefault();
+    lienzo.focus({ preventScroll: true });
+    cursor = null;
+    const [x, y] = puntoDe(ev);
+    const i = casillaEn(x, y);
+    if (i < 0) { if (modo) cancelarModo(); return; }
+    const o = e.ocup[i];
+    const esPeluchin = o >= 0 && o < P.HUECO;
+    const esHueco = o >= P.HUECO && o < P.BLOQUE;
+    /* Con una ayuda elegida, el toque es para ella */
+    if (modo === 'iman') { if (esPeluchin) usarIman(o); else noPuede(-1, 'Toca un peluchín'); return; }
+    if (modo === 'garra') { if (esPeluchin) { garraB = o; modo = 'garra2'; indicar(textoModo()); sonar.coger(); pedirPintar(); } else noPuede(-1, 'Toca un peluchín'); return; }
+    if (modo === 'garra2') { if (esPeluchin && o !== garraB) { garraB = o; sonar.coger(); pedirPintar(); } else if (o !== garraB) usarGarra(i); return; }
+    if (modo === 'pistola') { if (esHueco) usarPistola(o - P.HUECO); else noPuede(-1, 'Toca un hueco'); return; }
+    if (anims.length) return;    // que acabe el viaje anterior
+    if (esPeluchin) {
+        dedo = ev.pointerId;
+        try { lienzo.setPointerCapture(ev.pointerId); } catch (x2) {}
+        arrastre = { tipo: 'peluchin', b: o, d: P.destinos(e, o), x, y, x0: x, y0: y, t0: performance.now(), objetivo: -1, camino: null, lejos: false };
+        sonar.coger();
+        pedirPintar();
+    } else if (o >= P.BLOQUE) {
+        dedo = ev.pointerId;
+        try { lienzo.setPointerCapture(ev.pointerId); } catch (x2) {}
+        arrastre = { tipo: 'bloque', k: o - P.BLOQUE, x0: x, y0: y, dx: 0, dy: 0, movido: false, foto: P.foto(e) };
+    }
+});
+lienzo.addEventListener('pointermove', (ev) => {
+    if (ev.pointerId !== dedo || !arrastre) return;
+    const [x, y] = puntoDe(ev);
+    if (arrastre.tipo === 'peluchin') {
+        arrastre.x = x; arrastre.y = y;
+        if (Math.hypot(x - arrastre.x0, y - arrastre.y0) > L.s * 0.3) arrastre.lejos = true;
+        /* La casilla es la que queda bajo el peluchín (dibujado un poco por
+           encima del dedo para que se vea) */
+        const i = casillaEn(x, y - L.s * 0.3);
+        if (i !== arrastre.objetivo) {
+            arrastre.objetivo = i;
+            arrastre.camino = caminoHacia(arrastre, i);
+        }
+    } else {
+        /* Bloque: se empuja casilla a casilla hacia donde va el dedo */
+        let dx = x - arrastre.x0, dy = y - arrastre.y0;
+        const S = L.s;
+        while (Math.abs(dx) >= S * 0.6 || Math.abs(dy) >= S * 0.6) {
+            const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'der' : 'izq') : (dy > 0 ? 'aba' : 'arr');
+            if (!P.moverBloque(e, arrastre.k, dir)) break;
+            if (!arrastre.movido) { historial.push(arrastre.foto); arrastre.movido = true; }
+            sonar.bloque();
+            const [vx, vy] = P.DIRS[dir];
+            arrastre.x0 += vx * S; arrastre.y0 += vy * S;
+            dx = x - arrastre.x0; dy = y - arrastre.y0;
+            trasJugar();
+        }
+        /* Lo que sobra se enseña como un pequeño desplazamiento, con tope */
+        const tope = S * 0.25;
+        arrastre.dx = Math.max(-tope, Math.min(tope, dx * 0.3)); arrastre.dy = Math.max(-tope, Math.min(tope, dy * 0.3));
+    }
+    pedirPintar();
+});
+function caminoHacia(a, i) {
+    if (i < 0) return null;
+    const bo = e.bolitas[a.b];
+    if (i === bo.i) return null;
+    const o = e.ocup[i];
+    if (o === P.VACIA) return a.d.alcance.prev[i] !== -2 ? P.caminoHasta(a.d.alcance, i) : null;
+    if (o >= P.HUECO && o < P.BLOQUE && a.d.huecos.has(o - P.HUECO)) return P.caminoHasta(a.d.alcance, a.d.huecos.get(o - P.HUECO)).concat([i]);
+    return null;
+}
+function soltarDedo(ev) {
+    if (ev.pointerId !== dedo) return;
+    dedo = null;
+    const a = arrastre;
+    arrastre = null;
+    if (!a) return;
+    if (a.tipo === 'peluchin') {
+        const corto = !a.lejos && performance.now() - a.t0 < 400;
+        if (corto) mandarSolo(a.b);
+        else if (a.camino) jugarMover(a.b, a.objetivo);
+        else if (a.objetivo !== e.bolitas[a.b].i) noPuede(a.b, a.objetivo >= 0 && e.ocup[a.objetivo] >= P.HUECO && e.ocup[a.objetivo] < P.BLOQUE ? 'Ese hueco no es de su color o no tiene camino' : 'No hay camino libre hasta ahí');
+    }
+    pedirPintar();
+}
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => lienzo.addEventListener(t, soltarDedo));
+lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+
+/* ==========================================================
+   TECLADO: flechas mueven el cursor; Intro coge y suelta
+   ========================================================== */
+lienzo.addEventListener('keydown', (ev) => {
+    if (!e || e.ganado) return;
+    const dirs = { ArrowUp: 'arr', ArrowDown: 'aba', ArrowLeft: 'izq', ArrowRight: 'der' };
+    if (!cursor) cursor = { i: e.bolitas.find(b => b.i >= 0)?.i ?? 0, cogido: null };
+    if (dirs[ev.key]) {
+        ev.preventDefault();
+        if (typeof cursor.cogido === 'string') {
+            /* Con un bloque cogido, las flechas lo empujan */
+            const k = Number(cursor.cogido.slice(1)), foto = P.foto(e);
+            if (P.moverBloque(e, k, dirs[ev.key])) { historial.push(foto); sonar.bloque(); trasJugar(); } else sonar.no();
+        } else {
+            const [vx, vy] = P.DIRS[dirs[ev.key]];
+            const c = cursor.i % e.ancho + vx, f = Math.floor(cursor.i / e.ancho) + vy;
+            if (c >= 0 && f >= 0 && c < e.ancho && f < e.alto) cursor.i = f * e.ancho + c;
+        }
+        pedirPintar();
+        return;
+    }
+    if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        const o = e.ocup[cursor.i];
+        if (typeof cursor.cogido === 'string') { cursor.cogido = null; }
+        else if (typeof cursor.cogido === 'number') {
+            const b = cursor.cogido;
+            if (cursor.i === e.bolitas[b].i) { cursor.cogido = null; mandarSolo(b); }
+            else if (jugarMover(b, cursor.i)) cursor.cogido = null;
+            else noPuede(b, 'No hay camino libre hasta ahí');
+        } else if (o >= 0 && o < P.HUECO) {
+            if (modo === 'iman') usarIman(o);
+            else if (modo === 'garra' || modo === 'garra2') { garraB = o; modo = 'garra2'; indicar(textoModo()); }
+            else { cursor.cogido = o; sonar.coger(); }
+        } else if (o >= P.HUECO && o < P.BLOQUE && modo === 'pistola') usarPistola(o - P.HUECO);
+        else if (modo === 'garra2') usarGarra(cursor.i);
+        else if (o >= P.BLOQUE) { cursor.cogido = 'k' + (o - P.BLOQUE); indicar('Flechas para empujar el bloque; Intro para soltarlo', 2500); }
+        pedirPintar();
+        return;
+    }
+    if (ev.key === 'Escape' && (cursor.cogido !== null || modo)) { ev.stopPropagation(); cursor.cogido = null; cancelarModo(); }
+});
+lienzo.addEventListener('blur', () => pedirPintar());
+
+/* ==========================================================
+   NIVELES, BARRA Y CAPAS
+   ========================================================== */
+function empezarNivel(n, foto) {
+    nivel = Math.max(0, Math.min(NIV.length - 1, n));
+    e = P.crear(definicion(nivel, ayudasGuardadas()));
+    if (foto) {
+        try { P.volver(e, foto); e.ayudas = ayudasGuardadas(); } catch (x) { e = P.crear(definicion(nivel, ayudasGuardadas())); }
+    }
+    e.eventos.length = 0;
+    historial = []; anims = []; efectos = []; desapareciendo = []; fiesta = null; finPendiente = null;
+    arrastre = null; dedo = null; cursor = null; modo = null; garraB = -1;
+    sprites.clear(); L = null;
+    ['capaFin', 'capaPausa', 'capaNiveles', 'capaAyuda'].forEach(EST.cerrar);
+    EST.mostrar('pJuego');
+    $('dNivel').textContent = nivel + 1;
+    $('dDif').textContent = etiqueta(NIV[nivel].t);
+    $('datoBuhos').style.display = e.bolitas.some(b => b.buho) ? '' : 'none';
+    indicar(nivel === 0 && !foto ? 'Arrastra cada peluchín a un hueco de su color' : '', nivel === 0 ? 6000 : 0);
+    EST.guardar(CLAVE_PARTIDA, { nivel, foto: P.foto(e) });
+    musica.arrancar();
+    medir();
+    pintarBarra();
+}
+function pintarBarra() {
+    if (!e) return;
+    for (const [id, k] of [['nIman', 'iman'], ['nGarra', 'garra'], ['nPistola', 'pistola']]) $(id).textContent = e.ayudas[k];
+    $('btnIman').setAttribute('aria-pressed', modo === 'iman');
+    $('btnGarra').setAttribute('aria-pressed', modo === 'garra' || modo === 'garra2');
+    $('btnPistola').setAttribute('aria-pressed', modo === 'pistola');
+    $('btnDeshacer').disabled = !historial.length;
+    $('dBuhos').textContent = e.bolitas.filter(b => b.buho && b.i >= 0).length;
+}
+const PREMIOS = ['iman', 'garra', 'pistola'];
+const NOMBRE_PREMIO = { iman: '🧲 IMÁN', garra: '🪝 GARRA', pistola: '🔫 PISTOLA' };
+function mostrarFin() {
+    musica.parar();
+    const p = progreso();
+    if (nivel + 1 > p.max) EST.guardar(CLAVE_PROGRESO, { max: Math.min(NIV.length - 1, nivel + 1), hechos: nivel + 1 });
+    /* Premio: una ayuda más, por turnos */
+    const premio = PREMIOS[nivel % 3];
+    const a = ayudasGuardadas();
+    const sube = a[premio] < AYUDAS_TOPE;
+    if (sube) { a[premio]++; EST.guardar(CLAVE_AYUDAS, a); }
+    const ultimo = nivel === NIV.length - 1;
+    $('finTitulo').textContent = ultimo ? '🏆 ¡TODOS SUPERADOS!' : '🎉 ¡NIVEL ' + (nivel + 1) + ' SUPERADO!';
+    const sobran = e.bolitas.filter(b => b.i >= 0).length;
+    $('finDetalle').textContent = sobran ? 'Los que sobraban se van a dormir contentos.' : 'Todos los peluchines en su sitio.';
+    $('finPremio').textContent = sube ? 'Premio: +1 ' + NOMBRE_PREMIO[premio] : '';
+    $('btnSiguiente').style.display = ultimo ? 'none' : '';
+    EST.abrir('capaFin');
+}
+function pintarListaNiveles() {
+    const p = progreso(), cont = $('listaNiveles');
+    cont.textContent = '';
+    for (let n = 0; n < NIV.length; n++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = n + 1;
+        b.disabled = n > p.max;
+        if (n < p.max) b.classList.add('hecho');
+        if (n === p.max) b.classList.add('actual');
+        b.setAttribute('aria-label', 'Nivel ' + (n + 1) + (n > p.max ? ', bloqueado' : ''));
+        b.addEventListener('click', () => empezarNivel(n));
+        cont.appendChild(b);
+    }
+}
+function pintarMenu() {
+    const guardada = EST.leer(CLAVE_PARTIDA, null);
+    const n = guardada && Number.isInteger(guardada.nivel) ? guardada.nivel : progreso().max;
+    $('btnJugar').textContent = (guardada ? 'CONTINUAR' : 'JUGAR') + ' · NIVEL ' + (n + 1);
+}
+function jugar() {
+    const g = EST.leer(CLAVE_PARTIDA, null);
+    if (g && Number.isInteger(g.nivel) && g.nivel < NIV.length && g.foto) empezarNivel(g.nivel, g.foto);
+    else empezarNivel(progreso().max);
+}
+function pausar() {
+    if (!$('pJuego').classList.contains('activa') || EST.hayCapa()) return;
+    arrastre = null; dedo = null;
+    musica.parar();
+    EST.abrir('capaPausa');
+}
+function seguir() { EST.cerrar('capaPausa'); musica.arrancar(); pedirPintar(); }
+function alMenu() {
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    musica.parar();
+    arrastre = null; dedo = null; modo = null;
+    pintarMenu();
+    EST.mostrar('pMenu');
+}
+function alCambiarMusica(on) {
+    if (on && $('pJuego').classList.contains('activa') && !EST.hayCapa()) musica.arrancar(); else musica.parar();
+}
+
+const btn = (id, fn) => $(id).addEventListener('click', fn);
+btn('btnJugar', jugar);
+btn('btnNiveles', () => { pintarListaNiveles(); EST.abrir('capaNiveles'); });
+btn('btnCerrarNiveles', () => EST.cerrar('capaNiveles'));
+btn('btnAyuda', () => EST.abrir('capaAyuda'));
+btn('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+btn('btnPausa', pausar);
+btn('btnSeguir', seguir);
+btn('btnReiniciar', () => { EST.guardar(CLAVE_PARTIDA, null); empezarNivel(nivel); });
+btn('btnAbandonar', alMenu);
+btn('btnSiguiente', () => empezarNivel(nivel + 1));
+btn('btnMenuFin', alMenu);
+btn('btnDeshacer', deshacer);
+btn('btnIman', () => elegirModo('iman'));
+btn('btnGarra', () => elegirModo('garra'));
+btn('btnPistola', () => elegirModo('pistola'));
+
+document.addEventListener('keydown', (ev) => {
+    if (!$('pJuego').classList.contains('activa')) {
+        if (ev.key === 'Escape') ['capaNiveles', 'capaAyuda'].forEach(EST.cerrar);
+        return;
+    }
+    if (EST.hayCapa()) {
+        if ((ev.key === 'Escape' || ev.key === 'p' || ev.key === 'P') && $('capaPausa').classList.contains('activa')) seguir();
+        return;
+    }
+    if (ev.key === 'Escape' || ev.key === 'p' || ev.key === 'P') { ev.preventDefault(); pausar(); }
+    else if ((ev.key === 'z' || ev.key === 'Z') && !ev.repeat) deshacer();
+});
+new ResizeObserver(medir).observe($('marco'));
+window.addEventListener('resize', medir);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+
+EST.iniciar({ claveAudio: 'peluchinesAudio', alCambiarMusica });
+pintarMenu();
+
+/* Para las pruebas */
+window.__pel = { partida: () => e, nivel: () => nivel, medidas: () => L, centro: (i) => centro(i), anims: () => anims.length, bucle: () => pintando !== null };
+
+</script>
+</body>
+</html>
