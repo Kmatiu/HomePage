@@ -85,8 +85,19 @@
     .pestanas button[aria-selected="true"] { border-color: var(--acento); color: #0f0c2d; background: var(--acento); }
     [role="tabpanel"][hidden] { display: none; }
 
+    /* El icono de la aplicación, metido en la página (1,4 KB): se ve aunque
+       la página se abra dentro de WhatsApp, sin red o en el ordenador sin la
+       carpeta images. Es el mismo archivo que images/icono-192.png */
+    .logo {
+        display: inline-block; width: 2.2em; height: 2.2em; vertical-align: middle;
+        border-radius: 22%; background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAFbUlEQVR4nO3cO3bjRhAF0KaOQznTQpR51uIVeElegdfiybQQZaOcDnyoow9B4tPorkbdG440IoZ4r6sBYXgqwTw9Pp97HwP7eX17OfU+ho+6Hoyw07sQzV9c6JnSowzNXlDwWaJVGXZ/EcFni72LsNsPF3xq2qsI1X+o4LOn2kV4qPnDhJ+91c5YlTYJPj3UmAabJ4Dw00uN7G0qgPDT29YMri6A8BPFliyuKoDwE83aTC4ugPAT1ZpsLiqA8BPd0ozOLoDwM4olWZ1VAOFnNHMze7cAws+o5mS36qMQMJqbBbD6M7p7GZ4sgPBzFLeybAtEalcLYPXnaKYybQKQ2rcCWP05qmvZNgFI7VMBrP4c3deMmwCk9l4Aqz9ZfMy6CUBqCkBqD6XY/pDPJfMmAKkpAKkpAKkpAKmdXACTmQlAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAagpAar/1PoAtXn/93fsQKKU8/f5X70NYbbhPhRD6+EYqxBAFEPoxjVCE0AUQ/GOIXISwBRD+44lYhJB3gYT/mCKe11ATIOIbRH2RJkGYCSD8eUQ61yEKEOkNoY0o5zxEAcgpQgm6FyDCm0A/vc9/1wL0/scTQ88cdCuA8BNB9y0QlNJvQezyewCrf1vn0z9X//x0/rPxkdzX+ncEQz8OzW1Twf/69YhFaCVFAWqsKiNNrXvBn/r+jEVofg0wUpBGtDT8tf5uLa3z4SL4QGoEOEIJWlIAUmtaANuf/dRcuXtPgZY5MQFITQEOYI8Vu/cUaEUBSE0BSE0BSE0BSE0BSE0BDmCPZ3iyPBekAKSmAAdRc8XOsvqXMtjj0D0/UGnta3v8IzYT4EBqrNyZVv9SFOBwtgQ4W/hLGWwLxDyXIM99nidj8C8U4MDuFSFz8C8UIAFBn+YagNQUgNRsgZjl/PPH5NdOf/zb8EjqUgBuuhX8r98zYhFsgZg0J/xbvj8CBeCqtWEerQQKwDdbQzxSCRSAT2qFd5QSKACpKQCpDXUbdO2z9dk+Hn2t2tuW888f4W+NmgCkpgCkpgCkpgCkpgCkpgC8q33HJvodoFIUgOQUgNQUgE9qbVtG2P6UogBcsTW8o4S/lMYF6PnRhiyzNsQ1wt8yJyYAk5aGeaSV/2Koh+Fo7xJq/yme1EYO+S2np8fnc+sXzfBoMeu0vk50DUBqXQrgbhDX9MiFCUBq3QpgCvBRrzyYAKTWtQCmAKX0zUH3CaAEufU+/90LUEr/N4E+Ipz3EAUoJcabQTtRzneYApQS501hX5HOc6gClBLrzaG+aOc3XAFKifcmUUfE89rlYbglPDg3vojBvwhfgFKUYFSRg38xRAE+Uob4Rgj+xXAF+EgZYhgp8F8NXQDYKuRdIGhFAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUhNAUjr9e3l9PD69nLqfSDQiwlAagpAagpAag+l/H8x0PtAoKVL5k0AUlMAUnsvgG0QWXzMuglAagpAap8KYBvE0X3NuAlAat8KYApwVNeybQKQ2tUCmAIczVSmTQBSmyyAKcBR3MryzQmgBIzuXoZtgTisOQv43QKYAhzZrAmgBIxmbmZnb4GUgFEsyeqiawAlILqlGV18EawERLUmm6vuAikB0azN5OrboEpAFFuyuOn3AEpAb1szWCXAT4/P5xo/B+aqtfhWXcEVgRZq7jyqPgphS8Teamdst8CaBtS01+K6+4qtCGyx966i2ZZFEVii1Xa6+Z5dEZjS4xqy60WrMtD7xkm4uzZKcVy9w37Nf3k0mYOm3w+QAAAAAElFTkSuQmCC") center / cover no-repeat;
+        box-shadow: 0 0 0 1px var(--borde);
+    }
+    .logo.grande { display: block; width: 72px; height: 72px; margin: 0 auto 8px; }
+    .con-logo { display: flex; align-items: center; gap: 12px; margin: 8px 0 4px; }
+    /* Sin flex: 0 0 auto, el texto de al lado lo estrujaba a lo ancho */
+    .con-logo .logo { flex: 0 0 auto; width: 56px; height: 56px; }
     .final { text-align: center; margin: 22px 0 8px; }
-    .final img { width: 72px; height: 72px; border-radius: 16px; display: block; margin: 0 auto 8px; }
     .ir { display: inline-block; text-decoration: none; margin-top: 10px; background: var(--acento); color: #0f0c2d; }
     :focus-visible { outline: 3px solid var(--aviso); outline-offset: 2px; }
 </style>
@@ -147,7 +158,8 @@
             <div class="num" aria-hidden="true">5</div>
             <h2>Acepta con «Añadir»</h2>
             <div>
-                <p>Está arriba a la derecha. En la pantalla de inicio aparecerá el icono <b>Juegos</b>.</p>
+                <p>Está arriba a la derecha. En la pantalla de inicio aparecerá este icono, con el nombre <b>Juegos</b>:</p>
+                <p class="con-logo"><span class="logo" role="img" aria-label="Icono de Juegos: un mando de videojuegos turquesa sobre fondo azul oscuro"></span> <span>un mando de videojuegos turquesa sobre fondo azul oscuro</span></p>
             </div>
         </section>
     </div>
@@ -163,33 +175,37 @@
         </section>
         <section class="paso">
             <div class="num" aria-hidden="true">3</div>
-            <h2>Toca los tres puntos y elige «Instalar»</h2>
+            <h2>Toca los tres puntos e instálala</h2>
             <div>
                 <p>Los <b>tres puntos</b>
                     <svg class="icono" viewBox="0 0 24 24" fill="currentColor" aria-label="tres puntos" role="img"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
-                    están arriba a la derecha. En el menú, busca la opción de <b>instalar</b> (según el móvil pone <b class="boton">Instalar aplicación</b> o <b class="boton">Añadir a pantalla de inicio</b>) y acepta.</p>
+                    están arriba a la derecha. En el menú, busca <b class="boton">Instalar aplicación</b> o <b class="boton">Añadir a pantalla de inicio</b> (según el móvil).</p>
+                <p>Si te deja elegir entre <b class="boton">Instalar</b> y <b class="boton">Crear acceso directo</b>, elige <b>Instalar</b>. Acepta lo que pregunte.</p>
             </div>
         </section>
         <section class="paso">
             <div class="num" aria-hidden="true">4</div>
-            <h2>Busca «juegos» en tus aplicaciones</h2>
+            <h2>Mira la pantalla de inicio</h2>
             <div>
-                <p>Una vez instalada, abre el <b>menú de aplicaciones</b> (desliza el dedo hacia arriba desde abajo) y escribe <b>juegos</b> en el buscador. Aparecerá el icono <b>Juegos</b>.</p>
+                <p>En muchos móviles el icono aparece ya ahí, como en el iPhone. Es este, con el nombre <b>Juegos</b>:</p>
+                <p class="con-logo"><span class="logo" role="img" aria-label="Icono de Juegos: un mando de videojuegos turquesa sobre fondo azul oscuro"></span> <span>un mando de videojuegos turquesa sobre fondo azul oscuro</span></p>
+                <p>Si lo ves, <b>¡ya está!</b> Si no, sigue con el paso 5.</p>
+                <p class="nota">En algunos móviles el dibujo sale recortado en círculo o en otra forma: es el mismo.</p>
             </div>
         </section>
         <section class="paso">
             <div class="num" aria-hidden="true">5</div>
-            <h2>Ponlo en la pantalla de inicio</h2>
+            <h2>Si no está: llévalo tú a la pantalla de inicio</h2>
             <div>
-                <p><b>Mantén el dedo</b> sobre el icono y elige <b class="boton">Añadir a la pantalla de inicio</b>.</p>
-                <p class="nota">Un toque corto lo abre en vez de mostrar la opción. Si el icono ya estaba en la pantalla de inicio, no hace falta este paso.</p>
+                <p>Abre el <b>menú de aplicaciones</b> (desliza el dedo hacia arriba desde abajo) y escribe <b>juegos</b> en el buscador. Aparecerá el icono del mando.</p>
+                <p><b>Mantén el dedo</b> sobre el icono y elige <b class="boton">Añadir a la pantalla de inicio</b>, o arrástralo hasta ella sin soltarlo.</p>
+                <p class="nota">Un toque corto abre los juegos en vez de mostrar esa opción.</p>
             </div>
         </section>
     </div>
 
     <div class="final">
-        <!-- El icono de la aplicación; si no carga (abierta en el ordenador sin la carpeta images), se quita -->
-        <img src="./images/icono-192.png" alt="Icono de Juegos" onerror="this.remove()">
+        <span class="logo grande" role="img" aria-label="Icono de Juegos"></span>
         <p>¡Listo! A partir de ahora, abre los juegos desde el icono <b>Juegos</b>.</p>
         <a class="ir" id="ir" href="./">IR A LOS JUEGOS</a>
     </div>
