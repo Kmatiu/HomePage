@@ -324,9 +324,9 @@ body {
 
         /* La zona de juego: el lienzo y, en pantallas táctiles, los mandos
            FUERA de él (en el original iban encima y tapaban el juego).
-           - En vertical: lienzo arriba, mandos debajo (cruceta a la izquierda,
+           - En vertical: lienzo arriba, mandos debajo (palanca a la izquierda,
              ARPÓN a la derecha).
-           - En apaisado: cruceta a la izquierda del lienzo y ARPÓN a la derecha.
+           - En apaisado: palanca a la izquierda del lienzo y ARPÓN a la derecha.
            El tamaño del lienzo lo da el CSS con unidades del contenedor; el
            código solo lee cuánto mide para dibujar a esa resolución. */
         #zonaJuego {
@@ -359,7 +359,7 @@ body {
         body.tactil .disposicion {
             --mandos-alto: 156px;
             grid-template-areas: "lienzo lienzo" "izq der";
-            /* minmax(0, …): con 1fr a secas, una cruceta más ancha que su mitad
+            /* minmax(0, …): con 1fr a secas, una palanca más ancha que su mitad
                ensanchaba la rejilla y el lienzo quedaba descentrado 4 px */
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             width: 100%;
@@ -373,7 +373,7 @@ body {
         @container (max-aspect-ratio: 13/10) and (min-height: 520px) {
             body.tactil .disposicion { --mandos-alto: 200px; padding-bottom: 8px; }
             body.tactil #marco { width: min(100cqw, (100cqh - var(--mandos-alto) - 28px) * 1.6); }
-            body.tactil .cruz { grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 58px); gap: 6px; }
+            body.tactil .palanca { --lado: 184px; }
             body.tactil .fuego { width: 128px; height: 128px; }
             body.tactil.dos .fuego { width: 96px; height: 96px; }
         }
@@ -388,28 +388,52 @@ body {
             }
             body.tactil #marco { width: min(100cqw - 2 * var(--mandos-ancho) - 20px, 100cqh * 1.6); }
             body.tactil .mandos { flex-direction: column; }
+            body.tactil .palanca { --lado: 140px; }
             /* (Una consulta de contenedor no puede tocar al propio contenedor:
                por eso se alinea .disposicion y no #zonaJuego) */
             body.tactil .disposicion { align-self: center; }
         }
 
-        /* La cruceta: ◀ ▶ grandes (es lo que más se toca); ▲ ▼ para escaleras */
-        .cruz {
-            display: grid; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 46px); gap: 4px;
-            touch-action: none;
+        /* La palanca: un aro y un pomo que sigue al dedo. La dirección sale de
+           dónde está el dedo respecto al centro, así que basta con deslizarlo
+           para cambiarla, sin levantarlo (lo pidió el usuario: con la cruceta
+           de botones, ▶ se le quedó pulsado en una partida) */
+        .palanca {
+            --lado: 150px;
+            width: var(--lado); height: var(--lado); flex: 0 0 auto;
+            position: relative; touch-action: none; border-radius: 50%;
+            -webkit-tap-highlight-color: transparent; cursor: pointer;
         }
-        .cruz button, .fuego {
-            margin: 0; padding: 0; border-radius: 14px; cursor: pointer;
+        .palanca .aro {
+            position: absolute; inset: 0; border-radius: 50%;
             border: 2px solid rgba(var(--c-0-255-255, 0, 255, 255), 0.6);
-            background: rgba(var(--c-0-30-45, 0, 30, 45), 0.55); color: var(--c-00ffff, #00ffff);
-            font: bold 20px/1 var(--fuente, sans-serif);
+            background: radial-gradient(circle, rgba(var(--c-0-30-45, 0, 30, 45), 0.35) 0 40%, rgba(var(--c-0-30-45, 0, 30, 45), 0.7) 100%);
+            pointer-events: none;
+        }
+        .palanca .pista {
+            position: absolute; color: rgba(var(--c-0-255-255, 0, 255, 255), 0.55);
+            font: bold 16px/1 var(--fuente, sans-serif); pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        .palanca .pista.arr { left: 50%; top: 13%; }
+        .palanca .pista.aba { left: 50%; top: 87%; }
+        .palanca .pista.izq { left: 12%; top: 50%; }
+        .palanca .pista.der { left: 88%; top: 50%; }
+        .palanca .pista.on { color: #fff; text-shadow: 0 0 8px var(--c-00ffff, #00ffff); }
+        .palanca .pomo {
+            position: absolute; left: 50%; top: 50%; width: 40%; height: 40%;
+            margin: -20% 0 0 -20%; border-radius: 50%; pointer-events: none;
+            background: radial-gradient(circle at 35% 30%, rgba(160, 255, 255, 0.95), rgba(0, 150, 170, 0.95));
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+            /* Se mueve con transform: no recoloca nada alrededor */
+            transform: translate(var(--px, 0px), var(--py, 0px));
+        }
+        .palanca.activa .aro { border-color: var(--c-00ffff, #00ffff); }
+        .fuego {
+            margin: 0; padding: 0; cursor: pointer;
+            border: 2px solid; font: bold 20px/1 var(--fuente, sans-serif);
             touch-action: none; -webkit-tap-highlight-color: transparent;
         }
-        .cruz [data-dir="arr"] { grid-column: 2; grid-row: 1; }
-        .cruz [data-dir="izq"] { grid-column: 1; grid-row: 2 / 4; }
-        .cruz [data-dir="der"] { grid-column: 3; grid-row: 2 / 4; }
-        .cruz [data-dir="aba"] { grid-column: 2; grid-row: 3; }
-        .cruz button.pulsado, .fuego.pulsado { background: rgba(var(--c-0-255-255, 0, 255, 255), 0.35); color: #fff; }
         .fuego {
             width: 104px; height: 104px; border-radius: 50%;
             border-color: rgba(var(--c-255-80-80, 255, 80, 80), 0.9);
@@ -421,11 +445,11 @@ body {
         .fuego.pulsado { background: rgba(255, 80, 80, 0.6); }
         .etiqueta-j { font-size: 0.7rem; color: var(--apagado); display: none; }
         body.dos .etiqueta-j { display: block; }
-        /* Dos jugadores en táctil (solo si cabe): cada uno con su cruceta y su
+        /* Dos jugadores en táctil (solo si cabe): cada uno con su palanca y su
            ARPÓN, J1 a la izquierda y J2 a la derecha */
         body.dos .fuego { width: 84px; height: 84px; }
         @media (max-width: 380px), (max-height: 400px) {
-            .cruz { grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 40px); }
+            .palanca { --lado: 128px; }
             .fuego { width: 88px; height: 88px; }
         }
     </style>
@@ -698,22 +722,20 @@ body {
         <div class="disposicion">
             <div class="mandos izq" id="mandosIzq">
                 <div class="etiqueta-j">J1</div>
-                <div class="cruz" data-j="1" aria-label="Moverse">
-                    <button type="button" data-dir="arr" aria-label="Subir">▲</button>
-                    <button type="button" data-dir="izq" aria-label="Izquierda">◀</button>
-                    <button type="button" data-dir="der" aria-label="Derecha">▶</button>
-                    <button type="button" data-dir="aba" aria-label="Bajar">▼</button>
+                <div class="palanca" data-j="1" role="group" aria-label="Moverse">
+                    <div class="aro"></div>
+                    <span class="pista arr">▲</span><span class="pista aba">▼</span><span class="pista izq">◀</span><span class="pista der">▶</span>
+                    <div class="pomo"></div>
                 </div>
                 <button class="fuego" type="button" data-fuego="1" id="fuegoJ1Dos" aria-label="Disparar J1" style="display:none"><span class="flecha">⇧</span>ARPÓN</button>
             </div>
             <div id="marco"><canvas id="gameCanvas" aria-label="Súper Pang"></canvas></div>
             <div class="mandos der" id="mandosDer">
                 <div class="etiqueta-j">J2</div>
-                <div class="cruz" data-j="2" id="cruzJ2" aria-label="Moverse J2" style="display:none">
-                    <button type="button" data-dir="arr" aria-label="Subir J2">▲</button>
-                    <button type="button" data-dir="izq" aria-label="Izquierda J2">◀</button>
-                    <button type="button" data-dir="der" aria-label="Derecha J2">▶</button>
-                    <button type="button" data-dir="aba" aria-label="Bajar J2">▼</button>
+                <div class="palanca" data-j="2" id="palancaJ2" style="display:none" role="group" aria-label="Moverse J2">
+                    <div class="aro"></div>
+                    <span class="pista arr">▲</span><span class="pista aba">▼</span><span class="pista izq">◀</span><span class="pista der">▶</span>
+                    <div class="pomo"></div>
                 </div>
                 <button class="fuego" type="button" data-fuego="1" id="fuegoJ1" aria-label="Disparar"><span class="flecha">⇧</span>ARPÓN</button>
                 <button class="fuego" type="button" data-fuego="2" id="fuegoJ2" aria-label="Disparar J2" style="display:none"><span class="flecha">⇧</span>ARPÓN</button>
@@ -774,7 +796,7 @@ body {
             <p>Revienta todas las bolas de cada ciudad con el arpón antes de que se acabe el tiempo. Cada bola se parte en dos más pequeñas hasta desaparecer. Que no te toque ninguna. Al acabar una ciudad, el avión te lleva a la siguiente.</p>
             <h3>CONTROLES</h3>
             <ul>
-                <li><b>Móvil:</b> la cruceta para moverte y subir o bajar escaleras, y <b>ARPÓN</b> para disparar. Los mandos van fuera del juego: en vertical, debajo; en horizontal, a los lados.</li>
+                <li><b>Móvil:</b> la palanca para moverte (deja el dedo apoyado y deslízalo hacia donde quieras ir; arriba y abajo, en las escaleras), y <b>ARPÓN</b> para disparar. Los mandos van fuera del juego: en vertical, debajo; en horizontal, a los lados.</li>
                 <li><b>Jugador 1:</b> ← → para moverte, ↑ ↓ en las escaleras. Dispara con <b>espacio</b> si juegas solo, o con <b>Intro</b> si sois dos.</li>
                 <li><b>Jugador 2:</b> <b>A / D</b> para moverte, <b>W / S</b> en las escaleras, <b>espacio</b> para disparar.</li>
                 <li><b>P</b> o <b>Esc</b> pausa.</li>
@@ -798,7 +820,7 @@ body {
                 <li>Las armas duran hasta que te toca una bola. Los premios que caen desaparecen a los 9 segundos.</li>
             </ul>
             <h3>DOS JUGADORES</h3>
-            <ul><li>En el móvil hacen falta dos crucetas a la vez: solo cabe en tableta u ordenador.</li></ul>
+            <ul><li>En el móvil hacen falta dos palancas a la vez: solo cabe en tableta u ordenador.</li></ul>
         </div>
         <button class="principal" id="closeInstructions" type="button" style="margin-top:10px;">ENTENDIDO</button>
     </div>
@@ -1183,72 +1205,109 @@ const Pang = (() => {
         rambo:        { vel: 1.45, puntos: 2.0, tiempo: 85 }
     };
 
-    /* ---------- LOS NUEVE NIVELES (del original) ----------
-       bloques: 'ladrillo' se rompe con el arpón; 'plataforma' y 'muro' no
-       (en las dos se puede estar de pie). Las escaleras van de un suelo
-       (abajo) a una plataforma (arriba), medidas en la altura de los PIES.
+    /* ---------- LOS NUEVE NIVELES (rehechos el 11-11) ----------
+       bloques: 'ladrillo' se rompe con el arpón; 'plataforma' (acero) y
+       'muro' (piedra) no, y en los dos se puede estar de pie. Escaleras de
+       un suelo (abajo: el suelo, 580, o lo alto de otra plataforma) a una
+       plataforma (arriba), medidas en la altura de los PIES.
+       Los del original tenían ladrillos detrás de bloques fijos (imposibles
+       de romper). Reglas que cumplen ahora, y que comprueba por su cuenta
+       verificar-niveles.js:
+       - todo ladrillo tiene, debajo de algún trozo suyo, un sitio donde estar
+         de pie (el suelo o una plataforma con escalera) sin nada fijo en medio
+         y con sitio para el muñeco;
+       - toda plataforma se alcanza por escalera, y las escaleras no
+         atraviesan bloques;
+       - encima de donde sale cada jugador (x 255 y 705, el centro) no hay nada
+         fijo: el primer disparo siempre sale.
        bolas: cuántas de cada tamaño según dificultad [xl, l, m, s]. */
     const N = (nombre, ciudad, bloques, escaleras, premios, bolas) => ({ nombre, ciudad, bloques, escaleras, premios, bolas });
     const B = (x, y, w, h, tipo) => ({ x, y, w, h, tipo });
+    const E = (x, arriba, abajo = 580) => ({ x, arriba, abajo });
     const NIVELES = [
+        /* 1. Dos plataformas a los lados, para aprender a subir */
         N('Nueva York', 'nuevayork', [
-            B(80, 180, 180, 15, 'plataforma'), B(700, 180, 180, 15, 'plataforma'),
-            B(100, 140, 60, 15, 'muro'), B(200, 140, 60, 15, 'ladrillo'), B(700, 140, 60, 15, 'muro'), B(800, 140, 60, 15, 'muro'),
-            B(280, 280, 100, 15, 'ladrillo'), B(580, 280, 100, 15, 'ladrillo'), B(420, 240, 120, 15, 'ladrillo'),
-            B(150, 380, 140, 15, 'plataforma'), B(670, 380, 140, 15, 'plataforma'), B(100, 480, 15, 100, 'muro')
-        ], [{ x: 110, arriba: 180, abajo: 580 }, { x: 740, arriba: 180, abajo: 580 }],
-        [{ x: 130, y: 180, tipo: 'escudo' }, { x: 720, y: 180, tipo: 'doble' }],
+            B(40, 260, 150, 15, 'plataforma'), B(770, 260, 150, 15, 'plataforma'),
+            B(60, 140, 110, 15, 'ladrillo'), B(790, 140, 110, 15, 'ladrillo'),
+            B(270, 240, 80, 15, 'ladrillo'), B(610, 240, 80, 15, 'ladrillo'),
+            B(400, 170, 160, 15, 'ladrillo')
+        ], [E(60, 260), E(878, 260)],
+        [{ x: 140, y: 260, tipo: 'escudo' }, { x: 465, y: 170, tipo: 'doble' }],
         { principiante: [0, 1, 0, 1], avanzado: [0, 1, 2, 1], experto: [0, 2, 2, 1], rambo: [1, 1, 3, 2] }),
+        /* 2. El altar de piedra en el centro, con dos escaleras */
         N('Templo Azteca', 'azteca', [
-            B(360, 120, 240, 15, 'ladrillo'), B(300, 160, 80, 15, 'ladrillo'), B(580, 160, 80, 15, 'ladrillo'),
-            B(240, 200, 80, 15, 'ladrillo'), B(640, 200, 80, 15, 'ladrillo'), B(120, 280, 180, 15, 'ladrillo'),
-            B(660, 280, 180, 15, 'ladrillo'), B(400, 320, 160, 15, 'plataforma'), B(180, 420, 140, 15, 'ladrillo'), B(640, 420, 140, 15, 'ladrillo')
-        ], [], [{ x: 480, y: 120, tipo: 'reloj' }, { x: 200, y: 280, tipo: 'vida' }],
+            B(400, 320, 160, 15, 'muro'),
+            B(420, 200, 120, 15, 'ladrillo'),
+            B(280, 260, 80, 15, 'ladrillo'), B(600, 260, 80, 15, 'ladrillo'),
+            B(150, 190, 100, 15, 'ladrillo'), B(710, 190, 100, 15, 'ladrillo'),
+            B(30, 280, 80, 15, 'ladrillo'), B(850, 280, 80, 15, 'ladrillo')
+        ], [E(410, 320), E(528, 320)],
+        [{ x: 465, y: 320, tipo: 'reloj' }, { x: 185, y: 190, tipo: 'vida' }],
         { principiante: [0, 1, 1, 1], avanzado: [0, 2, 2, 1], experto: [0, 2, 3, 1], rambo: [1, 2, 3, 3] }),
+        /* 3. Plataformas altas en los árboles y una baja en el centro */
         N('Selva Amazónica', 'selva', [
-            B(100, 160, 120, 15, 'muro'), B(740, 160, 120, 15, 'muro'), B(240, 220, 120, 15, 'ladrillo'),
-            B(600, 220, 120, 15, 'ladrillo'), B(380, 280, 200, 15, 'plataforma'), B(140, 380, 100, 15, 'ladrillo'),
-            B(360, 380, 100, 15, 'ladrillo'), B(500, 380, 100, 15, 'ladrillo'), B(720, 380, 100, 15, 'ladrillo'), B(850, 480, 15, 100, 'muro')
-        ], [{ x: 150, arriba: 160, abajo: 580 }, { x: 780, arriba: 160, abajo: 580 }],
-        [{ x: 140, y: 160, tipo: 'doble' }, { x: 400, y: 380, tipo: 'escudo' }],
+            B(40, 260, 180, 15, 'plataforma'), B(740, 260, 180, 15, 'plataforma'),
+            B(400, 360, 160, 15, 'plataforma'),
+            B(60, 140, 120, 15, 'ladrillo'), B(780, 140, 120, 15, 'ladrillo'),
+            B(410, 240, 140, 15, 'ladrillo'),
+            B(260, 220, 90, 15, 'ladrillo'), B(610, 220, 90, 15, 'ladrillo')
+        ], [E(60, 260), E(878, 260), E(469, 360)],
+        [{ x: 150, y: 260, tipo: 'doble' }, { x: 510, y: 360, tipo: 'escudo' }],
         { principiante: [0, 1, 1, 1], avanzado: [1, 1, 2, 2], experto: [1, 2, 2, 2], rambo: [2, 2, 3, 3] }),
+        /* 4. Dos islotes de roca y un ladrillo arriba del todo */
         N('Islas Canarias', 'canarias', [
-            B(200, 140, 80, 15, 'ladrillo'), B(680, 140, 80, 15, 'ladrillo'), B(220, 180, 60, 15, 'ladrillo'),
-            B(700, 180, 60, 15, 'ladrillo'), B(420, 200, 120, 15, 'ladrillo'), B(400, 260, 160, 15, 'plataforma'),
-            B(140, 380, 180, 15, 'ladrillo'), B(640, 380, 180, 15, 'ladrillo'), B(360, 460, 240, 15, 'plataforma')
-        ], [], [{ x: 460, y: 200, tipo: 'reloj' }, { x: 180, y: 380, tipo: 'vida' }],
+            B(300, 330, 150, 15, 'muro'), B(510, 330, 150, 15, 'muro'),
+            B(320, 210, 110, 15, 'ladrillo'), B(530, 210, 110, 15, 'ladrillo'),
+            B(60, 250, 120, 15, 'ladrillo'), B(780, 250, 120, 15, 'ladrillo'),
+            B(430, 120, 100, 15, 'ladrillo')
+        ], [E(400, 330), E(538, 330)],
+        [{ x: 465, y: 120, tipo: 'reloj' }, { x: 320, y: 330, tipo: 'vida' }],
         { principiante: [0, 1, 2, 1], avanzado: [0, 2, 3, 2], experto: [1, 2, 3, 2], rambo: [2, 2, 4, 3] }),
+        /* 5. Los dos pisos de la torre: se sube de uno a otro */
         N('París', 'paris', [
-            B(120, 100, 120, 15, 'ladrillo'), B(720, 100, 120, 15, 'ladrillo'), B(100, 240, 140, 15, 'ladrillo'),
-            B(720, 240, 140, 15, 'ladrillo'), B(80, 380, 120, 15, 'ladrillo'), B(760, 380, 120, 15, 'ladrillo'), B(120, 480, 15, 100, 'muro')
-        ], [], [{ x: 160, y: 100, tipo: 'doble' }, { x: 760, y: 240, tipo: 'escudo' }],
+            B(360, 380, 240, 15, 'plataforma'), B(420, 260, 120, 15, 'plataforma'),
+            B(440, 140, 80, 15, 'ladrillo'),
+            B(80, 200, 120, 15, 'ladrillo'), B(760, 200, 120, 15, 'ladrillo'),
+            B(120, 340, 100, 15, 'ladrillo'), B(740, 340, 100, 15, 'ladrillo')
+        ], [E(380, 380), E(558, 380), E(469, 260, 380)],
+        [{ x: 125, y: 200, tipo: 'doble' }, { x: 465, y: 260, tipo: 'escudo' }],
         { principiante: [1, 0, 1, 1], avanzado: [1, 1, 3, 2], experto: [1, 2, 3, 2], rambo: [2, 3, 3, 4] }),
+        /* 6. Piedra a los lados y una plataforma alta en el centro */
         N('Moscú', 'moscu', [
-            B(180, 140, 100, 15, 'muro'), B(680, 140, 100, 15, 'ladrillo'), B(200, 180, 60, 15, 'muro'),
-            B(700, 180, 60, 15, 'ladrillo'), B(400, 220, 160, 15, 'plataforma'), B(120, 300, 140, 15, 'ladrillo'),
-            B(340, 300, 140, 15, 'ladrillo'), B(480, 300, 140, 15, 'ladrillo'), B(700, 300, 140, 15, 'ladrillo'),
-            B(220, 420, 160, 15, 'ladrillo'), B(580, 420, 160, 15, 'ladrillo')
-        ], [{ x: 210, arriba: 180, abajo: 580 }], [{ x: 215, y: 180, tipo: 'reloj' }, { x: 440, y: 300, tipo: 'vida' }],
+            B(60, 260, 160, 15, 'muro'), B(740, 260, 160, 15, 'muro'),
+            B(380, 300, 200, 15, 'plataforma'),
+            B(400, 180, 160, 15, 'ladrillo'),
+            B(80, 140, 120, 15, 'ladrillo'), B(760, 140, 120, 15, 'ladrillo'),
+            B(250, 220, 90, 15, 'ladrillo'), B(620, 220, 90, 15, 'ladrillo')
+        ], [E(80, 260), E(858, 260), E(469, 300)],
+        [{ x: 150, y: 260, tipo: 'reloj' }, { x: 520, y: 300, tipo: 'vida' }],
         { principiante: [0, 2, 1, 1], avanzado: [0, 2, 4, 3], experto: [1, 3, 3, 3], rambo: [2, 3, 4, 4] }),
+        /* 7. La pirámide de ladrillos: se rompe de abajo arriba */
         N('Pirámides de Egipto', 'egipto', [
-            B(420, 120, 120, 15, 'ladrillo'), B(380, 160, 200, 15, 'ladrillo'), B(340, 200, 280, 15, 'ladrillo'),
-            B(300, 240, 360, 15, 'ladrillo'), B(100, 320, 120, 15, 'ladrillo'), B(740, 320, 120, 15, 'ladrillo'),
-            B(180, 440, 180, 15, 'plataforma'), B(600, 440, 180, 15, 'plataforma'), B(100, 480, 15, 100, 'muro')
-        ], [], [{ x: 440, y: 120, tipo: 'escudo' }, { x: 420, y: 160, tipo: 'doble' }],
+            B(420, 140, 120, 15, 'ladrillo'), B(380, 180, 200, 15, 'ladrillo'), B(340, 220, 280, 15, 'ladrillo'),
+            B(60, 280, 150, 15, 'plataforma'), B(750, 280, 150, 15, 'plataforma'),
+            B(70, 160, 120, 15, 'ladrillo'), B(770, 160, 120, 15, 'ladrillo')
+        ], [E(80, 280), E(858, 280)],
+        [{ x: 465, y: 140, tipo: 'escudo' }, { x: 150, y: 280, tipo: 'doble' }],
         { principiante: [1, 1, 1, 1], avanzado: [2, 1, 2, 3], experto: [2, 2, 3, 3], rambo: [3, 2, 4, 4] }),
+        /* 8. El adarve de la muralla en el centro y dos torres */
         N('Muralla China', 'china', [
-            B(80, 180, 120, 15, 'ladrillo'), B(220, 160, 120, 15, 'ladrillo'), B(360, 180, 120, 15, 'ladrillo'),
-            B(500, 160, 120, 15, 'ladrillo'), B(640, 180, 120, 15, 'ladrillo'), B(760, 160, 120, 15, 'ladrillo'),
-            B(180, 240, 60, 15, 'ladrillo'), B(440, 240, 60, 15, 'ladrillo'), B(720, 240, 60, 15, 'ladrillo'),
-            B(140, 360, 180, 15, 'plataforma'), B(640, 360, 180, 15, 'plataforma'), B(320, 460, 320, 15, 'ladrillo')
-        ], [], [{ x: 280, y: 160, tipo: 'reloj' }, { x: 680, y: 360, tipo: 'doble' }],
+            B(330, 360, 300, 15, 'muro'),
+            B(40, 260, 140, 15, 'plataforma'), B(780, 260, 140, 15, 'plataforma'),
+            B(350, 240, 80, 15, 'ladrillo'), B(530, 240, 80, 15, 'ladrillo'), B(440, 130, 80, 15, 'ladrillo'),
+            B(60, 140, 100, 15, 'ladrillo'), B(800, 140, 100, 15, 'ladrillo'),
+            B(210, 200, 80, 15, 'ladrillo'), B(670, 200, 80, 15, 'ladrillo')
+        ], [E(340, 360), E(598, 360), E(60, 260), E(878, 260)],
+        [{ x: 465, y: 130, tipo: 'reloj' }, { x: 450, y: 360, tipo: 'doble' }],
         { principiante: [0, 2, 2, 2], avanzado: [0, 4, 2, 4], experto: [2, 3, 3, 4], rambo: [3, 3, 4, 5] }),
+        /* 9. El monte de ladrillos y dos plataformas */
         N('Monte Fuji', 'fuji', [
-            B(440, 100, 80, 15, 'ladrillo'), B(400, 140, 160, 15, 'ladrillo'), B(360, 180, 240, 15, 'ladrillo'),
-            B(320, 220, 320, 15, 'ladrillo'), B(280, 260, 400, 15, 'ladrillo'), B(100, 340, 120, 15, 'plataforma'),
-            B(740, 340, 120, 15, 'plataforma'), B(180, 440, 120, 15, 'ladrillo'), B(420, 440, 120, 15, 'ladrillo'),
-            B(660, 440, 120, 15, 'ladrillo'), B(100, 480, 15, 100, 'muro')
-        ], [], [{ x: 460, y: 100, tipo: 'reloj' }, { x: 480, y: 220, tipo: 'escudo' }, { x: 460, y: 440, tipo: 'vida' }],
+            B(440, 130, 80, 15, 'ladrillo'), B(400, 170, 160, 15, 'ladrillo'), B(360, 210, 240, 15, 'ladrillo'), B(320, 250, 320, 15, 'ladrillo'),
+            B(40, 290, 170, 15, 'plataforma'), B(750, 290, 170, 15, 'plataforma'),
+            B(60, 170, 110, 15, 'ladrillo'), B(790, 170, 110, 15, 'ladrillo'),
+            B(300, 420, 100, 15, 'ladrillo'), B(560, 420, 100, 15, 'ladrillo')
+        ], [E(60, 290), E(878, 290)],
+        [{ x: 465, y: 130, tipo: 'reloj' }, { x: 330, y: 250, tipo: 'escudo' }, { x: 150, y: 290, tipo: 'vida' }],
         { principiante: [1, 1, 1, 2], avanzado: [2, 2, 2, 4], experto: [2, 3, 4, 4], rambo: [3, 4, 4, 5] })
     ];
 
@@ -1871,7 +1930,7 @@ const PINTORES = {
     fuji(c, az) {
         cielo(c, '#ffd6c9', '#bcd8ef');
         /* Sol rosado y no rojo vivo: rojo y de ese tamaño se confundía con una bola */
-        sol(c, 700, 150, 52, '#f2a29a', 'rgba(242,162,154,0.25)');
+        sol(c, 700, 150, 52, '#fbd9d0', 'rgba(251,217,208,0.3)');
         /* El Fuji con su nieve, cerezos y una pagoda */
         c.fillStyle = '#5b6b8c'; c.beginPath(); c.moveTo(80, 560); c.lineTo(420, 220); c.lineTo(540, 220); c.lineTo(880, 560); c.fill();
         c.fillStyle = '#ffffff'; c.beginPath(); c.moveTo(355, 285); c.lineTo(420, 220); c.lineTo(540, 220); c.lineTo(605, 285); c.lineTo(570, 275); c.lineTo(540, 300); c.lineTo(505, 278); c.lineTo(470, 302); c.lineTo(440, 276); c.lineTo(400, 296); c.fill();
@@ -1988,43 +2047,105 @@ function pintarArpon(c, a, t) {
     if (a.fijo > 0) { c.strokeStyle = '#ffd54f'; c.lineWidth = 2; c.beginPath(); c.arc(a.x, a.punta + 4, 9, Math.PI, 0); c.stroke(); }
 }
 
+/* El fusil de arpones, dibujado en su propio giro: culata de madera,
+   cuerpo, cañón y, si está cargado, la punta del arpón asomando.
+   (x, y) es la empuñadura; ang, hacia dónde apunta el cañón */
+function pintarFusil(c, x, y, ang, cargado, fogonazo) {
+    c.save(); c.translate(x, y); c.rotate(ang);
+    c.fillStyle = '#7a4a24'; c.fillRect(-12, -3, 11, 7);                 // culata
+    c.fillStyle = '#5a3418'; c.fillRect(-12, 1, 11, 3);
+    c.fillStyle = '#3c4048'; c.fillRect(-2, -3.5, 16, 7);                // cuerpo
+    c.fillStyle = '#23262b'; c.fillRect(4, 3, 4, 5);                     // gatillo
+    c.fillStyle = '#8a929e'; c.fillRect(14, -2, 14, 4);                  // cañón
+    c.fillStyle = '#c9d1db'; c.fillRect(14, -2, 14, 1.2);
+    c.fillStyle = '#23262b'; c.fillRect(26, -3, 3, 6);                   // boca
+    if (cargado) { c.fillStyle = '#e8e8e8'; c.beginPath(); c.moveTo(36, 0); c.lineTo(29, -4); c.lineTo(29, 4); c.closePath(); c.fill(); }
+    if (fogonazo > 0) {
+        c.globalAlpha = Math.min(1, fogonazo * 6);
+        /* Fogonazo en estrella, no redondo: redondo y amarillo parecía una bola */
+        c.fillStyle = '#fffbe0'; c.beginPath();
+        for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, r = k % 2 ? 3 : 9; c.lineTo(33 + Math.cos(a) * r, Math.sin(a) * r); }
+        c.closePath(); c.fill();
+        c.globalAlpha = 1;
+    }
+    c.restore();
+}
+
+/* Cuánto dura en pantalla la postura de disparo (el motor la marca solo
+   0,18 s y casi no se veía) */
+const POSE_DISPARO = 0.3;
+const ultimoDisparo = { 1: -9, 2: -9 };
+
 function pintarJugador(c, j, t) {
     if (j.muerto) return;
     if (j.invul > 0 && Math.floor(t * 12) % 2 === 0 && !j.escudo) c.globalAlpha = 0.45;
     const P = Pang.JUG, x = j.x, y = j.y, col = COLOR_JUG[j.n];
-    const cx = x + P.ancho / 2;
+    const cx = x + P.ancho / 2, m = j.mira;
     const anda = j.andando ? Math.sin(j.paso * 14) : 0;
-    const dispara = j.disparo > 0;
+    const desde = t - ultimoDisparo[j.n];
+    const dispara = desde >= 0 && desde < POSE_DISPARO;
     const sube = j.escalera !== null || j.subiendo !== 0;
+    /* Cargado si le queda arpón por tirar (con el doble, dos a la vez) */
+    const cargado = e.arpones.filter(a => a.j === j.n).length < (j.arma === 'doble' ? 2 : 1);
     /* Sombra */
     c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(cx, y + P.alto, 14, 3, 0, 0, 7); c.fill();
     /* Piernas y botas */
+    const pI = sube ? Math.sin(t * 16) * 4 : anda * 6, pD = sube ? -Math.sin(t * 16) * 4 : -anda * 6;
     c.fillStyle = '#2d3142';
-    const piernaI = sube ? Math.sin(t * 16) * 4 : anda * 6, piernaD = sube ? -Math.sin(t * 16) * 4 : -anda * 6;
-    c.fillRect(cx - 9, y + 30, 7, 13 + (sube ? piernaI / 2 : 0)); c.fillRect(cx + 2, y + 30, 7, 13 + (sube ? piernaD / 2 : 0));
+    c.fillRect(cx - 9, y + 30, 7, 13 + (sube ? pI / 2 : 0)); c.fillRect(cx + 2, y + 30, 7, 13 + (sube ? pD / 2 : 0));
     c.fillStyle = '#5d4037';
-    c.fillRect(cx - 10 + (sube ? 0 : piernaI * 0.4), y + 42, 9, 4); c.fillRect(cx + 1 + (sube ? 0 : piernaD * 0.4), y + 42, 9, 4);
+    c.fillRect(cx - 10 + (sube ? 0 : pI * 0.4), y + 42, 9, 4); c.fillRect(cx + 1 + (sube ? 0 : pD * 0.4), y + 42, 9, 4);
+    /* De espaldas al subir y al disparar (como en el Pang de recreativa: se
+       vuelve hacia arriba para tirar) */
+    const espaldas = sube || dispara;
+    /* Al subir, el fusil va colgado a la espalda; se pinta antes del cuerpo */
+    if (sube) pintarFusil(c, cx - 4, y + 26, -Math.PI / 2 + 0.5, false, 0);
     /* Cuerpo (peto) */
     c.fillStyle = col.ropa; c.fillRect(cx - 11, y + 16, 22, 16);
     c.fillStyle = col.oscuro; c.fillRect(cx - 11, y + 28, 22, 4);
-    c.fillStyle = '#fff'; c.fillRect(cx - 7, y + 18, 3, 3); c.fillRect(cx + 4, y + 18, 3, 3);
-    /* Brazos: arriba al disparar o al subir; si no, con el paso */
-    c.fillStyle = col.ropa;
-    if (dispara) { c.fillRect(cx - 13, y + 4, 5, 14); c.fillRect(cx + 8, y + 4, 5, 14); c.fillStyle = '#ffccaa'; c.fillRect(cx - 13, y + 1, 5, 4); c.fillRect(cx + 8, y + 1, 5, 4); }
-    else if (sube) { const s = Math.sin(t * 16) * 4; c.fillRect(cx - 14, y + 6 + s, 5, 14); c.fillRect(cx + 9, y + 6 - s, 5, 14); }
-    else { c.fillRect(cx - 15, y + 17 + anda * 2, 5, 13); c.fillRect(cx + 10, y + 17 - anda * 2, 5, 13); }
-    /* Cabeza: cara de frente, de lado o de espaldas (subiendo) */
+    if (!espaldas) { c.fillStyle = '#fff'; c.fillRect(cx - 7, y + 18, 3, 3); c.fillRect(cx + 4, y + 18, 3, 3); }
+    else { c.fillStyle = col.oscuro; c.fillRect(cx - 8, y + 16, 3, 13); c.fillRect(cx + 5, y + 16, 3, 13); }
+    /* Cabeza */
     c.fillStyle = '#ffccaa'; c.beginPath(); c.arc(cx, y + 9, 9, 0, 7); c.fill();
-    c.fillStyle = '#4e342e';
-    if (sube) { c.beginPath(); c.arc(cx, y + 8, 9.5, 0, 7); c.fill(); }
-    else {
-        c.beginPath(); c.arc(cx, y + 5, 9.5, Math.PI, 0); c.fill();
+    if (espaldas) {
+        c.fillStyle = '#4e342e'; c.beginPath(); c.arc(cx, y + 8, 9.5, 0, 7); c.fill();
+        c.fillStyle = col.oscuro; c.beginPath(); c.arc(cx, y + 4, 9.5, Math.PI, 0); c.fill();
+    } else {
+        c.fillStyle = '#4e342e'; c.beginPath(); c.arc(cx, y + 5, 9.5, Math.PI, 0); c.fill();
         /* La gorra, con la visera hacia donde mira */
         c.fillStyle = col.oscuro; c.beginPath(); c.arc(cx, y + 4, 9.5, Math.PI, 0); c.fill();
-        c.fillRect(j.mira > 0 ? cx : cx - 13, y + 2, 13, 3);
-        c.fillStyle = '#222'; const ojo = j.andando ? j.mira * 2.5 : 0;
+        c.fillRect(m > 0 ? cx : cx - 13, y + 2, 13, 3);
+        c.fillStyle = '#222'; const ojo = m * 2.5;
         c.fillRect(cx - 4 + ojo, y + 8, 2, 3); c.fillRect(cx + 2 + ojo, y + 8, 2, 3);
         c.fillStyle = '#c0605a'; c.fillRect(cx - 2 + ojo, y + 13, 4, 1.5);
+    }
+    /* Brazos y fusil */
+    c.fillStyle = col.ropa;
+    if (dispara) {
+        /* El fusil en vertical, con la boca justo donde nace el arpón (el
+           centro del muñeco): así se ve que la cuerda sale del arma */
+        const gy = y + 26 - Math.min(1, desde / 0.06) * 4;     // retroceso al tirar
+        pintarFusil(c, cx, gy, -Math.PI / 2, false, 0.12 - desde);
+        /* Los dos brazos, de los hombros a las manos en el fusil */
+        c.strokeStyle = col.ropa; c.lineWidth = 5; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(cx - 10, y + 19); c.lineTo(cx - 2, gy); c.moveTo(cx + 10, y + 19); c.lineTo(cx + 2, gy - 13); c.stroke();
+        c.lineCap = 'butt';
+        c.fillStyle = '#ffccaa'; c.beginPath(); c.arc(cx - 1, gy, 2.6, 0, 7); c.arc(cx + 1, gy - 13, 2.6, 0, 7); c.fill();
+    } else if (sube) {
+        const s = Math.sin(t * 16) * 4;
+        c.fillRect(cx - 14, y + 4 + s, 5, 14); c.fillRect(cx + 9, y + 4 - s, 5, 14);
+        c.fillStyle = '#ffccaa'; c.fillRect(cx - 14, y + 2 + s, 5, 4); c.fillRect(cx + 9, y + 2 - s, 5, 4);
+    } else {
+        /* En reposo y andando: el fusil en las manos, hacia delante y un poco
+           hacia arriba, balanceándose con el paso */
+        const gx = cx + m * 3, gy = y + 25 + Math.abs(anda) * 1.2;
+        const ang = m > 0 ? -0.35 : Math.PI + 0.35;
+        c.fillRect(cx - 4 * m - 2.5, y + 17, 5, 10);
+        c.fillRect(cx + 7 * m - 2.5, y + 18, 5, 8);
+        pintarFusil(c, gx, gy, ang, cargado, 0);
+        c.fillStyle = '#ffccaa';
+        c.fillRect(gx - 2, gy - 2, 4, 4);
+        c.fillRect(gx + Math.cos(ang) * 12 - 2, gy + Math.sin(ang) * 12 - 2, 4, 4);
     }
     c.globalAlpha = 1;
     /* Escudo: burbuja */
@@ -2034,7 +2155,7 @@ function pintarJugador(c, j, t) {
         c.fillStyle = g; c.beginPath(); c.arc(cx, y + 24, 33 + Math.sin(t * 6) * 1.5, 0, 7); c.fill();
     }
     /* Marca del jugador con dos */
-    if (numPlayers === 2) { c.fillStyle = col.ropa; c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillText('J' + j.n, cx, y - 6); }
+    if (numPlayers === 2) { c.fillStyle = col.ropa; c.font = 'bold 16px sans-serif'; c.textAlign = 'center'; c.fillText('J' + j.n, cx, y - (dispara ? 22 : 6)); }
 }
 
 function pintarPremio(c, p, t) {
@@ -2279,7 +2400,7 @@ function fotograma(ahora) {
 function tratarEventos() {
     for (const ev of e.eventos) {
         switch (ev.tipo) {
-            case 'disparo': sonar.disparo(); break;
+            case 'disparo': sonar.disparo(); ultimoDisparo[ev.j] = performance.now() / 1000; break;
             case 'pop':
                 estallido(ev.x, ev.y, ev.tam); sonar.pop(ev.tam);
                 if (ev.puntos) texto(ev.x, ev.y - 10, '+' + ev.puntos + (ev.combo > 1 ? '  ×' + ev.combo : ''), ev.combo > 1 ? '#ffd54f' : '#ffffff', ev.combo > 2);
@@ -2436,38 +2557,86 @@ function alCambiarMusica(on) {
 
 /* ==========================================================
    MANDOS TÁCTILES (fuera del lienzo)
-   Una cruceta por jugador: el dedo puede deslizarse de ◀ a ▶ sin
-   levantarlo (se mira qué botón hay bajo el dedo en cada movimiento).
-   ARPÓN dispara al apoyar el dedo, no al soltarlo.
+   Una palanca por jugador: se apoya el dedo y la dirección es hacia dónde
+   está el dedo respecto al centro del aro; deslizándolo se cambia sin
+   levantarlo. ARPÓN dispara al apoyar el dedo, no al soltarlo.
+
+   Con la cruceta de botones anterior, al usuario se le quedó ▶ pulsado en
+   una partida. No se pudo reproducir; la sospecha (sin confirmar) es un
+   «pointerup» que no llegó, o soltarMandos(), que borraba lo pulsado pero
+   no los dedos que la cruceta llevaba apuntados: el siguiente toque
+   devolvía el ▶. Por eso ahora:
+   - cada palanca sigue a UN dedo y lo olvida con pointerup, pointercancel
+     y lostpointercapture;
+   - de respaldo, con cada touchend/touchcancel se mira si sigue habiendo
+     algún dedo que empezara en la palanca (la lista de toques del
+     navegador es la verdad); si no, se suelta;
+   - soltar() borra también el dedo apuntado, no solo la dirección.
    ========================================================== */
-function soltarMandos() {
-    for (const n of [1, 2]) mandos[n] = {};
-    document.querySelectorAll('.cruz button, .fuego').forEach(b => b.classList.remove('pulsado'));
-}
-function prepararCruz(cruz) {
-    const n = Number(cruz.dataset.j);
-    const dedos = new Map();   // pointerId → dirección
-    const aplicar = () => {
-        mandos[n] = {};
-        for (const d of dedos.values()) if (d) mandos[n][d] = true;
-        cruz.querySelectorAll('button').forEach(b => b.classList.toggle('pulsado', !!mandos[n][b.dataset.dir]));
+const ZONA_MUERTA = 0.25;     // fracción del radio sin dirección
+const palancas = [];
+function prepararPalanca(el) {
+    const n = Number(el.dataset.j);
+    const pomo = el.querySelector('.pomo');
+    const pistas = {};
+    el.querySelectorAll('.pista').forEach(p => { pistas[p.classList[1]] = p; });
+    let dedo = null;           // pointerId que la maneja, o null
+    const pintar = (px, py, dir) => {
+        pomo.style.setProperty('--px', px.toFixed(1) + 'px');
+        pomo.style.setProperty('--py', py.toFixed(1) + 'px');
+        for (const k in pistas) pistas[k].classList.toggle('on', !!dir[k]);
+        el.classList.toggle('activa', dedo !== null);
     };
-    const bajo = (ev) => {
-        const el = document.elementFromPoint(ev.clientX, ev.clientY);
-        const b = el && el.closest('.cruz button');
-        return b && b.parentElement === cruz ? b.dataset.dir : null;
+    const leer = (ev) => {
+        const r = el.getBoundingClientRect();
+        const radio = r.width / 2, tope = radio * 0.6;     // el pomo no se sale del aro
+        let dx = ev.clientX - (r.left + radio), dy = ev.clientY - (r.top + radio);
+        const nx = dx / tope, ny = dy / tope;
+        const dir = {};
+        /* Horizontal casi siempre; vertical solo si el dedo va claramente hacia
+           arriba o abajo: corriendo en diagonal no se agarra a una escalera */
+        if (Math.abs(nx) > ZONA_MUERTA && Math.abs(nx) > Math.abs(ny) * 0.4) dir[nx > 0 ? 'der' : 'izq'] = true;
+        if (Math.abs(ny) > 0.5 && Math.abs(ny) > Math.abs(nx) * 0.75) dir[ny > 0 ? 'aba' : 'arr'] = true;
+        const d = Math.hypot(dx, dy);
+        if (d > tope) { dx *= tope / d; dy *= tope / d; }
+        mandos[n] = dir;
+        pintar(dx, dy, dir);
     };
-    cruz.addEventListener('pointerdown', (ev) => {
+    const soltar = () => { dedo = null; mandos[n] = {}; pintar(0, 0, {}); };
+    el.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
-        try { cruz.setPointerCapture(ev.pointerId); } catch (x) {}
-        dedos.set(ev.pointerId, bajo(ev)); aplicar();
+        if (dedo !== null && dedo !== ev.pointerId) return;   // ya la lleva otro dedo
+        dedo = ev.pointerId;
+        try { el.setPointerCapture(ev.pointerId); } catch (x) {}
+        leer(ev);
     });
-    cruz.addEventListener('pointermove', (ev) => { if (dedos.has(ev.pointerId)) { dedos.set(ev.pointerId, bajo(ev)); aplicar(); } });
-    const suelta = (ev) => { dedos.delete(ev.pointerId); aplicar(); };
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => cruz.addEventListener(t, suelta));
-    cruz.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    el.addEventListener('pointermove', (ev) => {
+        if (ev.pointerId !== dedo) return;
+        /* Con ratón, si ya no hay botón pulsado es que el «up» se perdió */
+        if (ev.pointerType === 'mouse' && ev.buttons === 0) { soltar(); return; }
+        leer(ev);
+    });
+    const fin = (ev) => { if (ev.pointerId === dedo) soltar(); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, fin));
+    el.addEventListener('contextmenu', (ev) => ev.preventDefault());
+    palancas.push({ el, soltar, conDedo: () => dedo !== null });
 }
-document.querySelectorAll('.cruz').forEach(prepararCruz);
+document.querySelectorAll('.palanca').forEach(prepararPalanca);
+/* Respaldo: el target de un toque es donde EMPEZÓ, aunque el dedo se mueva */
+const revisarToques = (ev) => {
+    for (const p of palancas) {
+        if (!p.conDedo()) continue;
+        const sigue = [...ev.touches].some(t => t.target instanceof Node && p.el.contains(t.target));
+        if (!sigue) p.soltar();
+    }
+};
+document.addEventListener('touchend', revisarToques, { passive: true });
+document.addEventListener('touchcancel', revisarToques, { passive: true });
+function soltarMandos() {
+    palancas.forEach(p => p.soltar());
+    for (const n of [1, 2]) mandos[n] = {};
+    document.querySelectorAll('.fuego').forEach(b => b.classList.remove('pulsado'));
+}
 document.querySelectorAll('.fuego').forEach(b => {
     b.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
@@ -2482,13 +2651,13 @@ canvas.addEventListener('pointerdown', () => { if (gameState === 'transition' &&
 
 function mostrarMandos(n) {
     document.body.classList.toggle('dos', n === 2);
-    $('cruzJ2').style.display = n === 2 ? '' : 'none';
+    $('palancaJ2').style.display = n === 2 ? '' : 'none';
     $('fuegoJ2').style.display = n === 2 ? '' : 'none';
     $('fuegoJ1Dos').style.display = n === 2 ? '' : 'none';
     $('fuegoJ1').style.display = n === 2 ? 'none' : '';
 }
 
-/* Dos jugadores en táctil: dos crucetas y dos ARPÓN a la vez. Se decide
+/* Dos jugadores en táctil: dos palancas y dos ARPÓN a la vez. Se decide
    midiendo el hueco, no adivinando el aparato */
 const TWO_P_MIN_WIDTH = 720, TWO_P_MIN_HEIGHT = 480;
 function twoPlayersFits() {
