@@ -326,13 +326,28 @@ body {
         #zona {
             flex: 1 1 auto; min-height: 0; margin-top: 8px;
             display: flex; align-items: center; justify-content: center;
-            /* El tablero, cuadrado y lo más grande que quepa, sin JS:
-               el lado es el menor del ancho y el alto de la zona */
             container-type: size;
+        }
+        /* Tablero y miniatura, sin JS. En vertical, la miniatura debajo: mide
+           lo que sobra de alto (en los móviles medidos, de 174 a 276 px) entre
+           100 y 170 px; si sobra menos (tableta vertical: 108 px), el tablero
+           encoge un poco para dejarle 100. En apaisado, igual pero a un lado.
+           --lado: el lado del tablero, que usan también las letras */
+        .disposicion {
+            --m: clamp(100px, 100cqh - 100cqw - 10px, 170px);
+            --lado: min(100cqw, 100cqh - var(--m) - 10px);
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+        }
+        @container (orientation: landscape) {
+            .disposicion {
+                --m: clamp(100px, 100cqw - 100cqh - 10px, 200px);
+                --lado: min(100cqh, 100cqw - var(--m) - 10px);
+                flex-direction: row;
+            }
         }
         .tablero {
             position: relative;
-            width: min(100cqw, 100cqh); height: min(100cqw, 100cqh);
+            width: var(--lado); height: var(--lado);
             border-radius: 10px;
             background: repeating-linear-gradient(45deg, var(--pz-tablero) 0 12px, var(--pz-raya) 12px 24px);
             touch-action: manipulation;
@@ -353,7 +368,7 @@ body {
             width: 100%; height: 100%;
             border-radius: 8px; border: 2px solid rgba(var(--c-0-0-0, 0, 0, 0), 0.35);
             background-color: var(--pz-f0); background-repeat: no-repeat;
-            font: bold calc(min(100cqw, 100cqh) / var(--n) * 0.42) / 1 var(--fuente, sans-serif);
+            font: bold calc(var(--lado) / var(--n) * 0.42) / 1 var(--fuente, sans-serif);
             box-sizing: border-box;
             transition: border-radius 0.4s, border-width 0.4s;
         }
@@ -366,20 +381,52 @@ body {
             position: absolute; left: 6px; top: 6px;
             min-width: 1.6em; padding: 1px 4px; border-radius: 6px;
             background: rgba(255, 255, 255, 0.88); color: #10131f;
-            font-size: calc(min(100cqw, 100cqh) / var(--n) * 0.2); text-align: center;
+            font-size: calc(var(--lado) / var(--n) * 0.2); text-align: center;
         }
         .imagen .ficha .num { display: none; }
         .ficha.ultima { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
         .tablero.completo .ficha { padding: 0; cursor: default; }
         .tablero.completo .cara { border-radius: 0; border-width: 0; }
         .tablero.completo .ficha.ultima { opacity: 1; }
-        #modeloGrande {
-            position: absolute; inset: 0; border-radius: 10px;
-            background-size: 100% 100%; opacity: 0; pointer-events: none; transition: opacity 0.15s;
+        /* La miniatura del resultado: una carta que se da la vuelta. Por
+           delante, «MOSTRAR RESULTADO FINAL»; por detrás, el dibujo o los
+           números en orden. Tocarla otra vez la tapa. Las dos caras miden lo
+           mismo: darle la vuelta no mueve nada. */
+        .miniatura {
+            position: relative; flex: 0 0 auto;
+            width: var(--m); height: var(--m);
+            margin: 0; padding: 0; border: 0; background: none;
+            perspective: 700px; cursor: pointer; color: var(--texto);
         }
-        #modeloGrande.visible { opacity: 1; }
+        .miniatura .lado-m {
+            position: absolute; inset: 0; border-radius: 10px; overflow: hidden;
+            backface-visibility: hidden; -webkit-backface-visibility: hidden;
+            transition: transform 0.45s ease;
+        }
+        .miniatura .delante {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3em;
+            border: 2px dashed var(--acento); background: var(--panel);
+            font: bold calc(var(--m) * 0.085) / 1.15 var(--fuente, sans-serif); text-align: center;
+        }
+        .miniatura .delante .ico { font-size: 2.2em; line-height: 1; }
+        .miniatura .detras {
+            transform: rotateY(180deg);
+            background-color: var(--pz-tablero); background-size: 100% 100%;
+            border: 2px solid var(--acento);
+        }
+        .miniatura[aria-pressed="true"] .delante { transform: rotateY(-180deg); }
+        .miniatura[aria-pressed="true"] .detras { transform: rotateY(0deg); }
+        /* Con números: la rejilla en orden, con los colores de cada fila */
+        .mini-numeros {
+            display: grid; width: 100%; height: 100%; gap: 1px; padding: 2px; box-sizing: border-box;
+            grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr);
+        }
+        .mini-numeros span {
+            display: flex; align-items: center; justify-content: center; border-radius: 3px;
+            color: var(--pz-texto); font: bold calc(var(--m) / var(--n) * 0.42) / 1 var(--fuente, sans-serif);
+        }
         .est-barra .dato b { font-variant-numeric: tabular-nums; }
-        @media (prefers-reduced-motion: reduce) { .ficha { transition: none; } }
+        @media (prefers-reduced-motion: reduce) { .ficha, .miniatura .lado-m { transition: none; } }
     </style>
     <style>
 /* ==== VISTA CSS ==== */
@@ -638,12 +685,15 @@ body {
         <div class="dato"><b id="dMov">0</b><span>MOVIM.</span></div>
         <div class="dato"><b id="dMejor">—</b><span>MEJOR</span></div>
         <div class="hueco"></div>
-        <button id="btnModelo" class="est-icono" type="button" aria-label="Ver el dibujo entero" aria-pressed="false">👁</button>
         <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
     </div>
     <div id="zona">
-        <div class="tablero" id="tablero" role="group" aria-label="Tablero">
-            <div id="modeloGrande"></div>
+        <div class="disposicion">
+            <div class="tablero" id="tablero" role="group" aria-label="Tablero"></div>
+            <button class="miniatura" id="miniatura" type="button" aria-pressed="false" aria-label="Mostrar el resultado final">
+                <span class="lado-m delante" aria-hidden="true"><span class="ico">🖼️</span>MOSTRAR<br>RESULTADO<br>FINAL</span>
+                <span class="lado-m detras" id="miniDetras" aria-hidden="true"></span>
+            </button>
         </div>
     </div>
 </section>
@@ -711,7 +761,7 @@ body {
             <ul>
                 <li><b>Toca una ficha</b> de la fila o la columna del hueco: ella y las que haya hasta el hueco se corren hacia él.</li>
                 <li>Cada ficha que se corre cuenta como un movimiento.</li>
-                <li>Con dibujo, <b>👁</b> enseña el dibujo entero mientras está pulsado.</li>
+                <li><b>MOSTRAR RESULTADO FINAL</b>, junto al tablero, da la vuelta a la miniatura y enseña cómo tiene que quedar. Tocándola otra vez se tapa. El reloj no se para.</li>
             </ul>
             <h3>EL RELOJ</h3>
             <ul>
@@ -1426,8 +1476,7 @@ function pintarTablero() {
     tab.classList.add(partida.fichas);
     tab.style.setProperty('--n', n);
     const conDibujo = partida.fichas !== 'numeros';
-    $('modeloGrande').style.backgroundImage = conDibujo ? urlDibujo(partida.dibujo) : 'none';
-    $('btnModelo').style.display = conDibujo ? '' : 'none';
+    pintarMiniatura(conDibujo);
     for (let p = 0; p < n * n; p++) {
         const b = document.createElement('button');
         b.type = 'button';
@@ -1567,10 +1616,27 @@ function verRecords() {
     EST.abrir('capaRanking');
 }
 
-/* ---------- MODELO ---------- */
+/* ---------- MINIATURA DEL RESULTADO ---------- */
+function pintarMiniatura(conDibujo) {
+    const d = $('miniDetras'), n = partida.n;
+    d.innerHTML = '';
+    d.style.setProperty('--n', n);
+    if (conDibujo) { d.style.backgroundImage = urlDibujo(partida.dibujo); return; }
+    d.style.backgroundImage = 'none';
+    const rejilla = document.createElement('div');
+    rejilla.className = 'mini-numeros';
+    for (let p = 0; p < n * n; p++) {
+        const s = document.createElement('span');
+        /* El último hueco, vacío: así queda el puzle resuelto */
+        if (p < n * n - 1) { s.textContent = String(p + 1); s.style.backgroundColor = 'var(--pz-f' + Math.floor(p / n) % 5 + ')'; }
+        rejilla.appendChild(s);
+    }
+    d.appendChild(rejilla);
+}
 function verModelo(si) {
-    $('modeloGrande').classList.toggle('visible', !!si);
-    $('btnModelo').setAttribute('aria-pressed', String(!!si));
+    const b = $('miniatura');
+    b.setAttribute('aria-pressed', String(!!si));
+    b.setAttribute('aria-label', si ? 'Ocultar el resultado final' : 'Mostrar el resultado final');
 }
 
 /* ---------- PAUSA ---------- */
@@ -1578,7 +1644,6 @@ function pausar() {
     if (!partida || pausado || partida.resuelta || !$('pJuego').classList.contains('activa')) return;
     pausado = true;
     pararReloj();
-    verModelo(false);
     musica.parar();
     EST.abrir('capaPausa');
 }
@@ -1604,12 +1669,11 @@ $('tablero').addEventListener('click', (e) => {
     if (f) tocar(Number(f.dataset.casilla));
 });
 
-/* 👁: mantener pulsado en el táctil; con teclado (click sin puntero), alterna */
-const bModelo = $('btnModelo');
-bModelo.addEventListener('pointerdown', (e) => { if (partida && !partida.resuelta) { verModelo(true); bModelo.setPointerCapture(e.pointerId); } });
-['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => bModelo.addEventListener(t, () => verModelo(false)));
-bModelo.addEventListener('click', (e) => { if (e.detail === 0) verModelo(bModelo.getAttribute('aria-pressed') !== 'true'); });
-bModelo.addEventListener('contextmenu', (e) => e.preventDefault());
+/* La miniatura: un toque la vuelve, otro la tapa. No para el reloj. */
+$('miniatura').addEventListener('click', () => {
+    if (!partida || pausado) return;
+    verModelo($('miniatura').getAttribute('aria-pressed') !== 'true');
+});
 
 document.addEventListener('keydown', (e) => {
     if (e.target instanceof HTMLInputElement) {
