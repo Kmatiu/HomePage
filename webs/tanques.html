@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-vista="menus">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -38,7 +38,7 @@ body {
              calc(env(safe-area-inset-right, 0px) + 6px)
              calc(env(safe-area-inset-bottom, 0px) + 14px)
              calc(env(safe-area-inset-left, 0px) + 6px);
-    background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
     color: var(--texto);
     font-family: var(--fuente);
     /* svh: la altura con la barra del navegador desplegada, la menor de las
@@ -122,7 +122,7 @@ body {
 }
 .opcion[aria-pressed="true"] {
     border-color: var(--acento);
-    background: rgba(0, 255, 200, 0.16);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
     color: var(--acento);
     font-weight: bold;
 }
@@ -136,7 +136,7 @@ body {
     padding: 15px;
     border: 2px solid var(--acento);
     border-radius: 12px;
-    background: rgba(0, 255, 200, 0.14);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
     color: var(--acento);
     font: inherit;
     font-size: 1rem;
@@ -161,7 +161,7 @@ body {
 .secundario[aria-pressed="true"] {
     color: var(--acento);
     border-color: var(--acento);
-    background: rgba(0, 255, 200, 0.12);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
 }
 
 .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
@@ -170,7 +170,7 @@ body {
 /* En pantalla táctil el :hover se queda pegado tras tocar */
 @media (hover: hover) {
     .opcion:not(:disabled):hover { border-color: var(--acento); }
-    .principal:hover { background: rgba(0, 255, 200, 0.26); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
     .secundario:hover { color: var(--texto); border-color: var(--texto); }
 }
 .opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
@@ -182,7 +182,7 @@ body {
     padding: 12px;
     border: 2px solid var(--borde);
     border-radius: 10px;
-    background: #0a0820;
+    background: var(--c-0a0820, #0a0820);
     color: var(--texto);
     font: inherit;
     /* 16px evita que iOS haga zoom al enfocar el campo */
@@ -237,7 +237,7 @@ body {
     padding: 12px 18px;
     border-radius: 10px;
     border: 2px solid var(--acento);
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
     color: var(--acento);
     font-family: var(--fuente);
     font-size: 0.85rem;
@@ -259,7 +259,7 @@ body {
     align-items: center;
     justify-content: center;
     padding: 14px;
-    background: rgba(5, 3, 20, 0.93);
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
     font-family: var(--fuente);
     color: var(--texto);
 }
@@ -273,7 +273,7 @@ body {
     padding: 18px;
     border: 2px solid var(--acento);
     border-radius: 14px;
-    background: #130f33;
+    background: var(--c-130f33, #130f33);
     text-align: center;
 }
 .caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
@@ -312,7 +312,7 @@ body {
         #pJuego { max-width: 1000px; }
         #gameStage { margin-top: 6px; }
         .est-barra #levelName { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        #twoPlayersNote { color: #ff8080; font-size: 0.7rem; margin: 8px 2px 0; line-height: 1.5; display: none; }
+        #twoPlayersNote { color: var(--c-ff8080, #ff8080); font-size: 0.7rem; margin: 8px 2px 0; line-height: 1.5; display: none; }
 
         @media (orientation: landscape) and (max-height: 520px) {
             .est-barra { padding: 2px 6px; }
@@ -335,10 +335,10 @@ body {
            no cambian) y se escalan para caber. El de rastros va en flujo y
            marca el tamaño; el principal se superpone encima. */
         #gameContainer {
-            background: #c2b280; /* MODIFICADO - Color de fondo de arena */
-            border: 5px solid #444;
+            background: var(--c-c2b280, #c2b280); /* MODIFICADO - Color de fondo de arena */
+            border: 5px solid var(--c-444, #444);
             border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            box-shadow: 0 10px 40px rgba(var(--c-0-0-0, 0, 0, 0),0.8);
             position: relative;
             display: none;
             max-width: 100%;
@@ -402,9 +402,9 @@ body {
             width: 54px;
             height: 54px;
             border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.75);
-            background: rgba(0, 0, 0, 0.42);
-            color: #fff;
+            border: 2px solid rgba(var(--c-255-255-255, 255, 255, 255), 0.75);
+            background: rgba(var(--c-0-0-0, 0, 0, 0), 0.42);
+            color: var(--c-fff, #fff);
             font-family: inherit;
             font-size: 19px;
             font-weight: bold;
@@ -416,26 +416,26 @@ body {
             cursor: pointer;
         }
 
-        .touch-pad.p2 .touch-btn { border-color: rgba(231, 76, 60, 0.9); color: #ffb0a6; }
-        .touch-pad.p1 .touch-btn { border-color: rgba(74, 144, 226, 0.9); color: #b9d8ff; }
+        .touch-pad.p2 .touch-btn { border-color: rgba(var(--c-231-76-60, 231, 76, 60), 0.9); color: var(--c-ffb0a6, #ffb0a6); }
+        .touch-pad.p1 .touch-btn { border-color: rgba(var(--c-74-144-226, 74, 144, 226), 0.9); color: var(--c-b9d8ff, #b9d8ff); }
 
         .touch-btn.fire {
             width: 76px;
             height: 76px;
             font-size: 12px;
-            border-color: rgba(255, 200, 0, 0.9);
-            color: #ffd700;
-            background: rgba(60, 45, 0, 0.45);
+            border-color: rgba(var(--c-255-200-0, 255, 200, 0), 0.9);
+            color: var(--c-ffd700, #ffd700);
+            background: rgba(var(--c-60-45-0, 60, 45, 0), 0.45);
         }
 
-        .touch-btn:active { background: rgba(255, 255, 255, 0.28); }
+        .touch-btn:active { background: rgba(var(--c-255-255-255, 255, 255, 255), 0.28); }
 
         .pad-label {
             grid-column: 1 / -1;
             text-align: center;
             font-size: 10px;
-            color: #fff;
-            text-shadow: 1px 1px 2px #000;
+            color: var(--c-fff, #fff);
+            text-shadow: 1px 1px 2px var(--c-000, #000);
             pointer-events: none;
         }
 
@@ -444,9 +444,9 @@ body {
             left: 50%;
             top: 10px;
             transform: translateX(-50%);
-            background: rgba(0,0,0,0.75);
-            border: 2px solid #ffd700;
-            color: #ffd700;
+            background: rgba(var(--c-0-0-0, 0, 0, 0),0.75);
+            border: 2px solid var(--c-ffd700, #ffd700);
+            color: var(--c-ffd700, #ffd700);
             padding: 6px 12px;
             border-radius: 6px;
             font-size: 12px;
@@ -465,6 +465,212 @@ body {
             .touch-btn.fire { width: 64px; height: 64px; font-size: 11px; }
         }
     </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
 </head>
 <body>
 

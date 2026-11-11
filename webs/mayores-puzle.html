@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fff8ee">
+<title>Puzle</title>
+<style>
+/* ==========================================================
+   BASE DE LOS JUEGOS PARA MAYORES
+   Tema claro a propósito, distinto del oscuro del resto del portal: con la
+   vista cansada se lee mejor texto oscuro sobre fondo claro. Todos los
+   colores de texto pasan de 7:1 de contraste sobre el fondo (nivel AAA).
+
+   Todo lo de dentro del juego va en rem, y el tamaño de letra se cambia
+   tocando solo --escala: así A− / A+ agrandan textos, botones y tarjetas a
+   la vez. La barra de arriba va en px a propósito: tiene que caber y estar
+   al alcance con la letra al máximo.
+   Base de 18 px (el navegador trae 16) y escalones hasta 26 px. Se probó
+   llegar a 33 px y a 29 px: en un móvil no cabía ni una pregunta.
+   ========================================================== */
+:root {
+    --escala: 1;
+    --fondo: #fff8ee;
+    --tarjeta: #ffffff;
+    --texto: #1b1b1b;
+    --suave: #4a4a4a;
+    --azul: #174f94;
+    --azul-claro: #e3edf9;
+    --verde: #0d5524;
+    --verde-claro: #e2f3e6;
+    --naranja: #763800;
+    --naranja-claro: #fdeedd;
+    --borde: #c9bfae;
+    /* Alto de la barra de arriba: 16 + 52 + 6 de relleno y botón, más 2 de
+       borde. Lo usan los juegos que dimensionan su tablero con el alto libre. */
+    --alto-barra: calc(env(safe-area-inset-top, 0px) + 76px);
+}
+
+* { box-sizing: border-box; }
+
+html {
+    font-size: calc(18px * var(--escala));
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.35;
+    /* Sin zoom por doble toque ni selección de texto al pulsar fuerte:
+       con temblor, un toque doble involuntario es lo normal */
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- BARRA DE ARRIBA ---------- */
+.barra {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* 16 px y no 6 por arriba: en el iPhone, Safari difumina lo que queda
+       justo debajo de la hora y la batería, y con 6 px el difuminado caía
+       sobre los botones. Se suma al hueco de seguridad, no lo sustituye
+       (max() lo sustituiría; trampa ya pagada en este proyecto). */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px) 10px 6px;
+    background: var(--fondo);
+    border-bottom: 2px solid var(--borde);
+}
+.barra button {
+    min-width: 56px;
+    height: 52px;
+    padding: 0 12px;
+    border: 2px solid var(--azul);
+    border-radius: 12px;
+    background: var(--tarjeta);
+    color: var(--azul);
+    font: 700 20px/1 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+}
+.barra .salir { margin-right: auto; }
+.barra button:disabled { opacity: 0.35; }
+
+/* ---------- PANTALLAS ---------- */
+.pantalla { display: none; padding: 0.6rem 0.8rem calc(env(safe-area-inset-bottom, 0px) + 0.8rem); max-width: 34rem; margin: 0 auto; }
+.pantalla.activa { display: block; }
+
+h1 { font-size: 1.5rem; margin: 0.4rem 0 0.6rem; line-height: 1.2; text-align: center; }
+.explicacion { font-size: 1.1rem; text-align: center; margin: 0 0 1rem; }
+.pista { font-size: 1rem; text-align: center; color: var(--suave); margin: 0.4rem 0; min-height: 1.35em; }
+.fila-botones { display: flex; gap: 0.5rem; }
+.fila-botones .boton { margin: 0.4rem 0; }
+.fila-botones .boton:first-child { flex: 2; }
+.fila-botones .boton:not(:first-child) { flex: 1; }
+
+/* ---------- BOTONES ---------- */
+.boton {
+    display: block;
+    width: 100%;
+    min-height: 3.2rem;
+    margin: 0.6rem 0;
+    padding: 0.6rem 1rem;
+    border: 3px solid var(--azul);
+    border-radius: 0.8rem;
+    background: var(--azul);
+    color: #fff;
+    font: 700 1.25rem/1.2 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+}
+.boton.secundario { background: var(--tarjeta); color: var(--azul); }
+.boton:disabled { opacity: 0.4; }
+
+:focus-visible { outline: 4px solid #e08a00; outline-offset: 3px; }
+
+/* ---------- MENSAJES ---------- */
+.bien { color: var(--verde); }
+.felicidad { font-size: 1.4rem; font-weight: 700; text-align: center; color: var(--verde); margin: 0.6rem 0; }
+
+/* ---------- REJILLAS Y TARJETAS DE OBJETO ----------
+   Las usan la compra y ¿Qué falta?: dibujo y nombre siempre juntos. */
+/* minmax(0, 1fr) y no 1fr a secas: con 1fr la columna crece hasta el ancho
+   de la palabra más larga y la rejilla se salía de la pantalla por la
+   derecha con la letra grande */
+.lista, .estantes, .mesa, .opciones-obj {
+    display: grid;
+    grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+    gap: 0.5rem;
+    margin: 0.4rem 0 0.6rem;
+}
+.lista .producto { cursor: default; }
+
+
+.producto {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem 0.2rem;
+    /* El ancho de la tarjeta manda en el tamaño del nombre (unidades cqi) */
+    container-type: inline-size;
+    border: 3px solid var(--borde);
+    border-radius: 0.8rem;
+    background: var(--tarjeta);
+    color: var(--texto);
+    font: 600 1rem/1.15 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+}
+.producto .icono { font-size: 2rem; line-height: 1.1; }
+/* El nombre crece con la letra hasta donde quepa la palabra más larga
+   («mantequilla», 11 letras) sin partirla. La primera versión partía las
+   palabras por cualquier sitio («mant-equill-a») con la letra grande, que
+   es lo peor para quien ya lee con esfuerzo. 15cqi = 15 % del ancho de la
+   tarjeta; en negrita una letra ocupa algo más de media eme. */
+.producto .nombre { margin-top: 0.1rem; font-size: 1rem; }
+@supports (font-size: 1cqi) {
+    .producto .nombre { font-size: min(1rem, 15cqi); }
+    .producto .icono { font-size: min(2rem, 40cqi); }
+}
+
+.producto.en-cesta { border-color: var(--verde); background: var(--verde-claro); }
+.producto.en-cesta::after {
+    content: '✓';
+    position: absolute; top: 0.1rem; right: 0.35rem;
+    color: var(--verde); font-size: 1.3rem; font-weight: 900;
+}
+/* El que no estaba se apaga pero se sigue leyendo: no desaparece, para que
+   la tienda no cambie de sitio debajo del dedo */
+.producto.no-estaba { opacity: 0.38; border-style: dashed; }
+/* El aviso late con un halo, sin cambiar de tamaño: la primera versión
+   crecía y encogía (scale) y un blanco que se mueve es más difícil de
+   acertar con temblor. Hasta Playwright se negaba a pulsarla. */
+.producto.ayuda { border-color: var(--naranja); background: var(--naranja-claro); animation: halo 1.2s ease-in-out infinite; }
+@keyframes halo { 50% { box-shadow: 0 0 0 0.35rem rgba(118, 56, 0, 0.35); } }
+
+.pie { display: flex; align-items: center; gap: 0.6rem; }
+.cesta { flex: 1; font-size: 1.05rem; font-weight: 700; margin: 0; }
+.pie .boton { width: auto; flex: 0 0 auto; margin: 0.3rem 0; }
+.pista.titulo { font-size: 1.15rem; font-weight: 700; color: var(--texto); margin: 0.2rem 0; }
+
+/* ---------- CARTAS DE MEMORY ----------
+   Cuadradas y del ancho de su columna; el alto lo da aspect-ratio, sin
+   height fijo (con height explícito aspect-ratio no hace nada; trampa ya
+   pagada en este proyecto). */
+.cartas {
+    display: grid;
+    grid-template-columns: repeat(var(--columnas, 3), minmax(0, 1fr));
+    gap: 0.5rem;
+    width: min(100%, var(--ancho-cartas, 100%));
+    margin: 0.4rem auto 0.6rem;
+}
+.carta {
+    position: relative;
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 0.2rem; overflow: hidden;
+    border: 3px solid var(--azul); border-radius: 0.8rem;
+    background: var(--azul-claro); color: var(--azul);
+    font: 700 1rem/1.15 system-ui, -apple-system, Roboto, Arial, sans-serif;
+    cursor: pointer;
+    container-type: inline-size;
+}
+.carta.abierta { background: var(--tarjeta); border-color: var(--texto); color: var(--texto); outline: 0.3rem solid var(--texto); outline-offset: 0.1rem; }
+.carta.hecha { background: var(--verde-claro); border-color: var(--verde); color: var(--texto); cursor: default; }
+.carta.ayuda { animation: halo 1.2s ease-in-out infinite; }
+.carta .icono { font-size: min(2.2rem, 42cqi); line-height: 1.1; }
+.carta .nombre { font-size: min(1rem, 15cqi); margin-top: 0.1rem; }
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- PROPIO DE ESTE JUEGO ---------- */
+.eleccion { display: grid; gap: 0.2rem; }
+.fila-pista { display: flex; align-items: flex-start; gap: 0.6rem; }
+.fila-pista .pista { flex: 1; text-align: left; margin-top: 0.2rem; }
+/* El modelo: cómo tiene que quedar, siempre a la vista */
+.modelo {
+    flex: 0 0 auto; width: 4.2rem; height: 4.2rem;
+    border: 3px solid var(--borde); border-radius: 0.5rem;
+    background-size: 100% 100%; background-color: var(--tarjeta);
+}
+
+/* El tablero mide --lado px (lo calcula ajustarTablero con el alto libre).
+   Las piezas van con posición absoluta y transform: así, al moverse, se
+   desliza la misma pieza en vez de pintarse otra en su sitio, y se ve de
+   dónde viene. */
+.tablero {
+    position: relative; width: var(--lado, 300px); height: var(--lado, 300px);
+    margin: 0.3rem auto 0.4rem; border-radius: 0.6rem;
+    background: repeating-linear-gradient(45deg, #efe4cf 0 10px, #e6d8bd 10px 20px);
+    border: 3px solid var(--borde); box-sizing: content-box;
+}
+.pieza {
+    position: absolute; left: 0; top: 0; padding: 0;
+    width: var(--pieza); height: var(--pieza);
+    border: 3px solid var(--borde); border-radius: 0.45rem;
+    background-color: var(--tarjeta); background-repeat: no-repeat;
+    cursor: pointer;
+    transition: transform 0.2s ease-out, border-color 0.2s, border-radius 0.4s, border-width 0.4s;
+}
+/* Las que se pueden mover, con el borde azul: la regla se ve, no hay que
+   recordarla */
+.pieza.movible { border-color: var(--azul); border-width: 4px; }
+.pieza.ayuda { border-color: var(--naranja); border-width: 5px; animation: halo 1.2s ease-in-out infinite; }
+/* Resuelto: sin bordes ni separación, el dibujo entero */
+.tablero.completo .pieza { border-width: 0; border-radius: 0; cursor: default; }
+.pieza.ultima { opacity: 0; transition: opacity 0.6s; }
+.tablero.completo .pieza.ultima { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .pieza { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+    <section class="pantalla activa" id="inicio">
+        <h1>🧩 Puzle</h1>
+        <p class="explicacion">Mueve las piezas hasta que quede el dibujo. Se mueven las que están al lado del hueco.</p>
+        <div class="eleccion" id="eleccion">
+            <button class="boton" id="btnEmpezar" type="button">EMPEZAR</button>
+            <button class="boton secundario" id="btnFotos" type="button" style="display:none">CON TUS FOTOS</button>
+        </div>
+    </section>
+
+    <section class="pantalla" id="juego">
+        <div class="fila-pista">
+            <div class="modelo" id="modelo" role="img" aria-label="Así tiene que quedar"></div>
+            <p class="pista titulo" id="pista" data-foco aria-live="polite"></p>
+        </div>
+        <div class="tablero" id="tablero" role="group" aria-label="El puzle"></div>
+        <button class="boton secundario" id="btnAyuda" type="button">AYÚDAME</button>
+        <button class="boton" id="btnSiguiente" type="button">SIGUIENTE</button>
+    </section>
+
+    <section class="pantalla" id="final">
+        <h1 data-foco>¡Muy bien!</h1>
+        <p class="felicidad" id="textoFinal"></p>
+        <button class="boton" id="btnOtraVez" type="button">OTRA VEZ</button>
+        <button class="boton secundario" id="btnSalirFinal" type="button">SALIR</button>
+    </section>
+</main>
+
+<script>
+/* ==========================================================
+   LÓGICA DE LOS JUEGOS PARA MAYORES
+   Lo que no toca la pantalla: cómo se ajusta la dificultad y qué sale en
+   cada ronda. Sirve igual en el navegador y en Node, donde se prueba.
+
+   Toda elección al azar recibe la función `azar`, para que las pruebas
+   puedan repetir exactamente la misma partida.
+   ========================================================== */
+
+/* ---------- DIFICULTAD QUE SE AJUSTA SOLA ----------
+   La meta es que acierten casi siempre (en torno a 8 de cada 10): con estas
+   personas, fallar seguido no enseña, desanima.
+   Sube tras 3 rondas limpias seguidas y baja con la primera que no lo sea.
+   Es la escalera «3 arriba, 1 abajo», que se estabiliza donde acertar tres
+   veces seguidas tiene un 50 % de probabilidad: 0,79³ ≈ 0,5, o sea en un 79 %
+   de aciertos. Medido con jugadores simulados (prueba-logica.js): 77-79 % de
+   rondas limpias, y un 70 % el más flojo porque se queda en el nivel 1, que
+   es el suelo. La primera versión bajaba tras DOS rondas malas y perdonaba
+   un error suelto: parecía más amable y dejaba a todos en un 48 %.
+   - 'bien': sin errores y sin pedir ayuda
+   - 'mal':  cualquier error o ayuda. Bajar no se le enseña al jugador:
+             solo hace la siguiente ronda un poco más fácil. */
+const SUBIR_TRAS = 3, BAJAR_TRAS = 1;
+
+function nivelInicial() {
+    return { nivel: 1, seguidasBien: 0 };
+}
+
+function adaptarNivel(estado, resultado, nivelMaximo) {
+    let { nivel, seguidasBien } = estado;
+    if (resultado === 'bien') {
+        seguidasBien++;
+        if (seguidasBien >= SUBIR_TRAS && nivel < nivelMaximo) { nivel++; seguidasBien = 0; }
+    } else {
+        seguidasBien = 0;
+        if (nivel > 1) nivel--;
+    }
+    return { nivel, seguidasBien };
+}
+
+function resultadoDeRonda(errores, ayudas) {
+    return errores === 0 && ayudas === 0 ? 'bien' : 'mal';
+}
+
+function barajar(lista, azar) {
+    const l = lista.slice();
+    for (let i = l.length - 1; i > 0; i--) {
+        const j = Math.floor(azar() * (i + 1));
+        [l[i], l[j]] = [l[j], l[i]];
+    }
+    return l;
+}
+
+/* ==========================================================
+   LA LISTA DE LA COMPRA
+   Solo emojis hasta la versión 12 (2019): los más nuevos salen como un
+   cuadrado vacío en móviles algo viejos. Y ninguno que se preste a
+   confusión: la seta del emoji es una seta venenosa roja con lunares, no
+   un champiñón, así que no está.
+   ========================================================== */
+const PRODUCTOS = [
+    { nombre: 'pan',          icono: '🍞', grupo: 'desayuno' },
+    { nombre: 'leche',        icono: '🥛', grupo: 'desayuno' },
+    { nombre: 'huevos',       icono: '🥚', grupo: 'desayuno' },
+    { nombre: 'queso',        icono: '🧀', grupo: 'desayuno' },
+    { nombre: 'café',         icono: '☕', grupo: 'desayuno' },
+    { nombre: 'galletas',     icono: '🍪', grupo: 'desayuno' },
+    { nombre: 'mantequilla',  icono: '🧈', grupo: 'desayuno' },
+
+    { nombre: 'manzanas',     icono: '🍎', grupo: 'fruta' },
+    { nombre: 'plátanos',     icono: '🍌', grupo: 'fruta' },
+    { nombre: 'naranjas',     icono: '🍊', grupo: 'fruta' },
+    { nombre: 'uvas',         icono: '🍇', grupo: 'fruta' },
+    { nombre: 'fresas',       icono: '🍓', grupo: 'fruta' },
+    { nombre: 'peras',        icono: '🍐', grupo: 'fruta' },
+    { nombre: 'limones',      icono: '🍋', grupo: 'fruta' },
+    { nombre: 'sandía',       icono: '🍉', grupo: 'fruta' },
+    { nombre: 'piña',         icono: '🍍', grupo: 'fruta' },
+    { nombre: 'cerezas',      icono: '🍒', grupo: 'fruta' },
+
+    { nombre: 'tomates',      icono: '🍅', grupo: 'verdura' },
+    { nombre: 'patatas',      icono: '🥔', grupo: 'verdura' },
+    { nombre: 'zanahorias',   icono: '🥕', grupo: 'verdura' },
+    { nombre: 'cebollas',     icono: '🧅', grupo: 'verdura' },
+    { nombre: 'ajos',         icono: '🧄', grupo: 'verdura' },
+    { nombre: 'lechuga',      icono: '🥬', grupo: 'verdura' },
+    { nombre: 'pepino',       icono: '🥒', grupo: 'verdura' },
+    { nombre: 'berenjena',    icono: '🍆', grupo: 'verdura' },
+    { nombre: 'maíz',         icono: '🌽', grupo: 'verdura' },
+    { nombre: 'brócoli',      icono: '🥦', grupo: 'verdura' },
+
+    { nombre: 'pollo',        icono: '🍗', grupo: 'carne y pescado' },
+    { nombre: 'pescado',      icono: '🐟', grupo: 'carne y pescado' },
+    { nombre: 'gambas',       icono: '🦐', grupo: 'carne y pescado' },
+    { nombre: 'filetes',      icono: '🥩', grupo: 'carne y pescado' },
+
+    { nombre: 'arroz',        icono: '🍚', grupo: 'despensa' },
+    { nombre: 'sal',          icono: '🧂', grupo: 'despensa' },
+    { nombre: 'miel',         icono: '🍯', grupo: 'despensa' },
+    { nombre: 'chocolate',    icono: '🍫', grupo: 'despensa' },
+    { nombre: 'vino',         icono: '🍷', grupo: 'despensa' },
+
+    { nombre: 'jabón',        icono: '🧼', grupo: 'limpieza' },
+    { nombre: 'papel higiénico', icono: '🧻', grupo: 'limpieza' },
+    { nombre: 'esponja',      icono: '🧽', grupo: 'limpieza' }
+];
+
+/* Cuántos productos hay que recordar y cuántos de más hay en la tienda.
+   Nunca más de 9 en la tienda: con la letra al máximo en un móvil pequeño
+   no caben más sin desplazar la pantalla, y desplazar es otra dificultad
+   que no es la que se quiere entrenar. Desde el nivel 6 los que sobran son
+   del mismo tipo que los de la lista (frutas entre frutas), que obliga a
+   recordar de verdad y no a reconocer «algo de fruta». */
+const NIVELES_COMPRA = [
+    { lista: 2, otros: 2, parecidos: false },
+    { lista: 2, otros: 4, parecidos: false },
+    { lista: 3, otros: 3, parecidos: false },
+    { lista: 3, otros: 6, parecidos: false },
+    { lista: 4, otros: 5, parecidos: false },
+    { lista: 4, otros: 5, parecidos: true },
+    { lista: 5, otros: 4, parecidos: true },
+    { lista: 6, otros: 3, parecidos: true }
+];
+
+/* `evitar`: nombres de la lista anterior, para que no se repita la compra */
+function rondaCompra(nivel, azar, evitar) {
+    const cfg = NIVELES_COMPRA[Math.min(nivel, NIVELES_COMPRA.length) - 1];
+    const fuera = new Set(evitar || []);
+    const candidatos = PRODUCTOS.filter(p => !fuera.has(p.nombre));
+
+    const lista = barajar(candidatos, azar).slice(0, cfg.lista);
+    const enLista = new Set(lista.map(p => p.nombre));
+    const resto = barajar(PRODUCTOS.filter(p => !enLista.has(p.nombre)), azar);
+
+    let otros;
+    if (cfg.parecidos) {
+        const grupos = new Set(lista.map(p => p.grupo));
+        const mismos = resto.filter(p => grupos.has(p.grupo));
+        const distintos = resto.filter(p => !grupos.has(p.grupo));
+        otros = mismos.concat(distintos).slice(0, cfg.otros);
+    } else {
+        otros = resto.slice(0, cfg.otros);
+    }
+    return { lista, tienda: barajar(lista.concat(otros), azar) };
+}
+
+/* ==========================================================
+   REFRANES
+   Partidos donde se hace la pausa al decirlos. Nivel 1, los que sabe todo
+   el mundo; nivel 2, conocidos pero menos repetidos. Se han dejado fuera
+   los de muerte o violencia («Muerto el perro…», «Cría cuervos…»): son un
+   rato de entretenimiento, no hace falta llevarlo ahí.
+   ========================================================== */
+const REFRANES = [
+    ['A quien madruga', 'Dios le ayuda', 1],
+    ['No por mucho madrugar', 'amanece más temprano', 1],
+    ['Más vale pájaro en mano', 'que ciento volando', 1],
+    ['En casa del herrero', 'cuchillo de palo', 1],
+    ['Perro ladrador', 'poco mordedor', 1],
+    ['Ojos que no ven', 'corazón que no siente', 1],
+    ['Camarón que se duerme', 'se lo lleva la corriente', 1],
+    ['Quien a buen árbol se arrima', 'buena sombra le cobija', 1],
+    ['Dime con quién andas', 'y te diré quién eres', 1],
+    ['Más vale tarde', 'que nunca', 1],
+    ['No hay mal', 'que por bien no venga', 1],
+    ['A caballo regalado', 'no le mires el diente', 1],
+    ['Quien mucho abarca', 'poco aprieta', 1],
+    ['Agua que no has de beber', 'déjala correr', 1],
+    ['De tal palo', 'tal astilla', 1],
+    ['En boca cerrada', 'no entran moscas', 1],
+    ['A palabras necias', 'oídos sordos', 1],
+    ['Hablando del rey de Roma', 'por la puerta asoma', 1],
+    ['Cuando el río suena', 'agua lleva', 1],
+    ['No dejes para mañana', 'lo que puedas hacer hoy', 1],
+    ['Más vale prevenir', 'que curar', 1],
+    ['Zapatero', 'a tus zapatos', 1],
+    ['A mal tiempo', 'buena cara', 1],
+    ['El hábito', 'no hace al monje', 1],
+    ['Cada oveja', 'con su pareja', 1],
+    ['Dios los cría', 'y ellos se juntan', 1],
+
+    ['Más sabe el diablo por viejo', 'que por diablo', 2],
+    ['Del dicho al hecho', 'hay mucho trecho', 2],
+    ['A buen entendedor', 'pocas palabras bastan', 2],
+    ['El que tenga tienda', 'que la atienda', 2],
+    ['Gato escaldado', 'del agua fría huye', 2],
+    ['Una golondrina', 'no hace verano', 2],
+    ['En abril', 'aguas mil', 2],
+    ['Hasta el cuarenta de mayo', 'no te quites el sayo', 2],
+    ['Año de nieves', 'año de bienes', 2],
+    ['Por la boca', 'muere el pez', 2],
+    ['Quien siembra vientos', 'recoge tempestades', 2],
+    ['No es oro', 'todo lo que reluce', 2],
+    ['La avaricia', 'rompe el saco', 2],
+    ['A falta de pan', 'buenas son tortas', 2],
+    ['Ande yo caliente', 'y ríase la gente', 2],
+    ['Sobre gustos', 'no hay nada escrito', 2],
+    ['Quien tiene un amigo', 'tiene un tesoro', 2],
+    ['Lo cortés', 'no quita lo valiente', 2],
+    ['Más vale maña', 'que fuerza', 2],
+    ['Las apariencias', 'engañan', 2],
+    ['Donde fueres', 'haz lo que vieres', 2],
+    ['El que la sigue', 'la consigue', 2]
+].map(([inicio, final, fama]) => ({ inicio, final, fama }));
+
+/* Nivel: cuántos finales se ofrecen y hasta qué fama de refrán entra */
+const NIVELES_REFRANES = [
+    { opciones: 2, fama: 1 },
+    { opciones: 3, fama: 1 },
+    { opciones: 3, fama: 2 },
+    { opciones: 4, fama: 2 }
+];
+
+const primeraPalabra = (t) => t.toLowerCase().split(/\s+/)[0];
+const dosPalabras = (t) => t.toLowerCase().split(/\s+/).slice(0, 2).join(' ');
+
+/* Un final de otro refrán que empiece igual que este («Más vale…») no sirve
+   de distractor: «Más vale prevenir que nunca» casi suena bien, y para
+   quien duda eso no es un reto, es una trampa. */
+function sirveDeDistractor(objetivo, otro) {
+    if (otro === objetivo || otro.final === objetivo.final) return false;
+    return dosPalabras(otro.inicio) !== dosPalabras(objetivo.inicio) &&
+           primeraPalabra(otro.inicio) !== primeraPalabra(objetivo.inicio);
+}
+
+/* `usados`: inicios ya salidos en la sesión, para no repetir refrán */
+function rondaRefran(nivel, azar, usados) {
+    const cfg = NIVELES_REFRANES[Math.min(nivel, NIVELES_REFRANES.length) - 1];
+    const vistos = new Set(usados || []);
+    let pool = REFRANES.filter(r => r.fama <= cfg.fama && !vistos.has(r.inicio));
+    if (!pool.length) pool = REFRANES.filter(r => r.fama <= cfg.fama);
+
+    const refran = pool[Math.floor(azar() * pool.length)];
+    const distractores = barajar(REFRANES.filter(r => sirveDeDistractor(refran, r)), azar)
+        .slice(0, cfg.opciones - 1)
+        .map(r => r.final);
+    return { refran, opciones: barajar([refran.final].concat(distractores), azar) };
+}
+
+/* ==========================================================
+   COLORES DE LOS JUEGOS DE BOTONES (tipo Simón)
+   Cuatro colores escalonados también en CLARIDAD, no solo en tono: así se
+   distinguen con la vista borrosa, con el cristalino amarillento de la edad
+   o con daltonismo. Los colores del Simón de toda la vida (rojo, verde,
+   azul, amarillo) se midieron y el rojo y el verde tenían la misma claridad
+   (1,03:1): con daltonismo rojo-verde eran el mismo botón.
+   Medido con prueba-logica.js (distancia ΔE en CIELAB entre el par más
+   parecido, con daltonismo simulado según Machado y otros, 2009):
+     azul y naranja → ≥ 53 en los cuatro casos, claridad ≥ 2:1  (la de serie)
+     clásicos       → 35 normal, 15-19 con daltonismo rojo-verde
+     grises         → 25 en todos (no usa el color), claridad ≥ 1,8:1
+   Cada botón lleva además forma y nombre: el color nunca va solo. La forma
+   va pintada en `tinta` sobre el color (≥ 3:1); el nombre, en una etiqueta
+   blanca aparte, porque escrito sobre los colores de claridad media no
+   llegaba a 7:1 ni en blanco ni en negro. */
+const PALETAS = [
+    { id: 'azul-naranja', nombre: 'Azul y naranja', colores: [
+        { nombre: 'negro',   fondo: '#1a1a1a', tinta: '#ffffff' },
+        { nombre: 'azul',    fondo: '#2f6fe0', tinta: '#ffffff' },
+        { nombre: 'naranja', fondo: '#ff9800', tinta: '#1a1a1a' },
+        { nombre: 'blanco',  fondo: '#f7f7f7', tinta: '#1a1a1a' } ] },
+    { id: 'clasicos', nombre: 'Clásicos', colores: [
+        { nombre: 'azul',     fondo: '#0d2c6e', tinta: '#ffffff' },
+        { nombre: 'rojo',     fondo: '#e53935', tinta: '#ffffff' },
+        { nombre: 'verde',    fondo: '#8bc34a', tinta: '#1a1a1a' },
+        { nombre: 'amarillo', fondo: '#fff176', tinta: '#1a1a1a' } ] },
+    { id: 'grises', nombre: 'Grises', colores: [
+        { nombre: 'negro',       fondo: '#111111', tinta: '#ffffff' },
+        { nombre: 'gris oscuro', fondo: '#5a5a5a', tinta: '#ffffff' },
+        { nombre: 'gris claro',  fondo: '#b4b4b4', tinta: '#111111' },
+        { nombre: 'blanco',      fondo: '#fafafa', tinta: '#111111' } ] }
+];
+/* Formas por posición, iguales en todas las paletas */
+const FORMAS = ['círculo', 'cuadrado', 'triángulo', 'estrella'];
+
+/* ==========================================================
+   REPITE LOS COLORES
+   Una secuencia por ronda, que no crece dentro de la ronda como en el
+   Simón clásico: así cada ronda es corta y se puede repetir sin agobio.
+   ========================================================== */
+const NIVELES_SIMON = [
+    { botones: 2, largo: 2 },
+    { botones: 3, largo: 2 },
+    { botones: 3, largo: 3 },
+    { botones: 4, largo: 3 },
+    { botones: 4, largo: 4 },
+    { botones: 4, largo: 5 },
+    { botones: 4, largo: 6 }
+];
+
+/* Nunca el mismo botón tres veces seguidas (se ve como uno que no se
+   apaga) y siempre al menos dos botones distintos en la secuencia */
+function rondaSimon(nivel, azar) {
+    const cfg = NIVELES_SIMON[Math.min(nivel, NIVELES_SIMON.length) - 1];
+    let secuencia;
+    do {
+        secuencia = [];
+        while (secuencia.length < cfg.largo) {
+            const b = Math.floor(azar() * cfg.botones);
+            const n = secuencia.length;
+            if (n >= 2 && secuencia[n - 1] === b && secuencia[n - 2] === b) continue;
+            secuencia.push(b);
+        }
+    } while (new Set(secuencia).size < 2);
+    return { botones: cfg.botones, secuencia };
+}
+
+/* ==========================================================
+   PAGA JUSTO
+   Importes en céntimos, para no pelearse con 0,1 + 0,2 en coma flotante.
+   Diámetros reales en mm: las monedas se dibujan proporcionadas, porque el
+   tamaño es una de las pistas con las que se reconocen en la mano.
+   ========================================================== */
+const DINERO = [
+    { valor: 1,    tipo: 'cobre',   mm: 16.25 },
+    { valor: 2,    tipo: 'cobre',   mm: 18.75 },
+    { valor: 5,    tipo: 'cobre',   mm: 21.25 },
+    { valor: 10,   tipo: 'oro',     mm: 19.75 },
+    { valor: 20,   tipo: 'oro',     mm: 22.25 },
+    { valor: 50,   tipo: 'oro',     mm: 24.25 },
+    { valor: 100,  tipo: 'euro1',   mm: 23.25 },
+    { valor: 200,  tipo: 'euro2',   mm: 25.75 },
+    { valor: 500,  tipo: 'billete' },
+    { valor: 1000, tipo: 'billete' },
+    { valor: 2000, tipo: 'billete' }
+];
+
+/* Del más fácil (euros enteros con monedas de 1 y 2) al de cualquier
+   céntimo con billetes. `paso`: de cuánto en cuánto van los precios. */
+const NIVELES_MONEDAS = [
+    { valores: [100, 200],                                minimo: 100, maximo: 500,  paso: 100 },
+    { valores: [50, 100, 200],                            minimo: 150, maximo: 900,  paso: 50 },
+    { valores: [10, 20, 50, 100, 200],                    minimo: 50,  maximo: 500,  paso: 10 },
+    { valores: [5, 10, 20, 50, 100, 200],                 minimo: 50,  maximo: 500,  paso: 5 },
+    { valores: [1, 2, 5, 10, 20, 50, 100, 200],           minimo: 50,  maximo: 500,  paso: 1 },
+    /* Sin 1 ni 2 céntimos: los precios van de 5 en 5 y no hacen falta, y
+       con ellas el monedero no cabía en un móvil */
+    { valores: [5, 10, 20, 50, 100, 200, 500, 1000],      minimo: 600, maximo: 2000, paso: 5 }
+];
+
+function precioMonedas(nivel, azar, evitar) {
+    const cfg = NIVELES_MONEDAS[Math.min(nivel, NIVELES_MONEDAS.length) - 1];
+    const pasos = Math.floor((cfg.maximo - cfg.minimo) / cfg.paso) + 1;
+    let precio;
+    do {
+        precio = cfg.minimo + Math.floor(azar() * pasos) * cfg.paso;
+    } while (precio === evitar && pasos > 1);
+    return { precio, valores: cfg.valores };
+}
+
+/* La ayuda: la moneda o billete más grande que no se pasa de lo que falta.
+   Con los valores del euro eso da siempre el pago con menos piezas
+   (prueba-logica.js lo compara con el mínimo exacto). */
+function siguientePieza(falta, valores) {
+    const caben = valores.filter(v => v <= falta);
+    return caben.length ? Math.max(...caben) : -1;
+}
+
+/* 2,35 € → «2 euros con 35 céntimos»; la voz lee mejor las cifras sueltas */
+function importeEnTexto(centimos) {
+    const e = Math.floor(centimos / 100), c = centimos % 100;
+    const euros = e === 1 ? '1 euro' : e + ' euros';
+    const cents = c === 1 ? '1 céntimo' : c + ' céntimos';
+    if (!c) return euros;
+    if (!e) return cents;
+    return euros + ' con ' + cents;
+}
+const importeEnCifra = (centimos) => Math.floor(centimos / 100) + ',' + String(centimos % 100).padStart(2, '0') + ' €';
+
+/* ==========================================================
+   ¿QUÉ FALTA?
+   Objetos de casa. Mismo cuidado que con la compra: emojis hasta la
+   versión 12 y nada que se confunda.
+   ========================================================== */
+const OBJETOS = [
+    { nombre: 'gafas',        icono: '👓' },
+    { nombre: 'llave',        icono: '🔑' },
+    { nombre: 'reloj',        icono: '⏰' },
+    { nombre: 'teléfono',     icono: '📱' },
+    { nombre: 'libro',        icono: '📕' },
+    { nombre: 'lápiz',        icono: '✏️' },
+    { nombre: 'tijeras',      icono: '✂️' },
+    { nombre: 'paraguas',     icono: '☂️' },
+    { nombre: 'sombrero',     icono: '👒' },
+    { nombre: 'zapato',       icono: '👞' },
+    { nombre: 'flor',         icono: '🌷' },
+    { nombre: 'vela',         icono: '🕯️' },
+    { nombre: 'bombilla',     icono: '💡' },
+    { nombre: 'monedero',     icono: '👛' },
+    { nombre: 'cuchara',      icono: '🥄' },
+    { nombre: 'carta',        icono: '✉️' },
+    { nombre: 'regalo',       icono: '🎁' },
+    { nombre: 'pelota',       icono: '⚽' },
+    { nombre: 'campana',      icono: '🔔' },
+    { nombre: 'martillo',     icono: '🔨' },
+    { nombre: 'taza',         icono: '☕' },
+    { nombre: 'manzana',      icono: '🍎' }
+];
+
+/* 'falta': desaparece uno y se elige cuál de entre varios (de los que NO
+   estaban en la mesa, para que haya que recordar y no solo comparar).
+   'cambia': uno se cambia por otro nuevo y hay que tocar el nuevo. */
+const NIVELES_CAMBIO = [
+    { mesa: 3, tipo: 'falta',  opciones: 2 },
+    { mesa: 3, tipo: 'falta',  opciones: 3 },
+    { mesa: 4, tipo: 'falta',  opciones: 3 },
+    { mesa: 5, tipo: 'falta',  opciones: 3 },
+    { mesa: 4, tipo: 'cambia' },
+    { mesa: 5, tipo: 'cambia' },
+    { mesa: 6, tipo: 'falta',  opciones: 4 },
+    { mesa: 6, tipo: 'cambia' }
+];
+
+function rondaCambio(nivel, azar, evitar) {
+    const cfg = NIVELES_CAMBIO[Math.min(nivel, NIVELES_CAMBIO.length) - 1];
+    const fuera = new Set(evitar || []);
+    const libres = barajar(OBJETOS.filter(o => !fuera.has(o.nombre)), azar);
+    const mesa = libres.slice(0, cfg.mesa);
+    const restantes = barajar(OBJETOS.filter(o => !mesa.includes(o)), azar);
+    const hueco = Math.floor(azar() * cfg.mesa);
+    if (cfg.tipo === 'falta') {
+        const opciones = barajar([mesa[hueco]].concat(restantes.slice(0, cfg.opciones - 1)), azar);
+        return { tipo: 'falta', mesa, hueco, quitado: mesa[hueco], opciones };
+    }
+    return { tipo: 'cambia', mesa, hueco, quitado: mesa[hueco], nuevo: restantes[0] };
+}
+
+/* ==========================================================
+   PON EN ORDEN
+   Solo tareas cuyo orden lo impone la propia cosa (no se puede meter la
+   carta en el buzón antes de escribirla), nunca costumbres que cada casa
+   hace a su manera (¿la sal antes o después?). Se descartaron por eso la
+   tortilla, el huevo frito, el té y la lavadora.
+   ========================================================== */
+const TAREAS = [
+    { nombre: 'Hacer la compra', pasos: [
+        ['Hacer la lista', '📝'], ['Ir a la tienda', '🚶'], ['Coger lo que hace falta', '🛒'],
+        ['Pagar en la caja', '💶'], ['Volver a casa', '🏠']] },
+    { nombre: 'Cocer macarrones', pasos: [
+        ['Llenar la olla de agua', '💧'], ['Ponerla al fuego', '🔥'], ['Esperar a que hierva', '♨️'],
+        ['Echar los macarrones', '🍝'], ['Servirlos en el plato', '🍽️']] },
+    { nombre: 'Hacer zumo de naranja', pasos: [
+        ['Coger las naranjas', '🍊'], ['Partirlas por la mitad', '🔪'], ['Exprimirlas', '✊'],
+        ['Echar el zumo en el vaso', '🥛'], ['Bebérselo', '😋']] },
+    { nombre: 'Hacer una llamada', pasos: [
+        ['Coger el teléfono', '📱'], ['Marcar el número', '🔢'], ['Esperar a que contesten', '⏳'],
+        ['Hablar', '🗣️'], ['Colgar', '👋']] },
+    { nombre: 'Coger el autobús', pasos: [
+        ['Ir a la parada', '🚏'], ['Esperar el autobús', '⏳'], ['Subir al autobús', '🚌'],
+        ['Pagar el billete', '🎫'], ['Bajar en tu parada', '🏁']] },
+    { nombre: 'Plantar una flor', pasos: [
+        ['Hacer un hoyo en la tierra', '🕳️'], ['Poner la semilla', '🌰'], ['Taparla con tierra', '🤲'],
+        ['Regarla', '💧'], ['Ver salir la flor', '🌷']] },
+    /* Solo tres: abrir el grifo o mojarse antes o después del jabón es
+       costumbre de cada cual; enjabonar, aclarar y secar, no */
+    { nombre: 'Lavarse las manos', pasos: [
+        ['Enjabonarse las manos', '🧼'], ['Aclararse con agua', '💧'], ['Secarse con la toalla', '🙌']] },
+    { nombre: 'Mandar una carta', pasos: [
+        ['Escribir la carta', '✍️'], ['Meterla en el sobre', '✉️'], ['Echarla al buzón', '📮'], ['Le llega a quien la espera', '😊']] },
+    { nombre: 'Entrar en casa', pasos: [
+        ['Sacar la llave', '🔑'], ['Meterla en la cerradura', '🔐'], ['Abrir la puerta', '🚪'], ['Entrar en casa', '🏠']] },
+    { nombre: 'Fregar los platos', pasos: [
+        ['Quitar los restos', '🍽️'], ['Frotar con jabón', '🧽'], ['Aclarar con agua', '💧'], ['Dejar que se sequen', '🌬️']] }
+].map(t => ({ nombre: t.nombre, pasos: t.pasos.map(([texto, icono]) => ({ texto, icono })) }));
+
+const NIVELES_ORDEN = [{ pasos: 3 }, { pasos: 4 }, { pasos: 5 }];
+
+/* Con menos pasos que la tarea se quitan del medio: el primero y el último
+   se quedan siempre, que son los que dan sentido a la tarea */
+function rondaOrden(nivel, azar, evitar) {
+    const n = NIVELES_ORDEN[Math.min(nivel, NIVELES_ORDEN.length) - 1].pasos;
+    let candidatas = TAREAS.filter(t => t.pasos.length >= n && t.nombre !== evitar);
+    if (!candidatas.length) candidatas = TAREAS.filter(t => t.pasos.length >= n);
+    const tarea = candidatas[Math.floor(azar() * candidatas.length)];
+    const medio = barajar(tarea.pasos.slice(1, -1).map((_, i) => i + 1), azar).slice(0, n - 2).sort((a, b) => a - b);
+    const pasos = [0].concat(medio, [tarea.pasos.length - 1]).map(i => tarea.pasos[i]);
+    /* Desordenados de verdad: si el azar los deja en su sitio, no hay juego */
+    let barajados;
+    do { barajados = barajar(pasos, azar); } while (barajados.every((p, i) => p === pasos[i]));
+    return { tarea: tarea.nombre, pasos, barajados };
+}
+
+/* ==========================================================
+   CLASIFICAR
+   Un objeto cada vez y dos o tres grupos. Fuera todo lo discutible: las
+   bebidas en «¿Es comida?», el tomate (¿fruta o verdura?) y el maíz.
+   ========================================================== */
+const SIN_DUDA = new Set(['café', 'vino', 'leche', 'tomates', 'maíz']);
+const deGrupo = (g) => PRODUCTOS.filter(p => p.grupo === g && !SIN_DUDA.has(p.nombre));
+const NO_COMIDA = OBJETOS.filter(o => o.nombre !== 'manzana').concat(deGrupo('limpieza'));
+const COMIDA = PRODUCTOS.filter(p => p.grupo !== 'limpieza' && !SIN_DUDA.has(p.nombre));
+
+const CLASIFICACIONES = [
+    { pregunta: '¿Es comida?', grupos: [
+        { nombre: 'Es comida', icono: '🍽️', cosas: COMIDA },
+        { nombre: 'No es comida', icono: '✋', cosas: NO_COMIDA }] },
+    { pregunta: '¿Fruta o verdura?', grupos: [
+        { nombre: 'Fruta', icono: '🍎', cosas: deGrupo('fruta') },
+        { nombre: 'Verdura', icono: '🥕', cosas: deGrupo('verdura') }] },
+    { pregunta: '¿Fruta, verdura o carne y pescado?', grupos: [
+        { nombre: 'Fruta', icono: '🍎', cosas: deGrupo('fruta') },
+        { nombre: 'Verdura', icono: '🥕', cosas: deGrupo('verdura') },
+        { nombre: 'Carne y pescado', icono: '🐟', cosas: deGrupo('carne y pescado') }] }
+];
+
+const NIVELES_CLASIFICAR = [
+    { clasificacion: 0, cosas: 5 },
+    { clasificacion: 1, cosas: 6 },
+    { clasificacion: 2, cosas: 6 },
+    { clasificacion: 2, cosas: 8 }
+];
+
+/* Cada grupo sale al menos una vez, y nada se repite */
+function rondaClasificar(nivel, azar) {
+    const cfg = NIVELES_CLASIFICAR[Math.min(nivel, NIVELES_CLASIFICAR.length) - 1];
+    const c = CLASIFICACIONES[cfg.clasificacion];
+    const bolsas = c.grupos.map(g => barajar(g.cosas, azar));
+    const cosas = [];
+    for (let k = 0; cosas.length < cfg.cosas; k++) {
+        const g = k < c.grupos.length ? k : Math.floor(azar() * c.grupos.length);
+        const obj = bolsas[g].pop();
+        if (obj) cosas.push({ obj, grupo: g });
+    }
+    return { pregunta: c.pregunta, grupos: c.grupos.map(g => ({ nombre: g.nombre, icono: g.icono })), cosas: barajar(cosas, azar) };
+}
+
+/* ==========================================================
+   MEMORY (de oído y de fotos)
+   Un jugador con memoria perfecta falla, como mucho, parejas − 1 veces:
+   las que no puede evitar porque aún no ha visto la carta compañera
+   (medido en 20.000 partidas por tamaño, de 2 a 6 parejas; nunca más).
+   Así que solo cuentan como error los fallos de más.
+   ========================================================== */
+function erroresMemoria(fallos, pares) {
+    return Math.max(0, fallos - (pares - 1));
+}
+
+/* Palabras que no se parezcan al oído: nada de sol/col ni pan/flan */
+const PALABRAS_OIDO = [
+    { nombre: 'gato', icono: '🐈' }, { nombre: 'luna', icono: '🌙' }, { nombre: 'reloj', icono: '⏰' },
+    { nombre: 'flor', icono: '🌷' }, { nombre: 'coche', icono: '🚗' }, { nombre: 'árbol', icono: '🌳' },
+    { nombre: 'campana', icono: '🔔' }, { nombre: 'llave', icono: '🔑' }, { nombre: 'zapato', icono: '👞' },
+    { nombre: 'naranja', icono: '🍊' }, { nombre: 'libro', icono: '📕' }, { nombre: 'guitarra', icono: '🎸' },
+    { nombre: 'pelota', icono: '⚽' }, { nombre: 'caballo', icono: '🐎' }, { nombre: 'paraguas', icono: '☂️' },
+    { nombre: 'tren', icono: '🚂' }
+];
+const NIVELES_OIDO = [{ pares: 2 }, { pares: 3 }, { pares: 4 }, { pares: 5 }, { pares: 6 }];
+const NIVELES_FOTOS = [{ pares: 2 }, { pares: 3 }, { pares: 4 }, { pares: 6 }];
+
+function barajarParejas(cosas, pares, azar) {
+    const elegidas = barajar(cosas, azar).slice(0, pares);
+    return barajar(elegidas.concat(elegidas).map((c, i) => ({ id: i, cosa: c })), azar);
+}
+
+function rondaOido(nivel, azar) {
+    const pares = NIVELES_OIDO[Math.min(nivel, NIVELES_OIDO.length) - 1].pares;
+    return { pares, cartas: barajarParejas(PALABRAS_OIDO, pares, azar) };
+}
+
+/* Con fotos: nunca más parejas que fotos haya cargado */
+function rondaFotos(nivel, azar, fotos) {
+    const quiere = NIVELES_FOTOS[Math.min(nivel, NIVELES_FOTOS.length) - 1].pares;
+    const pares = Math.min(quiere, fotos.length);
+    return { pares, cartas: barajarParejas(fotos, pares, azar) };
+}
+
+/* ==========================================================
+   SIGUE LA SERIE (cálculo, como el «Continúa el patrón» de Duolingo)
+   Tres cuentas seguidas; a la última le falta el resultado. Se puede
+   calcular o fijarse en cómo cambia la columna de resultados: las dos
+   cosas valen.
+   Todo en números enteros (céntimos, minutos, centésimas) para no
+   pelearse con 0,1 + 0,2 en coma flotante; la coma decimal solo aparece
+   al escribirlo.
+   - 'cadena': cada cuenta empieza en el resultado de la anterior.
+   - 'tabla':  el mismo número por 2, por 3, por 4…
+   ========================================================== */
+const NIVELES_CALCULO = [
+    /* Desde el 9 y no desde el 1: de 1 en 1, lo que hay por debajo de la
+       respuesta ya está escrito en la tabla, la única falsa por debajo es la
+       de diez de menos y hace falta que sea positiva y no sea el 1 del paso.
+       Desde el 1, la buena era la menor el 91 % de las veces. */
+    { tipo: 'cadena', formato: 'entero',  pasos: [1],   inicios: rango(9, 20, 1),  opciones: 2 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [2],   inicios: rango(1, 15, 1),  opciones: 2 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [5],   inicios: rango(5, 40, 5),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [10],  inicios: rango(1, 49, 1),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [-1],  inicios: rango(6, 20, 1),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [-10], inicios: rango(40, 99, 1), opciones: 3 },
+    { tipo: 'cadena', formato: 'euro',    pasos: [50],  inicios: rango(50, 400, 50), opciones: 3 },
+    /* De 8:00 a 11:45 como mucho: «las 13 y media» no se dice así, y
+       pasar a «la una y media» con 13:30 escrito despistaría */
+    { tipo: 'cadena', formato: 'hora',    pasos: [30, 15], inicios: rango(480, 600, 15), opciones: 3 },
+    { tipo: 'tabla',  formato: 'entero',  factores: [2, 3, 4, 5],         ks: rango(2, 6, 1), opciones: 3 },
+    { tipo: 'tabla',  formato: 'decimal', factores: [5, 10, 20, 25, 50],  ks: rango(2, 6, 1), opciones: 3 }
+];
+function rango(desde, hasta, cada) { const l = []; for (let v = desde; v <= hasta; v += cada) l.push(v); return l; }
+
+const decimalEnCifra = (c) => Math.floor(c / 100) + ',' + String(c % 100).padStart(2, '0');
+/* «0 coma cero 5»: escrito «0,05», la voz decía «cero coma cinco» */
+const decimalEnTexto = (c) => Math.floor(c / 100) + ' coma ' + (c % 100 < 10 ? 'cero ' + (c % 100) : String(c % 100));
+const horaEnCifra = (m) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+function horaEnTexto(m) {
+    const h = Math.floor(m / 60), mm = m % 60;
+    const la = (n) => { const x = ((n - 1) % 12) + 1; return x === 1 ? 'la una' : 'las ' + x; };
+    if (mm === 0) return la(h) + ' en punto';
+    if (mm === 15) return la(h) + ' y cuarto';
+    if (mm === 30) return la(h) + ' y media';
+    if (mm === 45) return la(h + 1) + ' menos cuarto';
+    return la(h) + ' y ' + mm;
+}
+const DURACION_EN_TEXTO = { 15: 'un cuarto de hora', 30: 'media hora', 60: 'una hora' };
+
+function escribir(formato, v) {
+    if (formato === 'euro') return importeEnCifra(v);
+    if (formato === 'hora') return horaEnCifra(v);
+    if (formato === 'decimal') return decimalEnCifra(v);
+    return String(v);
+}
+function decirValor(formato, v) {
+    if (formato === 'euro') return importeEnTexto(v);
+    if (formato === 'hora') return horaEnTexto(v);
+    if (formato === 'decimal') return decimalEnTexto(v);
+    return String(v);
+}
+
+/* Equivocaciones con sentido, de la más probable a la menos: un paso de
+   más, una unidad de más o de menos, la coma corrida… El paso de menos no
+   está porque es el resultado de la fila de arriba, que ya se ve. */
+function deslices(cfg, respuesta, paso) {
+    if (cfg.tipo === 'tabla') {
+        const a = paso;
+        const l = [respuesta + a, respuesta - 3 * a, respuesta + 2 * a];
+        if (cfg.formato === 'decimal') { l.push(respuesta * 10); if (respuesta % 10 === 0) l.push(respuesta / 10); }
+        else l.push(respuesta + 1, respuesta - 1);
+        return l;
+    }
+    if (cfg.formato === 'euro') return [respuesta + paso, respuesta - 10, respuesta + 10, respuesta + 100, respuesta - 100, respuesta + 2 * paso];
+    if (cfg.formato === 'hora') return [respuesta + paso, respuesta - 60, respuesta + 60, respuesta + 2 * paso];
+    /* El 10 de menos/de más (13 por 3) antes que dos pasos: con la serie de
+       1 en 1 casi todo lo de abajo ya se ve en la tabla, y sin él la buena
+       era siempre la menor de las dos */
+    return [respuesta + paso, respuesta - Math.sign(paso), respuesta + Math.sign(paso), respuesta - 10, respuesta + 10, respuesta + 2 * paso];
+}
+function cabeEnFormato(formato, v) {
+    if (formato === 'hora') return v >= 420 && v <= 765;
+    if (formato === 'decimal') return v > 0 && v < 1000;
+    return v > 0;
+}
+
+function rondaCalculo(nivel, azar, evitar) {
+    const cfg = NIVELES_CALCULO[Math.min(nivel, NIVELES_CALCULO.length) - 1];
+    const elegir = (l) => l[Math.floor(azar() * l.length)];
+    const f = cfg.formato;
+    let filas, respuesta, paso, inicio, vistos;
+    do {
+        if (cfg.tipo === 'cadena') {
+            paso = elegir(cfg.pasos);
+            inicio = elegir(cfg.inicios);
+            const signo = paso < 0 ? ' − ' : ' + ';
+            const pasoEscrito = f === 'hora' ? Math.abs(paso) + ' min' : escribir(f, Math.abs(paso));
+            const pasoDicho = f === 'hora' ? DURACION_EN_TEXTO[Math.abs(paso)] : decirValor(f, Math.abs(paso));
+            filas = [0, 1, 2].map(i => {
+                const a = inicio + i * paso, r = a + paso;
+                return { op: escribir(f, a) + signo + pasoEscrito, res: escribir(f, r), valor: r, resVoz: decirValor(f, r),
+                         voz: decirValor(f, a) + (paso < 0 ? ' menos ' : ' más ') + pasoDicho };
+            });
+            /* El paso también se ve (el «+ 1» de cada fila): tampoco vale de falsa */
+            vistos = [inicio, inicio + paso, inicio + 2 * paso, Math.abs(paso)];
+        } else {
+            paso = elegir(cfg.factores);
+            inicio = elegir(cfg.ks);
+            filas = [0, 1, 2].map(i => {
+                const k = inicio + i, r = paso * k;
+                return { op: escribir(f, paso) + ' × ' + k, res: escribir(f, r), valor: r, resVoz: decirValor(f, r), voz: decirValor(f, paso) + ' por ' + k };
+            });
+            vistos = [paso, inicio, inicio + 1, inicio + 2, paso * inicio, paso * (inicio + 1)];
+        }
+        respuesta = filas[2].valor;
+    } while (evitar !== undefined && inicio === evitar && (cfg.inicios || cfg.ks).length > 1);
+
+    const fuera = new Set(vistos.concat(respuesta));
+    const candidatos = [];
+    for (const v of deslices(cfg, respuesta, paso)) {
+        if (!fuera.has(v) && cabeEnFormato(f, v) && Number.isInteger(v)) { candidatos.push(v); fuera.add(v); }
+    }
+    /* Entre las tres más probables, al azar: si siempre saliera la primera
+       (un paso de más), la buena sería siempre la menor y se acertaría sin
+       mirar */
+    const falsas = barajar(candidatos.slice(0, 3), azar).slice(0, cfg.opciones - 1);
+    const opciones = barajar([respuesta].concat(falsas), azar).map(v => ({ valor: v, texto: escribir(f, v), voz: decirValor(f, v) }));
+
+    /* En la tabla el resultado sube lo que vale el número que se multiplica */
+    const cambio = paso, sube = cambio > 0;
+    const patron = f === 'hora'
+        ? { pantalla: 'Cada vez pasa ' + DURACION_EN_TEXTO[Math.abs(cambio)] + '.', voz: 'Cada vez pasa ' + DURACION_EN_TEXTO[Math.abs(cambio)] + '.' }
+        : { pantalla: 'Cada vez ' + (sube ? 'sube ' : 'baja ') + escribir(f, Math.abs(cambio)) + '.',
+            voz: 'Cada vez ' + (sube ? 'sube ' : 'baja ') + decirValor(f, Math.abs(cambio)) + '.' };
+    return { formato: f, tipo: cfg.tipo, inicio, paso, filas, respuesta, opciones, patron,
+             pregunta: filas[2].voz + (f === 'hora' ? ', ¿qué hora es?' : ', ¿cuánto es?') };
+}
+
+/* ==========================================================
+   PUZLE DE PIEZAS QUE SE DESLIZAN
+   El motor (barajar, distancias, pista) es el común con el de Ingenio,
+   _fuentes/puzle/motor-puzle.js, y se pasa como `motor` para poder
+   probar esto en Node.
+   La dificultad no la da solo el tamaño: un 3×3 a 4 movimientos es más
+   fácil que un 2×2 a 6. Se gradúa por el número EXACTO de movimientos que
+   hacen falta, medido con el recorrido completo de todas las posiciones.
+   ========================================================== */
+const NIVELES_PUZLE = [
+    { n: 2, movimientos: 2 },
+    { n: 2, movimientos: 3 },
+    { n: 2, movimientos: 4 },
+    { n: 2, movimientos: 6 },
+    { n: 3, movimientos: 4 },
+    { n: 3, movimientos: 6 },
+    { n: 3, movimientos: 8 },
+    { n: 3, movimientos: 10 },
+    { n: 3, movimientos: 14 }
+];
+
+function rondaPuzle(nivel, azar, motor) {
+    const cfg = NIVELES_PUZLE[Math.min(nivel, NIVELES_PUZLE.length) - 1];
+    return { n: cfg.n, minimo: cfg.movimientos, tablero: motor.barajarA(cfg.n, cfg.movimientos, azar) };
+}
+
+/* En un puzle, alejarse una vez y volver es explorar, no equivocarse: se
+   perdona UN movimiento que aleja. Con dos ya se cuenta como ronda floja
+   (y el juego empieza a señalar la pieza). Ver resultadoDeRonda. */
+const ALEJAR_PERDONADO = 1;
+const resultadoPuzle = (alejan, ayudas) => resultadoDeRonda(Math.max(0, alejan - ALEJAR_PERDONADO), ayudas);
+</script>
+<script>
+/* ==========================================================
+   BASE DE LOS JUEGOS PARA MAYORES
+   Lo común a todos: barra de arriba, tamaño de letra, voz, sonidos suaves,
+   memoria del nivel y protección contra toques dobles.
+
+   Uso:
+     const M = Mayores.iniciar({ id: 'compra', nivelMaximo: 8 });
+     M.tocar(boton, () => ...);   M.decir('texto');   M.sonar('bien');
+     M.mostrar('juego');   M.nivel   M.anotar('bien' | 'mal')
+   ========================================================== */
+const Mayores = (() => {
+    /* 18, 21, 23 y 26 px. Un escalón de 29 px se probó y en un móvil de
+       360 de ancho dejaba ocho letras por renglón: el refrán solo ocupaba
+       media pantalla y no cabían ni dos respuestas. */
+    const ESCALAS = [1, 1.15, 1.3, 1.45];
+    const ANTIRREBOTE_MS = 450;
+
+    /* localStorage falla en navegación privada y en algunos iframes: se
+       cae a memoria y el juego sigue, solo que sin recordar entre visitas */
+    const memoria = {};
+    function leer(clave, porDefecto) {
+        try {
+            const v = localStorage.getItem(clave);
+            return v === null ? porDefecto : JSON.parse(v);
+        } catch (e) {
+            return clave in memoria ? memoria[clave] : porDefecto;
+        }
+    }
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    /* ---------- VOZ ----------
+       La del propio navegador: en Android e iPhone habla castellano sin
+       instalar nada. Un poco más lenta que la normal (0,9). */
+    let vozElegida = null;
+    function elegirVoz() {
+        if (!('speechSynthesis' in window)) return;
+        const voces = speechSynthesis.getVoices();
+        vozElegida = voces.find(v => v.lang === 'es-ES') ||
+                     voces.find(v => /^es[-_]/i.test(v.lang)) || null;
+    }
+    if ('speechSynthesis' in window) {
+        elegirVoz();
+        /* En Chrome la lista de voces llega más tarde que la página */
+        speechSynthesis.addEventListener('voiceschanged', elegirVoz);
+    }
+
+    /* ---------- SONIDOS ----------
+       El acierto suena a campanilla; el error, a un «toc» grave y corto.
+       Nada de zumbidos de «has fallado». El contexto de audio se crea con
+       el primer toque, que es cuando el navegador deja. */
+    let ctxAudio = null;
+    function audio() {
+        if (ctxAudio) return ctxAudio;
+        try { ctxAudio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctxAudio = null; }
+        return ctxAudio;
+    }
+    function nota(frec, inicio, dur, vol) {
+        const ctx = audio();
+        if (!ctx) return;
+        const t = ctx.currentTime + inicio;
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.value = frec;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        o.connect(g).connect(ctx.destination);
+        o.start(t);
+        o.stop(t + dur + 0.05);
+    }
+
+    /* Tarjeta de objeto (producto, cosa de la mesa): dibujo y nombre siempre
+       juntos. El dibujo cambia de un móvil a otro y la palabra es lo que de
+       verdad se recuerda. */
+    function tarjeta(p, etiqueta) {
+        const el = document.createElement(etiqueta || 'div');
+        el.className = 'producto';
+        if (etiqueta === 'button') el.type = 'button';
+        el.innerHTML = '<span class="icono" aria-hidden="true"></span><span class="nombre"></span>';
+        el.querySelector('.icono').textContent = p.icono;
+        el.querySelector('.nombre').textContent = p.nombre;
+        el.dataset.nombre = p.nombre;
+        return el;
+    }
+
+    /* Dos columnas con pocas tarjetas (sin hueco suelto en la última fila), o
+       cuando en tres el nombre bajaría del 85 % de la letra elegida: el nombre
+       ocupa el 15 % del ancho de DENTRO de la tarjeta (ver .nombre en el CSS),
+       así que se descuentan su relleno (0,2rem por lado) y su borde (3 px).
+       Sin descontarlos, «papel higiénico» salía a 13,7 px en un móvil de 360. */
+    function columnasPara(n, contenedor) {
+        if (n <= 2) return Math.max(1, n);
+        if (n === 4) return 2;
+        const rem = parseFloat(getComputedStyle(document.documentElement).fontSize);
+        const ancho = (contenedor || document.querySelector('main')).clientWidth;
+        const dentroEn3 = (ancho - 2 * 0.5 * rem) / 3 - 0.4 * rem - 6;
+        /* Tres en una sola fila cuando caben: en dos columnas, tres tarjetas
+           ocupan dos filas, y en ¿Qué falta? eso solo ya no cabía */
+        return dentroEn3 * 0.15 >= 0.85 * rem ? 3 : 2;
+    }
+
+    function iniciar(opciones) {
+        const id = opciones.id;
+        const nivelMaximo = opciones.nivelMaximo || 1;
+        let escala = Math.min(ESCALAS.length - 1, Math.max(0, leer('mayores.letra', 1)));
+        let sonido = leer('mayores.sonido', true);
+        /* La paleta de los juegos de botones de colores: la elige quien
+           juega, según la que mejor distinga, y vale para todos */
+        let paletaId = leer('mayores.paleta', PALETAS[0].id);
+        if (!PALETAS.some(p => p.id === paletaId)) paletaId = PALETAS[0].id;
+        let estadoNivel = leer('mayores.' + id + '.nivel', nivelInicial());
+        if (!estadoNivel || typeof estadoNivel.nivel !== 'number') estadoNivel = nivelInicial();
+        estadoNivel.nivel = Math.min(nivelMaximo, Math.max(1, estadoNivel.nivel));
+
+        /* ---------- barra de arriba ---------- */
+        const barra = document.createElement('div');
+        barra.className = 'barra';
+        barra.innerHTML =
+            '<button type="button" class="salir" data-b="salir" aria-label="Salir al portal de juegos">← Salir</button>' +
+            '<button type="button" data-b="menos" aria-label="Letra más pequeña">A−</button>' +
+            '<button type="button" data-b="mas" aria-label="Letra más grande">A+</button>' +
+            '<button type="button" data-b="sonido"></button>';
+        document.body.insertBefore(barra, document.body.firstChild);
+        const bMenos = barra.querySelector('[data-b="menos"]');
+        const bMas = barra.querySelector('[data-b="mas"]');
+        const bSonido = barra.querySelector('[data-b="sonido"]');
+
+        function aplicarEscala() {
+            document.documentElement.style.setProperty('--escala', ESCALAS[escala]);
+            bMenos.disabled = escala === 0;
+            bMas.disabled = escala === ESCALAS.length - 1;
+        }
+        function aplicarSonido() {
+            bSonido.textContent = sonido ? '🔊' : '🔇';
+            bSonido.setAttribute('aria-label', sonido ? 'Quitar el sonido' : 'Poner el sonido');
+            bSonido.setAttribute('aria-pressed', String(sonido));
+        }
+        aplicarEscala();
+        aplicarSonido();
+
+        /* ---------- toques ----------
+           Un toque doble involuntario no debe contar como dos respuestas:
+           se ignora todo toque que llegue antes de ANTIRREBOTE_MS del
+           anterior que sí se atendió. */
+        /* Cada juego puede querer recolocar su pantalla al cambiar la letra */
+        const avisosLetra = [];
+
+        let ultimoToque = 0;
+        function tocar(el, accion) {
+            el.addEventListener('click', (e) => {
+                const ahora = Date.now();
+                if (ahora - ultimoToque < ANTIRREBOTE_MS) { e.preventDefault(); return; }
+                ultimoToque = ahora;
+                audio();
+                if (ctxAudio && ctxAudio.state === 'suspended') ctxAudio.resume();
+                accion(e);
+            });
+        }
+
+        const cambiarLetra = (d) => {
+            const nueva = Math.min(ESCALAS.length - 1, Math.max(0, escala + d));
+            if (nueva === escala) return;
+            escala = nueva;
+            guardar('mayores.letra', escala);
+            aplicarEscala();
+            avisosLetra.forEach(f => f());
+        };
+        tocar(bMenos, () => cambiarLetra(-1));
+        tocar(bMas, () => cambiarLetra(1));
+        tocar(bSonido, () => {
+            sonido = !sonido;
+            guardar('mayores.sonido', sonido);
+            aplicarSonido();
+            if (!sonido && 'speechSynthesis' in window) speechSynthesis.cancel();
+            else decir('Sonido puesto');
+        });
+        tocar(barra.querySelector('[data-b="salir"]'), () => {
+            if ('speechSynthesis' in window) speechSynthesis.cancel();
+            /* Los juegos viven en webs/ y la portada en la raíz */
+            location.href = '../';
+        });
+
+        function decir(texto) {
+            if (!sonido || !('speechSynthesis' in window) || !texto) return;
+            try {
+                /* cancel antes de hablar: si no, las frases se encolan y la
+                   voz va contando lo de hace tres toques */
+                speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(texto);
+                u.lang = 'es-ES';
+                if (vozElegida) u.voice = vozElegida;
+                u.rate = 0.9;
+                /* Chrome a veces deja la síntesis en pausa tras pasar la
+                   pestaña a segundo plano, y speak() ya no suena */
+                speechSynthesis.resume();
+                speechSynthesis.speak(u);
+            } catch (e) {}
+        }
+
+        /* Un tono por botón: do, mi, sol y do agudo. Suenan bien juntos y
+           se distinguen sin ver el color */
+        const TONOS = [262, 330, 392, 523];
+        function tono(i, dur) {
+            if (sonido) nota(TONOS[i % TONOS.length], 0, (dur || 600) / 1000, 0.2);
+        }
+
+        function sonar(tipo) {
+            if (!sonido) return;
+            if (tipo === 'bien') { nota(784, 0, 0.25, 0.18); nota(1047, 0.12, 0.35, 0.16); }
+            else if (tipo === 'fin') { nota(659, 0, 0.3, 0.16); nota(784, 0.15, 0.3, 0.16); nota(1047, 0.3, 0.5, 0.16); }
+            else nota(220, 0, 0.18, 0.12);
+        }
+
+        function mostrar(idPantalla) {
+            document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === idPantalla));
+            window.scrollTo(0, 0);
+            /* El foco a la pantalla nueva: quien navega con lector de
+               pantalla o teclado no se queda en un botón que ya no se ve */
+            const h = document.querySelector('#' + idPantalla + ' [data-foco]') ||
+                      document.querySelector('#' + idPantalla + ' h1');
+            if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && 'speechSynthesis' in window) speechSynthesis.cancel();
+        });
+
+        /* ¿Cabe la pantalla sin desplazar? Se mide lo que de verdad se ve,
+           no se estima: el tamaño de letra, la pantalla y hasta la fuente
+           del sistema cambian de un aparato a otro. Se mira también el
+           ancho, porque una rejilla con una palabra larga puede ensanchar
+           la página en vez de bajar de línea. */
+        function cabe() {
+            const raiz = document.scrollingElement || document.documentElement;
+            const ancho = document.documentElement.clientWidth;
+            const sale = [...document.querySelectorAll('.pantalla.activa *')]
+                .some(e => e.offsetParent !== null && e.getBoundingClientRect().right > ancho + 1);
+            /* Sin tolerancia: con 1 px de margen se colaban pantallas que se
+               pasaban justo ese píxel y obligaban a desplazar */
+            return raiz.scrollHeight <= window.innerHeight && !sale;
+        }
+
+        /* Reservar el alto del mensaje más largo que puede salir en una pista.
+           Sin esto, al fallar, «¿Qué se hace primero?» pasaba a «Eso se hace
+           más tarde. ¿Qué se hace primero?», ocupaba un renglón más y todo lo
+           de debajo bajaba: la tarjeta siguiente ya no estaba bajo el dedo.
+           `medido` es el bloque que ocupa sitio; `texto`, dónde va el mensaje
+           (el mismo elemento o uno de dentro). Se recalcula al cambiar la
+           letra, y como deja puesto el min-height, cabe() ya lo cuenta. */
+        const reservas = new Map();
+        function reservar(medido, textos, texto) {
+            texto = texto || medido;
+            reservas.set(medido, { textos, texto });
+            const antes = texto.textContent;
+            medido.style.minHeight = '';
+            let alto = 0;
+            for (const t of textos) {
+                texto.textContent = t;
+                alto = Math.max(alto, medido.getBoundingClientRect().height);
+            }
+            texto.textContent = antes;
+            medido.style.minHeight = Math.ceil(alto) + 'px';
+        }
+        avisosLetra.push(() => reservas.forEach((r, el) => { if (el.offsetParent !== null) reservar(el, r.textos, r.texto); }));
+
+        return {
+            tocar, decir, sonar, tono, mostrar, cabe, tarjeta, columnasPara, reservar,
+            get paleta() { return PALETAS.find(p => p.id === paletaId); },
+            elegirPaleta(id) {
+                if (!PALETAS.some(p => p.id === id)) return;
+                paletaId = id;
+                guardar('mayores.paleta', id);
+            },
+            alCambiarLetra(f) { avisosLetra.push(f); },
+            get letraGrande() { return escala >= 2; },
+            get nivel() { return estadoNivel.nivel; },
+            anotar(resultado) {
+                estadoNivel = adaptarNivel(estadoNivel, resultado, nivelMaximo);
+                guardar('mayores.' + id + '.nivel', estadoNivel);
+                return estadoNivel.nivel;
+            },
+            get hayVoz() { return 'speechSynthesis' in window; },
+            get sonidoActivo() { return sonido; }
+        };
+    }
+
+    return { iniciar };
+})();
+</script>
+<script>
+/* ==========================================================
+   MOTOR DEL PUZLE DESLIZANTE
+   Común al de mayores y al de Ingenio. Sin DOM: se prueba en Node.
+
+   Tablero: lista de n·n casillas, de izquierda a derecha y de arriba
+   abajo; en cada una, el número de la pieza que tiene. La pieza n·n − 1
+   es el hueco. Resuelto: la pieza i en la casilla i (hueco abajo a la
+   derecha).
+
+   Se baraja SIEMPRE moviendo piezas desde el resuelto: la mitad de las
+   colocaciones al azar no tienen solución, y un puzle imposible es lo
+   peor que se le puede dar a nadie.
+   ========================================================== */
+const Puzle = (() => {
+    'use strict';
+
+    const resuelto = (n) => Array.from({ length: n * n }, (_, i) => i);
+    const huecoDe = (t) => t.indexOf(t.length - 1);
+    const estaResuelto = (t) => t.every((p, i) => p === i);
+
+    /* Casillas pegadas (no en diagonal) a la casilla c */
+    function vecinas(n, c) {
+        const f = Math.floor(c / n), k = c % n, l = [];
+        if (f > 0) l.push(c - n);
+        if (f < n - 1) l.push(c + n);
+        if (k > 0) l.push(c - 1);
+        if (k < n - 1) l.push(c + 1);
+        return l;
+    }
+
+    /* Tocar la casilla c: si está en la fila o la columna del hueco, se
+       corren hacia el hueco todas las piezas que hay entre las dos (como en
+       un puzle de verdad, empujando la fila). `soloPegadas`: solo vale una
+       pieza junto al hueco (el de mayores, para que la regla sea una sola).
+       Devuelve { tablero, piezas } con las piezas movidas, o null. */
+    function deslizar(t, n, c, soloPegadas) {
+        const h = huecoDe(t);
+        if (c === h || c < 0 || c >= t.length) return null;
+        const mismaFila = Math.floor(c / n) === Math.floor(h / n);
+        const mismaColumna = c % n === h % n;
+        if (!mismaFila && !mismaColumna) return null;
+        const paso = mismaFila ? (c > h ? 1 : -1) : (c > h ? n : -n);
+        if (soloPegadas && c !== h + paso) return null;
+        const nuevo = t.slice(), piezas = [];
+        let hueco = h;
+        while (hueco !== c) {
+            const de = hueco + paso;
+            piezas.push(nuevo[de]);
+            nuevo[hueco] = nuevo[de];
+            nuevo[de] = t.length - 1;
+            hueco = de;
+        }
+        return { tablero: nuevo, piezas };
+    }
+
+    /* Paseo al azar desde el resuelto, sin deshacer el paso anterior (eso
+       solo gasta pasos). Si acaba en el resuelto, se da un paso más: en el
+       2×2 no hay otra salida, el paseo sin vuelta atrás es dar vueltas a un
+       círculo de 12 y cada 12 pasos se vuelve al principio. */
+    function barajar(n, pasos, azar) {
+        const t = resuelto(n);
+        let h = t.length - 1, antes = -1;
+        for (let i = 0; i < pasos || estaResuelto(t); i++) {
+            const opciones = vecinas(n, h).filter(c => c !== antes);
+            const c = opciones[Math.floor(azar() * opciones.length)];
+            t[h] = t[c]; t[c] = t.length - 1;
+            antes = h; h = c;
+        }
+        return t;
+    }
+
+    /* ---------- DISTANCIA EXACTA (2×2 y 3×3) ----------
+       Recorrido en anchura desde el resuelto por todas las colocaciones
+       posibles, guardado por el rango de la permutación (código de Lehmer):
+       9! = 362.880 casillas de un byte. 255 = imposible. Se calcula una vez
+       por tamaño. En 4×4 son 10 billones: ahí no. */
+    const FACT = [1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880];
+    function rango(t) {
+        let r = 0;
+        for (let i = 0; i < t.length; i++) {
+            let menores = 0;
+            for (let j = i + 1; j < t.length; j++) if (t[j] < t[i]) menores++;
+            r += menores * FACT[t.length - 1 - i];
+        }
+        return r;
+    }
+    function desrango(r, m, t) {
+        let usados = 0;
+        for (let i = 0; i < m; i++) {
+            const f = FACT[m - 1 - i];
+            let k = Math.floor(r / f);
+            r -= k * f;
+            /* La k-ésima pieza aún sin usar */
+            let p = 0;
+            for (;; p++) if (!(usados & (1 << p)) && k-- === 0) break;
+            usados |= 1 << p;
+            t[i] = p;
+        }
+        return t;
+    }
+    const tablas = {};
+    function tablaDistancias(n) {
+        if (tablas[n]) return tablas[n];
+        if (n > 3) throw new Error('Sin tabla de distancias para ' + n + '×' + n);
+        const m = n * n;
+        const dist = new Uint8Array(FACT[m]).fill(255);
+        const cola = new Int32Array(FACT[m] / 2);
+        const t = new Array(m);
+        const vec = Array.from({ length: m }, (_, c) => vecinas(n, c));
+        let ini = 0, fin = 0;
+        const r0 = rango(resuelto(n));
+        dist[r0] = 0; cola[fin++] = r0;
+        while (ini < fin) {
+            const r = cola[ini++];
+            desrango(r, m, t);
+            const h = t.indexOf(m - 1), d = dist[r] + 1;
+            for (const c of vec[h]) {
+                t[h] = t[c]; t[c] = m - 1;
+                const rr = rango(t);
+                if (dist[rr] === 255) { dist[rr] = d; cola[fin++] = rr; }
+                t[c] = t[h]; t[h] = m - 1;
+            }
+        }
+        let maxima = 0;
+        for (let i = 0; i < dist.length; i++) if (dist[i] !== 255 && dist[i] > maxima) maxima = dist[i];
+        return (tablas[n] = { distancia: (x) => dist[rango(x)], maxima, alcanzables: fin });
+    }
+
+    /* La pieza (su casilla) que hay que mover ahora para ir por el camino
+       más corto. Para la ayuda. */
+    function siguientePaso(t, n) {
+        const tabla = tablaDistancias(n), d = tabla.distancia(t);
+        if (d === 0) return -1;
+        const h = huecoDe(t);
+        for (const c of vecinas(n, h)) {
+            const r = deslizar(t, n, c, true).tablero;
+            if (tabla.distancia(r) === d - 1) return c;
+        }
+        return -1;
+    }
+
+    /* Un barajado que esté EXACTAMENTE a d movimientos del resuelto: se
+       sale del resuelto y en cada paso se va a una vecina que esté un paso
+       más lejos, eligiendo al azar entre ellas. */
+    function barajarA(n, d, azar) {
+        const tabla = tablaDistancias(n);
+        if (d > tabla.maxima) throw new Error('En ' + n + '×' + n + ' no hay nada a ' + d + ' movimientos');
+        for (let intento = 0; intento < 100; intento++) {
+            let t = resuelto(n);
+            for (let k = 0; k < d; k++) {
+                const h = huecoDe(t);
+                const mas = vecinas(n, h).map(c => deslizar(t, n, c, true).tablero).filter(x => tabla.distancia(x) === k + 1);
+                if (!mas.length) { t = null; break; }
+                t = mas[Math.floor(azar() * mas.length)];
+            }
+            if (t) return t;
+        }
+        throw new Error('No se pudo barajar a ' + d);
+    }
+
+    /* Pasos del paseo para que el barajado de Ingenio sea como uno al azar
+       de verdad: con estos, la distancia Manhattan media llega al 98-100 %
+       de la de colocaciones al azar (medir.js). Con 200 pasos un 5×5 se
+       quedaba en el 75 %: media cara aún ordenada. */
+    const PASOS_BARAJAR = { 2: 13, 3: 150, 4: 500, 5: 1200 };
+
+    return { PASOS_BARAJAR, resuelto, huecoDe, estaResuelto, vecinas, deslizar, barajar, tablaDistancias, siguientePaso, barajarA };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = Puzle;
+
+/* ==========================================================
+   DIBUJOS DEL PUZLE
+   Propios, en SVG de 300 × 300, comunes al de mayores y al de Ingenio.
+   Pensados para cortarse en 3 × 3 (y en 2 × 2): cada cuadro de 100 × 100
+   lleva algo suyo y distinto (una nube, el sol, la puerta…). Un cielo
+   liso partido en tres piezas iguales es un puzle imposible de mirar: no
+   hay por dónde saber cuál va dónde.
+   ========================================================== */
+const DIBUJOS = [
+    {
+        id: 'casa', nombre: 'la casa',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">' +
+            '<rect width="300" height="300" fill="#9fd3f5"/>' +
+            '<rect y="215" width="300" height="85" fill="#74b85f"/>' +
+            /* nube */
+            '<g fill="#fff"><circle cx="35" cy="55" r="18"/><circle cx="58" cy="45" r="24"/><circle cx="80" cy="58" r="16"/><rect x="35" y="55" width="45" height="19"/></g>' +
+            /* pájaros */
+            '<g fill="none" stroke="#2c3e50" stroke-width="5" stroke-linecap="round"><path d="M118 45 q10 -12 20 0 q10 -12 20 0"/><path d="M150 80 q8 -9 16 0 q8 -9 16 0"/></g>' +
+            /* sol */
+            '<g stroke="#f2a900" stroke-width="7" stroke-linecap="round"><path d="M250 8 v14 M250 88 v14 M206 50 h14 M280 50 h14 M219 19 l10 10 M271 71 l10 10 M281 19 l-10 10 M219 81 l10 -10"/></g>' +
+            '<circle cx="250" cy="50" r="26" fill="#ffd23f"/>' +
+            /* montaña */
+            '<path d="M200 215 L255 120 L300 190 L300 215 Z" fill="#7d8fb3"/><path d="M240 146 L255 120 L270 144 L262 140 L255 147 L248 140 Z" fill="#fff"/>' +
+            /* árbol */
+            '<rect x="40" y="170" width="20" height="80" fill="#8b5a2b"/>' +
+            '<circle cx="50" cy="140" r="38" fill="#2e8b3e"/><circle cx="32" cy="160" r="22" fill="#2e8b3e"/><circle cx="70" cy="162" r="22" fill="#2e8b3e"/>' +
+            '<circle cx="36" cy="132" r="7" fill="#e63946"/><circle cx="64" cy="150" r="7" fill="#e63946"/><circle cx="52" cy="118" r="7" fill="#e63946"/>' +
+            /* casa */
+            '<rect x="110" y="170" width="80" height="100" fill="#f4e1c1" stroke="#7a4b24" stroke-width="4"/>' +
+            '<path d="M98 175 L150 112 L202 175 Z" fill="#c0392b" stroke="#7a1f16" stroke-width="4" stroke-linejoin="round"/>' +
+            '<rect x="138" y="135" width="24" height="24" fill="#9fd3f5" stroke="#7a1f16" stroke-width="3"/>' +
+            '<rect x="137" y="215" width="28" height="55" fill="#2f6db5"/><circle cx="159" cy="244" r="3" fill="#ffd23f"/>' +
+            '<rect x="117" y="185" width="22" height="20" fill="#9fd3f5" stroke="#7a4b24" stroke-width="3"/><rect x="162" y="185" width="22" height="20" fill="#9fd3f5" stroke="#7a4b24" stroke-width="3"/>' +
+            /* flores */
+            '<g><rect x="15" y="258" width="4" height="22" fill="#2e7d32"/><circle cx="17" cy="256" r="8" fill="#ff7eb6"/>' +
+            '<rect x="78" y="262" width="4" height="22" fill="#2e7d32"/><circle cx="80" cy="260" r="8" fill="#ffd23f"/>' +
+            '<rect x="90" y="250" width="4" height="30" fill="#2e7d32"/><circle cx="92" cy="248" r="8" fill="#b388ff"/></g>' +
+            /* valla y buzón */
+            '<g fill="#fff" stroke="#8a6d4b" stroke-width="2"><rect x="205" y="235" width="12" height="45"/><rect x="225" y="235" width="12" height="45"/><rect x="245" y="235" width="12" height="45"/><rect x="200" y="248" width="62" height="8"/></g>' +
+            '<rect x="275" y="245" width="6" height="40" fill="#555"/><rect x="264" y="228" width="30" height="20" rx="6" fill="#e63946"/>' +
+            '</svg>'
+    },
+    {
+        id: 'barco', nombre: 'el barco',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">' +
+            '<rect width="300" height="300" fill="#bfe6ff"/>' +
+            '<rect y="150" width="300" height="150" fill="#2f80c1"/><rect y="215" width="300" height="85" fill="#1f5f99"/>' +
+            /* gaviota */
+            '<path d="M22 52 q14 -16 28 0 q14 -16 28 0" fill="none" stroke="#34495e" stroke-width="6" stroke-linecap="round"/>' +
+            /* bandera y mástil */
+            '<rect x="146" y="20" width="6" height="200" fill="#6d4c2f"/><path d="M152 22 L190 34 L152 46 Z" fill="#e63946"/>' +
+            /* sol con nube */
+            '<circle cx="255" cy="48" r="28" fill="#ffd23f"/><g fill="#fff"><circle cx="232" cy="78" r="14"/><circle cx="250" cy="72" r="17"/><circle cx="268" cy="80" r="12"/></g>' +
+            /* isla */
+            '<path d="M0 155 Q45 105 92 155 Z" fill="#e8c77d"/><rect x="40" y="95" width="7" height="45" fill="#8b5a2b" transform="rotate(8 43 118)"/>' +
+            '<g fill="#2e8b3e"><path d="M46 96 q-30 -8 -40 8 q22 -12 40 -8z"/><path d="M46 96 q28 -14 42 2 q-22 -8 -42 -2z"/><path d="M46 96 q-8 -26 10 -32 q-14 14 -10 32z"/></g>' +
+            /* velas */
+            '<path d="M144 50 L144 175 L95 175 Z" fill="#fff" stroke="#c9d6e3" stroke-width="2"/><path d="M155 60 L155 175 L210 175 Z" fill="#fff" stroke="#c9d6e3" stroke-width="2"/>' +
+            '<path d="M155 120 L188 150 L155 150 Z" fill="#e63946"/>' +
+            /* faro */
+            '<path d="M240 270 L250 140 L276 140 L286 270 Z" fill="#fff"/><path d="M246 190 L280 190 L282 215 L244 215 Z M242 240 L284 240 L286 262 L240 262 Z M248 155 L278 155 L279 170 L247 170 Z" fill="#e63946"/>' +
+            '<rect x="247" y="115" width="32" height="25" fill="#ffd23f" stroke="#555" stroke-width="3"/><path d="M243 115 L263 98 L283 115 Z" fill="#555"/>' +
+            '<path d="M225 285 Q262 255 300 280 L300 300 L225 300 Z" fill="#7f8c8d"/>' +
+            /* casco */
+            '<path d="M85 182 L215 182 L195 222 L105 222 Z" fill="#8b4513" stroke="#5a2d0c" stroke-width="4" stroke-linejoin="round"/>' +
+            '<g fill="#ffd23f"><circle cx="125" cy="200" r="6"/><circle cx="150" cy="200" r="6"/><circle cx="175" cy="200" r="6"/></g>' +
+            /* pez */
+            '<path d="M25 255 q25 -22 50 0 q-25 22 -50 0z" fill="#ff8c42"/><path d="M75 255 l16 -12 v24 z" fill="#ff8c42"/><circle cx="38" cy="252" r="4" fill="#1b1b1b"/>' +
+            /* olas */
+            '<g fill="none" stroke="#bfe6ff" stroke-width="4" stroke-linecap="round"><path d="M110 245 q10 -8 20 0 q10 8 20 0 q10 -8 20 0"/><path d="M120 275 q10 -8 20 0 q10 8 20 0"/><path d="M190 230 q8 -6 16 0 q8 6 16 0"/></g>' +
+            '</svg>'
+    },
+    {
+        id: 'cocina', nombre: 'la cocina',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">' +
+            '<rect width="300" height="300" fill="#f6e7c8"/>' +
+            '<rect y="200" width="300" height="100" fill="#b5713b"/><rect y="200" width="300" height="10" fill="#8a5126"/>' +
+            /* ventana */
+            '<rect x="12" y="12" width="76" height="76" fill="#9fd3f5" stroke="#fff" stroke-width="6"/><path d="M50 12 V88 M12 50 H88" stroke="#fff" stroke-width="5"/>' +
+            '<circle cx="70" cy="30" r="10" fill="#ffd23f"/>' +
+            /* reloj */
+            '<circle cx="150" cy="50" r="34" fill="#fff" stroke="#2c3e50" stroke-width="6"/><path d="M150 50 V28 M150 50 L166 58" stroke="#2c3e50" stroke-width="5" stroke-linecap="round"/>' +
+            /* lámpara */
+            '<rect x="248" y="0" width="4" height="40" fill="#555"/><path d="M222 72 L232 40 L268 40 L278 72 Z" fill="#2a9d8f"/><circle cx="250" cy="78" r="8" fill="#ffd23f"/>' +
+            /* jarrón con flor */
+            '<rect x="48" y="110" width="4" height="60" fill="#2e7d32"/><circle cx="50" cy="108" r="14" fill="#e63946"/><circle cx="50" cy="108" r="5" fill="#ffd23f"/>' +
+            '<path d="M60 140 q16 -12 20 4 q-14 0 -20 -4z" fill="#2e7d32"/>' +
+            '<path d="M30 170 L70 170 Q80 235 50 255 Q20 235 30 170 Z" fill="#3d5a99"/>' +
+            /* plátanos */
+            '<g fill="#ffd23f" stroke="#c99a00" stroke-width="3"><path d="M115 140 q35 40 75 0 q-36 22 -75 0z"/><path d="M118 128 q32 32 68 -4 q-34 18 -68 4z"/></g>' +
+            /* tetera */
+            '<path d="M222 150 q28 -26 56 0 L272 195 Q250 205 228 195 Z" fill="#e76f51"/><path d="M278 160 q18 4 8 22 l-10 -6" fill="none" stroke="#e76f51" stroke-width="7"/>' +
+            '<path d="M222 168 L200 150" stroke="#e76f51" stroke-width="8" stroke-linecap="round"/><circle cx="250" cy="134" r="6" fill="#7a2e1f"/>' +
+            /* frutero */
+            '<path d="M105 250 Q150 295 195 250 Z" fill="#fff" stroke="#999" stroke-width="3"/>' +
+            '<circle cx="128" cy="240" r="16" fill="#e63946"/><circle cx="152" cy="232" r="17" fill="#ff8c42"/><circle cx="174" cy="242" r="15" fill="#7cb342"/>' +
+            /* taza */
+            '<path d="M228 235 L268 235 L264 275 L232 275 Z" fill="#fff" stroke="#2c3e50" stroke-width="4"/><path d="M268 245 q16 4 0 20" fill="none" stroke="#2c3e50" stroke-width="4"/>' +
+            '<path d="M240 225 q-6 -10 0 -18 M256 225 q-6 -10 0 -18" fill="none" stroke="#999" stroke-width="3" stroke-linecap="round"/>' +
+            '</svg>'
+    }
+];
+/* Como imagen de fondo de cada pieza: url() de datos, sin archivo aparte */
+const urlDibujo = (d) => 'url("data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg) + '")';
+
+/* ==========================================================
+   ALMACÉN DE FOTOS DE LOS MAYORES
+   Lo usan Parejas con fotos (que las carga) y el Puzle (que solo las lee).
+   Un solo código para abrir la base: si cada juego la abriera a su manera,
+   el primero en crearla decidiría su forma y el otro podría encontrarse
+   sin el almacén 'fotos' (onupgradeneeded solo corre al crearla).
+   ========================================================== */
+/* IndexedDB y no localStorage: localStorage solo admite texto y unos 5 MB,
+   y una docena de fotos en base64 no cabe. Si IndexedDB falla (algunos
+   modos privados), las fotos viven en memoria y se avisa de que se perderán. */
+const Almacen = (() => {
+    let bd = null, soloMemoria = false;
+    const memoria = [];
+    function abrir() {
+        if (bd || soloMemoria) return Promise.resolve();
+        return new Promise((ok) => {
+            try {
+                const peticion = indexedDB.open('mayores-fotos', 1);
+                peticion.onupgradeneeded = () => peticion.result.createObjectStore('fotos', { keyPath: 'id' });
+                peticion.onsuccess = () => { bd = peticion.result; ok(); };
+                peticion.onerror = () => { soloMemoria = true; ok(); };
+                peticion.onblocked = () => { soloMemoria = true; ok(); };
+            } catch (e) { soloMemoria = true; ok(); }
+        });
+    }
+    function operar(modo, f) {
+        return new Promise((ok, mal) => {
+            try {
+                const tx = bd.transaction('fotos', modo);
+                const r = f(tx.objectStore('fotos'));
+                tx.oncomplete = () => ok(r && r.result);
+                tx.onerror = () => mal(tx.error);
+            } catch (e) { mal(e); }
+        });
+    }
+    return {
+        get soloMemoria() { return soloMemoria; },
+        async todas() {
+            await abrir();
+            if (soloMemoria) return memoria.slice();
+            try {
+                const lista = await operar('readonly', s => s.getAll());
+                return (lista || []).sort((a, b) => a.fecha - b.fecha);
+            } catch (e) { soloMemoria = true; return memoria.slice(); }
+        },
+        async guardar(foto) {
+            await abrir();
+            if (!soloMemoria) {
+                try { await operar('readwrite', s => s.put(foto)); return; } catch (e) { soloMemoria = true; }
+            }
+            const k = memoria.findIndex(f => f.id === foto.id);
+            if (k === -1) memoria.push(foto); else memoria[k] = foto;
+        },
+        async borrar(id) {
+            await abrir();
+            if (!soloMemoria) {
+                try { await operar('readwrite', s => s.delete(id)); return; } catch (e) { soloMemoria = true; }
+            }
+            const k = memoria.findIndex(f => f.id === id);
+            if (k !== -1) memoria.splice(k, 1);
+        }
+    };
+})();
+</script>
+<script>
+/* ==========================================================
+   PUZLE
+   Nunca se pierde. Un movimiento que aleja del dibujo se dice («Esa lo
+   aleja») y se deshace tocando la misma pieza. A partir del segundo, o con
+   AYÚDAME, brilla la pieza que toca mover, calculada por el camino más
+   corto, hasta el final.
+   Con fotos: las de Parejas con fotos, si hay cargadas en este teléfono.
+   ========================================================== */
+const RONDAS = 4;
+const ALEJAR_ANTES_DE_GUIAR = 2;
+
+const M = Mayores.iniciar({ id: 'puzle', nivelMaximo: NIVELES_PUZLE.length });
+const $ = (id) => document.getElementById(id);
+
+const partida = { ronda: 0, conFotos: false, imagenes: [], usadas: [], imagen: null,
+                  n: 2, t: null, minimo: 0, movimientos: 0, alejan: 0, ayudas: 0, guiado: false, resuelta: false };
+let fotos = [];
+const urls = new Map();
+
+/* El 3×3 necesita la tabla de las 181.440 colocaciones (unos 0,2 s en un
+   ordenador, varias veces más en un móvil modesto). Se calcula cuando se
+   está cerca de necesitarla y con la pantalla quieta, no al tocar. */
+function prepararTabla() {
+    if (M.nivel >= 4) setTimeout(() => Puzle.tablaDistancias(3), 400);
+}
+const distancia = () => Puzle.tablaDistancias(partida.n).distancia(partida.t);
+
+function urlFoto(f) {
+    if (!urls.has(f.id)) urls.set(f.id, URL.createObjectURL(f.blob));
+    return 'url("' + urls.get(f.id) + '")';
+}
+addEventListener('pagehide', () => { urls.forEach(u => URL.revokeObjectURL(u)); urls.clear(); });
+
+/* Imágenes de la sesión: dibujos o fotos, sin repetir hasta agotarlas */
+function siguienteImagen() {
+    const todas = partida.conFotos
+        ? fotos.map(f => ({ id: f.id, nombre: f.nombre, url: urlFoto(f), foto: true }))
+        : DIBUJOS.map(d => ({ id: d.id, nombre: d.nombre, url: urlDibujo(d), foto: false }));
+    let libres = todas.filter(i => !partida.usadas.includes(i.id));
+    if (!libres.length) {
+        const ultima = partida.usadas[partida.usadas.length - 1];
+        partida.usadas = [];
+        libres = todas.filter(i => i.id !== ultima);
+        if (!libres.length) libres = todas;
+    }
+    const img = libres[Math.floor(Math.random() * libres.length)];
+    partida.usadas.push(img.id);
+    return img;
+}
+/* «la casa» → «Ya está la casa.»; una foto dice su nombre si lo tiene */
+const yaEsta = (img) => (img.foto ? (img.nombre ? 'Ya está: ' + img.nombre + '.' : 'Ya está la foto.') : 'Ya está ' + img.nombre + '.');
+
+function pintarTablero() {
+    const tab = $('tablero'), n = partida.n;
+    tab.innerHTML = '';
+    tab.classList.remove('completo');
+    for (let p = 0; p < n * n; p++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pieza' + (p === n * n - 1 ? ' ultima' : '');
+        b.dataset.pieza = p;
+        b.style.backgroundImage = partida.imagen.url;
+        b.style.backgroundSize = (n * 100) + '% ' + (n * 100) + '%';
+        b.style.backgroundPosition = (p % n) / (n - 1) * 100 + '% ' + Math.floor(p / n) / (n - 1) * 100 + '%';
+        b.setAttribute('aria-label', 'Pieza ' + (p + 1));
+        if (p === n * n - 1) { b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); }
+        else M.tocar(b, () => mover(b));
+        tab.appendChild(b);
+    }
+    colocar();
+}
+
+/* Pone cada pieza en su casilla y marca las que se pueden mover */
+function colocar() {
+    const n = partida.n, tab = $('tablero');
+    const lado = parseFloat(getComputedStyle(tab).getPropertyValue('--lado')) || tab.clientWidth;
+    /* 4 px entre piezas mientras se juega; al resolverlo, ninguno */
+    const hueco = partida.resuelta ? 0 : 4, celda = lado / n;
+    tab.style.setProperty('--pieza', (celda - hueco) + 'px');
+    const h = Puzle.huecoDe(partida.t);
+    const movibles = new Set(partida.resuelta ? [] : Puzle.vecinas(n, h));
+    partida.t.forEach((p, c) => {
+        const b = tab.querySelector('[data-pieza="' + p + '"]');
+        const x = (c % n) * celda + hueco / 2, y = Math.floor(c / n) * celda + hueco / 2;
+        b.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+        b.classList.toggle('movible', movibles.has(c));
+        b.dataset.casilla = c;
+    });
+}
+
+/* El tablero, lo más grande que quepa con AYÚDAME a la vista. Si para eso
+   tendría que quedar pequeño (en un móvil bajo con la letra al máximo
+   bajaba a 144 px, piezas de 45), se deja AYÚDAME bajo el borde, como en
+   los otros juegos, y lo que tiene que caber entero es el tablero. */
+const LADO_MINIMO = 260;
+function ajustarTablero() {
+    const tab = $('tablero');
+    const ancho = tab.parentElement.clientWidth - 6 - parseFloat(getComputedStyle(tab.parentElement).paddingLeft) * 2;
+    const tope = Math.floor(Math.min(ancho, 480));
+    let lado = tope;
+    tab.style.setProperty('--lado', lado + 'px');
+    while (!M.cabe() && lado > LADO_MINIMO) {
+        lado -= 8;
+        tab.style.setProperty('--lado', lado + 'px');
+    }
+    if (!M.cabe()) {
+        /* Que el tablero entero quede a la vista; entre 150 px y su tope */
+        const sobra = tab.getBoundingClientRect().bottom + 8 - window.innerHeight;
+        lado = Math.max(150, Math.min(tope, Math.floor(lado - Math.max(0, sobra))));
+        tab.style.setProperty('--lado', lado + 'px');
+    }
+    colocar();
+}
+
+function quitarAyuda() { document.querySelectorAll('.pieza.ayuda').forEach(b => b.classList.remove('ayuda')); }
+
+function senalar() {
+    quitarAyuda();
+    const c = Puzle.siguientePaso(partida.t, partida.n);
+    const b = $('tablero').querySelector('[data-casilla="' + c + '"]');
+    if (b) b.classList.add('ayuda');
+}
+
+function decirYPoner(texto, voz) {
+    $('pista').textContent = texto;
+    M.decir(voz || texto);
+}
+
+function mover(boton) {
+    if (partida.resuelta) return;
+    const c = Number(boton.dataset.casilla);
+    const r = Puzle.deslizar(partida.t, partida.n, c, true);
+    if (!r) {
+        decirYPoner('Esa no. Toca una con borde azul.', 'Esa no se puede mover. Toca una que esté al lado del hueco.');
+        return;
+    }
+    const antes = distancia();
+    partida.t = r.tablero;
+    partida.movimientos++;
+    colocar();
+    const ahora = distancia();
+    if (ahora === 0) return resolver();
+    if (ahora > antes) {
+        partida.alejan++;
+        M.sonar('suave');
+        if (partida.alejan >= ALEJAR_ANTES_DE_GUIAR) partida.guiado = true;
+        if (partida.guiado) { senalar(); decirYPoner('Mueve la que brilla.', 'Esa lo aleja. Mueve la que brilla.'); }
+        else decirYPoner('Esa lo aleja. Tócala otra vez.', 'Esa lo aleja. Tócala otra vez para deshacerlo.');
+        return;
+    }
+    /* Más agudo cuanto más cerca: do a 3 o más, mi a 2, sol a 1 */
+    M.tono(Math.max(0, 3 - ahora), 160);
+    const falta = ahora === 1 ? 'Falta 1.' : 'Faltan ' + ahora + '.';
+    if (partida.guiado) { senalar(); decirYPoner('Bien. Mueve la que brilla.', 'Bien. ' + falta + ' Mueve la que brilla.'); }
+    else decirYPoner('Bien. ' + falta, 'Bien. ' + (ahora === 1 ? 'Falta un movimiento.' : 'Faltan ' + ahora + ' movimientos.'));
+}
+
+function ayudar() {
+    if (partida.resuelta) return;
+    partida.ayudas++;
+    partida.guiado = true;
+    senalar();
+    decirYPoner('Mueve la que brilla.');
+}
+
+function resolver() {
+    partida.resuelta = true;
+    M.anotar(resultadoPuzle(partida.alejan, partida.ayudas));
+    quitarAyuda();
+    colocar();
+    $('tablero').classList.add('completo');
+    M.sonar('bien');
+    /* En pantalla corto (el nombre de una foto puede tener 30 letras); la
+       voz lo dice entero */
+    decirYPoner(partida.imagen.foto ? '¡Muy bien!' : '¡Muy bien! ' + yaEsta(partida.imagen), '¡Muy bien! ' + yaEsta(partida.imagen));
+    $('btnAyuda').style.display = 'none';
+    $('btnSiguiente').textContent = partida.ronda >= RONDAS ? 'TERMINAR' : 'SIGUIENTE';
+    $('btnSiguiente').style.display = '';
+    prepararTabla();
+}
+
+function nuevaRonda() {
+    partida.ronda++;
+    const r = rondaPuzle(M.nivel, Math.random, Puzle);
+    Object.assign(partida, { n: r.n, t: r.tablero, minimo: r.minimo, movimientos: 0, alejan: 0, ayudas: 0, guiado: false, resuelta: false });
+    partida.imagen = siguienteImagen();
+    $('modelo').style.backgroundImage = partida.imagen.url;
+    $('btnAyuda').style.display = '';
+    $('btnSiguiente').style.display = 'none';
+    $('pista').textContent = 'Toca una pieza con borde azul.';
+    M.mostrar('juego');
+    pintarTablero();
+    M.reservar($('pista'), ['Toca una pieza con borde azul.', 'Esa no. Toca una con borde azul.',
+        'Esa lo aleja. Tócala otra vez.', 'Bien. Faltan 14.', 'Bien. Mueve la que brilla.',
+        '¡Muy bien! ' + (partida.imagen.foto ? '' : yaEsta(partida.imagen))]);
+    ajustarTablero();
+    M.decir('Haz ' + (partida.imagen.foto ? 'la foto' : partida.imagen.nombre) + '. Toca una pieza que esté al lado del hueco.');
+}
+
+function empezarSesion(conFotos) {
+    partida.ronda = 0;
+    partida.conFotos = conFotos && fotos.length > 0;
+    partida.usadas = [];
+    nuevaRonda();
+}
+
+function terminarSesion() {
+    $('textoFinal').textContent = 'Has hecho ' + RONDAS + ' puzles.';
+    M.sonar('fin');
+    M.mostrar('final');
+    M.decir('¡Muy bien! Has hecho ' + RONDAS + ' puzles.');
+}
+
+function pintarInicio() {
+    const hay = fotos.length > 0;
+    $('btnFotos').style.display = hay ? '' : 'none';
+    $('btnEmpezar').textContent = hay ? 'CON DIBUJOS' : 'EMPEZAR';
+    $('btnFotos').textContent = 'CON TUS FOTOS (' + fotos.length + ')';
+}
+
+M.alCambiarLetra(() => { if ($('juego').classList.contains('activa')) ajustarTablero(); });
+addEventListener('resize', () => { if ($('juego').classList.contains('activa')) ajustarTablero(); });
+
+M.tocar($('btnEmpezar'), () => empezarSesion(false));
+M.tocar($('btnFotos'), () => empezarSesion(true));
+M.tocar($('btnAyuda'), ayudar);
+M.tocar($('btnSiguiente'), () => (partida.ronda >= RONDAS ? terminarSesion() : nuevaRonda()));
+M.tocar($('btnOtraVez'), () => empezarSesion(partida.conFotos));
+M.tocar($('btnSalirFinal'), () => { location.href = '../'; });
+
+/* Solo se leen: aquí no se carga ni se borra ninguna. Sin IndexedDB
+   (modo privado) no hay ninguna y se juega con dibujos. */
+Almacen.todas().then(lista => { fotos = (lista || []).filter(f => f && f.blob); pintarInicio(); }).catch(() => {});
+prepararTabla();
+</script>
+</body>
+</html>

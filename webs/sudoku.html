@@ -1,0 +1,1874 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="todo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Sudoku</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/sudoku (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DEL SUDOKU ---------- */
+        :root {
+            --sd-casilla: #15113a;
+            --sd-linea: rgba(255, 255, 255, 0.16);
+            --sd-grueso: rgba(255, 255, 255, 0.55);
+            --sd-pista: #e4ebff;          /* números de partida */
+            --sd-mio: #00ffc8;            /* los que pone el jugador */
+            --sd-mal: #ff6b8a;
+            --sd-nota: #b6c1e0;
+            --sd-zona: #1f1a52;           /* fila, columna y cuadro de la elegida */
+            --sd-igual: #2f2a78;          /* casillas con el mismo número */
+            --sd-elegida: #3d3596;
+            --sd-choque: #4a1830;
+        }
+        html:root[data-tema="claro"][data-vista] {
+            --sd-casilla: #ffffff;
+            --sd-linea: rgba(30, 40, 70, 0.22);
+            --sd-grueso: #2a3352;
+            --sd-pista: #1b2030;
+            --sd-mio: #004a75;
+            --sd-mal: #b3261e;
+            --sd-nota: #4a5470;
+            --sd-zona: #e6ecf7;
+            --sd-igual: #c9d7f2;
+            --sd-elegida: #b9cef4;
+            --sd-choque: #f8d4d4;
+        }
+        #pJuego { max-width: 760px; }
+        #zona {
+            flex: 1 1 auto; min-height: 0; margin-top: 6px;
+            container-type: size;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+        }
+        /* Vertical: el tablero, debajo herramientas y números. El lado del
+           tablero es el menor del ancho y del alto que dejan los controles
+           (--controles), sin medir con JS */
+        #zona { --controles: calc(5.9rem + 12px); }
+        .tablero {
+            width: min(100cqw, 100cqh - var(--controles));
+            height: min(100cqw, 100cqh - var(--controles));
+            display: grid; grid-template-columns: repeat(9, 1fr); grid-template-rows: repeat(9, 1fr);
+            border: 3px solid var(--sd-grueso); border-radius: 6px; overflow: hidden;
+            background: var(--sd-casilla);
+            touch-action: manipulation; -webkit-user-select: none; user-select: none;
+            outline-offset: 3px;
+        }
+        .casilla {
+            position: relative; display: flex; align-items: center; justify-content: center;
+            border-right: 1px solid var(--sd-linea); border-bottom: 1px solid var(--sd-linea);
+            background: var(--sd-casilla); color: var(--sd-mio);
+            font: 600 calc(min(100cqw, 100cqh - var(--controles)) / 9 * 0.6) / 1 var(--fuente, sans-serif);
+            cursor: pointer; min-width: 0; min-height: 0;
+        }
+        .casilla.c3 { border-right: 2px solid var(--sd-grueso); }
+        .casilla.f3 { border-bottom: 2px solid var(--sd-grueso); }
+        .casilla.c9 { border-right: 0; }
+        .casilla.f9 { border-bottom: 0; }
+        .casilla.dada { color: var(--sd-pista); font-weight: 800; }
+        .casilla.zona { background: var(--sd-zona); }
+        .casilla.igual { background: var(--sd-igual); }
+        .casilla.choque { background: var(--sd-choque); }
+        .casilla.elegida { background: var(--sd-elegida); }
+        .casilla.mal { color: var(--sd-mal); text-decoration: underline wavy; text-decoration-thickness: 2px; }
+        /* Notas: un 3×3 dentro de la casilla, cada número en su sitio fijo */
+        .notas {
+            position: absolute; inset: 1px; display: grid;
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+            font-size: calc(min(100cqw, 100cqh - var(--controles)) / 9 * 0.27); font-weight: 600;
+            color: var(--sd-nota); text-align: center; align-items: center;
+        }
+        .notas .igual { color: var(--sd-mio); font-weight: 900; }
+        .controles { display: flex; flex-direction: column; gap: 6px; width: min(100cqw, 560px); }
+        .herramientas, .teclado { display: grid; gap: 5px; }
+        .herramientas { grid-template-columns: repeat(4, 1fr); }
+        .teclado { grid-template-columns: repeat(9, 1fr); }
+        .herramientas button, .teclado button {
+            margin: 0; padding: 0; min-height: 2.6rem; border-radius: 8px;
+            border: 1px solid var(--borde); background: var(--panel); color: var(--texto);
+            font: bold 0.8rem/1.1 var(--fuente, sans-serif); cursor: pointer;
+        }
+        .herramientas button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); box-shadow: inset 0 0 0 1px var(--acento); }
+        .teclado button { font-size: 1.35rem; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 2.9rem; }
+        .teclado button small { font-size: 0.6rem; color: var(--apagado); font-weight: normal; }
+        .teclado button:disabled { opacity: 0.3; cursor: default; }
+        .modo-notas .teclado button { color: var(--sd-nota); font-style: italic; }
+        #preparando { position: absolute; color: var(--apagado); font-size: 0.9rem; }
+        /* Apaisado: tablero a la izquierda y controles en una columna */
+        @media (orientation: landscape) and (max-height: 600px) {
+            #zona { flex-direction: row; --controles: 0px; }
+            .tablero { width: min(100cqh, 100cqw - 14rem); height: min(100cqh, 100cqw - 14rem); }
+            .casilla { font-size: calc(min(100cqh, 100cqw - 14rem) / 9 * 0.6); }
+            .notas { font-size: calc(min(100cqh, 100cqw - 14rem) / 9 * 0.27); }
+            .controles { width: 13rem; }
+            .teclado { grid-template-columns: repeat(3, 1fr); }
+            .herramientas { grid-template-columns: repeat(2, 1fr); }
+        }
+        .est-barra .dato b { font-variant-numeric: tabular-nums; }
+    </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">SU<span>DOKU</span></div>
+        <p class="est-lema">Del 1 al 9, sin repetir</p>
+
+        <button class="principal" id="btnContinuar" type="button" style="display:none">CONTINUAR</button>
+
+        <fieldset class="est-grupo">
+            <legend>DIFICULTAD</legend>
+            <div class="opciones iguales" id="grpDif">
+                <button class="opcion" type="button" data-v="facil" aria-pressed="true">FÁCIL<span class="sub">con mirar basta</span></button>
+                <button class="opcion" type="button" data-v="normal" aria-pressed="false">NORMAL<span class="sub">hay que cruzar datos</span></button>
+                <button class="opcion" type="button" data-v="dificil" aria-pressed="false">DIFÍCIL<span class="sub">parejas y X-wing</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>ERRORES</legend>
+            <div class="opciones iguales" id="grpAvisos">
+                <button class="opcion" type="button" data-v="si" aria-pressed="true">🔴 MARCARLOS<span class="sub">en rojo al ponerlos</span></button>
+                <button class="opcion" type="button" data-v="no" aria-pressed="false">🤫 NO AVISAR<span class="sub">solo las repeticiones</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnRanking" type="button">🏆 RÉCORDS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="dTiempo">0:00</b><span>TIEMPO</span></div>
+        <div class="dato"><b id="dDif">FÁCIL</b><span>NIVEL</span></div>
+        <div class="dato" id="datoErrores"><b id="dErrores">0</b><span>ERRORES</span></div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zona">
+        <div id="preparando" aria-live="polite"></div>
+        <div class="tablero" id="tablero" role="grid" aria-label="Sudoku" tabindex="0"></div>
+        <div class="controles">
+            <div class="herramientas">
+                <button id="btnNotas" type="button" aria-pressed="false">✏️ NOTAS</button>
+                <button id="btnDeshacer" type="button">↶ DESHACER</button>
+                <button id="btnBorrar" type="button">⌫ BORRAR</button>
+                <button id="btnPista" type="button">💡 PISTA</button>
+            </div>
+            <div class="teclado" id="teclado" aria-label="Números"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>El reloj está parado y el tablero, tapado.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">← MENÚ (SE GUARDA)</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">🎉 ¡RESUELTO!</h2>
+        <div class="marcador" id="finMarcador">0:00</div>
+        <p id="finDetalle"></p>
+        <div id="zonaNombre" style="display:none;">
+            <p class="destacado" id="finRecord">¡Entras en el Top 10!</p>
+            <input type="text" class="est-campo" id="nameInput" maxlength="15" autocomplete="off" placeholder="Tu nombre">
+            <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnOtra" type="button">🔄 OTRO SUDOKU</button>
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaRanking">
+    <div class="caja">
+        <h2>🏆 MEJORES TIEMPOS</h2>
+        <p style="font-size:0.75rem;margin:0 0 6px;">Solo cuentan los resueltos sin pistas.</p>
+        <h3 style="font-size:0.8rem;margin:6px 0 4px;">FÁCIL</h3>
+        <div class="est-lista" id="rankingfacil"></div>
+        <h3 style="font-size:0.8rem;margin:12px 0 4px;">NORMAL</h3>
+        <div class="est-lista" id="rankingnormal"></div>
+        <h3 style="font-size:0.8rem;margin:12px 0 4px;">DIFÍCIL</h3>
+        <div class="est-lista" id="rankingdificil"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
+            <button class="secundario" id="btnCerrarRanking" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <h3>LAS REGLAS</h3>
+            <ul>
+                <li>Rellena el tablero para que cada <b>fila</b>, cada <b>columna</b> y cada <b>cuadro</b> de 3 × 3 tenga del 1 al 9, sin repetir.</li>
+                <li>Cada sudoku tiene <b>una sola solución</b> y sale pensando, sin adivinar: está comprobado al crearlo.</li>
+            </ul>
+            <h3>JUGAR</h3>
+            <ul>
+                <li>Toca una casilla y luego un número. Se iluminan su fila, su columna, su cuadro y los números iguales.</li>
+                <li><b>✏️ NOTAS:</b> apunta los números posibles en pequeño. Al poner un número, se borra de las notas de su fila, columna y cuadro.</li>
+                <li><b>💡 PISTA:</b> pone la casilla que se puede deducir ahora y dice cómo. Con pistas no hay récord.</li>
+                <li>Se guarda solo: si sales, en el menú aparece <b>CONTINUAR</b>.</li>
+            </ul>
+            <h3>LAS DIFICULTADES</h3>
+            <ul>
+                <li><b>Fácil:</b> basta con ver dónde solo cabe un número.</li>
+                <li><b>Normal:</b> hace falta ver que, dentro de un cuadro, un número solo puede ir en una fila o columna, y quitarlo del resto.</li>
+                <li><b>Difícil:</b> parejas, tríos y X-wing.</li>
+            </ul>
+            <h3>ORDENADOR</h3>
+            <ul>
+                <li><b>Flechas</b> para moverse, <b>1-9</b> para poner, <b>Supr</b> o <b>0</b> para borrar, <b>N</b> notas, <b>Z</b> deshacer, <b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ==========================================================
+   MOTOR DEL SUDOKU
+   Sin DOM: se prueba en Node (prueba-motor.js, con un resolvedor propio
+   que no usa nada de aquí).
+
+   Tablero: lista de 81 números, fila a fila; 0 = vacía.
+   Candidatos: máscara de bits, el bit v (1..9) encendido si v cabe.
+
+   La dificultad NO es el número de pistas: un sudoku con 24 pistas puede
+   salir solo con «aquí solo cabe el 7», y uno con 30 puede pedir parejas.
+   Se mide con un resolvedor «humano» que prueba las técnicas de menos a
+   más y anota la más difícil que ha necesitado:
+     1 sencillos   — solo cabe uno en la casilla, o solo hay un sitio en la
+                     fila, columna o cuadro
+     2 bloqueados  — en un cuadro, un número solo puede ir en una fila (o
+                     columna): se quita del resto de esa fila (y al revés)
+     3 avanzadas   — parejas y tríos desnudos, parejas ocultas, X-wing
+   Lo que no se resuelve con eso no se ofrece: no se pide adivinar nunca.
+   ========================================================== */
+const Sudoku = (() => {
+    'use strict';
+
+    const TODOS = 0x3FE;   // bits 1..9
+    const UNIDADES = [];   // 27: 9 filas, 9 columnas, 9 cuadros
+    for (let f = 0; f < 9; f++) UNIDADES.push(Array.from({ length: 9 }, (_, k) => f * 9 + k));
+    for (let k = 0; k < 9; k++) UNIDADES.push(Array.from({ length: 9 }, (_, f) => f * 9 + k));
+    for (let b = 0; b < 9; b++) {
+        const f0 = Math.floor(b / 3) * 3, k0 = (b % 3) * 3;
+        UNIDADES.push(Array.from({ length: 9 }, (_, i) => (f0 + Math.floor(i / 3)) * 9 + k0 + (i % 3)));
+    }
+    const fila = (c) => Math.floor(c / 9), columna = (c) => c % 9;
+    const cuadro = (c) => Math.floor(fila(c) / 3) * 3 + Math.floor(columna(c) / 3);
+    /* Las 20 casillas que «ven» a cada una */
+    const VECINAS = Array.from({ length: 81 }, (_, c) => {
+        const s = new Set();
+        for (const u of [UNIDADES[fila(c)], UNIDADES[9 + columna(c)], UNIDADES[18 + cuadro(c)]]) for (const x of u) if (x !== c) s.add(x);
+        return [...s];
+    });
+    const bits = (m) => { let n = 0; while (m) { m &= m - 1; n++; } return n; };
+    const unico = (m) => 31 - Math.clz32(m);   // el valor de una máscara de un solo bit
+    const valoresDe = (m) => { const l = []; for (let v = 1; v <= 9; v++) if (m & (1 << v)) l.push(v); return l; };
+
+    function candidatos(t) {
+        const cand = new Array(81).fill(0);
+        for (let c = 0; c < 81; c++) {
+            if (t[c]) continue;
+            let m = TODOS;
+            for (const p of VECINAS[c]) if (t[p]) m &= ~(1 << t[p]);
+            cand[c] = m;
+        }
+        return cand;
+    }
+
+    /* ---------- FUERZA BRUTA (contar soluciones y llenar) ----------
+       Vuelta atrás eligiendo siempre la casilla con menos candidatos. */
+    function buscar(t, limite, azar) {
+        const fil = new Array(9).fill(0), col = new Array(9).fill(0), cua = new Array(9).fill(0);
+        for (let c = 0; c < 81; c++) if (t[c]) {
+            const b = 1 << t[c];
+            if ((fil[fila(c)] | col[columna(c)] | cua[cuadro(c)]) & b) return { cuantas: 0, solucion: null };
+            fil[fila(c)] |= b; col[columna(c)] |= b; cua[cuadro(c)] |= b;
+        }
+        const x = t.slice();
+        let cuantas = 0, solucion = null;
+        (function paso() {
+            let mejor = -1, mejorM = 0, menos = 10;
+            for (let c = 0; c < 81; c++) {
+                if (x[c]) continue;
+                const m = TODOS & ~(fil[fila(c)] | col[columna(c)] | cua[cuadro(c)]);
+                const n = bits(m);
+                if (n < menos) { menos = n; mejor = c; mejorM = m; if (n <= 1) break; }
+            }
+            if (mejor === -1) { cuantas++; if (!solucion) solucion = x.slice(); return; }
+            if (menos === 0) return;
+            let vals = valoresDe(mejorM);
+            if (azar) for (let i = vals.length - 1; i > 0; i--) { const j = Math.floor(azar() * (i + 1)); [vals[i], vals[j]] = [vals[j], vals[i]]; }
+            const f = fila(mejor), k = columna(mejor), q = cuadro(mejor);
+            for (const v of vals) {
+                const b = 1 << v;
+                x[mejor] = v; fil[f] |= b; col[k] |= b; cua[q] |= b;
+                paso();
+                x[mejor] = 0; fil[f] &= ~b; col[k] &= ~b; cua[q] &= ~b;
+                if (cuantas >= limite) return;
+            }
+        })();
+        return { cuantas, solucion };
+    }
+    const contarSoluciones = (t, limite) => buscar(t, limite || 2).cuantas;
+    const resolver = (t) => buscar(t, 2).solucion;
+    const tableroLleno = (azar) => buscar(new Array(81).fill(0), 1, azar).solucion;
+
+    /* ---------- RESOLVEDOR «HUMANO» ---------- */
+    const NOMBRES = {
+        desnudo: 'solo cabe uno en la casilla',
+        oculto: 'solo hay un sitio para él',
+        bloqueados: 'candidatos bloqueados',
+        parejaDesnuda: 'pareja desnuda',
+        parejaOculta: 'pareja oculta',
+        trioDesnudo: 'trío desnudo',
+        xwing: 'X-wing'
+    };
+    const NIVEL = { desnudo: 1, oculto: 1, bloqueados: 2, parejaDesnuda: 3, parejaOculta: 3, trioDesnudo: 3, xwing: 3 };
+
+    function estadoDe(t) { return { v: t.slice(), cand: candidatos(t) }; }
+    function poner(e, c, v) {
+        e.v[c] = v; e.cand[c] = 0;
+        for (const p of VECINAS[c]) e.cand[p] &= ~(1 << v);
+    }
+
+    /* Cada técnica: si encuentra algo, lo hace y devuelve { casilla, valor }
+       (las que colocan) o true (las que solo quitan candidatos) */
+    const TECNICAS = {
+        desnudo(e) {
+            for (let c = 0; c < 81; c++) if (!e.v[c] && bits(e.cand[c]) === 1) { const v = unico(e.cand[c]); poner(e, c, v); return { casilla: c, valor: v }; }
+            return null;
+        },
+        oculto(e) {
+            for (const u of UNIDADES) for (let v = 1; v <= 9; v++) {
+                let sitio = -1, n = 0;
+                for (const c of u) if (e.cand[c] & (1 << v)) { n++; sitio = c; }
+                if (n === 1) { poner(e, sitio, v); return { casilla: sitio, valor: v }; }
+            }
+            return null;
+        },
+        bloqueados(e) {
+            let hecho = false;
+            /* Apuntadores: en un cuadro, el v solo en una fila/columna */
+            for (let b = 0; b < 9; b++) for (let v = 1; v <= 9; v++) {
+                const sitios = UNIDADES[18 + b].filter(c => e.cand[c] & (1 << v));
+                if (sitios.length < 2) continue;
+                for (const [que, base] of [[fila, 0], [columna, 9]]) {
+                    if (sitios.every(c => que(c) === que(sitios[0]))) {
+                        for (const c of UNIDADES[base + que(sitios[0])]) if (cuadro(c) !== b && (e.cand[c] & (1 << v))) { e.cand[c] &= ~(1 << v); hecho = true; }
+                    }
+                }
+                if (hecho) return true;
+            }
+            /* Reclamantes: en una fila/columna, el v solo dentro de un cuadro */
+            for (let u = 0; u < 18; u++) for (let v = 1; v <= 9; v++) {
+                const sitios = UNIDADES[u].filter(c => e.cand[c] & (1 << v));
+                if (sitios.length < 2 || !sitios.every(c => cuadro(c) === cuadro(sitios[0]))) continue;
+                for (const c of UNIDADES[18 + cuadro(sitios[0])]) if (!UNIDADES[u].includes(c) && (e.cand[c] & (1 << v))) { e.cand[c] &= ~(1 << v); hecho = true; }
+                if (hecho) return true;
+            }
+            return false;
+        },
+        parejaDesnuda(e) {
+            for (const u of UNIDADES) {
+                const dos = u.filter(c => bits(e.cand[c]) === 2);
+                for (let i = 0; i < dos.length; i++) for (let j = i + 1; j < dos.length; j++) {
+                    const m = e.cand[dos[i]];
+                    if (m !== e.cand[dos[j]]) continue;
+                    let hecho = false;
+                    for (const c of u) if (c !== dos[i] && c !== dos[j] && (e.cand[c] & m)) { e.cand[c] &= ~m; hecho = true; }
+                    if (hecho) return true;
+                }
+            }
+            return false;
+        },
+        parejaOculta(e) {
+            for (const u of UNIDADES) {
+                const sitios = {};
+                for (let v = 1; v <= 9; v++) { const s = u.filter(c => e.cand[c] & (1 << v)); if (s.length === 2) sitios[v] = s; }
+                const vs = Object.keys(sitios).map(Number);
+                for (let i = 0; i < vs.length; i++) for (let j = i + 1; j < vs.length; j++) {
+                    const a = sitios[vs[i]], b = sitios[vs[j]];
+                    if (a[0] !== b[0] || a[1] !== b[1]) continue;
+                    const m = (1 << vs[i]) | (1 << vs[j]);
+                    let hecho = false;
+                    for (const c of a) if (e.cand[c] & ~m) { e.cand[c] &= m; hecho = true; }
+                    if (hecho) return true;
+                }
+            }
+            return false;
+        },
+        trioDesnudo(e) {
+            for (const u of UNIDADES) {
+                const l = u.filter(c => { const n = bits(e.cand[c]); return n === 2 || n === 3; });
+                for (let i = 0; i < l.length; i++) for (let j = i + 1; j < l.length; j++) for (let k = j + 1; k < l.length; k++) {
+                    const m = e.cand[l[i]] | e.cand[l[j]] | e.cand[l[k]];
+                    if (bits(m) !== 3) continue;
+                    let hecho = false;
+                    for (const c of u) if (c !== l[i] && c !== l[j] && c !== l[k] && (e.cand[c] & m)) { e.cand[c] &= ~m; hecho = true; }
+                    if (hecho) return true;
+                }
+            }
+            return false;
+        },
+        xwing(e) {
+            for (let v = 1; v <= 9; v++) {
+                const b = 1 << v;
+                for (const [lineas, cruzadas, pos] of [[0, 9, columna], [9, 0, fila]]) {
+                    const conDos = [];
+                    for (let i = 0; i < 9; i++) {
+                        const s = UNIDADES[lineas + i].filter(c => e.cand[c] & b);
+                        if (s.length === 2) conDos.push({ i, a: pos(s[0]), z: pos(s[1]) });
+                    }
+                    for (let x = 0; x < conDos.length; x++) for (let y = x + 1; y < conDos.length; y++) {
+                        const p = conDos[x], q = conDos[y];
+                        if (p.a !== q.a || p.z !== q.z) continue;
+                        let hecho = false;
+                        for (const otra of [p.a, p.z]) for (const c of UNIDADES[cruzadas + otra]) {
+                            const linea = lineas === 0 ? fila(c) : columna(c);
+                            if (linea !== p.i && linea !== q.i && (e.cand[c] & b)) { e.cand[c] &= ~b; hecho = true; }
+                        }
+                        if (hecho) return true;
+                    }
+                }
+            }
+            return false;
+        }
+    };
+    const ORDEN = ['desnudo', 'oculto', 'bloqueados', 'parejaDesnuda', 'parejaOculta', 'trioDesnudo', 'xwing'];
+
+    /* Resuelve como una persona, de la técnica más fácil a la más difícil,
+       volviendo siempre a la más fácil tras cada avance. `hasta`: nivel
+       máximo que se permite usar. */
+    function calificar(t, hasta) {
+        const e = estadoDe(t);
+        const usadas = {};
+        let nivel = 0;
+        for (;;) {
+            if (e.v.every(x => x)) break;
+            if (e.v.some((x, c) => !x && !e.cand[c])) return { resuelto: false, nivel, usadas, contradiccion: true };
+            let avance = false;
+            for (const nombre of ORDEN) {
+                if (NIVEL[nombre] > (hasta || 3)) break;
+                if (TECNICAS[nombre](e)) {
+                    usadas[nombre] = (usadas[nombre] || 0) + 1;
+                    nivel = Math.max(nivel, NIVEL[nombre]);
+                    avance = true;
+                    break;
+                }
+            }
+            if (!avance) return { resuelto: false, nivel, usadas, valores: e.v };
+        }
+        return { resuelto: true, nivel, usadas, valores: e.v };
+    }
+
+    /* La siguiente casilla que se puede deducir desde `t` (solo con lo que
+       hay puesto y es correcto), y con qué técnica. Para el botón de pista. */
+    function siguientePista(t) {
+        const e = estadoDe(t);
+        let apoyo = null;
+        for (let vuelta = 0; vuelta < 200; vuelta++) {
+            for (const nombre of ['desnudo', 'oculto']) {
+                const r = TECNICAS[nombre](e);
+                if (r) return { casilla: r.casilla, valor: r.valor, tecnica: nombre, apoyo };
+            }
+            let avance = false;
+            for (const nombre of ORDEN.slice(2)) if (TECNICAS[nombre](e)) { apoyo = apoyo || nombre; avance = true; break; }
+            if (!avance) return null;
+        }
+        return null;
+    }
+
+    /* ---------- GENERAR ----------
+       1. Un tablero lleno al azar.
+       2. Se vacían casillas por parejas simétricas (respecto al centro), en
+          orden al azar. Cada vaciado se deshace si deja más de una solución
+          o si ya no sale sin pasar del nivel pedido.
+       3. Se para al llegar al mínimo de pistas del nivel (que no sea un
+          desierto), y se acepta si de verdad NECESITA el nivel pedido; si
+          no, otro tablero. */
+    const NIVELES = {
+        facil:   { nivel: 1, minimo: 36 },
+        normal:  { nivel: 2, minimo: 26 },
+        dificil: { nivel: 3, minimo: 22 }
+    };
+    function generar(nombre, azar, maxIntentos) {
+        const cfg = NIVELES[nombre];
+        const t0 = Date.now();
+        for (let intento = 1; intento <= (maxIntentos || 400); intento++) {
+            const solucion = tableroLleno(azar);
+            const p = solucion.slice();
+            const parejas = [];
+            for (let c = 0; c <= 40; c++) parejas.push(c);
+            for (let i = parejas.length - 1; i > 0; i--) { const j = Math.floor(azar() * (i + 1)); [parejas[i], parejas[j]] = [parejas[j], parejas[i]]; }
+            let pistas = 81;
+            for (const c of parejas) {
+                const d = 80 - c, quitan = c === d ? 1 : 2;
+                if (pistas - quitan < cfg.minimo) continue;
+                const a = p[c], b = p[d];
+                p[c] = 0; p[d] = 0;
+                if (contarSoluciones(p, 2) !== 1 || !calificar(p, cfg.nivel).resuelto) { p[c] = a; p[d] = b; continue; }
+                pistas -= quitan;
+            }
+            const nota = calificar(p, 3);
+            if (nota.resuelto && nota.nivel === cfg.nivel) {
+                return { pistas: p, solucion, nivel: nota.nivel, usadas: nota.usadas, numPistas: pistas, intentos: intento, ms: Date.now() - t0 };
+            }
+        }
+        return null;
+    }
+
+    return { UNIDADES, VECINAS, NIVELES, NOMBRES, fila, columna, cuadro, candidatos, valoresDe, bits,
+             contarSoluciones, resolver, tableroLleno, calificar, siguientePista, generar };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = Sudoku;
+
+</script>
+<script>
+/* ==========================================================
+   SUDOKU (Ingenio)
+   Motor en motor-sudoku.js. Aquí: menú, tablero, notas, deshacer, pista,
+   guardado de la partida, reloj, récords y sonido.
+   Sin bucle de animación: se repinta solo al cambiar algo, y el reloj es
+   un intervalo de 250 ms que solo existe con la partida en marcha.
+   ========================================================== */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const DIFS = { facil: 'FÁCIL', normal: 'NORMAL', dificil: 'DIFÍCIL' };
+const CLAVE_PARTIDA = 'sudokuPartida', CLAVE_RECORDS = 'sudokuRecords', CLAVE_OPCIONES = 'sudokuOpciones';
+
+const sel = Object.assign({ dif: 'facil', avisos: 'si' }, (() => {
+    const g = EST.leer(CLAVE_OPCIONES, {}), o = {};
+    if (g && DIFS[g.dif]) o.dif = g.dif;
+    if (g && (g.avisos === 'si' || g.avisos === 'no')) o.avisos = g.avisos;
+    return o;
+})());
+
+/* partida: { dif, avisos, pistas[81], solucion[81], valores[81], notas[81]
+   (máscaras), ms, errores, ayudas, resuelta }. Lo demás vive fuera porque
+   no se guarda: la casilla elegida, el modo notas y el historial. */
+let partida = null;
+let elegida = -1, modoNotas = false, historial = [];
+let pausado = false, corriendo = false, desde = 0, reloj = null;
+
+/* ---------- GUARDAR ----------
+   Tras cada jugada y al salir. Si el almacén falla (modo privado), EST lo
+   guarda en memoria: dura lo que la página. */
+const valido81 = (l) => Array.isArray(l) && l.length === 81 && l.every(n => Number.isInteger(n) && n >= 0);
+function guardarPartida() {
+    if (!partida || partida.resuelta) return;
+    const p = Object.assign({}, partida, { ms: Math.round(msJugados()) });
+    EST.guardar(CLAVE_PARTIDA, p);
+}
+function partidaGuardada() {
+    const g = EST.leer(CLAVE_PARTIDA, null);
+    /* Lo guardado puede venir de otra versión o estar roto: se comprueba
+       antes de fiarse (un tablero imposible no se puede terminar) */
+    if (!g || !DIFS[g.dif] || ![g.pistas, g.solucion, g.valores, g.notas].every(valido81)) return null;
+    if (g.pistas.some((v, c) => v && v !== g.solucion[c]) || g.valores.some((v, c) => g.pistas[c] && v !== g.pistas[c])) return null;
+    return { dif: g.dif, avisos: g.avisos === 'no' ? 'no' : 'si', pistas: g.pistas, solucion: g.solucion, valores: g.valores, notas: g.notas,
+             ms: Math.max(0, Number(g.ms) || 0), errores: Math.max(0, Number(g.errores) || 0), ayudas: Math.max(0, Number(g.ayudas) || 0), resuelta: false };
+}
+const borrarPartida = () => { try { localStorage.removeItem(CLAVE_PARTIDA); } catch (e) {} EST.guardar(CLAVE_PARTIDA, null); };
+
+/* ---------- RÉCORDS ----------
+   Por dificultad y de menor a mayor tiempo (EST.ranking ordena de mayor a
+   menor puntuación). Solo sin pistas. Los nombres entran escapados. */
+function records(dif) {
+    const todo = EST.leer(CLAVE_RECORDS, {});
+    const l = todo && Array.isArray(todo[dif]) ? todo[dif] : [];
+    return l.filter(e => e && isFinite(Number(e.ms)) && Number(e.ms) > 0).sort((a, b) => a.ms - b.ms);
+}
+function anadirRecord(dif, e) {
+    const todo = EST.leer(CLAVE_RECORDS, {}) || {};
+    todo[dif] = records(dif).concat(e).sort((a, b) => a.ms - b.ms).slice(0, 10);
+    EST.guardar(CLAVE_RECORDS, todo);
+}
+const tiempoEnTexto = (ms) => { const s = Math.floor(ms / 1000); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function pintarRecords(dif, cont) {
+    const l = records(dif);
+    if (!l.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.</p>'; return; }
+    cont.innerHTML = l.map((e, i) => '<div><span class="nom">' + (i + 1) + '. ' + EST.escapar(e.name == null ? '—' : e.name) +
+        '</span><span>' + tiempoEnTexto(e.ms) + (Number(e.errores) ? ' · ' + Number(e.errores) + ' err.' : '') + '</span></div>').join('');
+}
+
+/* ---------- SONIDO ---------- */
+const musica = EST.musica({
+    bpm: 76,
+    acordes: [
+        { bajo: 110, notas: [440, 523, 659] },   // La m
+        { bajo: 87, notas: [349, 440, 523] },    // Fa
+        { bajo: 131, notas: [523, 659, 784] },   // Do
+        { bajo: 98, notas: [392, 494, 587] }     // Sol
+    ]
+});
+const sonido = {
+    poner() { EST.efecto('poner', 30, [[660, 0.05, 'triangle', 0.12]]); },
+    nota() { EST.efecto('nota', 30, [[990, 0.03, 'sine', 0.06]]); },
+    mal() { EST.efecto('mal', 150, [[200, 0.15, 'square', 0.05]]); },
+    unidad() { EST.efecto('unidad', 200, [[784, 0.1, 'triangle', 0.1], [1047, 0.18, 'triangle', 0.1, 0.08]]); },
+    fin() { EST.efecto('fin', 400, [[523, 0.16, 'triangle', 0.14], [659, 0.16, 'triangle', 0.14, 0.13], [784, 0.16, 'triangle', 0.14, 0.26], [1047, 0.45, 'triangle', 0.14, 0.39]]); }
+};
+
+/* ---------- TABLERO ---------- */
+const casillas = [];
+function montarTablero() {
+    const tab = $('tablero');
+    for (let c = 0; c < 81; c++) {
+        const d = document.createElement('div');
+        const f = Sudoku.fila(c), k = Sudoku.columna(c);
+        d.className = 'casilla' + (k % 3 === 2 ? ' c3' : '') + (f % 3 === 2 ? ' f3' : '') + (k === 8 ? ' c9' : '') + (f === 8 ? ' f9' : '');
+        d.setAttribute('role', 'gridcell');
+        d.dataset.c = c;
+        tab.appendChild(d);
+        casillas.push(d);
+    }
+    const tec = $('teclado');
+    for (let v = 1; v <= 9; v++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.dataset.v = v;
+        b.innerHTML = '<span>' + v + '</span><small></small>';
+        b.setAttribute('aria-label', 'Poner ' + v);
+        tec.appendChild(b);
+    }
+}
+
+/* Repetidos en su fila, columna o cuadro: es la regla, no la solución, así
+   que se marca siempre, también sin avisos */
+function choques() {
+    const s = new Set();
+    for (const u of Sudoku.UNIDADES) {
+        const visto = {};
+        for (const c of u) { const v = partida.valores[c]; if (!v) continue; (visto[v] = visto[v] || []).push(c); }
+        for (const l of Object.values(visto)) if (l.length > 1) l.forEach(c => s.add(c));
+    }
+    return s;
+}
+
+function pintar() {
+    if (!partida) return;
+    const ch = choques();
+    const ve = elegida >= 0 ? partida.valores[elegida] : 0;
+    const zona = elegida >= 0 ? new Set([elegida, ...Sudoku.VECINAS[elegida]]) : new Set();
+    for (let c = 0; c < 81; c++) {
+        const d = casillas[c], v = partida.valores[c];
+        const mal = !!v && !partida.pistas[c] && partida.avisos === 'si' && v !== partida.solucion[c];
+        d.className = d.className.replace(/ (dada|zona|igual|elegida|choque|mal)\b/g, '');
+        if (partida.pistas[c]) d.classList.add('dada');
+        if (zona.has(c)) d.classList.add('zona');
+        if (ve && v === ve) d.classList.add('igual');
+        if (ch.has(c)) d.classList.add('choque');
+        if (mal) d.classList.add('mal');
+        if (c === elegida) d.classList.add('elegida');
+        if (v) {
+            d.textContent = String(v);
+        } else if (partida.notas[c]) {
+            let h = '<div class="notas">';
+            for (let n = 1; n <= 9; n++) h += '<span' + (ve === n ? ' class="igual"' : '') + '>' + (partida.notas[c] & (1 << n) ? n : '') + '</span>';
+            d.innerHTML = h + '</div>';
+        } else d.textContent = '';
+        d.setAttribute('aria-selected', String(c === elegida));
+        d.setAttribute('aria-label', 'Fila ' + (Sudoku.fila(c) + 1) + ', columna ' + (Sudoku.columna(c) + 1) + ': ' +
+            (v ? v + (partida.pistas[c] ? ', de partida' : '') + (mal ? ', mal' : '') : partida.notas[c] ? 'notas ' + Sudoku.valoresDe(partida.notas[c]).join(' ') : 'vacía'));
+    }
+    /* Cuántos quedan de cada número; con los nueve puestos, el botón se apaga */
+    const puestos = new Array(10).fill(0);
+    partida.valores.forEach(v => { if (v) puestos[v]++; });
+    for (const b of $('teclado').children) {
+        const v = Number(b.dataset.v), quedan = 9 - puestos[v];
+        b.querySelector('small').textContent = quedan > 0 ? quedan : '';
+        b.disabled = quedan <= 0 && !modoNotas;
+    }
+    $('btnNotas').setAttribute('aria-pressed', String(modoNotas));
+    $('zona').classList.toggle('modo-notas', modoNotas);
+    $('btnDeshacer').disabled = !historial.length;
+    pintarBarra();
+}
+
+/* ---------- RELOJ ---------- */
+const msJugados = () => partida ? partida.ms + (corriendo ? performance.now() - desde : 0) : 0;
+function arrancarReloj() {
+    if (!partida || corriendo || partida.resuelta || pausado) return;
+    corriendo = true; desde = performance.now();
+    if (reloj === null) reloj = setInterval(pintarBarra, 250);
+}
+function pararReloj() {
+    if (partida && corriendo) partida.ms += performance.now() - desde;
+    corriendo = false;
+    if (reloj !== null) { clearInterval(reloj); reloj = null; }
+}
+function pintarBarra() {
+    if (!partida) return;
+    $('dTiempo').textContent = tiempoEnTexto(msJugados());
+    $('dDif').textContent = DIFS[partida.dif];
+    $('dErrores').textContent = String(partida.errores);
+    $('datoErrores').style.display = partida.avisos === 'si' ? '' : 'none';
+}
+
+/* ---------- JUGADAS ----------
+   Cada jugada guarda en el historial cómo estaban las casillas que toca
+   (la suya y las vecinas a las que quitó notas), para deshacerla entera. */
+function foto(cs) { return cs.map(c => ({ c, v: partida.valores[c], n: partida.notas[c] })); }
+
+function escribir(v) {
+    if (!partida || partida.resuelta || pausado || elegida < 0 || partida.pistas[elegida]) return;
+    const c = elegida;
+    if (modoNotas) {
+        if (partida.valores[c]) return;
+        historial.push(foto([c]));
+        partida.notas[c] ^= 1 << v;
+        sonido.nota();
+    } else {
+        if (partida.valores[c] === v) return borrar();
+        const afectadas = [c, ...Sudoku.VECINAS[c].filter(p => partida.notas[p] & (1 << v))];
+        historial.push(foto(afectadas));
+        partida.valores[c] = v;
+        partida.notas[c] = 0;
+        /* Al poner un número, sale de las notas de su fila, columna y cuadro */
+        for (const p of afectadas) if (p !== c) partida.notas[p] &= ~(1 << v);
+        if (partida.avisos === 'si' && v !== partida.solucion[c]) { partida.errores++; sonido.mal(); }
+        else if (unidadCompleta(c)) sonido.unidad();
+        else sonido.poner();
+    }
+    tras();
+}
+function unidadCompleta(c) {
+    return [Sudoku.fila(c), 9 + Sudoku.columna(c), 18 + Sudoku.cuadro(c)].some(u => Sudoku.UNIDADES[u].every(x => partida.valores[x] === partida.solucion[x]));
+}
+function borrar() {
+    if (!partida || partida.resuelta || pausado || elegida < 0 || partida.pistas[elegida]) return;
+    const c = elegida;
+    if (!partida.valores[c] && !partida.notas[c]) return;
+    historial.push(foto([c]));
+    partida.valores[c] = 0;
+    partida.notas[c] = 0;
+    tras();
+}
+function deshacer() {
+    if (!partida || partida.resuelta || pausado || !historial.length) return;
+    for (const { c, v, n } of historial.pop()) { partida.valores[c] = v; partida.notas[c] = n; }
+    tras();
+}
+const NOMBRE_PISTA = {
+    desnudo: (v) => 'Pista: en esa casilla solo cabe el ' + v + '.',
+    oculto: (v) => 'Pista: el ' + v + ' solo tiene ese sitio en su fila, columna o cuadro.'
+};
+function pista() {
+    if (!partida || partida.resuelta || pausado) return;
+    /* Se deduce desde lo que hay bien puesto: un número equivocado del
+       jugador no puede servir de base para una pista */
+    const base = partida.valores.map((v, c) => (v === partida.solucion[c] ? v : 0));
+    const h = Sudoku.siguientePista(base);
+    let c, v, texto;
+    if (h) {
+        c = h.casilla; v = h.valor;
+        texto = (partida.valores[c] ? 'Ahí no iba el ' + partida.valores[c] + '. ' : '') +
+            NOMBRE_PISTA[h.tecnica](v) + (h.apoyo ? ' (antes hay que ver ' + Sudoku.NOMBRES[h.apoyo] + ')' : '');
+    } else {
+        /* No queda nada por deducir desde lo bien puesto: solo puede faltar
+           corregir algún número equivocado */
+        c = partida.valores.findIndex((x, i) => x && x !== partida.solucion[i]);
+        if (c < 0) return;
+        v = partida.solucion[c];
+        texto = 'Pista: ahí no iba el ' + partida.valores[c] + ', sino el ' + v + '.';
+    }
+    const afectadas = [c, ...Sudoku.VECINAS[c].filter(p => partida.notas[p] & (1 << v))];
+    historial.push(foto(afectadas));
+    partida.valores[c] = v; partida.notas[c] = 0;
+    for (const p of afectadas) if (p !== c) partida.notas[p] &= ~(1 << v);
+    partida.ayudas++;
+    elegida = c;
+    EST.avisar(texto);
+    sonido.poner();
+    tras();
+}
+function tras() {
+    pintar();
+    if (partida.valores.every((v, c) => v === partida.solucion[c])) return resuelto();
+    if (partida.valores.every(Boolean)) EST.avisar('Está lleno, pero hay algún número mal', true);
+    guardarPartida();
+}
+
+function elegir(c) {
+    if (!partida || pausado) return;
+    elegida = c;
+    pintar();
+}
+
+/* ---------- PARTIDA ---------- */
+function empezar() {
+    pararReloj();
+    $('preparando').textContent = 'Preparando el sudoku…';
+    $('tablero').style.visibility = 'hidden';
+    ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+    EST.mostrar('pJuego');
+    /* Generar puede llevar un segundo en un móvil lento (difícil, medido):
+       primero se pinta el aviso y luego se calcula */
+    setTimeout(() => {
+        let r = null;
+        while (!r) r = Sudoku.generar(sel.dif, Math.random);
+        abrir({ dif: sel.dif, avisos: sel.avisos, pistas: r.pistas, solucion: r.solucion, valores: r.pistas.slice(),
+                notas: new Array(81).fill(0), ms: 0, errores: 0, ayudas: 0, resuelta: false });
+        guardarPartida();
+    }, 30);
+}
+function continuar() {
+    const g = partidaGuardada();
+    if (!g) { pintarMenu(); return; }
+    ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+    EST.mostrar('pJuego');
+    abrir(g);
+}
+function abrir(p) {
+    partida = p;
+    historial = [];
+    modoNotas = false;
+    pausado = false;
+    elegida = partida.valores.findIndex(v => !v);
+    $('preparando').textContent = '';
+    $('tablero').style.visibility = '';
+    pintar();
+    musica.arrancar();
+    arrancarReloj();
+}
+
+function resuelto() {
+    pararReloj();
+    partida.resuelta = true;
+    elegida = -1;
+    pintar();
+    borrarPartida();
+    sonido.fin();
+    musica.parar();
+    const p = partida;
+    p.msFinal = Math.max(1, Math.round(p.ms));
+    setTimeout(() => {
+        if (partida !== p) return;
+        $('finMarcador').textContent = tiempoEnTexto(p.msFinal);
+        $('finDetalle').textContent = DIFS[p.dif] + (p.avisos === 'si' ? ' · ' + p.errores + (p.errores === 1 ? ' error' : ' errores') : '') +
+            (p.ayudas ? ' · ' + p.ayudas + (p.ayudas === 1 ? ' pista (sin récord)' : ' pistas (sin récord)') : '');
+        const l = records(p.dif);
+        p.entra = !p.ayudas && (l.length < 10 || p.msFinal < l[l.length - 1].ms);
+        $('finRecord').textContent = !l.length || p.msFinal < l[0].ms ? '¡Mejor tiempo en ' + DIFS[p.dif].toLowerCase() + '!' : '¡Entras en el Top 10!';
+        $('nameInput').value = '';
+        $('zonaNombre').style.display = p.entra ? '' : 'none';
+        EST.abrir('capaFin');
+    }, 700);
+}
+function guardarNombre() {
+    const input = $('nameInput');
+    const name = input.value.trim();
+    if (name === '') { EST.avisar('Escribe tu nombre', true); input.focus(); return; }
+    if (!partida || !partida.entra) return;
+    anadirRecord(partida.dif, { name, ms: partida.msFinal, errores: partida.errores, date: new Date().toLocaleDateString() });
+    partida.entra = false;
+    $('zonaNombre').style.display = 'none';
+    EST.avisar('¡Guardado!');
+}
+function verRecords() {
+    Object.keys(DIFS).forEach(d => pintarRecords(d, $('ranking' + d)));
+    EST.abrir('capaRanking');
+}
+
+/* ---------- PAUSA ---------- */
+function pausar() {
+    if (!partida || pausado || partida.resuelta || !$('pJuego').classList.contains('activa')) return;
+    pausado = true;
+    pararReloj();
+    guardarPartida();
+    musica.parar();
+    /* Con la pausa no se ve el tablero: si no, pausar sería pensar gratis */
+    $('tablero').style.visibility = 'hidden';
+    EST.abrir('capaPausa');
+}
+function seguir() {
+    if (!pausado) return;
+    pausado = false;
+    $('tablero').style.visibility = '';
+    EST.cerrar('capaPausa');
+    musica.arrancar();
+    arrancarReloj();
+}
+function alMenu() {
+    if (partida && !partida.resuelta) { pararReloj(); guardarPartida(); }
+    pararReloj();
+    musica.parar();
+    partida = null; pausado = false; historial = [];
+    $('tablero').style.visibility = '';
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    EST.mostrar('pMenu');
+    pintarMenu();
+}
+function pintarMenu() {
+    const g = partidaGuardada();
+    const b = $('btnContinuar');
+    b.style.display = g ? '' : 'none';
+    if (g) b.textContent = 'CONTINUAR · ' + DIFS[g.dif] + ' · ' + tiempoEnTexto(g.ms);
+    $('btnJugar').textContent = g ? 'SUDOKU NUEVO' : 'JUGAR';
+}
+
+/* ---------- ENTRADA ---------- */
+$('tablero').addEventListener('click', (e) => {
+    const d = e.target.closest('.casilla');
+    if (d) elegir(Number(d.dataset.c));
+});
+$('teclado').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (b && !b.disabled) escribir(Number(b.dataset.v));
+});
+document.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) {
+        if (e.key === 'Enter' && e.target.id === 'nameInput') { e.preventDefault(); guardarNombre(); }
+        return;
+    }
+    if (!partida) {
+        if (e.key === 'Escape') ['capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+        return;
+    }
+    if (partida.resuelta) return;
+    if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && !e.repeat) {
+        e.preventDefault();
+        if (pausado) seguir(); else pausar();
+        return;
+    }
+    if (pausado || EST.hayCapa()) return;
+    const MOV = { ArrowUp: -9, ArrowDown: 9, ArrowLeft: -1, ArrowRight: 1 };
+    if (MOV[e.key] !== undefined) {
+        e.preventDefault();
+        const c = elegida < 0 ? 40 : elegida;
+        const f = Sudoku.fila(c), k = Sudoku.columna(c);
+        const nf = (f + (e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0) + 9) % 9;
+        const nk = (k + (e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0) + 9) % 9;
+        elegir(nf * 9 + nk);
+        return;
+    }
+    if (/^[1-9]$/.test(e.key)) { e.preventDefault(); escribir(Number(e.key)); return; }
+    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') { e.preventDefault(); borrar(); return; }
+    if (e.key === 'n' || e.key === 'N') { modoNotas = !modoNotas; pintar(); return; }
+    if (e.key === 'z' || e.key === 'Z' || e.key === 'u' || e.key === 'U') { e.preventDefault(); deshacer(); }
+});
+
+/* ---------- ARRANQUE ---------- */
+montarTablero();
+const boton = (id, fn) => $(id).addEventListener('click', fn);
+EST.grupo('grpDif', (v) => { sel.dif = v; EST.guardar(CLAVE_OPCIONES, sel); });
+EST.grupo('grpAvisos', (v) => { sel.avisos = v; EST.guardar(CLAVE_OPCIONES, sel); });
+document.querySelectorAll('#grpDif .opcion').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.v === sel.dif)));
+document.querySelectorAll('#grpAvisos .opcion').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.v === sel.avisos)));
+boton('btnJugar', empezar);
+boton('btnContinuar', continuar);
+boton('btnNotas', () => { modoNotas = !modoNotas; pintar(); });
+boton('btnDeshacer', deshacer);
+boton('btnBorrar', borrar);
+boton('btnPista', pista);
+boton('btnPausa', pausar);
+boton('btnSeguir', seguir);
+boton('btnAbandonar', alMenu);
+boton('btnGuardar', guardarNombre);
+boton('btnOtra', empezar);
+boton('btnMenuFin', alMenu);
+boton('btnRanking', verRecords);
+boton('btnCerrarRanking', () => EST.cerrar('capaRanking'));
+boton('btnBorrarRanking', () => {
+    if (!confirm('¿Borrar todos los récords del sudoku?')) return;
+    try { localStorage.removeItem(CLAVE_RECORDS); } catch (e) {}
+    EST.guardar(CLAVE_RECORDS, {});
+    verRecords();
+});
+boton('btnAyuda', () => EST.abrir('capaAyuda'));
+boton('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+
+window.addEventListener('blur', pausar);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+/* Cerrar la pestaña o el navegador: lo último que se haya hecho queda guardado */
+window.addEventListener('pagehide', () => { if (partida && !partida.resuelta) { pararReloj(); guardarPartida(); } });
+
+EST.iniciar({
+    claveAudio: 'sudokuAudio',
+    alCambiarMusica(on) { if (on && partida && !pausado && !partida.resuelta) musica.arrancar(); else musica.parar(); }
+});
+pintarMenu();
+
+/* Para las pruebas */
+window.__sudoku = { estado: () => partida, elegida: () => elegida, historial: () => historial.length, pausado: () => pausado, relojActivo: () => reloj !== null, notas: () => modoNotas };
+
+</script>
+</body>
+</html>

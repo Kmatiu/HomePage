@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-vista="todo">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -34,7 +34,7 @@
                  calc(env(safe-area-inset-right, 0px) + 6px)
                  calc(env(safe-area-inset-bottom, 0px) + 20px)
                  calc(env(safe-area-inset-left, 0px) + 6px);
-        background: radial-gradient(1000px 700px at 25% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
         color: var(--texto);
         font-family: var(--fuente);
         height: 100vh;
@@ -91,7 +91,7 @@
 
     .opcion[aria-pressed="true"] {
         border-color: var(--acento);
-        background: rgba(0, 255, 200, 0.16);
+        background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
         color: var(--acento);
         font-weight: bold;
     }
@@ -105,7 +105,7 @@
         margin-top: 2px;
         border: 2px solid var(--acento);
         border-radius: 12px;
-        background: rgba(0, 255, 200, 0.14);
+        background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
         color: var(--acento);
         font: inherit;
         font-size: 1rem;
@@ -129,14 +129,14 @@
         touch-action: manipulation;
     }
 
-    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+    .secundario[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12); }
 
     .fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
     .fila-btns > * { flex: 1 1 100px; }
 
     @media (hover: hover) {
         .opcion:hover { border-color: var(--acento); }
-        .principal:not(:disabled):hover { background: rgba(0, 255, 200, 0.26); }
+        .principal:not(:disabled):hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
         .secundario:hover { color: var(--texto); border-color: var(--texto); }
     }
 
@@ -197,7 +197,7 @@
         touch-action: manipulation;
     }
 
-    .pestana[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(0, 255, 200, 0.12); }
+    .pestana[aria-pressed="true"] { color: var(--acento); border-color: var(--acento); background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12); }
 
     /* ---------- TABLERO ---------- */
     #zonaTablero {
@@ -243,13 +243,13 @@
     }
 
     /* Mi flota: una sombra suave debajo del casco marca la huella */
-    .casilla.barco { background: #26305c; }
+    .casilla.barco { background: var(--c-26305c, #26305c); }
 
     /* Disparos. Van por encima del dibujo del barco y algo transparentes,
        para que la silueta del casco siga leyéndose debajo del impacto. */
-    .casilla.agua { background: var(--agua-tocada); color: rgba(255,255,255,0.3); }
-    .casilla.tocado { position: relative; z-index: 2; background: rgba(255, 204, 0, 0.82); color: #0b0922; }
-    .casilla.hundido { position: relative; z-index: 2; background: rgba(255, 0, 110, 0.82); color: #fff; }
+    .casilla.agua { background: var(--agua-tocada); color: rgba(var(--c-255-255-255, 255, 255, 255),0.3); }
+    .casilla.tocado { position: relative; z-index: 2; background: rgba(var(--c-255-204-0, 255, 204, 0), 0.82); color: var(--c-0b0922, #0b0922); }
+    .casilla.hundido { position: relative; z-index: 2; background: rgba(var(--c-255-0-110, 255, 0, 110), 0.82); color: var(--c-fff, #fff); }
 
     /* ---------- DIBUJO DE LOS BARCOS ----------
        Cada barco es UN elemento que abarca sus casillas en la propia rejilla
@@ -268,23 +268,23 @@
     }
 
     .dibujo svg { width: 100%; height: 100%; display: block; }
-    .dibujo .casco { fill: #93a1c4; stroke: var(--fondo); stroke-width: 1.4; stroke-linejoin: round; }
-    .dibujo .torre { fill: #e4ebff; }
-    .dibujo .ojo { fill: #2b3557; }
+    .dibujo .casco { fill: var(--c-93a1c4, #93a1c4); stroke: var(--fondo); stroke-width: 1.4; stroke-linejoin: round; }
+    .dibujo .torre { fill: var(--c-e4ebff, #e4ebff); }
+    .dibujo .ojo { fill: var(--c-2b3557, #2b3557); }
     /* El hundido va POR ENCIMA de las casillas tocadas y solo como contorno:
        si se pinta debajo, las equis lo tapan y dos barcos hundidos uno al
        lado del otro parecen una sola mancha. Así se ve dónde acaba cada uno
        sin esconder los impactos. */
     .dibujo.hundido,
     .dibujo.tocado { z-index: 3; }
-    .dibujo.hundido .casco { fill: none; stroke: #ffd98a; stroke-width: 1.9; }
-    .dibujo.tocado  .casco { fill: none; stroke: #ced8f2; stroke-width: 1.9; }
+    .dibujo.hundido .casco { fill: none; stroke: var(--c-ffd98a, #ffd98a); stroke-width: 1.9; }
+    .dibujo.tocado  .casco { fill: none; stroke: var(--c-ced8f2, #ced8f2); stroke-width: 1.9; }
     .dibujo.hundido .torre, .dibujo.hundido .ojo,
     .dibujo.tocado  .torre, .dibujo.tocado  .ojo { display: none; }
 
     /* Casilla donde apunta el dedo al colocar */
-    .casilla.previa { background: rgba(0, 255, 200, 0.45); }
-    .casilla.previa-mal { background: rgba(255, 0, 110, 0.45); }
+    .casilla.previa { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.45); }
+    .casilla.previa-mal { background: rgba(var(--c-255-0-110, 255, 0, 110), 0.45); }
 
     .casilla.ultima { box-shadow: inset 0 0 0 2px var(--acento); }
 
@@ -343,7 +343,7 @@
         touch-action: manipulation;
     }
 
-    .porPoner[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); background: rgba(0,255,200,0.14); font-weight: bold; }
+    .porPoner[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); background: rgba(var(--c-0-255-200, 0, 255, 200),0.14); font-weight: bold; }
     .porPoner:disabled { opacity: 0.3; }
 
     /* ---------- CAPAS ---------- */
@@ -351,7 +351,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(8, 6, 26, 0.9);
+        background: rgba(var(--c-8-6-26, 8, 6, 26), 0.9);
         padding: 16px;
         z-index: 10;
         align-items: center;
@@ -367,7 +367,7 @@
         overflow-y: auto;
         border: 2px solid var(--borde);
         border-radius: 16px;
-        background: #15113a;
+        background: var(--c-15113a, #15113a);
         padding: 18px;
         text-align: center;
     }
@@ -377,6 +377,16 @@
     .caja ul { text-align: left; color: var(--apagado); font-size: 0.74rem; line-height: 1.6; padding-left: 18px; margin: 0 0 12px; }
     .caja .marcador { font-size: 1.5rem; font-weight: bold; color: var(--acento); margin: 6px 0 10px; }
 
+    .invitacion {
+        margin: 0 0 12px;
+        padding: 10px;
+        border: 2px solid var(--amarillo);
+        border-radius: 10px;
+        color: var(--amarillo);
+        font-size: 0.78rem;
+        text-align: center;
+    }
+
     #aviso-flotante {
         position: fixed;
         left: 50%;
@@ -385,7 +395,7 @@
         padding: 9px 16px;
         border: 2px solid var(--acento);
         border-radius: 10px;
-        background: #15113a;
+        background: var(--c-15113a, #15113a);
         color: var(--acento);
         font-size: 0.75rem;
         opacity: 0;
@@ -410,6 +420,212 @@
         #flotas { display: none; }
     }
 </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
 </head>
 <body>
 
@@ -417,9 +633,19 @@
 <section class="pantalla activa" id="pMenu">
     <div class="scroll">
         <h1>HUNDIR LA <span>FLOTA</span></h1>
-        <p class="lema">Diez barcos escondidos en cien casillas</p>
+        <p class="lema" id="lema">Seis barcos escondidos en cien casillas</p>
 
         <fieldset>
+            <legend>CONTRA QUIÉN</legend>
+            <div class="opciones" id="grpRival">
+                <button class="opcion" type="button" data-v="maquina" aria-pressed="true">LA MÁQUINA<span class="sub">en este móvil</span></button>
+                <button class="opcion" type="button" data-v="red" aria-pressed="false">OTRO MÓVIL<span class="sub">en la misma wifi</span></button>
+            </div>
+        </fieldset>
+
+        <p class="invitacion" id="invitacion" style="display:none;">Te han invitado a una partida: pulsa <b>UNIRME</b>.</p>
+
+        <fieldset id="fsNivel">
             <legend>NIVEL DE LA MÁQUINA</legend>
             <div class="opciones" id="grpNivel">
                 <button class="opcion" type="button" data-v="facil" aria-pressed="false">GRUMETE<span class="sub">dispara a ciegas</span></button>
@@ -437,6 +663,12 @@
         </fieldset>
 
         <button class="principal" id="btnJugar" type="button">COLOCAR LA FLOTA</button>
+        <!-- Se oculta con style.display y no con [hidden]: .fila-btns lleva
+             display:flex, que gana al atributo. -->
+        <div class="fila-btns" id="btnsRed" style="display:none;">
+            <button class="principal" id="btnCrear" type="button">CREAR PARTIDA</button>
+            <button class="principal" id="btnUnirme" type="button">UNIRME</button>
+        </div>
 
         <div class="fila-btns">
             <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
@@ -504,6 +736,17 @@
     </div>
 </div>
 
+<div class="capa" id="capaCorte">
+    <div class="caja">
+        <h2 id="tCorte">📡 SE HA CORTADO</h2>
+        <p id="sCorte"></p>
+        <button class="principal" id="btnReconectar" type="button">VOLVER A CONECTAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonarRed" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
 <div class="capa" id="capaAyuda">
     <div class="caja">
         <h2>📖 CÓMO SE JUEGA</h2>
@@ -515,6 +758,7 @@
             <li><b>No se te avisa cuando hundes un barco suyo.</b> Solo ves dónde diste y dónde no: te toca deducir qué has hundido y qué sigue a flote. Tampoco se descarta el agua de alrededor, y como los barcos pueden ir pegados, justo al lado puede haber otro.</li>
             <li>Al acabar se destapa su tablero entero y ves dónde tenía cada barco.</li>
             <li id="ayudaGana">Gana quien hunda antes todos los barcos del otro.</li>
+            <li><b>Contra otro móvil</b> tenéis que estar en la misma wifi. Uno pulsa <b>CREAR PARTIDA</b> y el otro <b>UNIRME</b>; el segundo lee con la cámara el código del primero, enseña el suyo y el primero lo lee. Si se corta, la partida no se pierde: se vuelve a conectar igual y sigue donde estaba.</li>
         </ul>
         <button class="principal" id="btnCerrarAyuda" type="button">ENTENDIDO</button>
     </div>
@@ -522,6 +766,1209 @@
 
 <div id="aviso-flotante"></div>
 
+<script>
+/* ---- enlace/terceros/qrcode-generator.min.js ---- */
+/* qrcode-generator 2.0.4 · (c) 2009 Kazuhiko Arase · licencia MIT · https://github.com/kazuhikoarase/qrcode-generator
+   Minificado sin cambios de lógica. Pinta el QR. */
+var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],f={},c=function(t,r){o=function(t){for(var r=new Array(t),e=0;e<t;e+=1){r[e]=new Array(t);for(var n=0;n<t;n+=1)r[e][n]=null}return r}(i=4*e+17),l(0,0),l(i-7,0),l(0,i-7),s(),h(),d(t,r),e>=7&&v(t),null==a&&(a=p(e,n,u)),w(a,r)},l=function(t,r){for(var e=-1;e<=7;e+=1)if(!(t+e<=-1||i<=t+e))for(var n=-1;n<=7;n+=1)r+n<=-1||i<=r+n||(o[t+e][r+n]=0<=e&&e<=6&&(0==n||6==n)||0<=n&&n<=6&&(0==e||6==e)||2<=e&&e<=4&&2<=n&&n<=4)},h=function(){for(var t=8;t<i-8;t+=1)null==o[t][6]&&(o[t][6]=t%2==0);for(var r=8;r<i-8;r+=1)null==o[6][r]&&(o[6][r]=r%2==0)},s=function(){for(var t=B.getPatternPosition(e),r=0;r<t.length;r+=1)for(var n=0;n<t.length;n+=1){var i=t[r],a=t[n];if(null==o[i][a])for(var u=-2;u<=2;u+=1)for(var f=-2;f<=2;f+=1)o[i+u][a+f]=-2==u||2==u||-2==f||2==f||0==u&&0==f}},v=function(t){for(var r=B.getBCHTypeNumber(e),n=0;n<18;n+=1){var a=!t&&1==(r>>n&1);o[Math.floor(n/3)][n%3+i-8-3]=a}for(n=0;n<18;n+=1){a=!t&&1==(r>>n&1);o[n%3+i-8-3][Math.floor(n/3)]=a}},d=function(t,r){for(var e=n<<3|r,a=B.getBCHTypeInfo(e),u=0;u<15;u+=1){var f=!t&&1==(a>>u&1);u<6?o[u][8]=f:u<8?o[u+1][8]=f:o[i-15+u][8]=f}for(u=0;u<15;u+=1){f=!t&&1==(a>>u&1);u<8?o[8][i-u-1]=f:u<9?o[8][15-u-1+1]=f:o[8][15-u-1]=f}o[i-8][8]=!t},w=function(t,r){for(var e=-1,n=i-1,a=7,u=0,f=B.getMaskFunction(r),c=i-1;c>0;c-=2)for(6==c&&(c-=1);;){for(var g=0;g<2;g+=1)if(null==o[n][c-g]){var l=!1;u<t.length&&(l=1==(t[u]>>>a&1)),f(n,c-g)&&(l=!l),o[n][c-g]=l,-1==(a-=1)&&(u+=1,a=7)}if((n+=e)<0||i<=n){n-=e,e=-e;break}}},p=function(t,r,e){for(var n=A.getRSBlocks(t,r),o=b(),i=0;i<e.length;i+=1){var a=e[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var u=0;for(i=0;i<n.length;i+=1)u+=n[i].dataCount;if(o.getLengthInBits()>8*u)throw"code length overflow. ("+o.getLengthInBits()+">"+8*u+")";for(o.getLengthInBits()+4<=8*u&&o.put(0,4);o.getLengthInBits()%8!=0;)o.putBit(!1);for(;!(o.getLengthInBits()>=8*u||(o.put(236,8),o.getLengthInBits()>=8*u));)o.put(17,8);return function(t,r){for(var e=0,n=0,o=0,i=new Array(r.length),a=new Array(r.length),u=0;u<r.length;u+=1){var f=r[u].dataCount,c=r[u].totalCount-f;n=Math.max(n,f),o=Math.max(o,c),i[u]=new Array(f);for(var g=0;g<i[u].length;g+=1)i[u][g]=255&t.getBuffer()[g+e];e+=f;var l=B.getErrorCorrectPolynomial(c),h=k(i[u],l.getLength()-1).mod(l);for(a[u]=new Array(l.getLength()-1),g=0;g<a[u].length;g+=1){var s=g+h.getLength()-a[u].length;a[u][g]=s>=0?h.getAt(s):0}}var v=0;for(g=0;g<r.length;g+=1)v+=r[g].totalCount;var d=new Array(v),w=0;for(g=0;g<n;g+=1)for(u=0;u<r.length;u+=1)g<i[u].length&&(d[w]=i[u][g],w+=1);for(g=0;g<o;g+=1)for(u=0;u<r.length;u+=1)g<a[u].length&&(d[w]=a[u][g],w+=1);return d}(o,n)};f.addData=function(t,r){var e=null;switch(r=r||"Byte"){case"Numeric":e=M(t);break;case"Alphanumeric":e=x(t);break;case"Byte":e=m(t);break;case"Kanji":e=L(t);break;default:throw"mode:"+r}u.push(e),a=null},f.isDark=function(t,r){if(t<0||i<=t||r<0||i<=r)throw t+","+r;return o[t][r]},f.getModuleCount=function(){return i},f.make=function(){if(e<1){for(var t=1;t<40;t++){for(var r=A.getRSBlocks(t,n),o=b(),i=0;i<u.length;i++){var a=u[i];o.put(a.getMode(),4),o.put(a.getLength(),B.getLengthInBits(a.getMode(),t)),a.write(o)}var g=0;for(i=0;i<r.length;i++)g+=r[i].dataCount;if(o.getLengthInBits()<=8*g)break}e=t}c(!1,function(){for(var t=0,r=0,e=0;e<8;e+=1){c(!0,e);var n=B.getLostPoint(f);(0==e||t>n)&&(t=n,r=e)}return r}())},f.createTableTag=function(t,r){t=t||2;var e="";e+='<table style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: "+(r=void 0===r?4*t:r)+"px;",e+='">',e+="<tbody>";for(var n=0;n<f.getModuleCount();n+=1){e+="<tr>";for(var o=0;o<f.getModuleCount();o+=1)e+='<td style="',e+=" border-width: 0px; border-style: none;",e+=" border-collapse: collapse;",e+=" padding: 0px; margin: 0px;",e+=" width: "+t+"px;",e+=" height: "+t+"px;",e+=" background-color: ",e+=f.isDark(n,o)?"#000000":"#ffffff",e+=";",e+='"/>';e+="</tr>"}return e+="</tbody>",e+="</table>"},f.createSvgTag=function(t,r,e,n){var o={};"object"==typeof arguments[0]&&(t=(o=arguments[0]).cellSize,r=o.margin,e=o.alt,n=o.title),t=t||2,r=void 0===r?4*t:r,(e="string"==typeof e?{text:e}:e||{}).text=e.text||null,e.id=e.text?e.id||"qrcode-description":null,(n="string"==typeof n?{text:n}:n||{}).text=n.text||null,n.id=n.text?n.id||"qrcode-title":null;var i,a,u,c,g=f.getModuleCount()*t+2*r,l="";for(c="l"+t+",0 0,"+t+" -"+t+",0 0,-"+t+"z ",l+='<svg version="1.1" xmlns="http://www.w3.org/2000/svg"',l+=o.scalable?"":' width="'+g+'px" height="'+g+'px"',l+=' viewBox="0 0 '+g+" "+g+'" ',l+=' preserveAspectRatio="xMinYMin meet"',l+=n.text||e.text?' role="img" aria-labelledby="'+y([n.id,e.id].join(" ").trim())+'"':"",l+=">",l+=n.text?'<title id="'+y(n.id)+'">'+y(n.text)+"</title>":"",l+=e.text?'<description id="'+y(e.id)+'">'+y(e.text)+"</description>":"",l+='<rect width="100%" height="100%" fill="white" cx="0" cy="0"/>',l+='<path d="',a=0;a<f.getModuleCount();a+=1)for(u=a*t+r,i=0;i<f.getModuleCount();i+=1)f.isDark(a,i)&&(l+="M"+(i*t+r)+","+u+c);return l+='" stroke="transparent" fill="black"/>',l+="</svg>"},f.createDataURL=function(t,r){t=t||2,r=void 0===r?4*t:r;var e=f.getModuleCount()*t+2*r,n=r,o=e-r;return I(e,e,function(r,e){if(n<=r&&r<o&&n<=e&&e<o){var i=Math.floor((r-n)/t),a=Math.floor((e-n)/t);return f.isDark(a,i)?0:1}return 1})},f.createImgTag=function(t,r,e){t=t||2,r=void 0===r?4*t:r;var n=f.getModuleCount()*t+2*r,o="";return o+="<img",o+=' src="',o+=f.createDataURL(t,r),o+='"',o+=' width="',o+=n,o+='"',o+=' height="',o+=n,o+='"',e&&(o+=' alt="',o+=y(e),o+='"'),o+="/>"};var y=function(t){for(var r="",e=0;e<t.length;e+=1){var n=t.charAt(e);switch(n){case"<":r+="&lt;";break;case">":r+="&gt;";break;case"&":r+="&amp;";break;case'"':r+="&quot;";break;default:r+=n}}return r};return f.createASCII=function(t,r){if((t=t||1)<2)return function(t){t=void 0===t?2:t;var r,e,n,o,i,a=1*f.getModuleCount()+2*t,u=t,c=a-t,g={"██":"█","█ ":"▀"," █":"▄","  ":" "},l={"██":"▀","█ ":"▀"," █":" ","  ":" "},h="";for(r=0;r<a;r+=2){for(n=Math.floor((r-u)/1),o=Math.floor((r+1-u)/1),e=0;e<a;e+=1)i="█",u<=e&&e<c&&u<=r&&r<c&&f.isDark(n,Math.floor((e-u)/1))&&(i=" "),u<=e&&e<c&&u<=r+1&&r+1<c&&f.isDark(o,Math.floor((e-u)/1))?i+=" ":i+="█",h+=t<1&&r+1>=c?l[i]:g[i];h+="\n"}return a%2&&t>0?h.substring(0,h.length-a-1)+Array(a+1).join("▀"):h.substring(0,h.length-1)}(r);t-=1,r=void 0===r?2*t:r;var e,n,o,i,a=f.getModuleCount()*t+2*r,u=r,c=a-r,g=Array(t+1).join("██"),l=Array(t+1).join("  "),h="",s="";for(e=0;e<a;e+=1){for(o=Math.floor((e-u)/t),s="",n=0;n<a;n+=1)i=1,u<=n&&n<c&&u<=e&&e<c&&f.isDark(o,Math.floor((n-u)/t))&&(i=0),s+=i?g:l;for(o=0;o<t;o+=1)h+=s+"\n"}return h.substring(0,h.length-1)},f.renderTo2dContext=function(t,r){r=r||2;for(var e=f.getModuleCount(),n=0;n<e;n++)for(var o=0;o<e;o++)t.fillStyle=f.isDark(n,o)?"black":"white",t.fillRect(o*r,n*r,r,r)},f};t.stringToBytes=(t.stringToBytesFuncs={default:function(t){for(var r=[],e=0;e<t.length;e+=1){var n=t.charCodeAt(e);r.push(255&n)}return r}}).default,t.createStringToBytes=function(t,r){var e=function(){for(var e=S(t),n=function(){var t=e.read();if(-1==t)throw"eof";return t},o=0,i={};;){var a=e.read();if(-1==a)break;var u=n(),f=n()<<8|n();i[String.fromCharCode(a<<8|u)]=f,o+=1}if(o!=r)throw o+" != "+r;return i}(),n="?".charCodeAt(0);return function(t){for(var r=[],o=0;o<t.length;o+=1){var i=t.charCodeAt(o);if(i<128)r.push(i);else{var a=e[t.charAt(o)];"number"==typeof a?(255&a)==a?r.push(a):(r.push(a>>>8),r.push(255&a)):r.push(n)}}return r}};var r,e,n,o,i,a=1,u=2,f=4,c=8,g={L:1,M:0,Q:3,H:2},l=0,h=1,s=2,v=3,d=4,w=5,p=6,y=7,B=(r=[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],[6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],[6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],[6,28,54,80,106],[6,32,58,84,110],[6,30,58,86,114],[6,34,62,90,118],[6,26,50,74,98,122],[6,30,54,78,102,126],[6,26,52,78,104,130],[6,30,56,82,108,134],[6,34,60,86,112,138],[6,30,58,86,114,142],[6,34,62,90,118,146],[6,30,54,78,102,126,150],[6,24,50,76,102,128,154],[6,28,54,80,106,132,158],[6,32,58,84,110,136,162],[6,26,54,82,110,138,166],[6,30,58,86,114,142,170]],e=1335,n=7973,i=function(t){for(var r=0;0!=t;)r+=1,t>>>=1;return r},(o={}).getBCHTypeInfo=function(t){for(var r=t<<10;i(r)-i(e)>=0;)r^=e<<i(r)-i(e);return 21522^(t<<10|r)},o.getBCHTypeNumber=function(t){for(var r=t<<12;i(r)-i(n)>=0;)r^=n<<i(r)-i(n);return t<<12|r},o.getPatternPosition=function(t){return r[t-1]},o.getMaskFunction=function(t){switch(t){case l:return function(t,r){return(t+r)%2==0};case h:return function(t,r){return t%2==0};case s:return function(t,r){return r%3==0};case v:return function(t,r){return(t+r)%3==0};case d:return function(t,r){return(Math.floor(t/2)+Math.floor(r/3))%2==0};case w:return function(t,r){return t*r%2+t*r%3==0};case p:return function(t,r){return(t*r%2+t*r%3)%2==0};case y:return function(t,r){return(t*r%3+(t+r)%2)%2==0};default:throw"bad maskPattern:"+t}},o.getErrorCorrectPolynomial=function(t){for(var r=k([1],0),e=0;e<t;e+=1)r=r.multiply(k([1,C.gexp(e)],0));return r},o.getLengthInBits=function(t,r){if(1<=r&&r<10)switch(t){case a:return 10;case u:return 9;case f:case c:return 8;default:throw"mode:"+t}else if(r<27)switch(t){case a:return 12;case u:return 11;case f:return 16;case c:return 10;default:throw"mode:"+t}else{if(!(r<41))throw"type:"+r;switch(t){case a:return 14;case u:return 13;case f:return 16;case c:return 12;default:throw"mode:"+t}}},o.getLostPoint=function(t){for(var r=t.getModuleCount(),e=0,n=0;n<r;n+=1)for(var o=0;o<r;o+=1){for(var i=0,a=t.isDark(n,o),u=-1;u<=1;u+=1)if(!(n+u<0||r<=n+u))for(var f=-1;f<=1;f+=1)o+f<0||r<=o+f||0==u&&0==f||a==t.isDark(n+u,o+f)&&(i+=1);i>5&&(e+=3+i-5)}for(n=0;n<r-1;n+=1)for(o=0;o<r-1;o+=1){var c=0;t.isDark(n,o)&&(c+=1),t.isDark(n+1,o)&&(c+=1),t.isDark(n,o+1)&&(c+=1),t.isDark(n+1,o+1)&&(c+=1),0!=c&&4!=c||(e+=3)}for(n=0;n<r;n+=1)for(o=0;o<r-6;o+=1)t.isDark(n,o)&&!t.isDark(n,o+1)&&t.isDark(n,o+2)&&t.isDark(n,o+3)&&t.isDark(n,o+4)&&!t.isDark(n,o+5)&&t.isDark(n,o+6)&&(e+=40);for(o=0;o<r;o+=1)for(n=0;n<r-6;n+=1)t.isDark(n,o)&&!t.isDark(n+1,o)&&t.isDark(n+2,o)&&t.isDark(n+3,o)&&t.isDark(n+4,o)&&!t.isDark(n+5,o)&&t.isDark(n+6,o)&&(e+=40);var g=0;for(o=0;o<r;o+=1)for(n=0;n<r;n+=1)t.isDark(n,o)&&(g+=1);return e+=Math.abs(100*g/r/r-50)/5*10},o),C=function(){for(var t=new Array(256),r=new Array(256),e=0;e<8;e+=1)t[e]=1<<e;for(e=8;e<256;e+=1)t[e]=t[e-4]^t[e-5]^t[e-6]^t[e-8];for(e=0;e<255;e+=1)r[t[e]]=e;var n={glog:function(t){if(t<1)throw"glog("+t+")";return r[t]},gexp:function(r){for(;r<0;)r+=255;for(;r>=256;)r-=255;return t[r]}};return n}();function k(t,r){if(void 0===t.length)throw t.length+"/"+r;var e=function(){for(var e=0;e<t.length&&0==t[e];)e+=1;for(var n=new Array(t.length-e+r),o=0;o<t.length-e;o+=1)n[o]=t[o+e];return n}(),n={getAt:function(t){return e[t]},getLength:function(){return e.length},multiply:function(t){for(var r=new Array(n.getLength()+t.getLength()-1),e=0;e<n.getLength();e+=1)for(var o=0;o<t.getLength();o+=1)r[e+o]^=C.gexp(C.glog(n.getAt(e))+C.glog(t.getAt(o)));return k(r,0)},mod:function(t){if(n.getLength()-t.getLength()<0)return n;for(var r=C.glog(n.getAt(0))-C.glog(t.getAt(0)),e=new Array(n.getLength()),o=0;o<n.getLength();o+=1)e[o]=n.getAt(o);for(o=0;o<t.getLength();o+=1)e[o]^=C.gexp(C.glog(t.getAt(o))+r);return k(e,0).mod(t)}};return n}var A=function(){var t=[[1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],[1,70,55],[1,70,44],[2,35,17],[2,35,13],[1,100,80],[2,50,32],[2,50,24],[4,25,9],[1,134,108],[2,67,43],[2,33,15,2,34,16],[2,33,11,2,34,12],[2,86,68],[4,43,27],[4,43,19],[4,43,15],[2,98,78],[4,49,31],[2,32,14,4,33,15],[4,39,13,1,40,14],[2,121,97],[2,60,38,2,61,39],[4,40,18,2,41,19],[4,40,14,2,41,15],[2,146,116],[3,58,36,2,59,37],[4,36,16,4,37,17],[4,36,12,4,37,13],[2,86,68,2,87,69],[4,69,43,1,70,44],[6,43,19,2,44,20],[6,43,15,2,44,16],[4,101,81],[1,80,50,4,81,51],[4,50,22,4,51,23],[3,36,12,8,37,13],[2,116,92,2,117,93],[6,58,36,2,59,37],[4,46,20,6,47,21],[7,42,14,4,43,15],[4,133,107],[8,59,37,1,60,38],[8,44,20,4,45,21],[12,33,11,4,34,12],[3,145,115,1,146,116],[4,64,40,5,65,41],[11,36,16,5,37,17],[11,36,12,5,37,13],[5,109,87,1,110,88],[5,65,41,5,66,42],[5,54,24,7,55,25],[11,36,12,7,37,13],[5,122,98,1,123,99],[7,73,45,3,74,46],[15,43,19,2,44,20],[3,45,15,13,46,16],[1,135,107,5,136,108],[10,74,46,1,75,47],[1,50,22,15,51,23],[2,42,14,17,43,15],[5,150,120,1,151,121],[9,69,43,4,70,44],[17,50,22,1,51,23],[2,42,14,19,43,15],[3,141,113,4,142,114],[3,70,44,11,71,45],[17,47,21,4,48,22],[9,39,13,16,40,14],[3,135,107,5,136,108],[3,67,41,13,68,42],[15,54,24,5,55,25],[15,43,15,10,44,16],[4,144,116,4,145,117],[17,68,42],[17,50,22,6,51,23],[19,46,16,6,47,17],[2,139,111,7,140,112],[17,74,46],[7,54,24,16,55,25],[34,37,13],[4,151,121,5,152,122],[4,75,47,14,76,48],[11,54,24,14,55,25],[16,45,15,14,46,16],[6,147,117,4,148,118],[6,73,45,14,74,46],[11,54,24,16,55,25],[30,46,16,2,47,17],[8,132,106,4,133,107],[8,75,47,13,76,48],[7,54,24,22,55,25],[22,45,15,13,46,16],[10,142,114,2,143,115],[19,74,46,4,75,47],[28,50,22,6,51,23],[33,46,16,4,47,17],[8,152,122,4,153,123],[22,73,45,3,74,46],[8,53,23,26,54,24],[12,45,15,28,46,16],[3,147,117,10,148,118],[3,73,45,23,74,46],[4,54,24,31,55,25],[11,45,15,31,46,16],[7,146,116,7,147,117],[21,73,45,7,74,46],[1,53,23,37,54,24],[19,45,15,26,46,16],[5,145,115,10,146,116],[19,75,47,10,76,48],[15,54,24,25,55,25],[23,45,15,25,46,16],[13,145,115,3,146,116],[2,74,46,29,75,47],[42,54,24,1,55,25],[23,45,15,28,46,16],[17,145,115],[10,74,46,23,75,47],[10,54,24,35,55,25],[19,45,15,35,46,16],[17,145,115,1,146,116],[14,74,46,21,75,47],[29,54,24,19,55,25],[11,45,15,46,46,16],[13,145,115,6,146,116],[14,74,46,23,75,47],[44,54,24,7,55,25],[59,46,16,1,47,17],[12,151,121,7,152,122],[12,75,47,26,76,48],[39,54,24,14,55,25],[22,45,15,41,46,16],[6,151,121,14,152,122],[6,75,47,34,76,48],[46,54,24,10,55,25],[2,45,15,64,46,16],[17,152,122,4,153,123],[29,74,46,14,75,47],[49,54,24,10,55,25],[24,45,15,46,46,16],[4,152,122,18,153,123],[13,74,46,32,75,47],[48,54,24,14,55,25],[42,45,15,32,46,16],[20,147,117,4,148,118],[40,75,47,7,76,48],[43,54,24,22,55,25],[10,45,15,67,46,16],[19,148,118,6,149,119],[18,75,47,31,76,48],[34,54,24,34,55,25],[20,45,15,61,46,16]],r=function(t,r){var e={};return e.totalCount=t,e.dataCount=r,e},e={};return e.getRSBlocks=function(e,n){var o=function(r,e){switch(e){case g.L:return t[4*(r-1)+0];case g.M:return t[4*(r-1)+1];case g.Q:return t[4*(r-1)+2];case g.H:return t[4*(r-1)+3];default:return}}(e,n);if(void 0===o)throw"bad rs block @ typeNumber:"+e+"/errorCorrectionLevel:"+n;for(var i=o.length/3,a=[],u=0;u<i;u+=1)for(var f=o[3*u+0],c=o[3*u+1],l=o[3*u+2],h=0;h<f;h+=1)a.push(r(c,l));return a},e}(),b=function(){var t=[],r=0,e={getBuffer:function(){return t},getAt:function(r){var e=Math.floor(r/8);return 1==(t[e]>>>7-r%8&1)},put:function(t,r){for(var n=0;n<r;n+=1)e.putBit(1==(t>>>r-n-1&1))},getLengthInBits:function(){return r},putBit:function(e){var n=Math.floor(r/8);t.length<=n&&t.push(0),e&&(t[n]|=128>>>r%8),r+=1}};return e},M=function(t){var r=a,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+2<r.length;)t.put(o(r.substring(n,n+3)),10),n+=3;n<r.length&&(r.length-n==1?t.put(o(r.substring(n,n+1)),4):r.length-n==2&&t.put(o(r.substring(n,n+2)),7))}},o=function(t){for(var r=0,e=0;e<t.length;e+=1)r=10*r+i(t.charAt(e));return r},i=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);throw"illegal char :"+t};return n},x=function(t){var r=u,e=t,n={getMode:function(){return r},getLength:function(t){return e.length},write:function(t){for(var r=e,n=0;n+1<r.length;)t.put(45*o(r.charAt(n))+o(r.charAt(n+1)),11),n+=2;n<r.length&&t.put(o(r.charAt(n)),6)}},o=function(t){if("0"<=t&&t<="9")return t.charCodeAt(0)-"0".charCodeAt(0);if("A"<=t&&t<="Z")return t.charCodeAt(0)-"A".charCodeAt(0)+10;switch(t){case" ":return 36;case"$":return 37;case"%":return 38;case"*":return 39;case"+":return 40;case"-":return 41;case".":return 42;case"/":return 43;case":":return 44;default:throw"illegal char :"+t}};return n},m=function(r){var e=f,n=t.stringToBytes(r),o={getMode:function(){return e},getLength:function(t){return n.length},write:function(t){for(var r=0;r<n.length;r+=1)t.put(n[r],8)}};return o},L=function(r){var e=c,n=t.stringToBytesFuncs.SJIS;if(!n)throw"sjis not supported.";!function(){var t=n("友");if(2!=t.length||38726!=(t[0]<<8|t[1]))throw"sjis not supported."}();var o=n(r),i={getMode:function(){return e},getLength:function(t){return~~(o.length/2)},write:function(t){for(var r=o,e=0;e+1<r.length;){var n=(255&r[e])<<8|255&r[e+1];if(33088<=n&&n<=40956)n-=33088;else{if(!(57408<=n&&n<=60351))throw"illegal char at "+(e+1)+"/"+n;n-=49472}n=192*(n>>>8&255)+(255&n),t.put(n,13),e+=2}if(e<r.length)throw"illegal char at "+(e+1)}};return i},D=function(){var t=[],r={writeByte:function(r){t.push(255&r)},writeShort:function(t){r.writeByte(t),r.writeByte(t>>>8)},writeBytes:function(t,e,n){e=e||0,n=n||t.length;for(var o=0;o<n;o+=1)r.writeByte(t[o+e])},writeString:function(t){for(var e=0;e<t.length;e+=1)r.writeByte(t.charCodeAt(e))},toByteArray:function(){return t},toString:function(){var r="";r+="[";for(var e=0;e<t.length;e+=1)e>0&&(r+=","),r+=t[e];return r+="]"}};return r},S=function(t){var r=t,e=0,n=0,o=0,i={read:function(){for(;o<8;){if(e>=r.length){if(0==o)return-1;throw"unexpected end of file./"+o}var t=r.charAt(e);if(e+=1,"="==t)return o=0,-1;t.match(/^\s$/)||(n=n<<6|a(t.charCodeAt(0)),o+=6)}var i=n>>>o-8&255;return o-=8,i}},a=function(t){if(65<=t&&t<=90)return t-65;if(97<=t&&t<=122)return t-97+26;if(48<=t&&t<=57)return t-48+52;if(43==t)return 62;if(47==t)return 63;throw"c:"+t};return i},I=function(t,r,e){for(var n=function(t,r){var e=t,n=r,o=new Array(t*r),i={setPixel:function(t,r,n){o[r*e+t]=n},write:function(t){t.writeString("GIF87a"),t.writeShort(e),t.writeShort(n),t.writeByte(128),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(0),t.writeByte(255),t.writeByte(255),t.writeByte(255),t.writeString(","),t.writeShort(0),t.writeShort(0),t.writeShort(e),t.writeShort(n),t.writeByte(0);var r=a(2);t.writeByte(2);for(var o=0;r.length-o>255;)t.writeByte(255),t.writeBytes(r,o,255),o+=255;t.writeByte(r.length-o),t.writeBytes(r,o,r.length-o),t.writeByte(0),t.writeString(";")}},a=function(t){for(var r=1<<t,e=1+(1<<t),n=t+1,i=u(),a=0;a<r;a+=1)i.add(String.fromCharCode(a));i.add(String.fromCharCode(r)),i.add(String.fromCharCode(e));var f,c,g,l=D(),h=(f=l,c=0,g=0,{write:function(t,r){if(t>>>r!=0)throw"length over";for(;c+r>=8;)f.writeByte(255&(t<<c|g)),r-=8-c,t>>>=8-c,g=0,c=0;g|=t<<c,c+=r},flush:function(){c>0&&f.writeByte(g)}});h.write(r,n);var s=0,v=String.fromCharCode(o[s]);for(s+=1;s<o.length;){var d=String.fromCharCode(o[s]);s+=1,i.contains(v+d)?v+=d:(h.write(i.indexOf(v),n),i.size()<4095&&(i.size()==1<<n&&(n+=1),i.add(v+d)),v=d)}return h.write(i.indexOf(v),n),h.write(e,n),h.flush(),l.toByteArray()},u=function(){var t={},r=0,e={add:function(n){if(e.contains(n))throw"dup key:"+n;t[n]=r,r+=1},size:function(){return r},indexOf:function(r){return t[r]},contains:function(r){return void 0!==t[r]}};return e};return i}(t,r),o=0;o<r;o+=1)for(var i=0;i<t;i+=1)n.setPixel(i,o,e(i,o));var a=D();n.write(a);for(var u=function(){var t=0,r=0,e=0,n="",o={},i=function(t){n+=String.fromCharCode(a(63&t))},a=function(t){if(t<0);else{if(t<26)return 65+t;if(t<52)return t-26+97;if(t<62)return t-52+48;if(62==t)return 43;if(63==t)return 47}throw"n:"+t};return o.writeByte=function(n){for(t=t<<8|255&n,r+=8,e+=1;r>=6;)i(t>>>r-6),r-=6},o.flush=function(){if(r>0&&(i(t<<6-r),t=0,r=0),e%3!=0)for(var o=3-e%3,a=0;a<o;a+=1)n+="="},o.toString=function(){return n},o}(),f=a.toByteArray(),c=0;c<f.length;c+=1)u.writeByte(f[c]);return u.flush(),"data:image/gif;base64,"+u};return t}();qrcode.stringToBytesFuncs["UTF-8"]=function(t){return function(t){for(var r=[],e=0;e<t.length;e++){var n=t.charCodeAt(e);n<128?r.push(n):n<2048?r.push(192|n>>6,128|63&n):n<55296||n>=57344?r.push(224|n>>12,128|n>>6&63,128|63&n):(e++,n=65536+((1023&n)<<10|1023&t.charCodeAt(e)),r.push(240|n>>18,128|n>>12&63,128|n>>6&63,128|63&n))}return r}(t)},function(t){"function"==typeof define&&define.amd?define([],t):"object"==typeof exports&&(module.exports=t())}(function(){return qrcode});
+
+/* ---- enlace/terceros/qr-lector-worker.js ---- */
+/* qr-scanner 1.4.2 (worker) · (c) 2017 Nimiq, danimoh · licencia MIT · https://github.com/nimiq/qr-scanner
+   Derivado de jsQR (Apache-2.0, (c) 2017 Cosmo Wolfe). Único cambio: el
+   'export const createWorker' del original pasa a una constante normal,
+   porque este archivo va incrustado en un script clásico. */
+const qrsCrearWorker=()=>new Worker(URL.createObjectURL(new Blob([`class x{constructor(a,b){this.width=b;this.height=a.length/b;this.data=a}static createEmpty(a,b){return new x(new Uint8ClampedArray(a*b),a)}get(a,b){return 0>a||a>=this.width||0>b||b>=this.height?!1:!!this.data[b*this.width+a]}set(a,b,c){this.data[b*this.width+a]=c?1:0}setRegion(a,b,c,d,e){for(let f=b;f<b+d;f++)for(let g=a;g<a+c;g++)this.set(g,f,!!e)}}
+class A{constructor(a,b,c){this.width=a;a*=b;if(c&&c.length!==a)throw Error("Wrong buffer size");this.data=c||new Uint8ClampedArray(a)}get(a,b){return this.data[b*this.width+a]}set(a,b,c){this.data[b*this.width+a]=c}}
+class ba{constructor(a){this.bitOffset=this.byteOffset=0;this.bytes=a}readBits(a){if(1>a||32<a||a>this.available())throw Error("Cannot read "+a.toString()+" bits");var b=0;if(0<this.bitOffset){b=8-this.bitOffset;var c=a<b?a:b;b-=c;b=(this.bytes[this.byteOffset]&255>>8-c<<b)>>b;a-=c;this.bitOffset+=c;8===this.bitOffset&&(this.bitOffset=0,this.byteOffset++)}if(0<a){for(;8<=a;)b=b<<8|this.bytes[this.byteOffset]&255,this.byteOffset++,a-=8;0<a&&(c=8-a,b=b<<a|(this.bytes[this.byteOffset]&255>>c<<c)>>c,
+this.bitOffset+=a)}return b}available(){return 8*(this.bytes.length-this.byteOffset)-this.bitOffset}}var B,C=B||(B={});C.Numeric="numeric";C.Alphanumeric="alphanumeric";C.Byte="byte";C.Kanji="kanji";C.ECI="eci";C.StructuredAppend="structuredappend";var D,E=D||(D={});E[E.Terminator=0]="Terminator";E[E.Numeric=1]="Numeric";E[E.Alphanumeric=2]="Alphanumeric";E[E.Byte=4]="Byte";E[E.Kanji=8]="Kanji";E[E.ECI=7]="ECI";E[E.StructuredAppend=3]="StructuredAppend";let F="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:".split("");
+function ca(a,b){let c=[],d="";b=a.readBits([8,16,16][b]);for(let e=0;e<b;e++){let f=a.readBits(8);c.push(f)}try{d+=decodeURIComponent(c.map(e=>\`%\${("0"+e.toString(16)).substr(-2)}\`).join(""))}catch(e){}return{bytes:c,text:d}}
+function da(a,b){a=new ba(a);let c=9>=b?0:26>=b?1:2;for(b={text:"",bytes:[],chunks:[],version:b};4<=a.available();){var d=a.readBits(4);if(d===D.Terminator)return b;if(d===D.ECI)0===a.readBits(1)?b.chunks.push({type:B.ECI,assignmentNumber:a.readBits(7)}):0===a.readBits(1)?b.chunks.push({type:B.ECI,assignmentNumber:a.readBits(14)}):0===a.readBits(1)?b.chunks.push({type:B.ECI,assignmentNumber:a.readBits(21)}):b.chunks.push({type:B.ECI,assignmentNumber:-1});else if(d===D.Numeric){var e=a,f=[];d="";for(var g=
+e.readBits([10,12,14][c]);3<=g;){var h=e.readBits(10);if(1E3<=h)throw Error("Invalid numeric value above 999");var k=Math.floor(h/100),m=Math.floor(h/10)%10;h%=10;f.push(48+k,48+m,48+h);d+=k.toString()+m.toString()+h.toString();g-=3}if(2===g){g=e.readBits(7);if(100<=g)throw Error("Invalid numeric value above 99");e=Math.floor(g/10);g%=10;f.push(48+e,48+g);d+=e.toString()+g.toString()}else if(1===g){e=e.readBits(4);if(10<=e)throw Error("Invalid numeric value above 9");f.push(48+e);d+=e.toString()}b.text+=
+d;b.bytes.push(...f);b.chunks.push({type:B.Numeric,text:d})}else if(d===D.Alphanumeric){e=a;f=[];d="";for(g=e.readBits([9,11,13][c]);2<=g;)m=e.readBits(11),k=Math.floor(m/45),m%=45,f.push(F[k].charCodeAt(0),F[m].charCodeAt(0)),d+=F[k]+F[m],g-=2;1===g&&(e=e.readBits(6),f.push(F[e].charCodeAt(0)),d+=F[e]);b.text+=d;b.bytes.push(...f);b.chunks.push({type:B.Alphanumeric,text:d})}else if(d===D.Byte)d=ca(a,c),b.text+=d.text,b.bytes.push(...d.bytes),b.chunks.push({type:B.Byte,bytes:d.bytes,text:d.text});
+else if(d===D.Kanji){f=a;d=[];e=f.readBits([8,10,12][c]);for(g=0;g<e;g++)k=f.readBits(13),k=Math.floor(k/192)<<8|k%192,k=7936>k?k+33088:k+49472,d.push(k>>8,k&255);f=(new TextDecoder("shift-jis")).decode(Uint8Array.from(d));b.text+=f;b.bytes.push(...d);b.chunks.push({type:B.Kanji,bytes:d,text:f})}else d===D.StructuredAppend&&b.chunks.push({type:B.StructuredAppend,currentSequence:a.readBits(4),totalSequence:a.readBits(4),parity:a.readBits(8)})}if(0===a.available()||0===a.readBits(a.available()))return b}
+class G{constructor(a,b){if(0===b.length)throw Error("No coefficients.");this.field=a;let c=b.length;if(1<c&&0===b[0]){let d=1;for(;d<c&&0===b[d];)d++;if(d===c)this.coefficients=a.zero.coefficients;else for(this.coefficients=new Uint8ClampedArray(c-d),a=0;a<this.coefficients.length;a++)this.coefficients[a]=b[d+a]}else this.coefficients=b}degree(){return this.coefficients.length-1}isZero(){return 0===this.coefficients[0]}getCoefficient(a){return this.coefficients[this.coefficients.length-1-a]}addOrSubtract(a){if(this.isZero())return a;
+if(a.isZero())return this;let b=this.coefficients;a=a.coefficients;b.length>a.length&&([b,a]=[a,b]);let c=new Uint8ClampedArray(a.length),d=a.length-b.length;for(var e=0;e<d;e++)c[e]=a[e];for(e=d;e<a.length;e++)c[e]=b[e-d]^a[e];return new G(this.field,c)}multiply(a){if(0===a)return this.field.zero;if(1===a)return this;let b=this.coefficients.length,c=new Uint8ClampedArray(b);for(let d=0;d<b;d++)c[d]=this.field.multiply(this.coefficients[d],a);return new G(this.field,c)}multiplyPoly(a){if(this.isZero()||
+a.isZero())return this.field.zero;let b=this.coefficients,c=b.length;a=a.coefficients;let d=a.length,e=new Uint8ClampedArray(c+d-1);for(let f=0;f<c;f++){let g=b[f];for(let h=0;h<d;h++)e[f+h]=H(e[f+h],this.field.multiply(g,a[h]))}return new G(this.field,e)}multiplyByMonomial(a,b){if(0>a)throw Error("Invalid degree less than 0");if(0===b)return this.field.zero;let c=this.coefficients.length;a=new Uint8ClampedArray(c+a);for(let d=0;d<c;d++)a[d]=this.field.multiply(this.coefficients[d],b);return new G(this.field,
+a)}evaluateAt(a){let b=0;if(0===a)return this.getCoefficient(0);let c=this.coefficients.length;if(1===a)return this.coefficients.forEach(d=>{b^=d}),b;b=this.coefficients[0];for(let d=1;d<c;d++)b=H(this.field.multiply(a,b),this.coefficients[d]);return b}}function H(a,b){return a^b}
+class ea{constructor(a,b,c){this.primitive=a;this.size=b;this.generatorBase=c;this.expTable=Array(this.size);this.logTable=Array(this.size);a=1;for(b=0;b<this.size;b++)this.expTable[b]=a,a*=2,a>=this.size&&(a=(a^this.primitive)&this.size-1);for(a=0;a<this.size-1;a++)this.logTable[this.expTable[a]]=a;this.zero=new G(this,Uint8ClampedArray.from([0]));this.one=new G(this,Uint8ClampedArray.from([1]))}multiply(a,b){return 0===a||0===b?0:this.expTable[(this.logTable[a]+this.logTable[b])%(this.size-1)]}inverse(a){if(0===
+a)throw Error("Can't invert 0");return this.expTable[this.size-this.logTable[a]-1]}buildMonomial(a,b){if(0>a)throw Error("Invalid monomial degree less than 0");if(0===b)return this.zero;a=new Uint8ClampedArray(a+1);a[0]=b;return new G(this,a)}log(a){if(0===a)throw Error("Can't take log(0)");return this.logTable[a]}exp(a){return this.expTable[a]}}
+function fa(a,b,c,d){b.degree()<c.degree()&&([b,c]=[c,b]);let e=a.zero;for(var f=a.one;c.degree()>=d/2;){var g=b;let h=e;b=c;e=f;if(b.isZero())return null;c=g;f=a.zero;g=b.getCoefficient(b.degree());for(g=a.inverse(g);c.degree()>=b.degree()&&!c.isZero();){let k=c.degree()-b.degree(),m=a.multiply(c.getCoefficient(c.degree()),g);f=f.addOrSubtract(a.buildMonomial(k,m));c=c.addOrSubtract(b.multiplyByMonomial(k,m))}f=f.multiplyPoly(e).addOrSubtract(h);if(c.degree()>=b.degree())return null}d=f.getCoefficient(0);
+if(0===d)return null;a=a.inverse(d);return[f.multiply(a),c.multiply(a)]}
+function ha(a,b){let c=new Uint8ClampedArray(a.length);c.set(a);a=new ea(285,256,0);var d=new G(a,c),e=new Uint8ClampedArray(b),f=!1;for(var g=0;g<b;g++){var h=d.evaluateAt(a.exp(g+a.generatorBase));e[e.length-1-g]=h;0!==h&&(f=!0)}if(!f)return c;d=new G(a,e);d=fa(a,a.buildMonomial(b,1),d,b);if(null===d)return null;b=d[0];g=b.degree();if(1===g)b=[b.getCoefficient(1)];else{e=Array(g);f=0;for(h=1;h<a.size&&f<g;h++)0===b.evaluateAt(h)&&(e[f]=a.inverse(h),f++);b=f!==g?null:e}if(null==b)return null;e=d[1];
+f=b.length;d=Array(f);for(g=0;g<f;g++){h=a.inverse(b[g]);let k=1;for(let m=0;m<f;m++)g!==m&&(k=a.multiply(k,H(1,a.multiply(b[m],h))));d[g]=a.multiply(e.evaluateAt(h),a.inverse(k));0!==a.generatorBase&&(d[g]=a.multiply(d[g],h))}for(e=0;e<b.length;e++){f=c.length-1-a.log(b[e]);if(0>f)return null;c[f]^=d[e]}return c}
+let I=[{infoBits:null,versionNumber:1,alignmentPatternCenters:[],errorCorrectionLevels:[{ecCodewordsPerBlock:7,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:19}]},{ecCodewordsPerBlock:10,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:16}]},{ecCodewordsPerBlock:13,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:13}]},{ecCodewordsPerBlock:17,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:9}]}]},{infoBits:null,versionNumber:2,alignmentPatternCenters:[6,18],errorCorrectionLevels:[{ecCodewordsPerBlock:10,ecBlocks:[{numBlocks:1,
+dataCodewordsPerBlock:34}]},{ecCodewordsPerBlock:16,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:28}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:22}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:16}]}]},{infoBits:null,versionNumber:3,alignmentPatternCenters:[6,22],errorCorrectionLevels:[{ecCodewordsPerBlock:15,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:55}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:44}]},{ecCodewordsPerBlock:18,
+ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:17}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:13}]}]},{infoBits:null,versionNumber:4,alignmentPatternCenters:[6,26],errorCorrectionLevels:[{ecCodewordsPerBlock:20,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:80}]},{ecCodewordsPerBlock:18,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:32}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:24}]},{ecCodewordsPerBlock:16,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:9}]}]},
+{infoBits:null,versionNumber:5,alignmentPatternCenters:[6,30],errorCorrectionLevels:[{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:108}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:43}]},{ecCodewordsPerBlock:18,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:15},{numBlocks:2,dataCodewordsPerBlock:16}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:11},{numBlocks:2,dataCodewordsPerBlock:12}]}]},{infoBits:null,versionNumber:6,alignmentPatternCenters:[6,
+34],errorCorrectionLevels:[{ecCodewordsPerBlock:18,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:68}]},{ecCodewordsPerBlock:16,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:27}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:19}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:15}]}]},{infoBits:31892,versionNumber:7,alignmentPatternCenters:[6,22,38],errorCorrectionLevels:[{ecCodewordsPerBlock:20,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:78}]},{ecCodewordsPerBlock:18,
+ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:31}]},{ecCodewordsPerBlock:18,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:14},{numBlocks:4,dataCodewordsPerBlock:15}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:13},{numBlocks:1,dataCodewordsPerBlock:14}]}]},{infoBits:34236,versionNumber:8,alignmentPatternCenters:[6,24,42],errorCorrectionLevels:[{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:97}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:38},
+{numBlocks:2,dataCodewordsPerBlock:39}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:18},{numBlocks:2,dataCodewordsPerBlock:19}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:14},{numBlocks:2,dataCodewordsPerBlock:15}]}]},{infoBits:39577,versionNumber:9,alignmentPatternCenters:[6,26,46],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:36},
+{numBlocks:2,dataCodewordsPerBlock:37}]},{ecCodewordsPerBlock:20,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:16},{numBlocks:4,dataCodewordsPerBlock:17}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:12},{numBlocks:4,dataCodewordsPerBlock:13}]}]},{infoBits:42195,versionNumber:10,alignmentPatternCenters:[6,28,50],errorCorrectionLevels:[{ecCodewordsPerBlock:18,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:68},{numBlocks:2,dataCodewordsPerBlock:69}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:4,
+dataCodewordsPerBlock:43},{numBlocks:1,dataCodewordsPerBlock:44}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:19},{numBlocks:2,dataCodewordsPerBlock:20}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:15},{numBlocks:2,dataCodewordsPerBlock:16}]}]},{infoBits:48118,versionNumber:11,alignmentPatternCenters:[6,30,54],errorCorrectionLevels:[{ecCodewordsPerBlock:20,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:81}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:1,
+dataCodewordsPerBlock:50},{numBlocks:4,dataCodewordsPerBlock:51}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:22},{numBlocks:4,dataCodewordsPerBlock:23}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:12},{numBlocks:8,dataCodewordsPerBlock:13}]}]},{infoBits:51042,versionNumber:12,alignmentPatternCenters:[6,32,58],errorCorrectionLevels:[{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:92},{numBlocks:2,dataCodewordsPerBlock:93}]},
+{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:36},{numBlocks:2,dataCodewordsPerBlock:37}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:20},{numBlocks:6,dataCodewordsPerBlock:21}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:7,dataCodewordsPerBlock:14},{numBlocks:4,dataCodewordsPerBlock:15}]}]},{infoBits:55367,versionNumber:13,alignmentPatternCenters:[6,34,62],errorCorrectionLevels:[{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:107}]},
+{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:37},{numBlocks:1,dataCodewordsPerBlock:38}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:20},{numBlocks:4,dataCodewordsPerBlock:21}]},{ecCodewordsPerBlock:22,ecBlocks:[{numBlocks:12,dataCodewordsPerBlock:11},{numBlocks:4,dataCodewordsPerBlock:12}]}]},{infoBits:58893,versionNumber:14,alignmentPatternCenters:[6,26,46,66],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:115},
+{numBlocks:1,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:40},{numBlocks:5,dataCodewordsPerBlock:41}]},{ecCodewordsPerBlock:20,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:16},{numBlocks:5,dataCodewordsPerBlock:17}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:12},{numBlocks:5,dataCodewordsPerBlock:13}]}]},{infoBits:63784,versionNumber:15,alignmentPatternCenters:[6,26,48,70],errorCorrectionLevels:[{ecCodewordsPerBlock:22,
+ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:87},{numBlocks:1,dataCodewordsPerBlock:88}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:41},{numBlocks:5,dataCodewordsPerBlock:42}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:24},{numBlocks:7,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:12},{numBlocks:7,dataCodewordsPerBlock:13}]}]},{infoBits:68472,versionNumber:16,alignmentPatternCenters:[6,26,50,
+74],errorCorrectionLevels:[{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:98},{numBlocks:1,dataCodewordsPerBlock:99}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:7,dataCodewordsPerBlock:45},{numBlocks:3,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:15,dataCodewordsPerBlock:19},{numBlocks:2,dataCodewordsPerBlock:20}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:15},{numBlocks:13,dataCodewordsPerBlock:16}]}]},{infoBits:70749,
+versionNumber:17,alignmentPatternCenters:[6,30,54,78],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:107},{numBlocks:5,dataCodewordsPerBlock:108}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:10,dataCodewordsPerBlock:46},{numBlocks:1,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:22},{numBlocks:15,dataCodewordsPerBlock:23}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:14},{numBlocks:17,
+dataCodewordsPerBlock:15}]}]},{infoBits:76311,versionNumber:18,alignmentPatternCenters:[6,30,56,82],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:120},{numBlocks:1,dataCodewordsPerBlock:121}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:9,dataCodewordsPerBlock:43},{numBlocks:4,dataCodewordsPerBlock:44}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:22},{numBlocks:1,dataCodewordsPerBlock:23}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:2,
+dataCodewordsPerBlock:14},{numBlocks:19,dataCodewordsPerBlock:15}]}]},{infoBits:79154,versionNumber:19,alignmentPatternCenters:[6,30,58,86],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:113},{numBlocks:4,dataCodewordsPerBlock:114}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:44},{numBlocks:11,dataCodewordsPerBlock:45}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:21},{numBlocks:4,dataCodewordsPerBlock:22}]},
+{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:9,dataCodewordsPerBlock:13},{numBlocks:16,dataCodewordsPerBlock:14}]}]},{infoBits:84390,versionNumber:20,alignmentPatternCenters:[6,34,62,90],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:107},{numBlocks:5,dataCodewordsPerBlock:108}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:41},{numBlocks:13,dataCodewordsPerBlock:42}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:15,dataCodewordsPerBlock:24},
+{numBlocks:5,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:15,dataCodewordsPerBlock:15},{numBlocks:10,dataCodewordsPerBlock:16}]}]},{infoBits:87683,versionNumber:21,alignmentPatternCenters:[6,28,50,72,94],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:116},{numBlocks:4,dataCodewordsPerBlock:117}]},{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:42}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:22},
+{numBlocks:6,dataCodewordsPerBlock:23}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:19,dataCodewordsPerBlock:16},{numBlocks:6,dataCodewordsPerBlock:17}]}]},{infoBits:92361,versionNumber:22,alignmentPatternCenters:[6,26,50,74,98],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:111},{numBlocks:7,dataCodewordsPerBlock:112}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:7,dataCodewordsPerBlock:24},
+{numBlocks:16,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:24,ecBlocks:[{numBlocks:34,dataCodewordsPerBlock:13}]}]},{infoBits:96236,versionNumber:23,alignmentPatternCenters:[6,30,54,74,102],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:121},{numBlocks:5,dataCodewordsPerBlock:122}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:47},{numBlocks:14,dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:24},
+{numBlocks:14,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:16,dataCodewordsPerBlock:15},{numBlocks:14,dataCodewordsPerBlock:16}]}]},{infoBits:102084,versionNumber:24,alignmentPatternCenters:[6,28,54,80,106],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:117},{numBlocks:4,dataCodewordsPerBlock:118}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:45},{numBlocks:14,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:30,
+ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:24},{numBlocks:16,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:30,dataCodewordsPerBlock:16},{numBlocks:2,dataCodewordsPerBlock:17}]}]},{infoBits:102881,versionNumber:25,alignmentPatternCenters:[6,32,58,84,110],errorCorrectionLevels:[{ecCodewordsPerBlock:26,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:106},{numBlocks:4,dataCodewordsPerBlock:107}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:47},{numBlocks:13,
+dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:7,dataCodewordsPerBlock:24},{numBlocks:22,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:22,dataCodewordsPerBlock:15},{numBlocks:13,dataCodewordsPerBlock:16}]}]},{infoBits:110507,versionNumber:26,alignmentPatternCenters:[6,30,58,86,114],errorCorrectionLevels:[{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:10,dataCodewordsPerBlock:114},{numBlocks:2,dataCodewordsPerBlock:115}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:19,
+dataCodewordsPerBlock:46},{numBlocks:4,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:28,dataCodewordsPerBlock:22},{numBlocks:6,dataCodewordsPerBlock:23}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:33,dataCodewordsPerBlock:16},{numBlocks:4,dataCodewordsPerBlock:17}]}]},{infoBits:110734,versionNumber:27,alignmentPatternCenters:[6,34,62,90,118],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:122},{numBlocks:4,dataCodewordsPerBlock:123}]},
+{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:22,dataCodewordsPerBlock:45},{numBlocks:3,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:8,dataCodewordsPerBlock:23},{numBlocks:26,dataCodewordsPerBlock:24}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:12,dataCodewordsPerBlock:15},{numBlocks:28,dataCodewordsPerBlock:16}]}]},{infoBits:117786,versionNumber:28,alignmentPatternCenters:[6,26,50,74,98,122],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:117},
+{numBlocks:10,dataCodewordsPerBlock:118}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:3,dataCodewordsPerBlock:45},{numBlocks:23,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:4,dataCodewordsPerBlock:24},{numBlocks:31,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:15},{numBlocks:31,dataCodewordsPerBlock:16}]}]},{infoBits:119615,versionNumber:29,alignmentPatternCenters:[6,30,54,78,102,126],errorCorrectionLevels:[{ecCodewordsPerBlock:30,
+ecBlocks:[{numBlocks:7,dataCodewordsPerBlock:116},{numBlocks:7,dataCodewordsPerBlock:117}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:21,dataCodewordsPerBlock:45},{numBlocks:7,dataCodewordsPerBlock:46}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:1,dataCodewordsPerBlock:23},{numBlocks:37,dataCodewordsPerBlock:24}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:19,dataCodewordsPerBlock:15},{numBlocks:26,dataCodewordsPerBlock:16}]}]},{infoBits:126325,versionNumber:30,alignmentPatternCenters:[6,
+26,52,78,104,130],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:5,dataCodewordsPerBlock:115},{numBlocks:10,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:19,dataCodewordsPerBlock:47},{numBlocks:10,dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:15,dataCodewordsPerBlock:24},{numBlocks:25,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:23,dataCodewordsPerBlock:15},{numBlocks:25,dataCodewordsPerBlock:16}]}]},
+{infoBits:127568,versionNumber:31,alignmentPatternCenters:[6,30,56,82,108,134],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:13,dataCodewordsPerBlock:115},{numBlocks:3,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:46},{numBlocks:29,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:42,dataCodewordsPerBlock:24},{numBlocks:1,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:23,dataCodewordsPerBlock:15},
+{numBlocks:28,dataCodewordsPerBlock:16}]}]},{infoBits:133589,versionNumber:32,alignmentPatternCenters:[6,34,60,86,112,138],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:115}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:10,dataCodewordsPerBlock:46},{numBlocks:23,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:10,dataCodewordsPerBlock:24},{numBlocks:35,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:19,
+dataCodewordsPerBlock:15},{numBlocks:35,dataCodewordsPerBlock:16}]}]},{infoBits:136944,versionNumber:33,alignmentPatternCenters:[6,30,58,86,114,142],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:115},{numBlocks:1,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:14,dataCodewordsPerBlock:46},{numBlocks:21,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:29,dataCodewordsPerBlock:24},{numBlocks:19,dataCodewordsPerBlock:25}]},
+{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:11,dataCodewordsPerBlock:15},{numBlocks:46,dataCodewordsPerBlock:16}]}]},{infoBits:141498,versionNumber:34,alignmentPatternCenters:[6,34,62,90,118,146],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:13,dataCodewordsPerBlock:115},{numBlocks:6,dataCodewordsPerBlock:116}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:14,dataCodewordsPerBlock:46},{numBlocks:23,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:44,
+dataCodewordsPerBlock:24},{numBlocks:7,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:59,dataCodewordsPerBlock:16},{numBlocks:1,dataCodewordsPerBlock:17}]}]},{infoBits:145311,versionNumber:35,alignmentPatternCenters:[6,30,54,78,102,126,150],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:12,dataCodewordsPerBlock:121},{numBlocks:7,dataCodewordsPerBlock:122}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:12,dataCodewordsPerBlock:47},{numBlocks:26,dataCodewordsPerBlock:48}]},
+{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:39,dataCodewordsPerBlock:24},{numBlocks:14,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:22,dataCodewordsPerBlock:15},{numBlocks:41,dataCodewordsPerBlock:16}]}]},{infoBits:150283,versionNumber:36,alignmentPatternCenters:[6,24,50,76,102,128,154],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:6,dataCodewordsPerBlock:121},{numBlocks:14,dataCodewordsPerBlock:122}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:6,
+dataCodewordsPerBlock:47},{numBlocks:34,dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:46,dataCodewordsPerBlock:24},{numBlocks:10,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:2,dataCodewordsPerBlock:15},{numBlocks:64,dataCodewordsPerBlock:16}]}]},{infoBits:152622,versionNumber:37,alignmentPatternCenters:[6,28,54,80,106,132,158],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:17,dataCodewordsPerBlock:122},{numBlocks:4,dataCodewordsPerBlock:123}]},
+{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:29,dataCodewordsPerBlock:46},{numBlocks:14,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:49,dataCodewordsPerBlock:24},{numBlocks:10,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:24,dataCodewordsPerBlock:15},{numBlocks:46,dataCodewordsPerBlock:16}]}]},{infoBits:158308,versionNumber:38,alignmentPatternCenters:[6,32,58,84,110,136,162],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:4,
+dataCodewordsPerBlock:122},{numBlocks:18,dataCodewordsPerBlock:123}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:13,dataCodewordsPerBlock:46},{numBlocks:32,dataCodewordsPerBlock:47}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:48,dataCodewordsPerBlock:24},{numBlocks:14,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:42,dataCodewordsPerBlock:15},{numBlocks:32,dataCodewordsPerBlock:16}]}]},{infoBits:161089,versionNumber:39,alignmentPatternCenters:[6,26,54,82,110,138,166],
+errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:20,dataCodewordsPerBlock:117},{numBlocks:4,dataCodewordsPerBlock:118}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:40,dataCodewordsPerBlock:47},{numBlocks:7,dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:43,dataCodewordsPerBlock:24},{numBlocks:22,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:10,dataCodewordsPerBlock:15},{numBlocks:67,dataCodewordsPerBlock:16}]}]},{infoBits:167017,
+versionNumber:40,alignmentPatternCenters:[6,30,58,86,114,142,170],errorCorrectionLevels:[{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:19,dataCodewordsPerBlock:118},{numBlocks:6,dataCodewordsPerBlock:119}]},{ecCodewordsPerBlock:28,ecBlocks:[{numBlocks:18,dataCodewordsPerBlock:47},{numBlocks:31,dataCodewordsPerBlock:48}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:34,dataCodewordsPerBlock:24},{numBlocks:34,dataCodewordsPerBlock:25}]},{ecCodewordsPerBlock:30,ecBlocks:[{numBlocks:20,dataCodewordsPerBlock:15},
+{numBlocks:61,dataCodewordsPerBlock:16}]}]}];function J(a,b){a^=b;for(b=0;a;)b++,a&=a-1;return b}function K(a,b){return b<<1|a}
+let ia=[{bits:21522,formatInfo:{errorCorrectionLevel:1,dataMask:0}},{bits:20773,formatInfo:{errorCorrectionLevel:1,dataMask:1}},{bits:24188,formatInfo:{errorCorrectionLevel:1,dataMask:2}},{bits:23371,formatInfo:{errorCorrectionLevel:1,dataMask:3}},{bits:17913,formatInfo:{errorCorrectionLevel:1,dataMask:4}},{bits:16590,formatInfo:{errorCorrectionLevel:1,dataMask:5}},{bits:20375,formatInfo:{errorCorrectionLevel:1,dataMask:6}},{bits:19104,formatInfo:{errorCorrectionLevel:1,dataMask:7}},{bits:30660,formatInfo:{errorCorrectionLevel:0,
+dataMask:0}},{bits:29427,formatInfo:{errorCorrectionLevel:0,dataMask:1}},{bits:32170,formatInfo:{errorCorrectionLevel:0,dataMask:2}},{bits:30877,formatInfo:{errorCorrectionLevel:0,dataMask:3}},{bits:26159,formatInfo:{errorCorrectionLevel:0,dataMask:4}},{bits:25368,formatInfo:{errorCorrectionLevel:0,dataMask:5}},{bits:27713,formatInfo:{errorCorrectionLevel:0,dataMask:6}},{bits:26998,formatInfo:{errorCorrectionLevel:0,dataMask:7}},{bits:5769,formatInfo:{errorCorrectionLevel:3,dataMask:0}},{bits:5054,
+formatInfo:{errorCorrectionLevel:3,dataMask:1}},{bits:7399,formatInfo:{errorCorrectionLevel:3,dataMask:2}},{bits:6608,formatInfo:{errorCorrectionLevel:3,dataMask:3}},{bits:1890,formatInfo:{errorCorrectionLevel:3,dataMask:4}},{bits:597,formatInfo:{errorCorrectionLevel:3,dataMask:5}},{bits:3340,formatInfo:{errorCorrectionLevel:3,dataMask:6}},{bits:2107,formatInfo:{errorCorrectionLevel:3,dataMask:7}},{bits:13663,formatInfo:{errorCorrectionLevel:2,dataMask:0}},{bits:12392,formatInfo:{errorCorrectionLevel:2,
+dataMask:1}},{bits:16177,formatInfo:{errorCorrectionLevel:2,dataMask:2}},{bits:14854,formatInfo:{errorCorrectionLevel:2,dataMask:3}},{bits:9396,formatInfo:{errorCorrectionLevel:2,dataMask:4}},{bits:8579,formatInfo:{errorCorrectionLevel:2,dataMask:5}},{bits:11994,formatInfo:{errorCorrectionLevel:2,dataMask:6}},{bits:11245,formatInfo:{errorCorrectionLevel:2,dataMask:7}}],ja=[a=>0===(a.y+a.x)%2,a=>0===a.y%2,a=>0===a.x%3,a=>0===(a.y+a.x)%3,a=>0===(Math.floor(a.y/2)+Math.floor(a.x/3))%2,a=>0===a.x*a.y%
+2+a.x*a.y%3,a=>0===(a.y*a.x%2+a.y*a.x%3)%2,a=>0===((a.y+a.x)%2+a.y*a.x%3)%2];
+function ka(a,b,c){c=ja[c.dataMask];let d=a.height;var e=17+4*b.versionNumber;let f=x.createEmpty(e,e);f.setRegion(0,0,9,9,!0);f.setRegion(e-8,0,8,9,!0);f.setRegion(0,e-8,9,8,!0);for(var g of b.alignmentPatternCenters)for(var h of b.alignmentPatternCenters)6===g&&6===h||6===g&&h===e-7||g===e-7&&6===h||f.setRegion(g-2,h-2,5,5,!0);f.setRegion(6,9,1,e-17,!0);f.setRegion(9,6,e-17,1,!0);6<b.versionNumber&&(f.setRegion(e-11,0,3,6,!0),f.setRegion(0,e-11,6,3,!0));b=[];h=g=0;e=!0;for(let k=d-1;0<k;k-=2){6===
+k&&k--;for(let m=0;m<d;m++){let l=e?d-1-m:m;for(let n=0;2>n;n++){let q=k-n;if(!f.get(q,l)){h++;let r=a.get(q,l);c({y:l,x:q})&&(r=!r);g=g<<1|r;8===h&&(b.push(g),g=h=0)}}}e=!e}return b}
+function la(a){var b=a.height,c=Math.floor((b-17)/4);if(6>=c)return I[c-1];c=0;for(var d=5;0<=d;d--)for(var e=b-9;e>=b-11;e--)c=K(a.get(e,d),c);d=0;for(e=5;0<=e;e--)for(let g=b-9;g>=b-11;g--)d=K(a.get(e,g),d);a=Infinity;let f;for(let g of I){if(g.infoBits===c||g.infoBits===d)return g;b=J(c,g.infoBits);b<a&&(f=g,a=b);b=J(d,g.infoBits);b<a&&(f=g,a=b)}if(3>=a)return f}
+function ma(a){let b=0;for(var c=0;8>=c;c++)6!==c&&(b=K(a.get(c,8),b));for(c=7;0<=c;c--)6!==c&&(b=K(a.get(8,c),b));var d=a.height;c=0;for(var e=d-1;e>=d-7;e--)c=K(a.get(8,e),c);for(e=d-8;e<d;e++)c=K(a.get(e,8),c);a=Infinity;d=null;for(let {bits:f,formatInfo:g}of ia){if(f===b||f===c)return g;e=J(b,f);e<a&&(d=g,a=e);b!==c&&(e=J(c,f),e<a&&(d=g,a=e))}return 3>=a?d:null}
+function na(a,b,c){let d=b.errorCorrectionLevels[c],e=[],f=0;d.ecBlocks.forEach(h=>{for(let k=0;k<h.numBlocks;k++)e.push({numDataCodewords:h.dataCodewordsPerBlock,codewords:[]}),f+=h.dataCodewordsPerBlock+d.ecCodewordsPerBlock});if(a.length<f)return null;a=a.slice(0,f);b=d.ecBlocks[0].dataCodewordsPerBlock;for(c=0;c<b;c++)for(var g of e)g.codewords.push(a.shift());if(1<d.ecBlocks.length)for(g=d.ecBlocks[0].numBlocks,b=d.ecBlocks[1].numBlocks,c=0;c<b;c++)e[g+c].codewords.push(a.shift());for(;0<a.length;)for(let h of e)h.codewords.push(a.shift());
+return e}function L(a){let b=la(a);if(!b)return null;var c=ma(a);if(!c)return null;a=ka(a,b,c);var d=na(a,b,c.errorCorrectionLevel);if(!d)return null;c=d.reduce((e,f)=>e+f.numDataCodewords,0);c=new Uint8ClampedArray(c);a=0;for(let e of d){d=ha(e.codewords,e.codewords.length-e.numDataCodewords);if(!d)return null;for(let f=0;f<e.numDataCodewords;f++)c[a++]=d[f]}try{return da(c,b.versionNumber)}catch(e){return null}}
+function M(a,b,c,d){var e=a.x-b.x+c.x-d.x;let f=a.y-b.y+c.y-d.y;if(0===e&&0===f)return{a11:b.x-a.x,a12:b.y-a.y,a13:0,a21:c.x-b.x,a22:c.y-b.y,a23:0,a31:a.x,a32:a.y,a33:1};let g=b.x-c.x;var h=d.x-c.x;let k=b.y-c.y,m=d.y-c.y;c=g*m-h*k;h=(e*m-h*f)/c;e=(g*f-e*k)/c;return{a11:b.x-a.x+h*b.x,a12:b.y-a.y+h*b.y,a13:h,a21:d.x-a.x+e*d.x,a22:d.y-a.y+e*d.y,a23:e,a31:a.x,a32:a.y,a33:1}}
+function oa(a,b,c,d){a=M(a,b,c,d);return{a11:a.a22*a.a33-a.a23*a.a32,a12:a.a13*a.a32-a.a12*a.a33,a13:a.a12*a.a23-a.a13*a.a22,a21:a.a23*a.a31-a.a21*a.a33,a22:a.a11*a.a33-a.a13*a.a31,a23:a.a13*a.a21-a.a11*a.a23,a31:a.a21*a.a32-a.a22*a.a31,a32:a.a12*a.a31-a.a11*a.a32,a33:a.a11*a.a22-a.a12*a.a21}}
+function pa(a,b){var c=oa({x:3.5,y:3.5},{x:b.dimension-3.5,y:3.5},{x:b.dimension-6.5,y:b.dimension-6.5},{x:3.5,y:b.dimension-3.5}),d=M(b.topLeft,b.topRight,b.alignmentPattern,b.bottomLeft),e=d.a11*c.a11+d.a21*c.a12+d.a31*c.a13,f=d.a12*c.a11+d.a22*c.a12+d.a32*c.a13,g=d.a13*c.a11+d.a23*c.a12+d.a33*c.a13,h=d.a11*c.a21+d.a21*c.a22+d.a31*c.a23,k=d.a12*c.a21+d.a22*c.a22+d.a32*c.a23,m=d.a13*c.a21+d.a23*c.a22+d.a33*c.a23,l=d.a11*c.a31+d.a21*c.a32+d.a31*c.a33,n=d.a12*c.a31+d.a22*c.a32+d.a32*c.a33,q=d.a13*
+c.a31+d.a23*c.a32+d.a33*c.a33;c=x.createEmpty(b.dimension,b.dimension);d=(r,u)=>{const p=g*r+m*u+q;return{x:(e*r+h*u+l)/p,y:(f*r+k*u+n)/p}};for(let r=0;r<b.dimension;r++)for(let u=0;u<b.dimension;u++){let p=d(u+.5,r+.5);c.set(u,r,a.get(Math.floor(p.x),Math.floor(p.y)))}return{matrix:c,mappingFunction:d}}let N=(a,b)=>Math.sqrt(Math.pow(b.x-a.x,2)+Math.pow(b.y-a.y,2));function O(a){return a.reduce((b,c)=>b+c)}
+function qa(a,b,c){let d=N(a,b),e=N(b,c),f=N(a,c),g,h,k;e>=d&&e>=f?[g,h,k]=[b,a,c]:f>=e&&f>=d?[g,h,k]=[a,b,c]:[g,h,k]=[a,c,b];0>(k.x-h.x)*(g.y-h.y)-(k.y-h.y)*(g.x-h.x)&&([g,k]=[k,g]);return{bottomLeft:g,topLeft:h,topRight:k}}
+function ra(a,b,c,d){d=(O(P(a,c,d,5))/7+O(P(a,b,d,5))/7+O(P(c,a,d,5))/7+O(P(b,a,d,5))/7)/4;if(1>d)throw Error("Invalid module size");b=Math.round(N(a,b)/d);a=Math.round(N(a,c)/d);a=Math.floor((b+a)/2)+7;switch(a%4){case 0:a++;break;case 2:a--}return{dimension:a,moduleSize:d}}
+function Q(a,b,c,d){let e=[{x:Math.floor(a.x),y:Math.floor(a.y)}];var f=Math.abs(b.y-a.y)>Math.abs(b.x-a.x);if(f){var g=Math.floor(a.y);var h=Math.floor(a.x);a=Math.floor(b.y);b=Math.floor(b.x)}else g=Math.floor(a.x),h=Math.floor(a.y),a=Math.floor(b.x),b=Math.floor(b.y);let k=Math.abs(a-g),m=Math.abs(b-h),l=Math.floor(-k/2),n=g<a?1:-1,q=h<b?1:-1,r=!0;for(let u=g,p=h;u!==a+n;u+=n){g=f?p:u;h=f?u:p;if(c.get(g,h)!==r&&(r=!r,e.push({x:g,y:h}),e.length===d+1))break;l+=m;if(0<l){if(p===b)break;p+=q;l-=k}}c=
+[];for(f=0;f<d;f++)e[f]&&e[f+1]?c.push(N(e[f],e[f+1])):c.push(0);return c}function P(a,b,c,d){let e=b.y-a.y,f=b.x-a.x;b=Q(a,b,c,Math.ceil(d/2));a=Q(a,{x:a.x-f,y:a.y-e},c,Math.ceil(d/2));c=b.shift()+a.shift()-1;return a.concat(c).concat(...b)}function R(a,b){let c=O(a)/O(b),d=0;b.forEach((e,f)=>{d+=Math.pow(a[f]-e*c,2)});return{averageSize:c,error:d}}
+function S(a,b,c){try{let d=P(a,{x:-1,y:a.y},c,b.length),e=P(a,{x:a.x,y:-1},c,b.length),f=P(a,{x:Math.max(0,a.x-a.y)-1,y:Math.max(0,a.y-a.x)-1},c,b.length),g=P(a,{x:Math.min(c.width,a.x+a.y)+1,y:Math.min(c.height,a.y+a.x)+1},c,b.length),h=R(d,b),k=R(e,b),m=R(f,b),l=R(g,b),n=(h.averageSize+k.averageSize+m.averageSize+l.averageSize)/4;return Math.sqrt(h.error*h.error+k.error*k.error+m.error*m.error+l.error*l.error)+(Math.pow(h.averageSize-n,2)+Math.pow(k.averageSize-n,2)+Math.pow(m.averageSize-n,2)+
+Math.pow(l.averageSize-n,2))/n}catch(d){return Infinity}}function T(a,b){for(var c=Math.round(b.x);a.get(c,Math.round(b.y));)c--;for(var d=Math.round(b.x);a.get(d,Math.round(b.y));)d++;c=(c+d)/2;for(d=Math.round(b.y);a.get(Math.round(c),d);)d--;for(b=Math.round(b.y);a.get(Math.round(c),b);)b++;return{x:c,y:(d+b)/2}}
+function sa(a){var b=[],c=[];let d=[];var e=[];for(let p=0;p<=a.height;p++){var f=0,g=!1;let t=[0,0,0,0,0];for(let v=-1;v<=a.width;v++){var h=a.get(v,p);if(h===g)f++;else{t=[t[1],t[2],t[3],t[4],f];f=1;g=h;var k=O(t)/7;k=Math.abs(t[0]-k)<k&&Math.abs(t[1]-k)<k&&Math.abs(t[2]-3*k)<3*k&&Math.abs(t[3]-k)<k&&Math.abs(t[4]-k)<k&&!h;var m=O(t.slice(-3))/3;h=Math.abs(t[2]-m)<m&&Math.abs(t[3]-m)<m&&Math.abs(t[4]-m)<m&&h;if(k){let z=v-t[3]-t[4],y=z-t[2];k={startX:y,endX:z,y:p};m=c.filter(w=>y>=w.bottom.startX&&
+y<=w.bottom.endX||z>=w.bottom.startX&&y<=w.bottom.endX||y<=w.bottom.startX&&z>=w.bottom.endX&&1.5>t[2]/(w.bottom.endX-w.bottom.startX)&&.5<t[2]/(w.bottom.endX-w.bottom.startX));0<m.length?m[0].bottom=k:c.push({top:k,bottom:k})}if(h){let z=v-t[4],y=z-t[3];h={startX:y,y:p,endX:z};k=e.filter(w=>y>=w.bottom.startX&&y<=w.bottom.endX||z>=w.bottom.startX&&y<=w.bottom.endX||y<=w.bottom.startX&&z>=w.bottom.endX&&1.5>t[2]/(w.bottom.endX-w.bottom.startX)&&.5<t[2]/(w.bottom.endX-w.bottom.startX));0<k.length?
+k[0].bottom=h:e.push({top:h,bottom:h})}}}b.push(...c.filter(v=>v.bottom.y!==p&&2<=v.bottom.y-v.top.y));c=c.filter(v=>v.bottom.y===p);d.push(...e.filter(v=>v.bottom.y!==p));e=e.filter(v=>v.bottom.y===p)}b.push(...c.filter(p=>2<=p.bottom.y-p.top.y));d.push(...e);c=[];for(var l of b)2>l.bottom.y-l.top.y||(b=(l.top.startX+l.top.endX+l.bottom.startX+l.bottom.endX)/4,e=(l.top.y+l.bottom.y+1)/2,a.get(Math.round(b),Math.round(e))&&(f=[l.top.endX-l.top.startX,l.bottom.endX-l.bottom.startX,l.bottom.y-l.top.y+
+1],f=O(f)/f.length,g=S({x:Math.round(b),y:Math.round(e)},[1,1,3,1,1],a),c.push({score:g,x:b,y:e,size:f})));if(3>c.length)return null;c.sort((p,t)=>p.score-t.score);l=[];for(b=0;b<Math.min(c.length,5);++b){e=c[b];f=[];for(var n of c)n!==e&&f.push(Object.assign(Object.assign({},n),{score:n.score+Math.pow(n.size-e.size,2)/e.size}));f.sort((p,t)=>p.score-t.score);l.push({points:[e,f[0],f[1]],score:e.score+f[0].score+f[1].score})}l.sort((p,t)=>p.score-t.score);let {topRight:q,topLeft:r,bottomLeft:u}=qa(...l[0].points);
+l=U(a,d,q,r,u);n=[];l&&n.push({alignmentPattern:{x:l.alignmentPattern.x,y:l.alignmentPattern.y},bottomLeft:{x:u.x,y:u.y},dimension:l.dimension,topLeft:{x:r.x,y:r.y},topRight:{x:q.x,y:q.y}});l=T(a,q);b=T(a,r);c=T(a,u);(a=U(a,d,l,b,c))&&n.push({alignmentPattern:{x:a.alignmentPattern.x,y:a.alignmentPattern.y},bottomLeft:{x:c.x,y:c.y},topLeft:{x:b.x,y:b.y},topRight:{x:l.x,y:l.y},dimension:a.dimension});return 0===n.length?null:n}
+function U(a,b,c,d,e){let f,g;try{({dimension:f,moduleSize:g}=ra(d,c,e,a))}catch(l){return null}var h=c.x-d.x+e.x,k=c.y-d.y+e.y;c=(N(d,e)+N(d,c))/2/g;e=1-3/c;let m={x:d.x+e*(h-d.x),y:d.y+e*(k-d.y)};b=b.map(l=>{const n=(l.top.startX+l.top.endX+l.bottom.startX+l.bottom.endX)/4;l=(l.top.y+l.bottom.y+1)/2;if(a.get(Math.floor(n),Math.floor(l))){var q=S({x:Math.floor(n),y:Math.floor(l)},[1,1,1],a)+N({x:n,y:l},m);return{x:n,y:l,score:q}}}).filter(l=>!!l).sort((l,n)=>l.score-n.score);return{alignmentPattern:15<=
+c&&b.length?b[0]:m,dimension:f}}
+function V(a){var b=sa(a);if(!b)return null;for(let e of b){b=pa(a,e);var c=b.matrix;if(null==c)c=null;else{var d=L(c);if(d)c=d;else{for(d=0;d<c.width;d++)for(let f=d+1;f<c.height;f++)c.get(d,f)!==c.get(f,d)&&(c.set(d,f,!c.get(d,f)),c.set(f,d,!c.get(f,d)));c=L(c)}}if(c)return{binaryData:c.bytes,data:c.text,chunks:c.chunks,version:c.version,location:{topRightCorner:b.mappingFunction(e.dimension,0),topLeftCorner:b.mappingFunction(0,0),bottomRightCorner:b.mappingFunction(e.dimension,e.dimension),bottomLeftCorner:b.mappingFunction(0,
+e.dimension),topRightFinderPattern:e.topRight,topLeftFinderPattern:e.topLeft,bottomLeftFinderPattern:e.bottomLeft,bottomRightAlignmentPattern:e.alignmentPattern},matrix:b.matrix}}return null}let ta={inversionAttempts:"attemptBoth",greyScaleWeights:{red:.2126,green:.7152,blue:.0722,useIntegerApproximation:!1},canOverwriteImage:!0};function W(a,b){Object.keys(b).forEach(c=>{a[c]=b[c]})}
+function X(a,b,c,d={}){let e=Object.create(null);W(e,ta);W(e,d);d="onlyInvert"===e.inversionAttempts||"invertFirst"===e.inversionAttempts;var f="attemptBoth"===e.inversionAttempts||d;var g=e.greyScaleWeights,h=e.canOverwriteImage,k=b*c;if(a.length!==4*k)throw Error("Malformed data passed to binarizer.");var m=0;if(h){var l=new Uint8ClampedArray(a.buffer,m,k);m+=k}l=new A(b,c,l);if(g.useIntegerApproximation)for(var n=0;n<c;n++)for(var q=0;q<b;q++){var r=4*(n*b+q);l.set(q,n,g.red*a[r]+g.green*a[r+1]+
+g.blue*a[r+2]+128>>8)}else for(n=0;n<c;n++)for(q=0;q<b;q++)r=4*(n*b+q),l.set(q,n,g.red*a[r]+g.green*a[r+1]+g.blue*a[r+2]);g=Math.ceil(b/8);n=Math.ceil(c/8);q=g*n;if(h){var u=new Uint8ClampedArray(a.buffer,m,q);m+=q}u=new A(g,n,u);for(q=0;q<n;q++)for(r=0;r<g;r++){var p=Infinity,t=0;for(var v=0;8>v;v++)for(let w=0;8>w;w++){let aa=l.get(8*r+w,8*q+v);p=Math.min(p,aa);t=Math.max(t,aa)}v=(p+t)/2;v=Math.min(255,1.11*v);24>=t-p&&(v=p/2,0<q&&0<r&&(t=(u.get(r,q-1)+2*u.get(r-1,q)+u.get(r-1,q-1))/4,p<t&&(v=t)));
+u.set(r,q,v)}h?(q=new Uint8ClampedArray(a.buffer,m,k),m+=k,q=new x(q,b)):q=x.createEmpty(b,c);r=null;f&&(h?(a=new Uint8ClampedArray(a.buffer,m,k),r=new x(a,b)):r=x.createEmpty(b,c));for(b=0;b<n;b++)for(a=0;a<g;a++){c=g-3;c=2>a?2:a>c?c:a;h=n-3;h=2>b?2:b>h?h:b;k=0;for(m=-2;2>=m;m++)for(p=-2;2>=p;p++)k+=u.get(c+m,h+p);c=k/25;for(h=0;8>h;h++)for(k=0;8>k;k++)m=8*a+h,p=8*b+k,t=l.get(m,p),q.set(m,p,t<=c),f&&r.set(m,p,!(t<=c))}f=f?{binarized:q,inverted:r}:{binarized:q};let {binarized:z,inverted:y}=f;(f=V(d?
+y:z))||"attemptBoth"!==e.inversionAttempts&&"invertFirst"!==e.inversionAttempts||(f=V(d?z:y));return f}X.default=X;let Y="dontInvert",Z={red:77,green:150,blue:29,useIntegerApproximation:!0};
+self.onmessage=a=>{let b=a.data.id,c=a.data.data;switch(a.data.type){case "decode":(a=X(c.data,c.width,c.height,{inversionAttempts:Y,greyScaleWeights:Z}))?self.postMessage({id:b,type:"qrResult",data:a.data,cornerPoints:[a.location.topLeftCorner,a.location.topRightCorner,a.location.bottomRightCorner,a.location.bottomLeftCorner]}):self.postMessage({id:b,type:"qrResult",data:null});break;case "grayscaleWeights":Z.red=c.red;Z.green=c.green;Z.blue=c.blue;Z.useIntegerApproximation=c.useIntegerApproximation;
+break;case "inversionMode":switch(c){case "original":Y="dontInvert";break;case "invert":Y="onlyInvert";break;case "both":Y="attemptBoth";break;default:throw Error("Invalid inversion mode");}break;case "close":self.close()}}
+`]),{type:"application/javascript"}))
+
+/* ---- enlace/sdp-compacto.js ---- */
+/* ==========================================================
+   SDP COMPACTO
+   Una descripción de sesión de WebRTC ronda los 600 bytes, y en un QR que
+   se lee de pantalla a pantalla cada byte cuenta. De todo eso, lo único que
+   cambia de una conexión a otra en un canal de datos sin servidor es:
+   usuario y clave de ICE, huella del certificado DTLS, papel DTLS y las
+   direcciones locales. Se mandan solo esos datos (unos 70 bytes) y el otro
+   extremo rehace el SDP a partir de una plantilla.
+
+   Formato (versión 1), en binario y luego en base64url:
+     [0]  bits 7-5 versión · bit 4 tipo (0 oferta, 1 respuesta)
+          bits 3-2 setup (0 actpass, 1 active, 2 passive)
+     [1]  algoritmo de la huella (índice en HUELLAS) y luego sus bytes
+     ufrag: longitud + ASCII · pwd: longitud + ASCII
+     n candidatas, y cada una: clase (4 IPv4, 6 IPv6, 1 mDNS con UUID,
+          2 nombre suelto) + dirección + puerto (2 bytes)
+
+   Sirve igual en el navegador y en Node: no toca el DOM.
+   ========================================================== */
+
+const SDPC_VERSION = 1;
+const SDPC_SETUP = ['actpass', 'active', 'passive'];
+const SDPC_HUELLAS = [
+    { nombre: 'sha-256', bytes: 32 },
+    { nombre: 'sha-384', bytes: 48 },
+    { nombre: 'sha-512', bytes: 64 },
+    { nombre: 'sha-1',   bytes: 20 }
+];
+const SDPC_MAX_CANDIDATAS = 4;
+
+/* ---------- base64url sin relleno ----------
+   btoa/atob existen en los navegadores y en Node 16+. Sin relleno ni + / =
+   para que quepa en el fragmento de una URL sin escaparlo. */
+function sdpcABase64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function sdpcDeBase64(texto) {
+    const b = texto.replace(/-/g, '+').replace(/_/g, '/');
+    const s = atob(b + '==='.slice((b.length + 3) % 4));
+    const salida = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) salida[i] = s.charCodeAt(i);
+    return salida;
+}
+
+/* ---------- lectura del SDP ----------
+   Firefox pone la huella a nivel de sesión y Chrome a nivel de medio, así
+   que se busca en todas las líneas sin mirar en qué sección cae. */
+function sdpcLeer(sdp) {
+    const datos = { ufrag: '', pwd: '', huella: null, setup: 'actpass', mid: '0', candidatas: [] };
+
+    for (const crudo of sdp.split(/\r?\n/)) {
+        const l = crudo.trim();
+        let m;
+        if ((m = /^a=ice-ufrag:(.+)$/.exec(l))) datos.ufrag = m[1];
+        else if ((m = /^a=ice-pwd:(.+)$/.exec(l))) datos.pwd = m[1];
+        else if ((m = /^a=fingerprint:(\S+) (\S+)$/.exec(l))) datos.huella = { algoritmo: m[1].toLowerCase(), valor: m[2] };
+        else if ((m = /^a=setup:(\S+)$/.exec(l))) datos.setup = m[1];
+        else if ((m = /^a=mid:(\S+)$/.exec(l))) datos.mid = m[1];
+        else if ((m = /^a=candidate:(.+)$/.exec(l))) {
+            const c = sdpcLeerCandidata(m[1]);
+            if (c) datos.candidatas.push(c);
+        }
+    }
+    return datos;
+}
+
+/* Solo interesan las de host por UDP: sin STUN no hay otras, y TCP en la
+   misma wifi no aporta nada y gasta 7 bytes. */
+function sdpcLeerCandidata(texto) {
+    const p = texto.split(/\s+/);
+    if (p.length < 8) return null;
+    if (p[2].toLowerCase() !== 'udp') return null;
+    const tipo = p[p.indexOf('typ') + 1];
+    if (tipo !== 'host') return null;
+    if (p[1] !== '1') return null;            // componente RTP; con BUNDLE no hay otro
+    return { direccion: p[4], puerto: Number(p[5]) };
+}
+
+function sdpcClase(direccion) {
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(direccion)) return 4;
+    if (direccion.indexOf(':') !== -1) return 6;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.local$/i.test(direccion)) return 1;
+    return 2;
+}
+
+/* Qué candidatas viajan, y en qué orden.
+   - IPv4 primero: es lo que se usa en una wifi doméstica.
+   - 169.254.x.x (sin DHCP) y 127.x no llevan a ningún sitio desde otro móvil.
+   - mDNS solo resuelve si el otro navegador lo sabe hacer; va detrás.
+   - IPv6 solo si no hay nada más: suele haber varias por interfaz y cada una
+     cuesta 19 bytes, que es casi lo que pesa todo lo demás. */
+function sdpcElegir(candidatas) {
+    const vistas = new Set();
+    const unicas = candidatas.filter(c => {
+        const clave = c.direccion + ' ' + c.puerto;
+        if (vistas.has(clave)) return false;
+        vistas.add(clave);
+        return true;
+    });
+    const v4 = unicas.filter(c => sdpcClase(c.direccion) === 4 &&
+                                  !/^(127\.|169\.254\.|0\.)/.test(c.direccion));
+    const mdns = unicas.filter(c => { const k = sdpcClase(c.direccion); return k === 1 || k === 2; });
+    const v6 = unicas.filter(c => sdpcClase(c.direccion) === 6 && !/^fe80:/i.test(c.direccion));
+    const elegidas = v4.concat(mdns);
+    return (elegidas.length ? elegidas : v6).slice(0, SDPC_MAX_CANDIDATAS);
+}
+
+/* ---------- direcciones a bytes ---------- */
+function sdpcIPv6ABytes(texto) {
+    let partes = texto.split('::');
+    const izq = partes[0] ? partes[0].split(':') : [];
+    const der = partes.length > 1 && partes[1] ? partes[1].split(':') : [];
+    /* Una IPv6 puede acabar en notación IPv4 (::ffff:1.2.3.4) */
+    const ultima = (der.length ? der : izq);
+    if (ultima.length && ultima[ultima.length - 1].indexOf('.') !== -1) {
+        const v4 = ultima.pop().split('.').map(Number);
+        ultima.push(((v4[0] << 8) | v4[1]).toString(16), ((v4[2] << 8) | v4[3]).toString(16));
+    }
+    const faltan = 8 - izq.length - der.length;
+    const grupos = izq.concat(new Array(partes.length > 1 ? faltan : 0).fill('0'), der);
+    if (grupos.length !== 8) throw new Error('IPv6 mal formada: ' + texto);
+    const salida = [];
+    grupos.forEach(g => { const v = parseInt(g, 16); salida.push(v >> 8, v & 255); });
+    return salida;
+}
+
+function sdpcBytesAIPv6(b) {
+    const g = [];
+    for (let i = 0; i < 16; i += 2) g.push(((b[i] << 8) | b[i + 1]).toString(16));
+    return g.join(':');      // sin abreviar: el SDP la admite igual
+}
+
+/* ---------- comprimir ---------- */
+function sdpcComprimir(sdp, tipo) {
+    const d = sdpcLeer(sdp);
+    if (!d.ufrag || !d.pwd || !d.huella) throw new Error('SDP incompleto: falta ufrag, pwd o huella');
+
+    const alg = SDPC_HUELLAS.findIndex(h => h.nombre === d.huella.algoritmo);
+    if (alg === -1) throw new Error('Huella no admitida: ' + d.huella.algoritmo);
+    const huella = d.huella.valor.split(':').map(x => parseInt(x, 16));
+    if (huella.length !== SDPC_HUELLAS[alg].bytes) throw new Error('Huella de longitud inesperada');
+
+    const setup = SDPC_SETUP.indexOf(d.setup);
+    if (setup === -1) throw new Error('setup desconocido: ' + d.setup);
+
+    const b = [];
+    b.push((SDPC_VERSION << 5) | ((tipo === 'respuesta' ? 1 : 0) << 4) | (setup << 2));
+    b.push(alg, ...huella);
+
+    for (const texto of [d.ufrag, d.pwd]) {
+        if (texto.length > 255) throw new Error('ufrag/pwd demasiado largo');
+        b.push(texto.length);
+        for (let i = 0; i < texto.length; i++) b.push(texto.charCodeAt(i) & 255);
+    }
+
+    const cands = sdpcElegir(d.candidatas);
+    b.push(cands.length);
+    for (const c of cands) {
+        const k = sdpcClase(c.direccion);
+        b.push(k);
+        if (k === 4) b.push(...c.direccion.split('.').map(Number));
+        else if (k === 6) b.push(...sdpcIPv6ABytes(c.direccion));
+        else if (k === 1) b.push(...c.direccion.slice(0, 36).replace(/-/g, '').match(/../g).map(x => parseInt(x, 16)));
+        else {
+            const n = c.direccion.slice(0, 255);
+            b.push(n.length);
+            for (let i = 0; i < n.length; i++) b.push(n.charCodeAt(i) & 255);
+        }
+        b.push(c.puerto >> 8, c.puerto & 255);
+    }
+    return sdpcABase64(Uint8Array.from(b));
+}
+
+/* ---------- descomprimir ---------- */
+function sdpcDescomprimir(texto) {
+    const b = sdpcDeBase64(texto);
+    let p = 0;
+    const leer = () => {
+        if (p >= b.length) throw new Error('Código cortado');
+        return b[p++];
+    };
+    const leerN = (n) => { const s = []; for (let i = 0; i < n; i++) s.push(leer()); return s; };
+    const leerTexto = () => String.fromCharCode(...leerN(leer()));
+
+    const cab = leer();
+    const version = cab >> 5;
+    if (version !== SDPC_VERSION) throw new Error('Versión de código ' + version + ', se esperaba ' + SDPC_VERSION);
+    const tipo = (cab >> 4) & 1 ? 'respuesta' : 'oferta';
+    const setup = SDPC_SETUP[(cab >> 2) & 3];
+    if (!setup) throw new Error('setup inválido');
+
+    const h = SDPC_HUELLAS[leer()];
+    if (!h) throw new Error('Algoritmo de huella desconocido');
+    const huella = leerN(h.bytes).map(x => (x < 16 ? '0' : '') + x.toString(16).toUpperCase()).join(':');
+
+    const ufrag = leerTexto();
+    const pwd = leerTexto();
+
+    const candidatas = [];
+    const n = leer();
+    for (let k = 0; k < n; k++) {
+        const clase = leer();
+        let direccion;
+        if (clase === 4) direccion = leerN(4).join('.');
+        else if (clase === 6) direccion = sdpcBytesAIPv6(leerN(16));
+        else if (clase === 1) {
+            const hex = leerN(16).map(x => (x < 16 ? '0' : '') + x.toString(16)).join('');
+            direccion = hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) + '-' +
+                        hex.slice(16, 20) + '-' + hex.slice(20) + '.local';
+        } else if (clase === 2) direccion = leerTexto();
+        else throw new Error('Clase de candidata desconocida: ' + clase);
+        const puerto = (leer() << 8) | leer();
+        candidatas.push({ direccion, puerto });
+    }
+    if (p !== b.length) throw new Error('Sobran ' + (b.length - p) + ' bytes en el código');
+
+    return { tipo, setup, huella: { algoritmo: h.nombre, valor: huella }, ufrag, pwd, candidatas };
+}
+
+/* ---------- rehacer el SDP ----------
+   `mid` tiene que ser el que usa el otro extremo en SU descripción local.
+   Quien recibe la oferta no lo sabe y usa '0' (lo que ponen Chrome, Safari y
+   el Firefox actual); quien recibe la respuesta sí lo sabe, porque la
+   respuesta repite el de su propia oferta, y debe pasarlo. */
+function sdpcRehacer(d, mid) {
+    mid = mid || '0';
+    const lineas = [
+        'v=0',
+        'o=- ' + String(Math.floor(Math.random() * 1e15)) + ' 2 IN IP4 127.0.0.1',
+        's=-',
+        't=0 0',
+        'a=group:BUNDLE ' + mid,
+        'a=msid-semantic: WMS',
+        'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
+        'c=IN IP4 0.0.0.0'
+    ];
+    d.candidatas.forEach((c, n) => {
+        /* La prioridad solo ordena las pruebas; se da más a las primeras,
+           que son las IPv4 que más probablemente funcionen. */
+        const prioridad = (126 << 24) + ((65535 - n) << 8) + 255;
+        lineas.push('a=candidate:' + (n + 1) + ' 1 udp ' + prioridad + ' ' + c.direccion + ' ' + c.puerto + ' typ host');
+    });
+    if (d.candidatas.length) lineas.push('a=end-of-candidates');
+    lineas.push(
+        'a=ice-ufrag:' + d.ufrag,
+        'a=ice-pwd:' + d.pwd,
+        'a=fingerprint:' + d.huella.algoritmo + ' ' + d.huella.valor,
+        'a=setup:' + d.setup,
+        'a=mid:' + mid,
+        'a=sctp-port:5000',
+        'a=max-message-size:262144'
+    );
+    return lineas.join('\r\n') + '\r\n';
+}
+
+/* ---- enlace/enlace.js ---- */
+/* ==========================================================
+   ENLACE · dos móviles en la misma wifi, sin servidor
+   Un canal de datos WebRTC cuya señalización viaja en dos QR: el anfitrión
+   enseña su oferta, el invitado la lee y enseña su respuesta, el anfitrión
+   la lee. No hay servidor de cita ni STUN: en la misma red bastan las
+   candidatas de host.
+
+   Encima del canal va una capa de sesión que numera los mensajes y guarda
+   los no confirmados, para que tras un corte (pantalla bloqueada, cambio de
+   app) un nuevo par de QR continúe la misma partida.
+
+   Depende de: sdp-compacto.js, qrcode-generator (pintar) y el worker de
+   qr-scanner (leer cuando no hay BarcodeDetector, que es el caso de Safari).
+
+   Uso:
+     const enlace = Enlace.crear({
+         juego: 'flota',
+         alConectar({ nueva, papel }) {},   // nueva: no hay partida que reanudar
+         alMensaje(datos) {},              // en orden y sin duplicados
+         alCorte(motivo) {},               // 'perdida' | 'adios'
+         alCancelar() {}                   // cerró la capa sin conectar
+     });
+     enlace.anfitrion();  enlace.invitado(codigoDeLaURL);  enlace.reconectar();
+     enlace.enviar({...});  enlace.cerrar();
+   ========================================================== */
+const Enlace = (() => {
+    const PREFIJO_URL = 'enlace=';
+    /* Medido en Chromium: la candidata UDP útil llega a los 4-5 ms, pero con
+       mDNS la recogida NO llega nunca a 'complete' (12 s esperando). Esperar
+       a 'complete' colgaba la oferta; se da por buena 300 ms después de la
+       primera UDP, que deja llegar las de otras interfaces. */
+    const GRACIA_RECOGIDA = 300, TOPE_RECOGIDA = 3000;
+    const PLAZO_CONECTAR = 15000;
+    const LATIDO = 2000, SILENCIO_MAX = 8000;
+    const INTERVALO_LECTURA = 140;
+    const LADO_LECTURA = 480;
+
+    /* ---------- estilos, una sola vez por página ---------- */
+    let estilosPuestos = false;
+    function ponerEstilos() {
+        if (estilosPuestos) return;
+        estilosPuestos = true;
+        const css = document.createElement('style');
+        css.textContent = `
+.enl-capa { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+    padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px calc(env(safe-area-inset-bottom, 0px) + 10px);
+    background: rgba(var(--c-8-6-26, 8, 6, 26), 0.94); color: var(--texto, var(--c-f2f2f7, #f2f2f7)); font-family: var(--fuente, system-ui, sans-serif); }
+/* Sin esto, cualquier display de una regla de clase gana al atributo hidden.
+   Pasó con la propia capa: «cerrada» seguía en pantalla, transparente al ojo
+   pero no al dedo, y se comía los toques del juego entero. */
+.enl-capa[hidden], .enl-capa [hidden] { display: none !important; }
+.enl-caja { width: 100%; max-width: 400px; max-height: 100%; overflow-y: auto; text-align: center;
+    border: 2px solid var(--borde, rgba(var(--c-255-255-255, 255, 255, 255),0.16)); border-radius: 16px; background: var(--c-15113a, #15113a); padding: 12px 14px; }
+.enl-caja h2 { margin: 0 0 6px; font-size: 1.05rem; letter-spacing: 1px; outline: none; }
+.enl-paso { margin: 4px 0; font-size: 0.74rem; color: var(--apagado, var(--c-a9a7c0, #a9a7c0)); line-height: 1.4; }
+.enl-paso b { color: var(--texto, var(--c-f2f2f7, #f2f2f7)); }
+/* Se mide contra svh, no vh: con la barra de direcciones a la vista, vh
+   promete más alto del que hay y el QR empujaba los botones fuera. */
+.enl-qr { display: block; margin: 4px auto; width: min(88vw, 52svh, 400px); height: auto; aspect-ratio: 1;
+    background: var(--c-fff, #fff); border-radius: 8px; image-rendering: pixelated; }
+/* Con la cámara a la vista el QR cede algo de alto, pero el visor es el que
+   más encoge: solo sirve para apuntar, y el QR es lo que el otro tiene que
+   leer desde 15-20 cm. */
+.enl-con-camara .enl-qr { width: min(84vw, 40svh, 340px); }
+.enl-visor { position: relative; margin: 4px auto; width: min(46vw, 19svh, 200px); aspect-ratio: 1;
+    border-radius: 12px; overflow: hidden; background: var(--c-000, #000); border: 2px solid var(--acento, var(--c-00ffc8, #00ffc8)); }
+.enl-visor video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.enl-mira { position: absolute; inset: 14%; border: 2px dashed rgba(var(--c-255-255-255, 255, 255, 255),0.55); border-radius: 8px; pointer-events: none; }
+.enl-estado { min-height: 1.4em; margin: 6px 0 4px; font-size: 0.78rem; font-weight: bold; color: var(--acento, var(--c-00ffc8, #00ffc8)); }
+.enl-estado.malo { color: var(--rosa, var(--c-ff006e, #ff006e)); }
+.enl-ayuda { text-align: left; font-size: 0.7rem; line-height: 1.5; color: var(--apagado, var(--c-a9a7c0, #a9a7c0)); margin: 4px 0 8px; padding-left: 18px; }
+.enl-manual { margin: 6px 0; font-size: 0.7rem; color: var(--apagado, var(--c-a9a7c0, #a9a7c0)); text-align: left; }
+.enl-manual summary { cursor: pointer; text-align: center; padding: 4px; }
+.enl-manual textarea { width: 100%; min-height: 4.2em; margin: 6px 0; font: 0.7rem/1.3 var(--fuente, monospace);
+    background: rgba(var(--c-255-255-255, 255, 255, 255),0.06); color: inherit; border: 1px solid var(--borde, rgba(var(--c-255-255-255, 255, 255, 255),0.16)); border-radius: 8px; padding: 6px; }
+.enl-botones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.enl-botones > button, .enl-manual button { flex: 1 1 100px; padding: 10px 8px; border: 2px solid var(--borde, rgba(var(--c-255-255-255, 255, 255, 255),0.16));
+    border-radius: 10px; background: transparent; color: var(--texto, var(--c-f2f2f7, #f2f2f7)); font: inherit; font-size: 0.74rem;
+    cursor: pointer; touch-action: manipulation; }
+.enl-botones > button.enl-principal { border-color: var(--acento, var(--c-00ffc8, #00ffc8)); color: var(--acento, var(--c-00ffc8, #00ffc8)); background: rgba(var(--c-0-255-200, 0, 255, 200),0.12); font-weight: bold; }
+.enl-diag { text-align: left; font-size: 0.6rem; line-height: 1.35; white-space: pre-wrap; word-break: break-all;
+    background: rgba(var(--c-0-0-0, 0, 0, 0),0.35); border-radius: 8px; padding: 8px; margin: 8px 0 0; max-height: 30svh; overflow-y: auto; user-select: text; }
+`;
+        document.head.appendChild(css);
+    }
+
+    const ahora = () => Date.now();
+    const idAzar = () => Math.random().toString(36).slice(2, 8);
+    const claseDe = (d) => d.endsWith('.local') ? 'mDNS' : (d.indexOf(':') !== -1 ? 'IPv6 ' + d : 'IPv4 ' + d);
+
+    function extraerCodigo(texto) {
+        const t = String(texto || '').trim();
+        const k = t.indexOf(PREFIJO_URL);
+        return (k === -1 ? t : t.slice(k + PREFIJO_URL.length)).split('&')[0].trim();
+    }
+
+    /* Lee el código de la URL (si se entró escaneando el QR con la cámara del
+       sistema) y lo borra de la barra: si se recarga, esa oferta ya no vale. */
+    function codigoEnURL() {
+        const h = location.hash || '';
+        if (h.indexOf(PREFIJO_URL) === -1) return null;
+        const codigo = extraerCodigo(h);
+        try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+        return codigo || null;
+    }
+
+    /* ==========================================================
+       LECTOR DE QR
+       ========================================================== */
+    function crearLector(video, alLeer, apuntar) {
+        let flujo = null, timer = null, leyendo = false, ocupado = false, desde = 0;
+        let detector = null, worker = null, peticion = 0, motorListo = null;
+        const lienzo = document.createElement('canvas');
+        const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+
+        function prepararMotor() {
+            if (motorListo) return motorListo;
+            motorListo = (async () => {
+                if ('BarcodeDetector' in window) {
+                    try {
+                        const formatos = await window.BarcodeDetector.getSupportedFormats();
+                        if (formatos.indexOf('qr_code') !== -1) {
+                            detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+                            apuntar('lector: BarcodeDetector nativo');
+                            return;
+                        }
+                    } catch (e) { /* cae al worker */ }
+                }
+                worker = qrsCrearWorker();
+                worker.onmessage = (e) => {
+                    if (!e.data || e.data.type !== 'qrResult' || e.data.id !== peticion) return;
+                    ocupado = false;
+                    if (e.data.data) alLeer(e.data.data);
+                };
+                apuntar('lector: worker incrustado');
+            })();
+            return motorListo;
+        }
+
+        async function encender() {
+            if (flujo) return;
+            if (!window.isSecureContext) throw Object.assign(new Error('La cámara solo funciona desde una dirección https'), { name: 'Inseguro' });
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw Object.assign(new Error('Este navegador no da acceso a la cámara'), { name: 'SinCamara' });
+            flujo = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            });
+            /* iOS exige playsinline y muted o abre el vídeo a pantalla completa
+               y deja de mandar fotogramas al lienzo. */
+            video.setAttribute('playsinline', '');
+            video.muted = true;
+            video.srcObject = flujo;
+            try { await video.play(); } catch (e) { apuntar('video.play: ' + e.name); }
+            await prepararMotor();
+        }
+
+        function ciclo() {
+            timer = null;
+            if (!leyendo) return;
+            /* Si el worker no contesta en 1,5 s se da por perdida la petición:
+               sin esto, una sola respuesta extraviada congelaba el lector. */
+            if (ocupado && ahora() - desde > 1500) ocupado = false;
+            if (!ocupado && video.readyState >= 2 && video.videoWidth) {
+                if (detector) {
+                    ocupado = true; desde = ahora();
+                    detector.detect(video).then(r => {
+                        ocupado = false;
+                        if (r && r.length && r[0].rawValue) alLeer(r[0].rawValue);
+                    }, () => { ocupado = false; });
+                } else if (worker) {
+                    /* Solo el cuadrado central, reducido: es donde se apunta, y
+                       pasar el fotograma entero a 1280x720 hacía cada lectura
+                       cuatro veces más lenta en un móvil modesto. */
+                    const vw = video.videoWidth, vh = video.videoHeight;
+                    const lado = Math.floor(Math.min(vw, vh) * 0.85);
+                    const destino = Math.min(LADO_LECTURA, lado);
+                    lienzo.width = destino; lienzo.height = destino;
+                    ctx.drawImage(video, (vw - lado) / 2, (vh - lado) / 2, lado, lado, 0, 0, destino, destino);
+                    const img = ctx.getImageData(0, 0, destino, destino);
+                    ocupado = true; desde = ahora();
+                    worker.postMessage({ id: ++peticion, type: 'decode', data: img }, [img.data.buffer]);
+                }
+            }
+            timer = setTimeout(ciclo, INTERVALO_LECTURA);
+        }
+
+        return {
+            encender,
+            empezar() { if (!flujo || leyendo) return; leyendo = true; ciclo(); },
+            pausar() { leyendo = false; if (timer) { clearTimeout(timer); timer = null; } },
+            apagar() {
+                leyendo = false;
+                if (timer) { clearTimeout(timer); timer = null; }
+                if (flujo) { flujo.getTracks().forEach(t => { try { t.stop(); } catch (e) {} }); flujo = null; }
+                video.srcObject = null;
+                if (worker) { try { worker.terminate(); } catch (e) {} worker = null; motorListo = null; }
+                ocupado = false;
+            },
+            get encendida() { return !!flujo; }
+        };
+    }
+
+    /* ==========================================================
+       PINTAR UN QR EN UN LIENZO
+       ========================================================== */
+    function pintarQR(lienzo, texto) {
+        /* Corrección L: de pantalla a cámara no hay manchas que corregir, y
+           cada nivel más sube la densidad. Medido con el worker sobre un
+           fotograma de 1280x720, QR de 170 px, con desenfoque y giro: el
+           código solo en L (37 módulos) se lee 4 de 6 veces; con la URL
+           delante y en M (53 módulos), 0 de 6. Por eso el QR lleva solo el
+           código y la URL se reserva para mandarlo por mensaje. */
+        const qr = qrcode(0, 'L');
+        qr.addData(texto, 'Byte');
+        qr.make();
+        const n = qr.getModuleCount();
+        const margen = 4;                         // la zona en blanco que pide la norma
+        const px = 10;
+        const lado = (n + margen * 2) * px;
+        lienzo.width = lado; lienzo.height = lado;
+        const c = lienzo.getContext('2d');
+        c.fillStyle = '#fff'; c.fillRect(0, 0, lado, lado);
+        c.fillStyle = '#000';
+        for (let f = 0; f < n; f++) {
+            for (let k = 0; k < n; k++) {
+                if (qr.isDark(f, k)) c.fillRect((k + margen) * px, (f + margen) * px, px, px);
+            }
+        }
+        return n;
+    }
+
+    /* ==========================================================
+       LA CAPA
+       ========================================================== */
+    function crearCapa(acciones) {
+        ponerEstilos();
+        const capa = document.createElement('div');
+        capa.className = 'enl-capa';
+        capa.hidden = true;
+        capa.setAttribute('role', 'dialog');
+        capa.setAttribute('aria-modal', 'true');
+        capa.setAttribute('aria-labelledby', 'enl-titulo');
+        capa.innerHTML = `
+<div class="enl-caja">
+  <h2 id="enl-titulo" tabindex="-1"></h2>
+  <p class="enl-paso" data-p="qr"></p>
+  <canvas class="enl-qr" aria-label="Código QR para el otro móvil" role="img"></canvas>
+  <p class="enl-paso" data-p="cam"></p>
+  <div class="enl-visor"><video playsinline muted></video><div class="enl-mira"></div></div>
+  <p class="enl-estado" aria-live="polite"></p>
+  <ul class="enl-ayuda" hidden></ul>
+  <details class="enl-manual">
+    <summary>¿Sin cámara? Pasar el código por mensaje</summary>
+    <button type="button" data-a="mandar">ENVIAR MI CÓDIGO</button>
+    <textarea aria-label="Código del otro móvil" placeholder="Pega aquí el código del otro móvil" spellcheck="false" autocomplete="off"></textarea>
+    <button type="button" data-a="usar">USAR ESTE CÓDIGO</button>
+  </details>
+  <div class="enl-botones">
+    <button type="button" data-a="reintentar" class="enl-principal" hidden>REINTENTAR</button>
+    <button type="button" data-a="cancelar">CANCELAR</button>
+    <button type="button" data-a="diag">DIAGNÓSTICO</button>
+  </div>
+  <pre class="enl-diag" hidden></pre>
+</div>`;
+        document.body.appendChild(capa);
+
+        const $ = (s) => capa.querySelector(s);
+        const el = {
+            titulo: $('#enl-titulo'), pasoQR: $('[data-p="qr"]'), qr: $('.enl-qr'), pasoCam: $('[data-p="cam"]'),
+            visor: $('.enl-visor'), video: $('video'), estado: $('.enl-estado'), ayuda: $('.enl-ayuda'),
+            manual: $('.enl-manual'), texto: $('textarea'), mandar: $('[data-a="mandar"]'),
+            reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag')
+        };
+
+        capa.addEventListener('click', (e) => {
+            const b = e.target.closest('button[data-a]');
+            if (!b) return;
+            const a = b.dataset.a;
+            if (a === 'diag') {
+                el.diag.hidden = !el.diag.hidden;
+                if (!el.diag.hidden) el.diag.textContent = acciones.diagnostico();
+            } else if (a === 'usar') acciones.pegado(el.texto.value);
+            else if (a === 'mandar') acciones.mandar();
+            else if (a === 'cancelar') acciones.cancelar();
+            else if (a === 'reintentar') acciones.reintentar();
+        });
+        /* Que el Escape de la capa no le llegue al juego: en Hundir la Flota
+           pausaría la partida por debajo mientras se reconecta. */
+        capa.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { e.preventDefault(); acciones.cancelar(); }
+            e.stopPropagation();
+        });
+
+        return {
+            video: el.video,
+            abrir(titulo) {
+                el.titulo.textContent = titulo;
+                [el.pasoQR, el.qr, el.pasoCam, el.visor, el.ayuda, el.reintentar, el.diag].forEach(x => { x.hidden = true; });
+                capa.querySelector('.enl-caja').classList.remove('enl-con-camara');
+                el.manual.open = false;
+                el.texto.value = '';
+                el.mandar.hidden = true;
+                this.estado('');
+                capa.hidden = false;
+                el.titulo.focus();
+            },
+            cerrar() { capa.hidden = true; },
+            get abierta() { return !capa.hidden; },
+            qr(texto, paso) {
+                capa.querySelector('.enl-caja').classList.toggle('enl-con-camara', !el.visor.hidden);
+                el.pasoQR.innerHTML = paso;        // texto fijo del módulo, nunca del usuario
+                el.pasoQR.hidden = false;
+                el.qr.hidden = false;
+                el.mandar.hidden = false;
+                return pintarQR(el.qr, texto);
+            },
+            sinQR() { el.pasoQR.hidden = true; el.qr.hidden = true; el.mandar.hidden = true; },
+            camara(paso) {
+                el.pasoCam.innerHTML = paso; el.pasoCam.hidden = false; el.visor.hidden = false;
+                capa.querySelector('.enl-caja').classList.add('enl-con-camara');
+            },
+            sinCamara() {
+                el.pasoCam.hidden = true; el.visor.hidden = true;
+                capa.querySelector('.enl-caja').classList.remove('enl-con-camara');
+            },
+            abrirManual() { el.manual.open = true; },
+            estado(texto, malo) { el.estado.textContent = texto || ''; el.estado.classList.toggle('malo', !!malo); },
+            ayuda(lineas) {
+                el.ayuda.innerHTML = '';
+                lineas.forEach(t => { const li = document.createElement('li'); li.textContent = t; el.ayuda.appendChild(li); });
+                el.ayuda.hidden = !lineas.length;
+            },
+            reintentable(si) { el.reintentar.hidden = !si; },
+            refrescarDiagnostico() { if (!el.diag.hidden) el.diag.textContent = acciones.diagnostico(); }
+        };
+    }
+
+    /* ==========================================================
+       EL ENLACE
+       ========================================================== */
+    function crear(opciones) {
+        const juego = opciones.juego || 'juego';
+        const avisar = (nombre, arg) => { try { if (opciones[nombre]) opciones[nombre](arg); } catch (e) { apuntar('error en ' + nombre + ': ' + e.message); } };
+
+        /* Declaradas antes que apuntar(): lo primero que hace crear() es
+           apuntar el navegador, y apuntar() lee `capa`. */
+        let capa = null, lector = null;
+        const registro = [];
+        const t0 = ahora();
+        function apuntar(texto) {
+            registro.push(((ahora() - t0) / 1000).toFixed(1).padStart(6) + ' ' + texto);
+            if (registro.length > 200) registro.shift();
+            if (capa) capa.refrescarDiagnostico();
+        }
+        apuntar(navigator.userAgent);
+        apuntar('origen ' + location.protocol + ' · seguro ' + window.isSecureContext +
+                ' · RTCPeerConnection ' + (typeof RTCPeerConnection) + ' · BarcodeDetector ' + ('BarcodeDetector' in window));
+
+        let papel = null;              // 'anfitrion' | 'invitado'
+        let sesion = null;              // la pone el anfitrión; el invitado la adopta
+        let vuelta = 0;                 // invalida los pasos de un intento cancelado
+        let con = null;                 // { pc, dc }
+        let esperando = null;           // { tipo, vuelta }: qué código se acepta ahora
+        let miCodigo = '';
+        let plazo = null, latido = null, cerrojo = null;
+        let ultimoAviso = 0;
+
+        /* Sesión: numeración de mensajes y lo que falta por confirmar */
+        const S = { enviados: 0, recibidos: 0, pendientes: [], lista: false, ultimoRecibido: 0, ultimoEnvio: 0 };
+
+        function asegurarCapa() {
+            if (capa) return;
+            capa = crearCapa({
+                diagnostico: () => registro.join('\n'),
+                pegado: (t) => recibirCodigo(t, 'pegado'),
+                mandar: mandarMiCodigo,
+                cancelar,
+                reintentar: () => (papel === 'anfitrion' ? anfitrion() : invitado())
+            });
+            lector = crearLector(capa.video, (t) => recibirCodigo(t, 'cámara'), apuntar);
+        }
+
+        /* ---------- conexión ---------- */
+        function cerrarConexion() {
+            if (plazo) { clearTimeout(plazo); plazo = null; }
+            if (!con) return;
+            const viejo = con;
+            con = null;
+            try { viejo.dc.close(); } catch (e) {}
+            try { viejo.pc.close(); } catch (e) {}
+        }
+
+        function nuevaConexion() {
+            cerrarConexion();
+            const pc = new RTCPeerConnection({ iceServers: [] });
+            /* Canal negociado: los dos lo crean con el mismo id y no hace falta
+               esperar a ondatachannel, que en el invitado llegaba tarde. */
+            const dc = pc.createDataChannel('enlace', { negotiated: true, id: 0, ordered: true });
+            const esta = { pc, dc };
+            con = esta;
+            const vigente = () => con === esta;
+
+            pc.addEventListener('iceconnectionstatechange', () => vigente() && apuntar('ice ' + pc.iceConnectionState));
+            pc.addEventListener('connectionstatechange', () => {
+                if (!vigente()) return;
+                apuntar('conexión ' + pc.connectionState);
+                if (pc.connectionState === 'failed') {
+                    if (S.lista) cortar('perdida');
+                    else fallo('no-conecta');
+                }
+            });
+            dc.addEventListener('open', () => {
+                if (!vigente()) return;
+                apuntar('canal abierto');
+                if (plazo) { clearTimeout(plazo); plazo = null; }
+                S.ultimoRecibido = ahora();
+                mandar({ t: 'hola', j: juego, s: sesion, r: S.recibidos });
+            });
+            dc.addEventListener('message', (e) => vigente() && llegada(e.data));
+            dc.addEventListener('close', () => {
+                if (!vigente()) return;
+                apuntar('canal cerrado');
+                if (S.lista) cortar('perdida');
+            });
+            return esta;
+        }
+
+        function recoger(pc) {
+            return new Promise((listo) => {
+                let hecho = false, gracia = null;
+                const acabar = (por) => {
+                    if (hecho) return;
+                    hecho = true;
+                    clearTimeout(tope); clearTimeout(gracia);
+                    apuntar('recogida: ' + por);
+                    listo();
+                };
+                const tope = setTimeout(() => acabar('tope de ' + TOPE_RECOGIDA + ' ms'), TOPE_RECOGIDA);
+                pc.addEventListener('icecandidate', (e) => {
+                    if (!e.candidate) return acabar('completa');
+                    const c = e.candidate.candidate || '';
+                    if (/ udp /i.test(c) && / typ host/.test(c) && !gracia) {
+                        gracia = setTimeout(() => acabar('gracia tras la primera UDP'), GRACIA_RECOGIDA);
+                    }
+                });
+                if (pc.iceGatheringState === 'complete') acabar('ya estaba');
+            });
+        }
+
+        const urlDe = (codigo) => /^https?:$/.test(location.protocol)
+            ? location.origin + location.pathname + '#' + PREFIJO_URL + codigo
+            : codigo;
+
+        function apuntarCandidatas(quien, datos) {
+            apuntar(quien + ': ' + (datos.candidatas.length ? datos.candidatas.map(c => claseDe(c.direccion) + ':' + c.puerto).join(', ') : 'NINGUNA'));
+        }
+
+        /* ---------- anfitrión ---------- */
+        async function anfitrion() {
+            if (!comprobarWebRTC()) return;
+            asegurarCapa();
+            const v = ++vuelta;
+            papel = 'anfitrion';
+            if (!sesion) sesion = idAzar();
+            cerrarConexion();
+            capa.abrir(S.enviados || S.recibidos ? 'VOLVER A CONECTAR' : 'PARTIDA NUEVA');
+            capa.estado('Preparando…');
+            apuntar('— anfitrión, sesión ' + sesion);
+
+            /* La cámara se pide ANTES de la oferta. Medido en Chromium: sin el
+               permiso concedido la dirección local sale como uuid.local (mDNS)
+               y con él como IP real. Safari (hipótesis, sin medir) solo da la
+               IP mientras captura, por eso además se deja encendida. */
+            const hayCamara = await encenderCamara();
+            if (v !== vuelta) return;
+
+            let codigo;
+            try {
+                const { pc } = nuevaConexion();
+                await pc.setLocalDescription(await pc.createOffer());
+                await recoger(pc);
+                if (v !== vuelta) return;
+                codigo = sdpcComprimir(pc.localDescription.sdp, 'oferta');
+                apuntarCandidatas('mías', sdpcDescomprimir(codigo));
+            } catch (e) { apuntar('oferta: ' + e.message); fallo('interno'); return; }
+
+            miCodigo = codigo;
+            const modulos = capa.qr(codigo, '<b>1.</b> En el otro móvil, pulsa <b>UNIRME</b> y apunta a este código.');
+            apuntar('QR de ' + modulos + ' módulos, ' + codigo.length + ' caracteres');
+            esperando = { tipo: 'respuesta', vuelta: v };
+            if (hayCamara) {
+                capa.camara('<b>2.</b> Cuando el otro te enseñe el suyo, apúntale con esta cámara.');
+                capa.estado('Esperando su código…');
+                lector.empezar();
+            } else {
+                capa.abrirManual();
+                capa.estado('Pega el código que te mande el otro móvil');
+            }
+        }
+
+        /* ---------- invitado ---------- */
+        async function invitado(codigoInicial) {
+            if (!comprobarWebRTC()) return;
+            asegurarCapa();
+            const v = ++vuelta;
+            papel = 'invitado';
+            cerrarConexion();
+            capa.abrir(S.enviados || S.recibidos ? 'VOLVER A CONECTAR' : 'UNIRME A UNA PARTIDA');
+            apuntar('— invitado');
+            esperando = { tipo: 'oferta', vuelta: v };
+
+            if (codigoInicial) { recibirCodigo(codigoInicial, 'URL'); return; }
+
+            capa.estado('Preparando la cámara…');
+            const hayCamara = await encenderCamara();
+            if (v !== vuelta) return;
+            if (hayCamara) {
+                capa.camara('Apunta al código del móvil que ha creado la partida.');
+                capa.estado('Buscando el código…');
+                lector.empezar();
+            } else {
+                capa.abrirManual();
+                capa.estado('Pega el código que te mande el otro móvil');
+            }
+        }
+
+        async function encenderCamara() {
+            try {
+                await lector.encender();
+                apuntar('cámara encendida');
+                return true;
+            } catch (e) {
+                apuntar('cámara: ' + e.name + ' ' + e.message);
+                capa.sinCamara();
+                capa.ayuda([
+                    e.name === 'NotAllowedError' ? 'No hay permiso para la cámara. Puedes darlo en los ajustes del navegador para esta página.'
+                        : e.name === 'Inseguro' ? 'La cámara solo funciona abriendo el juego desde su dirección https, no desde un archivo.'
+                        : 'No se ha podido usar la cámara (' + e.name + ').',
+                    'Mientras tanto podéis pasaros el código por mensaje, abajo.'
+                ]);
+                return false;
+            }
+        }
+
+        function comprobarWebRTC() {
+            if (typeof RTCPeerConnection === 'function') return true;
+            asegurarCapa();
+            capa.abrir('NO SE PUEDE');
+            capa.estado('Este navegador no permite conectar dos móviles.', true);
+            return false;
+        }
+
+        /* ---------- lo que llega por cámara, URL o pegado ---------- */
+        async function recibirCodigo(texto, via) {
+            const esp = esperando;
+            if (!esp || esp.vuelta !== vuelta) return;
+            let datos;
+            try { datos = sdpcDescomprimir(extraerCodigo(texto)); }
+            catch (e) {
+                /* La cámara lee el mismo QR equivocado diez veces por segundo:
+                   un aviso cada dos segundos basta. Lo pegado a mano se
+                   contesta siempre, o el segundo intento parecía ignorado. */
+                if (via !== 'cámara' || ahora() - ultimoAviso > 2000) {
+                    ultimoAviso = ahora();
+                    apuntar('código no válido por ' + via + ': ' + e.message);
+                    capa.estado('Ese código no es de una partida', true);
+                }
+                return;
+            }
+            if (datos.tipo !== esp.tipo) {
+                if (via !== 'cámara' || ahora() - ultimoAviso > 2000) {
+                    ultimoAviso = ahora();
+                    capa.estado(esp.tipo === 'respuesta'
+                        ? 'Ese es tu propio código de partida: apunta al del otro'
+                        : 'Ese código es una respuesta: en el otro móvil hay que pulsar CREAR', true);
+                }
+                return;
+            }
+            esperando = null;
+            lector.pausar();
+            apuntar('código leído por ' + via + ' (' + datos.tipo + ')');
+            apuntarCandidatas('suyas', datos);
+            if (papel === 'anfitrion') await aplicarRespuesta(datos, esp.vuelta);
+            else await responderOferta(datos, esp.vuelta);
+        }
+
+        async function aplicarRespuesta(datos, v) {
+            lector.apagar();
+            capa.sinCamara();
+            capa.estado('Conectando…');
+            try {
+                if (!con) return;
+                const pc = con.pc;
+                /* El mid tiene que ser el de MI oferta: Firefox antiguo usaba
+                   «sdparta_0» y la plantilla pone «0». */
+                const m = /a=mid:(\S+)/.exec(pc.localDescription.sdp);
+                await pc.setRemoteDescription({ type: 'answer', sdp: sdpcRehacer(datos, m ? m[1] : '0') });
+            } catch (e) { apuntar('respuesta: ' + e.message); fallo('interno'); return; }
+            if (v !== vuelta) return;
+            plazo = setTimeout(() => fallo('no-conecta'), PLAZO_CONECTAR);
+        }
+
+        async function responderOferta(datos, v) {
+            capa.estado('Preparando mi código…');
+            let codigo;
+            try {
+                const { pc } = nuevaConexion();
+                await pc.setRemoteDescription({ type: 'offer', sdp: sdpcRehacer(datos) });
+                await pc.setLocalDescription(await pc.createAnswer());
+                /* Se recoge con la cámara todavía encendida, a propósito:
+                   es la condición con la que Safari enseña la IP local. */
+                await recoger(pc);
+                if (v !== vuelta) return;
+                codigo = sdpcComprimir(pc.localDescription.sdp, 'respuesta');
+                apuntarCandidatas('mías', sdpcDescomprimir(codigo));
+            } catch (e) { apuntar('respuesta: ' + e.message); fallo('interno'); return; }
+            lector.apagar();
+            capa.sinCamara();
+            miCodigo = codigo;
+            capa.qr(codigo, 'Ahora el otro móvil tiene que leer <b>este</b> código con la cámara de la página.');
+            capa.estado('Esperando a que lo lea…');
+            /* Sin plazo duro: el otro puede tardar en apuntar. Pero si a los 30 s
+               no hay nada, lo probable es que el anfitrión haya reintentado y su
+               oferta ya no sea esta. */
+            plazo = setTimeout(() => {
+                if (v !== vuelta || S.lista) return;
+                capa.ayuda(['Si el otro móvil ya lo ha leído y no conecta, pulsad REINTENTAR en los dos.',
+                            'Los dos tienen que estar en la misma wifi, no con datos móviles.']);
+                capa.reintentable(true);
+            }, 30000);
+        }
+
+        async function mandarMiCodigo() {
+            if (!miCodigo) return;
+            const texto = papel === 'anfitrion' ? urlDe(miCodigo) : miCodigo;
+            try {
+                if (navigator.share) { await navigator.share({ text: texto }); return; }
+            } catch (e) { if (e.name === 'AbortError') return; }
+            try {
+                await navigator.clipboard.writeText(texto);
+                capa.estado('Código copiado: mándaselo y que lo pegue');
+            } catch (e) {
+                capa.estado('No se ha podido copiar', true);
+            }
+        }
+
+        function fallo(motivo) {
+            if (plazo) { clearTimeout(plazo); plazo = null; }
+            esperando = null;
+            if (lector) lector.apagar();
+            cerrarConexion();
+            apuntar('FALLO: ' + motivo);
+            if (!capa) return;
+            if (!capa.abierta) capa.abrir('SIN CONEXIÓN');
+            capa.sinCamara();
+            capa.sinQR();
+            capa.reintentable(true);
+            if (motivo === 'no-conecta') {
+                capa.estado('Los móviles no consiguen verse', true);
+                capa.ayuda([
+                    'Los dos tienen que estar en la MISMA wifi, no con datos móviles.',
+                    'Las redes de invitados de muchos routers aíslan a los móviles entre sí: usad la principal.',
+                    'Si el código se leyó con la cámara del móvil y no con la de la página, probad desde UNIRME en la página.'
+                ]);
+            } else if (motivo === 'otro-juego') {
+                capa.estado('Ese código es de otro juego', true);
+                capa.ayuda([]);
+            } else {
+                capa.estado('Algo ha fallado al preparar la conexión', true);
+                capa.ayuda(['Pulsa DIAGNÓSTICO y haz una foto de lo que salga.']);
+            }
+        }
+
+        function cancelar() {
+            vuelta++;
+            esperando = null;
+            if (lector) lector.apagar();
+            if (!S.lista) cerrarConexion();
+            if (capa) capa.cerrar();
+            apuntar('cancelado');
+            avisar('alCancelar');
+        }
+
+        /* ---------- sesión ---------- */
+        function mandar(obj) {
+            if (!con || con.dc.readyState !== 'open') return false;
+            try { con.dc.send(JSON.stringify(obj)); S.ultimoEnvio = ahora(); return true; }
+            catch (e) { apuntar('envío: ' + e.message); return false; }
+        }
+
+        function llegada(crudo) {
+            S.ultimoRecibido = ahora();
+            let m;
+            try { m = JSON.parse(crudo); } catch (e) { return; }
+            if (!m || typeof m !== 'object') return;
+
+            if (m.t === 'hola') return saludo(m);
+            if (m.t === 'p') return;
+            if (m.t === 'a') {
+                if (typeof m.n === 'number') S.pendientes = S.pendientes.filter(p => p.n > m.n);
+                return;
+            }
+            if (m.t === 'adios') { apuntar('el otro ha cerrado'); return cortar('adios'); }
+            if (m.t === 'm' && S.lista && typeof m.n === 'number') {
+                /* El canal es ordenado, así que solo puede llegar el siguiente o
+                   uno repetido (reenviado tras un corte porque su confirmación
+                   se perdió por el camino). El repetido se confirma otra vez y
+                   no se entrega. */
+                if (m.n === S.recibidos + 1) {
+                    S.recibidos = m.n;
+                    mandar({ t: 'a', n: m.n });
+                    avisar('alMensaje', m.d);
+                } else if (m.n <= S.recibidos) {
+                    mandar({ t: 'a', n: S.recibidos });
+                } else {
+                    apuntar('hueco en la numeración: llega ' + m.n + ', esperaba ' + (S.recibidos + 1));
+                }
+            }
+        }
+
+        function saludo(m) {
+            if (m.j !== juego) { fallo('otro-juego'); return; }
+            /* Las dos puntas llegan a la misma conclusión sin hablarlo: la
+               sesión es nueva si el invitado no traía la del anfitrión. */
+            let nueva;
+            if (papel === 'anfitrion') nueva = m.s !== sesion;
+            else { nueva = sesion !== m.s; sesion = m.s; }
+
+            if (nueva) { S.enviados = 0; S.recibidos = 0; S.pendientes = []; }
+            else S.pendientes = S.pendientes.filter(p => p.n > (m.r | 0));
+
+            S.lista = true;
+            S.ultimoRecibido = ahora();
+            apuntar('sesión ' + sesion + (nueva ? ' nueva' : ' reanudada, reenvío ' + S.pendientes.length));
+            S.pendientes.forEach(p => mandar({ t: 'm', n: p.n, d: p.d }));
+
+            if (lector) lector.apagar();
+            if (capa) capa.cerrar();
+            arrancarLatido();
+            pedirCerrojo();
+            avisar('alConectar', { nueva, papel });
+        }
+
+        function enviar(datos) {
+            const n = ++S.enviados;
+            S.pendientes.push({ n, d: datos });
+            if (S.lista) mandar({ t: 'm', n, d: datos });
+        }
+
+        function arrancarLatido() {
+            if (latido) return;
+            latido = setInterval(() => {
+                if (!S.lista) return;
+                if (ahora() - S.ultimoEnvio >= LATIDO) mandar({ t: 'p' });
+                if (!document.hidden && ahora() - S.ultimoRecibido > SILENCIO_MAX) {
+                    apuntar('silencio de ' + Math.round((ahora() - S.ultimoRecibido) / 1000) + ' s');
+                    cortar('perdida');
+                }
+            }, 1000);
+        }
+
+        function cortar(motivo) {
+            if (!S.lista) return;
+            S.lista = false;
+            if (latido) { clearInterval(latido); latido = null; }
+            soltarCerrojo();
+            cerrarConexion();
+            apuntar('corte: ' + motivo);
+            if (motivo === 'adios') { sesion = null; S.enviados = 0; S.recibidos = 0; S.pendientes = []; }
+            avisar('alCorte', motivo);
+        }
+
+        function cerrar() {
+            vuelta++;
+            esperando = null;
+            if (S.lista) mandar({ t: 'adios' });
+            S.lista = false;
+            if (latido) { clearInterval(latido); latido = null; }
+            soltarCerrojo();
+            if (lector) lector.apagar();
+            if (capa) capa.cerrar();
+            /* Un respiro antes de cerrar para que el «adiós» salga: cerrar la
+               conexión en el acto lo descartaba. */
+            const viejo = con;
+            con = null;
+            setTimeout(() => {
+                if (!viejo) return;
+                try { viejo.dc.close(); } catch (e) {}
+                try { viejo.pc.close(); } catch (e) {}
+            }, 150);
+            sesion = null; papel = null;
+            S.enviados = 0; S.recibidos = 0; S.pendientes = [];
+            apuntar('cerrado');
+        }
+
+        /* ---------- pantalla encendida ----------
+           Bloquearse la pantalla es la causa más probable de corte en una
+           partida de turnos largos; el Wake Lock lo evita donde existe. */
+        async function pedirCerrojo() {
+            if (!navigator.wakeLock || document.hidden || cerrojo) return;
+            try {
+                cerrojo = await navigator.wakeLock.request('screen');
+                cerrojo.addEventListener('release', () => { cerrojo = null; });
+            } catch (e) { apuntar('wakeLock: ' + e.name); }
+        }
+        function soltarCerrojo() {
+            if (cerrojo) { try { cerrojo.release(); } catch (e) {} cerrojo = null; }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden || !S.lista) return;
+            /* Al volver, el otro puede no haber mandado aún su latido: los
+               temporizadores de la pestaña oculta iban frenados. Tres segundos
+               de margen antes de dar la conexión por muerta. */
+            S.ultimoRecibido = Math.max(S.ultimoRecibido, ahora() - SILENCIO_MAX + 3000);
+            if (!con || con.dc.readyState !== 'open') cortar('perdida');
+            else pedirCerrojo();
+        });
+
+        return {
+            anfitrion, invitado, enviar, cerrar, cancelar,
+            reconectar() { return papel === 'invitado' ? invitado() : anfitrion(); },
+            get papel() { return papel; },
+            get conectado() { return S.lista; },
+            diagnostico: () => registro.join('\n'),
+            /* Solo para las pruebas: cortar la red a mano */
+            _cortarPorDebajo() { if (con) { try { con.pc.close(); } catch (e) {} } }
+        };
+    }
+
+    return { crear, codigoEnURL };
+})();
+</script>
 <script>
 /* ==========================================================
    MOTOR DE HUNDIR LA FLOTA
@@ -653,6 +2100,36 @@ function colocarAlAzar(azar) {
         if (bien && flota.barcos.length === TOTAL_BARCOS) return flota;
     }
     return null;
+}
+
+/* Rehace una flota a partir de las casillas de cada barco, tal como la manda
+   el otro móvil al acabar la partida. Lo que llega por la red no se da por
+   bueno: tiene que ser exactamente la flota de FLOTA, cada barco en línea
+   recta y sin montarse. Si algo no cuadra devuelve null y el juego no
+   destapa nada, en lugar de pintar un tablero imposible. */
+function flotaDesdeCeldas(lista) {
+    if (!Array.isArray(lista) || lista.length !== TOTAL_BARCOS) return null;
+    const flota = flotaVacia();
+    const pendientes = FLOTA.flatMap(t => new Array(t.cuantos).fill(t));
+
+    for (const celdas of lista) {
+        if (!Array.isArray(celdas) || !celdas.length) return null;
+        if (!celdas.every(c => Number.isInteger(c) && c >= 0 && c < CASILLAS)) return null;
+
+        const k = pendientes.findIndex(t => t.largo === celdas.length);
+        if (k === -1) return null;
+
+        const primera = Math.min(...celdas);
+        const horizontal = celdas.length === 1 || filaDe(celdas[0]) === filaDe(celdas[1]);
+        const esperadas = celdasDe(filaDe(primera), colDe(primera), celdas.length, horizontal);
+        const ordenar = (l) => l.slice().sort((a, b) => a - b).join(',');
+        if (!esperadas || ordenar(esperadas) !== ordenar(celdas)) return null;
+        if (!cabe(flota.ocupadas, esperadas)) return null;
+
+        ponerBarco(flota, pendientes[k], esperadas);
+        pendientes.splice(k, 1);
+    }
+    return flota;
 }
 
 /* ==========================================================
@@ -1075,6 +2552,8 @@ const ESPERA_MAQUINA = 700;      // lo que "piensa" antes de disparar
 const ESPERA_MIRAR = 1100;       // lo que se queda viendo tu tablero
 
 const partida = {
+    modo: 'maquina',             // 'maquina' | 'red'
+    red: null,                   // estado de la partida contra otro móvil
     nivel: 'normal',
     fase: 'colocar',             // 'colocar' | 'jugar' | 'fin'
     miFlota: null,
@@ -1268,6 +2747,10 @@ function pintarBarcos(flota, mostrar) {
     if (!flota || !mostrar) return;
 
     flota.barcos.forEach(b => {
+        /* La flota rival en red no tiene casillas hasta el final. Sin esta
+           guarda, Math.min() de nada da Infinity, la posición sale NaN, el
+           navegador la descarta y la rejilla coloca el dibujo donde quiere. */
+        if (!b.celdas.length) return;
         const primera = Math.min(...b.celdas);
         const f = filaDe(primera), c = colDe(primera);
         /* La rejilla lleva una fila y una columna de rótulos, así que la
@@ -1394,7 +2877,7 @@ function pintarFlotas() {
 function pintarPorColocar() {
     const cont = document.getElementById('porColocar');
     cont.innerHTML = '';
-    if (partida.fase !== 'colocar') return;
+    if (partida.fase !== 'colocar' || colocacionCerrada()) return;
 
     partida.porColocar.forEach((p, idx) => {
         const b = document.createElement('button');
@@ -1447,10 +2930,24 @@ function empezarColocacion() {
     partida.jugando = false;
     partida.ultima = -1;
 
+    /* En red, cada colocación abre una ronda nueva: los mensajes llevan su
+       número y así un «listo» rezagado de la anterior no cuela en esta. */
+    if (partida.modo === 'red' && partida.red) {
+        const r = partida.red;
+        r.ronda++;
+        r.yoListo = false; r.empezada = false; r.tiroPendiente = -1;
+        r.flotaRival = null; r.miFlotaEnviada = false; r.fin = null;
+    }
+
+    /* OTRA PARTIDA llega aquí con la capa de fin abierta, y nadie la cerraba:
+       la colocación quedaba debajo, a la vista pero sin poder tocarse. */
+    cerrarCapa('capaFin');
+
     document.getElementById('pestanas').style.display = 'none';
     document.getElementById('btnsColocar').style.display = '';
     document.getElementById('btnAtacar').style.display = '';
     document.getElementById('btnAtacar').disabled = true;
+    document.getElementById('btnAtacar').textContent = partida.modo === 'red' ? '¡LISTO!' : '¡AL ATAQUE!';
 
     mostrarPantalla('pJuego');
     construirTablero();
@@ -1580,6 +3077,8 @@ function miDisparo(i) {
     if (partida.pestana !== 'enemigo') { avisar('Dispara en el tablero enemigo', true); return; }
     if (partida.misTiros[i]) { rechazar(); return; }
 
+    if (partida.modo === 'red') { dispararEnRed(i); return; }
+
     const r = disparar(partida.suFlota, partida.misTiros, i);
     partida.disparos++;
     partida.ultima = i;
@@ -1690,9 +3189,319 @@ function terminar(quien) {
     /* Si no se escribe aquí, la línea de estado se queda con el último aviso
        de la partida ("TE TOCA: DISPARA") y encima se vuelve a pintar cada vez
        que se cambia de pestaña, invitando a disparar con la partida acabada. */
-    pintarEstado(quien === 'yo' ? 'GANASTE TÚ' : 'GANÓ LA MÁQUINA',
+    pintarEstado(quien === 'yo' ? 'GANASTE TÚ' : (partida.modo === 'red' ? 'GANÓ TU RIVAL' : 'GANÓ LA MÁQUINA'),
                  quien === 'yo' ? 'var(--acento)' : 'var(--rosa)');
     setTimeout(() => abrirCapa('capaFin'), 650);
+}
+
+/* ==========================================================
+   CONTRA OTRO MÓVIL
+   Cada móvil guarda SU flota y no la manda mientras se juega: quien dispara
+   solo recibe «agua» o «tocado». Ni siquiera «hundido»: la regla es que
+   hundir no se anuncia, y lo que no llega no se puede escapar por ningún
+   rincón de la interfaz. Las dos flotas se cruzan al acabar.
+
+   El anfitrión decide quién empieza, para que no haya dos opiniones.
+   ========================================================== */
+let enlace = null;
+let codigoInvitacion = null;
+
+function redNueva() {
+    return {
+        ronda: 0, yoListo: false, rivalListoRonda: 0, empezada: false,
+        tiroPendiente: -1,           // casilla disparada esperando resultado
+        flotaRival: null, miFlotaEnviada: false,
+        fin: null,                   // 'yo' | 'rival' en cuanto se sabe, antes de destapar
+        cortado: false
+    };
+}
+
+function usarEnlace() {
+    if (enlace) return enlace;
+    enlace = Enlace.crear({
+        juego: 'flota',
+        alConectar: alConectarRed,
+        alMensaje: alMensajeRed,
+        alCorte: alCorteRed,
+        /* Si se cierra la capa de conexión a mitad de una reconexión, la
+           partida sigue cortada: se vuelve a ofrecer reconectar. */
+        alCancelar: () => { if (partida.red && partida.red.cortado) abrirCapa('capaCorte'); }
+    });
+    return enlace;
+}
+
+const colocacionCerrada = () => partida.modo === 'red' && !!partida.red && partida.red.yoListo;
+const casillaValida = (i) => Number.isInteger(i) && i >= 0 && i < CASILLAS;
+
+function alConectarRed(info) {
+    cerrarCapa('capaCorte');
+    if (info.nueva || !partida.red) {
+        if (partida.red && partida.red.ronda) avisar('El otro móvil ha empezado de cero', true);
+        partida.modo = 'red';
+        partida.red = redNueva();
+        ['capaPausa', 'capaFin'].forEach(cerrarCapa);
+        partida.pausado = false;
+        document.getElementById('zonaTablero').style.visibility = '';
+        empezarColocacion();
+        pintarEstado('CONECTADO · COLOCA TU FLOTA', 'var(--acento)');
+        return;
+    }
+    partida.red.cortado = false;
+    avisar('Conexión recuperada');
+    pintarTodo();
+    pintarEstadoRed();
+}
+
+function pintarEstadoRed() {
+    const r = partida.red;
+    if (!r) return;
+    if (partida.fase === 'colocar') {
+        if (r.yoListo) pintarEstado('ESPERANDO A QUE TU RIVAL COLOQUE…', 'var(--amarillo)');
+        else pintarEstado('COLOCA TU FLOTA');
+    } else if (partida.fase === 'jugar') {
+        if (r.fin) pintarEstado('DESTAPANDO LAS FLOTAS…', 'var(--amarillo)');
+        else if (partida.turno === 'yo') {
+            pintarEstado(r.tiroPendiente >= 0 ? 'DISPARANDO A ' + nombreCasilla(r.tiroPendiente) + '…' : 'TE TOCA: DISPARA', 'var(--acento)');
+        } else pintarEstado('LE TOCA A TU RIVAL', 'var(--apagado)');
+    }
+}
+
+function alCorteRed(motivo) {
+    if (partida.modo !== 'red' || !partida.red) return;
+    const titulo = document.getElementById('tCorte');
+    const texto = document.getElementById('sCorte');
+    const reconectar = document.getElementById('btnReconectar');
+    const salir = document.getElementById('btnAbandonarRed');
+
+    if (motivo === 'adios') {
+        partida.red.cortado = false;
+        partida.jugando = false;
+        titulo.textContent = '👋 TU RIVAL SE HA IDO';
+        texto.textContent = partida.fase === 'fin' ? 'La partida ya había terminado.' : 'La partida se queda sin terminar.';
+        reconectar.style.display = 'none';
+        salir.textContent = 'MENÚ';
+    } else {
+        partida.red.cortado = true;
+        titulo.textContent = '📡 SE HA CORTADO';
+        texto.textContent = 'La partida sigue guardada en los dos móviles. Pulsad VOLVER A CONECTAR en los dos: ' +
+            (enlace.papel === 'anfitrion'
+                ? 'tú enseñas un código nuevo y luego lees el suyo.'
+                : 'tú lees el código nuevo del otro y luego le enseñas el tuyo.');
+        reconectar.style.display = '';
+        salir.textContent = 'ABANDONAR';
+    }
+    abrirCapa('capaCorte');
+}
+
+function alMensajeRed(m) {
+    const r = partida.red;
+    if (!r || !m || typeof m !== 'object') return;
+
+    if (m.tipo === 'otra') {
+        if (m.ronda > r.ronda) avisar('Tu rival quiere la revancha');
+        return;
+    }
+    if (m.tipo === 'listo') {
+        /* Puede llegar antes de que yo haya empezado esa ronda (el otro pulsó
+           OTRA PARTIDA y colocó más rápido): se guarda hasta que la abra. */
+        r.rivalListoRonda = Math.max(r.rivalListoRonda, m.ronda | 0);
+        if (m.ronda === r.ronda && partida.fase === 'colocar') {
+            if (!r.yoListo) avisar('Tu rival ya tiene la flota lista');
+            quizaEmpezar();
+        }
+        return;
+    }
+    if (m.ronda !== r.ronda) return;            // rezagado de otra ronda
+
+    if (m.tipo === 'empieza') {
+        if (partida.fase === 'colocar' && r.yoListo && !r.empezada &&
+            (m.quien === 'anfitrion' || m.quien === 'invitado')) comenzarRed(m.quien);
+    } else if (m.tipo === 'tiro') recibirTiro(m.i);
+    else if (m.tipo === 'resultado') recibirResultado(m);
+    else if (m.tipo === 'flota') recibirFlota(m.barcos);
+}
+
+function marcarListo() {
+    const r = partida.red;
+    if (partida.porColocar.some(p => !p.puesto)) { rechazar(); return; }
+    if (r.yoListo) return;
+    r.yoListo = true;
+    enlace.enviar({ tipo: 'listo', ronda: r.ronda });
+    document.getElementById('btnsColocar').style.display = 'none';
+    document.getElementById('btnAtacar').style.display = 'none';
+    partida.eligiendo = -1;
+    pintarTodo();
+    pintarEstadoRed();
+    quizaEmpezar();
+}
+
+function quizaEmpezar() {
+    const r = partida.red;
+    if (!enlace || enlace.papel !== 'anfitrion') return;
+    if (r.empezada || !r.yoListo || r.rivalListoRonda !== r.ronda) return;
+    const quien = Math.random() < 0.5 ? 'anfitrion' : 'invitado';
+    enlace.enviar({ tipo: 'empieza', ronda: r.ronda, quien });
+    comenzarRed(quien);
+}
+
+/* La flota rival mientras se juega: los seis barcos sin casillas. La fila
+   de barcos de abajo los enseña sin tachar, y el tablero no tiene de dónde
+   sacar un hundido aunque quisiera. */
+function flotaDesconocida() {
+    const f = flotaVacia();
+    FLOTA.forEach(t => {
+        for (let n = 0; n < t.cuantos; n++) {
+            f.barcos.push({ id: f.barcos.length + 1, nombre: t.nombre, largo: t.largo, celdas: [], tocadas: [], hundido: false });
+        }
+    });
+    return f;
+}
+
+function comenzarRed(quien) {
+    const r = partida.red;
+    r.empezada = true;
+    partida.suFlota = flotaDesconocida();
+    partida.misTiros = new Array(CASILLAS).fill(0);
+    partida.susTiros = new Array(CASILLAS).fill(0);
+    partida.conocimiento = null;
+    partida.turno = quien === enlace.papel ? 'yo' : 'rival';
+    partida.fase = 'jugar';
+    partida.jugando = true;
+    partida.pausado = false;
+    partida.ocupado = false;
+    partida.disparos = 0;
+    partida.ultima = -1;
+    partida.pestana = partida.turno === 'yo' ? 'enemigo' : 'mia';
+
+    document.getElementById('pestanas').style.display = '';
+    document.getElementById('btnsColocar').style.display = 'none';
+    document.getElementById('btnAtacar').style.display = 'none';
+
+    pintarTodo();
+    if (partida.turno === 'yo') pintarEstado('EMPIEZAS TÚ: DISPARA', 'var(--acento)');
+    else pintarEstado('EMPIEZA TU RIVAL', 'var(--apagado)');
+}
+
+function dispararEnRed(i) {
+    const r = partida.red;
+    if (r.tiroPendiente >= 0 || r.fin) return;
+    r.tiroPendiente = i;
+    partida.ocupado = true;
+    partida.ultima = i;
+    enlace.enviar({ tipo: 'tiro', ronda: r.ronda, i });
+    pintarTodo();
+    pintarEstadoRed();
+}
+
+/* Me disparan: lo resuelvo con MI flota y contesto solo agua o tocado */
+function recibirTiro(i) {
+    const r = partida.red;
+    if (partida.fase !== 'jugar' || partida.turno !== 'rival' || r.fin) return;
+    if (!casillaValida(i) || partida.susTiros[i]) return;
+
+    const res = disparar(partida.miFlota, partida.susTiros, i);
+    const fin = flotaHundida(partida.miFlota);
+    enlace.enviar({ tipo: 'resultado', ronda: r.ronda, i, r: res.resultado === AGUA ? 'agua' : 'tocado', fin });
+
+    /* Se enseña mi tablero mientras me disparan, como contra la máquina */
+    partida.pestana = 'mia';
+    partida.ultima = i;
+    pintarTodo();
+
+    if (res.resultado === AGUA) {
+        sonAgua();
+        pintarEstado('TE DISPARA A ' + nombreCasilla(i) + ': AGUA', 'var(--apagado)');
+        /* El turno es mío desde ya; la espera es solo para que dé tiempo a
+           ver dónde cayó. Mientras, no se admiten toques. */
+        partida.turno = 'yo';
+        partida.ocupado = true;
+        setTimeout(() => {
+            if (partida.fase !== 'jugar' || partida.turno !== 'yo' || partida.red !== r) return;
+            partida.ocupado = false;
+            partida.pestana = 'enemigo';
+            partida.ultima = -1;
+            pintarTodo();
+            pintarEstado('TE TOCA: DISPARA', 'var(--acento)');
+        }, ESPERA_MIRAR);
+        return;
+    }
+
+    if (res.resultado === HUNDIDO) {
+        sonHundido();
+        pintarEstado('TE HUNDE UN BARCO EN ' + nombreCasilla(i), 'var(--rosa)');
+    } else {
+        sonTocado();
+        pintarEstado('TE DA EN ' + nombreCasilla(i), 'var(--amarillo)');
+    }
+    if (fin) {
+        partida.jugando = false;
+        r.fin = 'rival';
+        cruzarFlotas();
+    }
+}
+
+function recibirResultado(m) {
+    const r = partida.red;
+    if (partida.fase !== 'jugar' || r.tiroPendiente < 0 || m.i !== r.tiroPendiente) return;
+    const i = m.i;
+    r.tiroPendiente = -1;
+    partida.ocupado = false;
+    partida.disparos++;
+    partida.ultima = i;
+
+    if (m.r === 'agua') {
+        partida.misTiros[i] = 1;
+        partida.turno = 'rival';
+        sonAgua();
+        pintarTodo();
+        pintarEstado('AGUA EN ' + nombreCasilla(i) + ' · LE TOCA', 'var(--apagado)');
+        return;
+    }
+
+    partida.misTiros[i] = 2;
+    if (m.fin === true) {
+        sonHundido();
+        partida.jugando = false;
+        r.fin = 'yo';
+        pintarTodo();
+        pintarEstadoRed();
+        cruzarFlotas();
+        return;
+    }
+    /* Tocar y hundir suenan y se anuncian igual, como contra la máquina */
+    sonTocado();
+    pintarTodo();
+    pintarEstado('¡TOCADO! REPITES', 'var(--amarillo)');
+}
+
+/* Al acabar cada uno manda su flota una vez, y se destapa cuando están las
+   dos. Quien pierde la manda primero (lo sabe antes); quien gana la manda al
+   enterarse. Con la sesión del enlace, un corte justo aquí no pierde nada. */
+function cruzarFlotas() {
+    const r = partida.red;
+    if (!r.miFlotaEnviada) {
+        r.miFlotaEnviada = true;
+        enlace.enviar({ tipo: 'flota', ronda: r.ronda, barcos: partida.miFlota.barcos.map(b => b.celdas) });
+    }
+    if (!r.flotaRival || !r.fin || partida.fase === 'fin') return;
+
+    if (r.flotaRival !== 'invalida') {
+        partida.suFlota = r.flotaRival;
+        partida.suFlota.barcos.forEach(b => {
+            b.tocadas = b.celdas.filter(c => partida.misTiros[c] === 2);
+            b.hundido = b.tocadas.length === b.largo;
+        });
+    } else {
+        avisar('No se ha podido destapar su flota', true);
+    }
+    terminar(r.fin);
+}
+
+function recibirFlota(barcos) {
+    const r = partida.red;
+    if (r.flotaRival) return;
+    r.flotaRival = flotaDesdeCeldas(barcos) || 'invalida';
+    cruzarFlotas();
 }
 
 function pausar() {
@@ -1715,8 +3524,12 @@ function volverAlMenu() {
     partida.jugando = false;
     partida.pausado = false;
     partida.ocupado = false;
+    /* Irse al menú en red es irse de la partida: el otro recibe el adiós en
+       vez de quedarse esperando un disparo que no va a llegar. */
+    if (partida.modo === 'red' && enlace) enlace.cerrar();
+    partida.red = null;
     document.getElementById('zonaTablero').style.visibility = '';
-    ['capaPausa', 'capaFin'].forEach(cerrarCapa);
+    ['capaPausa', 'capaFin', 'capaCorte'].forEach(cerrarCapa);
     mostrarPantalla('pMenu');
 }
 
@@ -1742,6 +3555,15 @@ function grupoSimple(id, alElegir) {
 
 grupoSimple('grpNivel', (v) => { partida.nivel = v; });
 
+function pintarMenuRival(v) {
+    const red = v === 'red';
+    document.querySelectorAll('#grpRival .opcion').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.v === v)));
+    document.getElementById('fsNivel').style.display = red ? 'none' : '';
+    document.getElementById('btnJugar').style.display = red ? 'none' : '';
+    document.getElementById('btnsRed').style.display = red ? '' : 'none';
+}
+grupoSimple('grpRival', pintarMenuRival);
+
 /* ==========================================================
    LISTENERS
    ========================================================== */
@@ -1753,7 +3575,25 @@ document.addEventListener('click', (e) => {
     if (t.closest('.opcion, .principal, .secundario, .icono, .pestana, .porPoner')) sonPulsar();
 });
 
-document.getElementById('btnJugar').addEventListener('click', empezarColocacion);
+document.getElementById('btnJugar').addEventListener('click', () => {
+    partida.modo = 'maquina';
+    partida.red = null;
+    empezarColocacion();
+});
+document.getElementById('btnCrear').addEventListener('click', () => usarEnlace().anfitrion());
+document.getElementById('btnUnirme').addEventListener('click', () => {
+    /* El código de la invitación vale una sola vez: si se cancela y se
+       vuelve a pulsar, toca leer uno nuevo con la cámara. */
+    const codigo = codigoInvitacion;
+    codigoInvitacion = null;
+    document.getElementById('invitacion').style.display = 'none';
+    usarEnlace().invitado(codigo);
+});
+document.getElementById('btnReconectar').addEventListener('click', () => {
+    cerrarCapa('capaCorte');
+    enlace.reconectar();
+});
+document.getElementById('btnAbandonarRed').addEventListener('click', volverAlMenu);
 
 document.getElementById('tablero').addEventListener('click', (e) => {
     const d = e.target.closest('.casilla');
@@ -1761,6 +3601,7 @@ document.getElementById('tablero').addEventListener('click', (e) => {
     const i = Number(d.dataset.i);
 
     if (partida.fase === 'colocar') {
+        if (colocacionCerrada()) { avisar('Ya está lista: esperando a tu rival'); return; }
         /* Si ahí ya hay un barco, el toque lo quita en vez de intentar poner
            otro encima: es lo que uno espera al tocar algo que ya está. */
         if (quitarDeCasilla(i)) return;
@@ -1785,18 +3626,27 @@ document.getElementById('btnGirar').addEventListener('click', () => {
 
 document.getElementById('btnAzar').addEventListener('click', colocarTodoAlAzar);
 document.getElementById('btnBorrar').addEventListener('click', vaciarTablero);
-document.getElementById('btnAtacar').addEventListener('click', empezarBatalla);
+document.getElementById('btnAtacar').addEventListener('click', () => {
+    if (partida.modo === 'red') marcarListo(); else empezarBatalla();
+});
 
 document.getElementById('pestEnemigo').addEventListener('click', () => cambiarPestana('enemigo'));
 document.getElementById('pestMia').addEventListener('click', () => cambiarPestana('mia'));
 
 document.getElementById('btnPausa').addEventListener('click', () => {
+    /* Con la partida acabada no hay nada que pausar, y tras VER SU TABLERO
+       este botón era la única salida a la vista: sin esto había que recargar
+       la página para jugar otra o volver al menú. */
+    if (partida.fase === 'fin') { abrirCapa('capaFin'); return; }
     if (partida.pausado) reanudar(); else pausar();
 });
 
 document.getElementById('btnSeguir').addEventListener('click', reanudar);
 document.getElementById('btnAbandonar').addEventListener('click', volverAlMenu);
-document.getElementById('btnOtra').addEventListener('click', empezarColocacion);
+document.getElementById('btnOtra').addEventListener('click', () => {
+    if (partida.modo === 'red' && partida.red) enlace.enviar({ tipo: 'otra', ronda: partida.red.ronda + 1 });
+    empezarColocacion();
+});
 document.getElementById('btnVolverMenu').addEventListener('click', volverAlMenu);
 /* Lleva siempre al tablero del rival, que es lo que se quiere mirar al
    acabar: dónde tenía la flota. Si la partida se perdió, la pestaña activa
@@ -1816,6 +3666,7 @@ document.addEventListener('keydown', (e) => {
             if (document.getElementById('capaPausa').classList.contains('activa')) reanudar();
             else { cerrarCapa('capaAyuda'); cerrarCapa('capaFin'); }
         } else if (partida.jugando) pausar();
+        else if (partida.fase === 'fin' && document.getElementById('pJuego').classList.contains('activa')) abrirCapa('capaFin');
         return;
     }
     if (partida.fase === 'colocar' && (e.key === 'r' || e.key === 'R')) {
@@ -1868,8 +3719,21 @@ function textoFlota() {
 document.getElementById('ayudaFlota').innerHTML =
     'Primero colocas tu flota: ' + enLetra(TOTAL_BARCOS) + ' barcos, ' + textoFlota() +
     ' casillas. <b>Pueden ir pegados unos a otros</b>, lo único que no vale es montarlos.';
+/* El lema también: decía «Diez barcos» meses después de quedarse en seis */
+const enLetraMayuscula = (n) => { const t = enLetra(n); return t.charAt(0).toUpperCase() + t.slice(1); };
+document.getElementById('lema').textContent =
+    enLetraMayuscula(TOTAL_BARCOS) + ' barcos escondidos en ' + (CASILLAS === 100 ? 'cien' : CASILLAS) + ' casillas';
 document.getElementById('ayudaGana').textContent =
     'Gana quien hunda antes los ' + enLetra(TOTAL_BARCOS) + ' barcos del otro.';
+
+/* Se entra con #enlace=… cuando el otro mandó su código por mensaje y se ha
+   tocado el enlace: se deja elegido «otro móvil» y se avisa. No se conecta
+   solo, porque la cámara y el audio piden un toque del usuario. */
+codigoInvitacion = Enlace.codigoEnURL();
+if (codigoInvitacion) {
+    pintarMenuRival('red');
+    document.getElementById('invitacion').style.display = '';
+}
 
 /* Si en la visita anterior quedó algo encendido, el navegador sigue sin
    permitir audio hasta el primer toque: se espera a ese gesto. */

@@ -815,6 +815,173 @@ function rondaFotos(nivel, azar, fotos) {
     const pares = Math.min(quiere, fotos.length);
     return { pares, cartas: barajarParejas(fotos, pares, azar) };
 }
+
+/* ==========================================================
+   SIGUE LA SERIE (cálculo, como el «Continúa el patrón» de Duolingo)
+   Tres cuentas seguidas; a la última le falta el resultado. Se puede
+   calcular o fijarse en cómo cambia la columna de resultados: las dos
+   cosas valen.
+   Todo en números enteros (céntimos, minutos, centésimas) para no
+   pelearse con 0,1 + 0,2 en coma flotante; la coma decimal solo aparece
+   al escribirlo.
+   - 'cadena': cada cuenta empieza en el resultado de la anterior.
+   - 'tabla':  el mismo número por 2, por 3, por 4…
+   ========================================================== */
+const NIVELES_CALCULO = [
+    /* Desde el 9 y no desde el 1: de 1 en 1, lo que hay por debajo de la
+       respuesta ya está escrito en la tabla, la única falsa por debajo es la
+       de diez de menos y hace falta que sea positiva y no sea el 1 del paso.
+       Desde el 1, la buena era la menor el 91 % de las veces. */
+    { tipo: 'cadena', formato: 'entero',  pasos: [1],   inicios: rango(9, 20, 1),  opciones: 2 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [2],   inicios: rango(1, 15, 1),  opciones: 2 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [5],   inicios: rango(5, 40, 5),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [10],  inicios: rango(1, 49, 1),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [-1],  inicios: rango(6, 20, 1),  opciones: 3 },
+    { tipo: 'cadena', formato: 'entero',  pasos: [-10], inicios: rango(40, 99, 1), opciones: 3 },
+    { tipo: 'cadena', formato: 'euro',    pasos: [50],  inicios: rango(50, 400, 50), opciones: 3 },
+    /* De 8:00 a 11:45 como mucho: «las 13 y media» no se dice así, y
+       pasar a «la una y media» con 13:30 escrito despistaría */
+    { tipo: 'cadena', formato: 'hora',    pasos: [30, 15], inicios: rango(480, 600, 15), opciones: 3 },
+    { tipo: 'tabla',  formato: 'entero',  factores: [2, 3, 4, 5],         ks: rango(2, 6, 1), opciones: 3 },
+    { tipo: 'tabla',  formato: 'decimal', factores: [5, 10, 20, 25, 50],  ks: rango(2, 6, 1), opciones: 3 }
+];
+function rango(desde, hasta, cada) { const l = []; for (let v = desde; v <= hasta; v += cada) l.push(v); return l; }
+
+const decimalEnCifra = (c) => Math.floor(c / 100) + ',' + String(c % 100).padStart(2, '0');
+/* «0 coma cero 5»: escrito «0,05», la voz decía «cero coma cinco» */
+const decimalEnTexto = (c) => Math.floor(c / 100) + ' coma ' + (c % 100 < 10 ? 'cero ' + (c % 100) : String(c % 100));
+const horaEnCifra = (m) => Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0');
+function horaEnTexto(m) {
+    const h = Math.floor(m / 60), mm = m % 60;
+    const la = (n) => { const x = ((n - 1) % 12) + 1; return x === 1 ? 'la una' : 'las ' + x; };
+    if (mm === 0) return la(h) + ' en punto';
+    if (mm === 15) return la(h) + ' y cuarto';
+    if (mm === 30) return la(h) + ' y media';
+    if (mm === 45) return la(h + 1) + ' menos cuarto';
+    return la(h) + ' y ' + mm;
+}
+const DURACION_EN_TEXTO = { 15: 'un cuarto de hora', 30: 'media hora', 60: 'una hora' };
+
+function escribir(formato, v) {
+    if (formato === 'euro') return importeEnCifra(v);
+    if (formato === 'hora') return horaEnCifra(v);
+    if (formato === 'decimal') return decimalEnCifra(v);
+    return String(v);
+}
+function decirValor(formato, v) {
+    if (formato === 'euro') return importeEnTexto(v);
+    if (formato === 'hora') return horaEnTexto(v);
+    if (formato === 'decimal') return decimalEnTexto(v);
+    return String(v);
+}
+
+/* Equivocaciones con sentido, de la más probable a la menos: un paso de
+   más, una unidad de más o de menos, la coma corrida… El paso de menos no
+   está porque es el resultado de la fila de arriba, que ya se ve. */
+function deslices(cfg, respuesta, paso) {
+    if (cfg.tipo === 'tabla') {
+        const a = paso;
+        const l = [respuesta + a, respuesta - 3 * a, respuesta + 2 * a];
+        if (cfg.formato === 'decimal') { l.push(respuesta * 10); if (respuesta % 10 === 0) l.push(respuesta / 10); }
+        else l.push(respuesta + 1, respuesta - 1);
+        return l;
+    }
+    if (cfg.formato === 'euro') return [respuesta + paso, respuesta - 10, respuesta + 10, respuesta + 100, respuesta - 100, respuesta + 2 * paso];
+    if (cfg.formato === 'hora') return [respuesta + paso, respuesta - 60, respuesta + 60, respuesta + 2 * paso];
+    /* El 10 de menos/de más (13 por 3) antes que dos pasos: con la serie de
+       1 en 1 casi todo lo de abajo ya se ve en la tabla, y sin él la buena
+       era siempre la menor de las dos */
+    return [respuesta + paso, respuesta - Math.sign(paso), respuesta + Math.sign(paso), respuesta - 10, respuesta + 10, respuesta + 2 * paso];
+}
+function cabeEnFormato(formato, v) {
+    if (formato === 'hora') return v >= 420 && v <= 765;
+    if (formato === 'decimal') return v > 0 && v < 1000;
+    return v > 0;
+}
+
+function rondaCalculo(nivel, azar, evitar) {
+    const cfg = NIVELES_CALCULO[Math.min(nivel, NIVELES_CALCULO.length) - 1];
+    const elegir = (l) => l[Math.floor(azar() * l.length)];
+    const f = cfg.formato;
+    let filas, respuesta, paso, inicio, vistos;
+    do {
+        if (cfg.tipo === 'cadena') {
+            paso = elegir(cfg.pasos);
+            inicio = elegir(cfg.inicios);
+            const signo = paso < 0 ? ' − ' : ' + ';
+            const pasoEscrito = f === 'hora' ? Math.abs(paso) + ' min' : escribir(f, Math.abs(paso));
+            const pasoDicho = f === 'hora' ? DURACION_EN_TEXTO[Math.abs(paso)] : decirValor(f, Math.abs(paso));
+            filas = [0, 1, 2].map(i => {
+                const a = inicio + i * paso, r = a + paso;
+                return { op: escribir(f, a) + signo + pasoEscrito, res: escribir(f, r), valor: r, resVoz: decirValor(f, r),
+                         voz: decirValor(f, a) + (paso < 0 ? ' menos ' : ' más ') + pasoDicho };
+            });
+            /* El paso también se ve (el «+ 1» de cada fila): tampoco vale de falsa */
+            vistos = [inicio, inicio + paso, inicio + 2 * paso, Math.abs(paso)];
+        } else {
+            paso = elegir(cfg.factores);
+            inicio = elegir(cfg.ks);
+            filas = [0, 1, 2].map(i => {
+                const k = inicio + i, r = paso * k;
+                return { op: escribir(f, paso) + ' × ' + k, res: escribir(f, r), valor: r, resVoz: decirValor(f, r), voz: decirValor(f, paso) + ' por ' + k };
+            });
+            vistos = [paso, inicio, inicio + 1, inicio + 2, paso * inicio, paso * (inicio + 1)];
+        }
+        respuesta = filas[2].valor;
+    } while (evitar !== undefined && inicio === evitar && (cfg.inicios || cfg.ks).length > 1);
+
+    const fuera = new Set(vistos.concat(respuesta));
+    const candidatos = [];
+    for (const v of deslices(cfg, respuesta, paso)) {
+        if (!fuera.has(v) && cabeEnFormato(f, v) && Number.isInteger(v)) { candidatos.push(v); fuera.add(v); }
+    }
+    /* Entre las tres más probables, al azar: si siempre saliera la primera
+       (un paso de más), la buena sería siempre la menor y se acertaría sin
+       mirar */
+    const falsas = barajar(candidatos.slice(0, 3), azar).slice(0, cfg.opciones - 1);
+    const opciones = barajar([respuesta].concat(falsas), azar).map(v => ({ valor: v, texto: escribir(f, v), voz: decirValor(f, v) }));
+
+    /* En la tabla el resultado sube lo que vale el número que se multiplica */
+    const cambio = paso, sube = cambio > 0;
+    const patron = f === 'hora'
+        ? { pantalla: 'Cada vez pasa ' + DURACION_EN_TEXTO[Math.abs(cambio)] + '.', voz: 'Cada vez pasa ' + DURACION_EN_TEXTO[Math.abs(cambio)] + '.' }
+        : { pantalla: 'Cada vez ' + (sube ? 'sube ' : 'baja ') + escribir(f, Math.abs(cambio)) + '.',
+            voz: 'Cada vez ' + (sube ? 'sube ' : 'baja ') + decirValor(f, Math.abs(cambio)) + '.' };
+    return { formato: f, tipo: cfg.tipo, inicio, paso, filas, respuesta, opciones, patron,
+             pregunta: filas[2].voz + (f === 'hora' ? ', ¿qué hora es?' : ', ¿cuánto es?') };
+}
+
+/* ==========================================================
+   PUZLE DE PIEZAS QUE SE DESLIZAN
+   El motor (barajar, distancias, pista) es el común con el de Ingenio,
+   _fuentes/puzle/motor-puzle.js, y se pasa como `motor` para poder
+   probar esto en Node.
+   La dificultad no la da solo el tamaño: un 3×3 a 4 movimientos es más
+   fácil que un 2×2 a 6. Se gradúa por el número EXACTO de movimientos que
+   hacen falta, medido con el recorrido completo de todas las posiciones.
+   ========================================================== */
+const NIVELES_PUZLE = [
+    { n: 2, movimientos: 2 },
+    { n: 2, movimientos: 3 },
+    { n: 2, movimientos: 4 },
+    { n: 2, movimientos: 6 },
+    { n: 3, movimientos: 4 },
+    { n: 3, movimientos: 6 },
+    { n: 3, movimientos: 8 },
+    { n: 3, movimientos: 10 },
+    { n: 3, movimientos: 14 }
+];
+
+function rondaPuzle(nivel, azar, motor) {
+    const cfg = NIVELES_PUZLE[Math.min(nivel, NIVELES_PUZLE.length) - 1];
+    return { n: cfg.n, minimo: cfg.movimientos, tablero: motor.barajarA(cfg.n, cfg.movimientos, azar) };
+}
+
+/* En un puzle, alejarse una vez y volver es explorar, no equivocarse: se
+   perdona UN movimiento que aleja. Con dos ya se cuenta como ronda floja
+   (y el juego empieza a señalar la pieza). Ver resultadoDeRonda. */
+const ALEJAR_PERDONADO = 1;
+const resultadoPuzle = (alejan, ayudas) => resultadoDeRonda(Math.max(0, alejan - ALEJAR_PERDONADO), ayudas);
 </script>
 <script>
 /* ==========================================================
