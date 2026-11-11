@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cómo instalar los juegos</title>
+<meta name="theme-color" content="#0f0c2d">
+<!-- Sin manifest a propósito: si alguien instalara ESTA página, se llevaría
+     las instrucciones en vez de los juegos. Lo que se instala es la portada. -->
+<style>
+    /* Mismos colores que la portada (index.html) */
+    :root {
+        --fondo: #0f0c2d;
+        --tarjeta: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.14);
+        --acento: #00ffc8;
+        --acento2: #ff006e;
+        --aviso: #ffcc66;
+        --texto: #f2f2f7;
+        --apagado: #b4b2cb;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+        margin: 0;
+        /* Holgura SUMADA al área segura: con max() Chrome en Android, que da
+           0 aunque haya barra de gestos, se quedaba sin margen abajo */
+        padding: calc(env(safe-area-inset-top, 0px) + 16px) calc(env(safe-area-inset-right, 0px) + 16px)
+                 calc(env(safe-area-inset-bottom, 0px) + 24px) calc(env(safe-area-inset-left, 0px) + 16px);
+        background: radial-gradient(1200px 800px at 20% -10%, #2a1a5e 0%, var(--fondo) 55%), var(--fondo);
+        color: var(--texto);
+        font: 17px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 620px; margin: 0 auto; }
+    h1 { font-size: clamp(1.5rem, 6.5vw, 2.1rem); margin: 8px 0 4px; text-align: center; line-height: 1.2; }
+    h1 span {
+        background: linear-gradient(90deg, var(--acento), var(--acento2));
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .subtitulo { color: var(--apagado); text-align: center; margin: 0 0 22px; }
+
+    .paso {
+        display: grid; grid-template-columns: 2.4rem 1fr; gap: 0 12px;
+        padding: 14px; margin: 0 0 12px;
+        background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 14px;
+    }
+    .num {
+        grid-row: span 2; width: 2.4rem; height: 2.4rem; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--acento); color: #0f0c2d; font-weight: 800; font-size: 1.15rem;
+    }
+    .paso h2 { font-size: 1.08rem; margin: 0.25rem 0 0.2rem; line-height: 1.3; }
+    .paso p { margin: 0.2rem 0; }
+    .paso .nota { color: var(--apagado); font-size: 0.92rem; }
+    .ojo { color: var(--aviso); font-weight: 700; }
+    b.boton {
+        display: inline-block; padding: 0 0.4em; border-radius: 6px;
+        border: 1px solid var(--borde); background: rgba(255, 255, 255, 0.1); white-space: nowrap;
+    }
+    /* Los dibujos de los botones (compartir, tres puntos) en línea con el texto */
+    .icono { width: 1.35em; height: 1.35em; vertical-align: -0.3em; color: var(--acento); }
+
+    .enlace {
+        display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+    }
+    .enlace input {
+        flex: 1 1 12rem; min-width: 0; padding: 10px; border-radius: 10px;
+        border: 1px solid var(--borde); background: rgba(0, 0, 0, 0.25); color: var(--texto);
+        font: 0.95rem/1.2 ui-monospace, Menlo, Consolas, monospace;
+    }
+    button, .ir {
+        font: 700 1rem/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: 10px 16px; border-radius: 10px; cursor: pointer;
+        border: 1px solid var(--acento); background: transparent; color: var(--acento);
+    }
+    #copiado { color: var(--acento); font-weight: 700; min-height: 1.5em; margin: 6px 0 0; }
+
+    /* Pestañas iPhone / Android: se elige sola la del móvil que abre la
+       página, pero se puede cambiar (para ayudar a otro por teléfono) */
+    .pestanas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 22px 0 12px; }
+    .pestanas button { padding: 12px 8px; font-size: 1.05rem; border-color: var(--borde); color: var(--texto); }
+    .pestanas button[aria-selected="true"] { border-color: var(--acento); color: #0f0c2d; background: var(--acento); }
+    [role="tabpanel"][hidden] { display: none; }
+
+    .final { text-align: center; margin: 22px 0 8px; }
+    .final img { width: 72px; height: 72px; border-radius: 16px; display: block; margin: 0 auto 8px; }
+    .ir { display: inline-block; text-decoration: none; margin-top: 10px; background: var(--acento); color: #0f0c2d; }
+    :focus-visible { outline: 3px solid var(--aviso); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Cómo instalar <span>los juegos</span></h1>
+    <p class="subtitulo">Para tenerlos en el móvil con su icono, como una aplicación más.</p>
+
+    <section class="paso" aria-labelledby="p1">
+        <div class="num" aria-hidden="true">1</div>
+        <h2 id="p1">Copia el enlace de los juegos</h2>
+        <div>
+            <p>En WhatsApp, <b>mantén el dedo</b> sobre el enlace y elige <b class="boton">Copiar</b>.</p>
+            <p class="ojo">⚠️ No lo abras, solo cópialo.</p>
+            <p class="nota">Si lo abres desde WhatsApp, se abre dentro de WhatsApp, y desde ahí no se puede instalar.</p>
+            <p class="nota">¿Ya estás viendo esta página? También puedes copiarlo aquí:</p>
+            <div class="enlace">
+                <input id="direccion" type="text" readonly aria-label="Enlace de los juegos">
+                <button id="copiar" type="button">COPIAR</button>
+            </div>
+            <p id="copiado" aria-live="polite"></p>
+        </div>
+    </section>
+
+    <div class="pestanas" role="tablist" aria-label="Tipo de móvil">
+        <button id="tabIphone" type="button" role="tab" aria-controls="iphone" aria-selected="true">🍎 iPhone</button>
+        <button id="tabAndroid" type="button" role="tab" aria-controls="android" aria-selected="false">🤖 Android</button>
+    </div>
+
+    <!-- ===================== iPHONE ===================== -->
+    <div id="iphone" role="tabpanel" aria-labelledby="tabIphone">
+        <section class="paso">
+            <div class="num" aria-hidden="true">2</div>
+            <h2>Abre Safari y pega el enlace</h2>
+            <div>
+                <p>Abre la aplicación <b>Safari</b>. Toca la barra de direcciones, mantén el dedo y elige <b class="boton">Pegar</b>. Después, ábrelo.</p>
+                <p class="nota">Tiene que ser Safari: es el que sabe añadir páginas a la pantalla de inicio.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">3</div>
+            <h2>Toca el botón de compartir</h2>
+            <div>
+                <p>Es el <b>cuadrado con la flecha hacia arriba</b>
+                    <svg class="icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="botón de compartir" role="img"><path d="M8 10H6v11h12V10h-2"/><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/></svg>.</p>
+                <p class="nota">Si no lo ves (los iPhone actualizados lo guardan ahí), toca antes los <b>tres puntos</b>
+                    <svg class="icono" viewBox="0 0 24 24" fill="currentColor" aria-label="tres puntos" role="img"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                    junto a la dirección y luego <b class="boton">Compartir</b>.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">4</div>
+            <h2>Elige «Añadir a pantalla de inicio»</h2>
+            <div>
+                <p>Baja un poco en la lista que aparece hasta encontrarlo.</p>
+                <p class="nota">Si sale la opción de abrirlo como app web, déjala activada.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">5</div>
+            <h2>Acepta con «Añadir»</h2>
+            <div>
+                <p>Está arriba a la derecha. En la pantalla de inicio aparecerá el icono <b>Juegos</b>.</p>
+            </div>
+        </section>
+    </div>
+
+    <!-- ===================== ANDROID ===================== -->
+    <div id="android" role="tabpanel" aria-labelledby="tabAndroid" hidden>
+        <section class="paso">
+            <div class="num" aria-hidden="true">2</div>
+            <h2>Abre Chrome y pega el enlace</h2>
+            <div>
+                <p>Abre el navegador <b>Chrome</b>. Toca la barra de direcciones, mantén el dedo y elige <b class="boton">Pegar</b>. Después, ábrelo.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">3</div>
+            <h2>Toca los tres puntos y elige «Instalar»</h2>
+            <div>
+                <p>Los <b>tres puntos</b>
+                    <svg class="icono" viewBox="0 0 24 24" fill="currentColor" aria-label="tres puntos" role="img"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+                    están arriba a la derecha. En el menú, busca la opción de <b>instalar</b> (según el móvil pone <b class="boton">Instalar aplicación</b> o <b class="boton">Añadir a pantalla de inicio</b>) y acepta.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">4</div>
+            <h2>Busca «juegos» en tus aplicaciones</h2>
+            <div>
+                <p>Una vez instalada, abre el <b>menú de aplicaciones</b> (desliza el dedo hacia arriba desde abajo) y escribe <b>juegos</b> en el buscador. Aparecerá el icono <b>Juegos</b>.</p>
+            </div>
+        </section>
+        <section class="paso">
+            <div class="num" aria-hidden="true">5</div>
+            <h2>Ponlo en la pantalla de inicio</h2>
+            <div>
+                <p><b>Mantén el dedo</b> sobre el icono y elige <b class="boton">Añadir a la pantalla de inicio</b>.</p>
+                <p class="nota">Un toque corto lo abre en vez de mostrar la opción. Si el icono ya estaba en la pantalla de inicio, no hace falta este paso.</p>
+            </div>
+        </section>
+    </div>
+
+    <div class="final">
+        <!-- El icono de la aplicación; si no carga (abierta en el ordenador sin la carpeta images), se quita -->
+        <img src="./images/icono-192.png" alt="Icono de Juegos" onerror="this.remove()">
+        <p>¡Listo! A partir de ahora, abre los juegos desde el icono <b>Juegos</b>.</p>
+        <a class="ir" id="ir" href="./">IR A LOS JUEGOS</a>
+    </div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+    /* El enlace de la portada se saca de dónde está esta página (en el
+       mismo sitio que index.html): no hay que tocarlo si cambia la dirección */
+    var portada = new URL('./', location.href).href;
+    var campo = document.getElementById('direccion');
+    campo.value = portada;
+
+    var aviso = document.getElementById('copiado');
+    function copiado(ok) {
+        aviso.textContent = ok ? '✓ Copiado. Ahora sigue con el paso 2.' : 'No se ha podido copiar: mantén el dedo sobre la dirección y elige Copiar.';
+    }
+    /* Copiar a la antigua: para navegadores sin el portapapeles moderno, o
+       dentro del navegador de WhatsApp, que a veces lo bloquea */
+    function copiarALaAntigua() {
+        campo.focus();
+        campo.setSelectionRange(0, campo.value.length);
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        copiado(ok);
+    }
+    document.getElementById('copiar').addEventListener('click', function () {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(portada).then(function () { copiado(true); }, copiarALaAntigua);
+        } else copiarALaAntigua();
+    });
+
+    /* Pestañas. Se abre sola la del móvil que lee: los iPad nuevos dicen
+       ser un Mac, pero un Mac no tiene pantalla táctil */
+    var ua = navigator.userAgent;
+    var esIphone = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    var esAndroid = /Android/.test(ua);
+    var tabs = [document.getElementById('tabIphone'), document.getElementById('tabAndroid')];
+    function elegir(tab) {
+        tabs.forEach(function (t) {
+            var si = t === tab;
+            t.setAttribute('aria-selected', String(si));
+            t.tabIndex = si ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !si;
+        });
+    }
+    tabs.forEach(function (t, i) {
+        t.addEventListener('click', function () { elegir(t); });
+        t.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var o = tabs[1 - i]; elegir(o); o.focus(); e.preventDefault(); }
+        });
+    });
+    elegir(esAndroid && !esIphone ? tabs[1] : tabs[0]);
+})();
+</script>
+</body>
+</html>
