@@ -74,6 +74,8 @@
         padding: 10px 16px; border-radius: 10px; cursor: pointer;
         border: 1px solid var(--acento); background: transparent; color: var(--acento);
     }
+    /* COPIAR, relleno: es lo primero que hay que hacer en la página */
+    button.copiar { background: var(--acento); color: #0f0c2d; padding: 12px 22px; font-size: 1.05rem; }
     #copiado { color: var(--acento); font-weight: 700; min-height: 1.5em; margin: 6px 0 0; }
 
     /* Pestañas iPhone / Android: se elige sola la del móvil que abre la
@@ -98,13 +100,10 @@
         <div class="num" aria-hidden="true">1</div>
         <h2 id="p1">Copia el enlace de los juegos</h2>
         <div>
-            <p>En WhatsApp, <b>mantén el dedo</b> sobre el enlace y elige <b class="boton">Copiar</b>.</p>
-            <p class="ojo">⚠️ No lo abras, solo cópialo.</p>
-            <p class="nota">Si lo abres desde WhatsApp, se abre dentro de WhatsApp, y desde ahí no se puede instalar.</p>
-            <p class="nota">¿Ya estás viendo esta página? También puedes copiarlo aquí:</p>
+            <p>Toca el botón <b class="boton">COPIAR</b>.</p>
             <div class="enlace">
                 <input id="direccion" type="text" readonly aria-label="Enlace de los juegos">
-                <button id="copiar" type="button">COPIAR</button>
+                <button id="copiar" class="copiar" type="button">COPIAR</button>
             </div>
             <p id="copiado" aria-live="polite"></p>
         </div>
@@ -210,7 +209,8 @@
         aviso.textContent = ok ? '✓ Copiado. Ahora sigue con el paso 2.' : 'No se ha podido copiar: mantén el dedo sobre la dirección y elige Copiar.';
     }
     /* Copiar a la antigua: para navegadores sin el portapapeles moderno, o
-       dentro del navegador de WhatsApp, que a veces lo bloquea */
+       dentro del navegador de WhatsApp (la página llega por WhatsApp y se
+       abre ahí), que a veces lo bloquea */
     function copiarALaAntigua() {
         campo.focus();
         campo.setSelectionRange(0, campo.value.length);
