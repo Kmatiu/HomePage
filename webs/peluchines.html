@@ -578,7 +578,7 @@ body {
 <section class="pantalla activa est-menu" id="pMenu">
     <div class="est-scroll">
         <div class="est-titulo">PELU<span>CHINES</span></div>
-        <p class="est-lema">Lleva cada peluchín a su hueco</p>
+        <p class="est-lema">Mueve las piezas y recoge a los peluchines</p>
 
         <button class="principal" id="btnJugar" type="button">JUGAR · NIVEL 1</button>
         <button class="secundario" id="btnNiveles" type="button" style="width:100%;margin-top:8px;">🗺️ ELEGIR NIVEL</button>
@@ -608,7 +608,7 @@ body {
     </div>
     <div id="zona"><div class="disposicion">
         <div id="marco">
-            <canvas id="lienzo" tabindex="0" aria-label="Tablero: arrastra cada peluchín a un hueco de su color"></canvas>
+            <canvas id="lienzo" tabindex="0" aria-label="Tablero: arrastra las piezas por encima de los peluchines de su color"></canvas>
         </div>
         <div class="lado">
             <p id="indicacion" aria-live="polite"></p>
@@ -669,30 +669,30 @@ body {
         <div class="est-ayuda">
             <h3>EL OBJETIVO</h3>
             <ul>
-                <li>Cada pieza de color con borde brillante es un <b>hueco</b>. Su número dice cuántos peluchines de ese color le faltan.</li>
-                <li>Lleva cada peluchín a un hueco de <b>su color</b>. Lleno, el hueco desaparece y deja paso.</li>
-                <li>Se gana al llenar todos los huecos. <b>No hay límite</b> de movimientos ni de tiempo.</li>
+                <li>Cada <b>pieza</b> de color con borde brillante recoge peluchines de <b>su color</b>. Su número dice cuántos le faltan.</li>
+                <li><b>Arrastra</b> la pieza con el dedo: los peluchines de su color por los que <b>pasa por encima</b> se meten dentro. Llena, desaparece y deja sitio.</li>
+                <li>Se gana cuando no queda ninguna pieza de color. <b>No hay límite</b> de movimientos ni de tiempo.</li>
             </ul>
-            <h3>MOVER</h3>
+            <h3>QUÉ LAS PARA</h3>
             <ul>
-                <li><b>Arrastra</b> el peluchín con el dedo: va por las casillas libres, doblando esquinas. Si no hay camino, vuelve a su sitio.</li>
-                <li>Puedes dejarlo en cualquier casilla libre a la que llegue, para apartarlo.</li>
-                <li><b>Tocarlo</b> sin arrastrar lo manda solo a su hueco, si tiene camino.</li>
-                <li>Los <b>bloques grises</b> con ✥ se empujan arrastrándolos.</li>
-                <li>Los <b>dispensadores</b> del borde sueltan su siguiente peluchín cuando la casilla de delante queda libre. Su número es cuántos le quedan.</li>
-                <li>Los peluchines <b>con estrellas</b> van a los huecos con estrellas. Los <b>búhos</b> son azules y van a los huecos azules.</li>
+                <li>El borde, las otras piezas y los peluchines de <b>otro color</b>. Los peluchines no se mueven nunca.</li>
+                <li>Los <b>dispensadores</b> del borde solo dan su peluchín a una pieza de su color puesta justo delante. Su número es cuántos les quedan.</li>
+                <li>Los <b>bloques grises</b> ✥ se mueven pero no recogen nada: solo estorban.</li>
+                <li>Las piezas con <b>flechas</b> ↔ o ↕ solo se mueven en esa dirección.</li>
+                <li>Las piezas <b>dobles</b> (con tornillos) se mueven juntas; cuando una mitad se llena, se va y la otra sigue sola.</li>
+                <li>Los peluchines <b>con estrellas</b> van a las piezas con estrellas. Los <b>búhos</b> son azules y van a las piezas azules.</li>
             </ul>
             <h3>SI TE ATASCAS</h3>
             <ul>
                 <li><b>↶ DESHACER:</b> sin límite.</li>
-                <li><b>🧲 IMÁN:</b> toca un peluchín y todos los de su color se van a sus huecos, sin buscar camino.</li>
-                <li><b>🪝 GARRA:</b> toca un peluchín y luego dónde dejarlo (una casilla libre o su hueco), sin buscar camino.</li>
-                <li><b>🔫 PISTOLA:</b> toca un hueco y le faltará uno menos.</li>
-                <li>Cada nivel superado te da una ayuda más.</li>
+                <li><b>🧲 IMÁN:</b> toca un peluchín y todos los de su color se meten en sus piezas, estén donde estén.</li>
+                <li><b>🪝 GARRA:</b> toca un peluchín y luego dónde dejarlo: una casilla libre o una pieza de su color.</li>
+                <li><b>🔫 PISTOLA:</b> toca una pieza y le faltará uno menos.</li>
+                <li>Se gana una ayuda más cada 5 niveles; al final, más a menudo.</li>
             </ul>
             <h3>ORDENADOR</h3>
             <ul>
-                <li><b>Flechas</b> para moverte, <b>Intro</b> para coger y soltar, <b>Z</b> deshacer, <b>P</b> o <b>Esc</b> pausa.</li>
+                <li><b>Flechas</b> para moverte, <b>Intro</b> para coger una pieza (y las flechas la empujan) y soltarla, <b>Z</b> deshacer, <b>P</b> o <b>Esc</b> pausa.</li>
             </ul>
         </div>
         <div class="fila-btns">
@@ -1042,29 +1042,36 @@ const EST = (() => {
 /* ==========================================================
    PELUCHINES — reglas del juego, sin pantalla (se prueba en Node)
 
-   Un tablero de casillas. En él hay:
-   - huecos: piezas de un color con forma de tetris; caben tantos
-     peluchines como casillas tienen (el número que se ve es lo que falta).
-     Lleno, el hueco desaparece y sus casillas quedan libres;
-   - peluchines: bolitas de un color que se llevan, por casillas libres, a
-     un hueco de su color. También se pueden dejar en cualquier casilla
-     libre a la que se llegue («aparcar»);
-   - bloques móviles: piezas grises que se empujan casilla a casilla;
-   - dispensadores en el borde: sueltan su siguiente peluchín en la casilla
-     de delante en cuanto queda libre.
-   Se gana al llenar todos los huecos. No hay límite de movimientos ni de
-   tiempo.
+   Versión 2 (12-11-2026). En la primera se movían los peluchines; en el
+   juego que pidió el usuario se mueven las PIEZAS:
+   - piezas: formas de tetris de un color; caben tantos peluchines como
+     casillas tienen (el número que se ve es lo que falta). Se arrastran
+     casilla a casilla en cualquier dirección. Al pasar por encima de un
+     peluchín de su color, se lo quedan; llenas, desaparecen;
+   - a una pieza la paran el borde, las otras piezas y los peluchines de
+     otro color;
+   - piezas de un eje: solo se mueven en horizontal o solo en vertical;
+   - piezas dobles: dos piezas de distinto color unidas que se mueven a la
+     vez; cada mitad recoge los de su color y, al llenarse una, esa
+     desaparece y la otra sigue sola;
+   - bloques grises: piezas sin color que se mueven pero no recogen nada:
+     solo estorban;
+   - peluchines: quietos;
+   - dispensadores del borde: si delante (en la casilla del borde) hay una
+     pieza del color de su siguiente peluchín y le cabe, se lo da; y así
+     mientras siga cabiendo y el siguiente sea de ese color.
+   Se gana cuando no queda ninguna pieza de color. No hay límite de
+   movimientos ni de tiempo.
 
    Casillas por índice: i = f * ancho + c.
-   ocup[i]: VACIA, un peluchín (0…), un hueco (HUECO + h) o un bloque
-   (BLOQUE + k).
+   ocup[i]: VACIA, un peluchín (0…) o una pieza (PIEZA + p).
    ========================================================== */
 (function (raiz) {
     'use strict';
-    const VACIA = -1, HUECO = 10000, BLOQUE = 20000;
+    const VACIA = -1, PIEZA = 10000;
 
-    /* Colores. Los de estrella son otro color a efectos de juego (van a
-       huecos de estrella del mismo tono): se distinguen por el traje */
+    /* Colores. Los de estrella son otro color a efectos de juego: se
+       distinguen por el traje */
     const COLORES = {
         r: { nombre: 'rojo', hex: '#ff4d5e' },
         n: { nombre: 'naranja', hex: '#ff9a2e' },
@@ -1082,24 +1089,27 @@ const EST = (() => {
     const LADOS = ['arr', 'aba', 'izq', 'der'];
     const DIRS = { arr: [0, -1], aba: [0, 1], izq: [-1, 0], der: [1, 0] };
 
-    /* ---------- CREAR UNA PARTIDA A PARTIR DE LA DEFINICIÓN ----------
+    /* ---------- CREAR UNA PARTIDA ----------
        def = { ancho, alto,
-               huecos: [{ color, celdas: [i, …] }],
-               bolitas: [{ color, i, buho? }],
-               bloques: [{ forma: [[dc, df], …], c, f }],
-               dispensadores: [{ lado, pos, cola: 'rrz…' }] }  */
+               piezas: [{ color (null = gris), forma: [[dc, df]…], c, f, eje?: 'h'|'v', grupo?: n }],
+               peluchines: [{ color, i, buho? }],
+               dispensadores: [{ lado, pos, cola: 'rrz…' }],
+               ayudas? }
+       Las dos mitades de una pieza doble llevan el mismo «grupo» */
     function crear(def) {
         const e = {
             ancho: def.ancho, alto: def.alto,
-            huecos: def.huecos.map(h => ({ color: h.color, celdas: h.celdas.slice(), llenas: 0, quitadas: 0, completo: false })),
-            bolitas: [],
-            bloques: (def.bloques || []).map(k => ({ forma: k.forma.map(x => x.slice()), c: k.c, f: k.f })),
+            piezas: def.piezas.map(p => ({
+                color: p.color || null, forma: p.forma.map(x => x.slice()), c: p.c, f: p.f,
+                eje: p.eje || null, grupo: p.grupo === undefined ? null : p.grupo,
+                cap: p.color ? p.forma.length : 0, llenas: 0, quitadas: 0, viva: true
+            })),
+            peluchines: def.peluchines.map(b => ({ color: b.color, i: b.i, buho: !!b.buho, pieza: -1, celda: -1 })),
             disp: (def.dispensadores || []).map(d => ({ lado: d.lado, pos: d.pos, cola: d.cola, sacadas: 0, salida: salidaDe(def, d) })),
             ocup: new Int32Array(def.ancho * def.alto).fill(VACIA),
             ayudas: Object.assign({ iman: 0, garra: 0, pistola: 0 }, def.ayudas || {}),
-            eventos: []
+            eventos: [], ganado: false
         };
-        for (const b of def.bolitas) nuevaBolita(e, b.color, b.i, !!b.buho);
         rehacerOcup(e);
         asentar(e);
         e.eventos.length = 0;
@@ -1111,383 +1121,367 @@ const EST = (() => {
         if (d.lado === 'izq') return d.pos * e.ancho;
         return d.pos * e.ancho + e.ancho - 1;
     }
-    function nuevaBolita(e, color, i, buho) {
-        const b = { color, i, buho, h: -1, celda: -1 };
-        e.bolitas.push(b);
-        return e.bolitas.length - 1;
-    }
-    function celdasBloque(e, k, c = e.bloques[k].c, f = e.bloques[k].f) {
-        return e.bloques[k].forma.map(([dc, df]) => [c + dc, f + df]);
-    }
+    const celdasDe = (e, p, c = e.piezas[p].c, f = e.piezas[p].f) => e.piezas[p].forma.map(([dc, df]) => (f + df) * e.ancho + c + dc);
+    const resta = (P) => P.cap - P.llenas - P.quitadas;
     function rehacerOcup(e) {
         e.ocup.fill(VACIA);
-        e.huecos.forEach((h, n) => { if (!h.completo) for (const i of h.celdas) e.ocup[i] = HUECO + n; });
-        e.bloques.forEach((k, n) => { for (const [c, f] of celdasBloque(e, n)) e.ocup[f * e.ancho + c] = BLOQUE + n; });
-        e.bolitas.forEach((b, n) => { if (b.i >= 0) e.ocup[b.i] = n; });
+        e.peluchines.forEach((b, n) => { if (b.i >= 0) e.ocup[b.i] = n; });
+        e.piezas.forEach((P, p) => { if (P.viva) for (const i of celdasDe(e, p)) e.ocup[i] = PIEZA + p; });
     }
-    const resta = (h) => h.celdas.length - h.llenas - h.quitadas;
-
-    /* ---------- DESPUÉS DE CADA JUGADA ----------
-       Los huecos llenos desaparecen y los dispensadores sacan peluchín si
-       tienen la salida libre. Se repite hasta que nada cambia */
-    function asentar(e) {
-        let cambio = true;
-        while (cambio) {
-            cambio = false;
-            e.huecos.forEach((h, n) => {
-                if (h.completo || resta(h) > 0) return;
-                h.completo = true;
-                for (const i of h.celdas) if (e.ocup[i] === HUECO + n) e.ocup[i] = VACIA;
-                e.eventos.push({ tipo: 'completo', h: n });
-                cambio = true;
-            });
-            e.disp.forEach((d, n) => {
-                if (d.sacadas >= d.cola.length || e.ocup[d.salida] !== VACIA) return;
-                const color = d.cola[d.sacadas++];
-                const b = nuevaBolita(e, color, d.salida, false);
-                e.ocup[d.salida] = b;
-                e.eventos.push({ tipo: 'sale', d: n, b });
-                cambio = true;
-            });
-        }
-        if (ganado(e) && !e.ganado) {
-            e.ganado = true;
-            e.eventos.push({ tipo: 'ganado' });
-        }
-    }
-    const ganado = (e) => e.huecos.every(h => h.completo);
-
-    /* ---------- CAMINOS ----------
-       Desde la casilla de un peluchín, por casillas libres (en cruz).
-       Devuelve prev (de dónde se llega a cada casilla alcanzada; -2 = no
-       alcanzada) y la lista de alcanzadas */
-    function alcance(e, desde) {
-        const prev = new Int32Array(e.ocup.length).fill(-2);
-        const lista = [desde];
-        prev[desde] = -1;
-        for (let k = 0; k < lista.length; k++) {
-            const i = lista[k], c = i % e.ancho, f = (i - c) / e.ancho;
-            if (c > 0) mirar(i - 1);
-            if (c < e.ancho - 1) mirar(i + 1);
-            if (f > 0) mirar(i - e.ancho);
-            if (f < e.alto - 1) mirar(i + e.ancho);
-            function mirar(j) { if (prev[j] === -2 && e.ocup[j] === VACIA) { prev[j] = i; lista.push(j); } }
-        }
-        return { prev, lista };
-    }
-    function vecinas(e, i) {
-        const c = i % e.ancho, f = (i - c) / e.ancho, r = [];
-        if (c > 0) r.push(i - 1);
-        if (c < e.ancho - 1) r.push(i + 1);
-        if (f > 0) r.push(i - e.ancho);
-        if (f < e.alto - 1) r.push(i + e.ancho);
+    /* Las piezas que se mueven juntas con p (ella misma y, si es doble, su
+       otra mitad mientras siga viva) */
+    function grupoDe(e, p) {
+        const g = e.piezas[p].grupo;
+        if (g === null) return [p];
+        const r = [];
+        e.piezas.forEach((P, k) => { if (P.viva && P.grupo === g) r.push(k); });
         return r;
     }
-    /* Adónde puede ir el peluchín b: casillas libres y huecos de su color
-       con sitio que toquen alguna casilla alcanzable (por cualquier lado).
-       Para cada hueco se guarda por qué casilla se entra */
-    function destinos(e, b) {
-        const bo = e.bolitas[b];
-        if (!bo || bo.i < 0) return null;
-        const a = alcance(e, bo.i);
-        const huecos = new Map();   // h → casilla alcanzable pegada a él
-        for (const i of a.lista) for (const j of vecinas(e, i)) {
-            const o = e.ocup[j];
-            if (o >= HUECO && o < BLOQUE) {
-                const h = o - HUECO, H = e.huecos[h];
-                if (H.color === bo.color && !H.completo && resta(H) > 0 && !huecos.has(h)) huecos.set(h, i);
+
+    /* ---------- ¿SE PUEDE MOVER? ----------
+       Una casilla nueva vale si está libre, si es de la misma pieza o de su
+       otra mitad, o si tiene un peluchín del color de la mitad que va a
+       pisarla (se lo quedará). No depende de lo que se haya recogido antes:
+       solo se recogen los de su color, que de todos modos no paran */
+    function puedeMover(e, p, dir) {
+        const P = e.piezas[p];
+        if (!P.viva) return false;
+        if (P.eje === 'h' && (dir === 'arr' || dir === 'aba')) return false;
+        if (P.eje === 'v' && (dir === 'izq' || dir === 'der')) return false;
+        const [dc, df] = DIRS[dir];
+        const grupo = grupoDe(e, p);
+        for (const q of grupo) {
+            const Q = e.piezas[q];
+            if (Q.eje === 'h' && df) return false;
+            if (Q.eje === 'v' && dc) return false;
+            for (const [a, b] of Q.forma) {
+                const c = Q.c + a + dc, f = Q.f + b + df;
+                if (c < 0 || f < 0 || c >= e.ancho || f >= e.alto) return false;
+                const o = e.ocup[f * e.ancho + c];
+                if (o === VACIA) continue;
+                if (o >= PIEZA) { if (grupo.includes(o - PIEZA)) continue; return false; }
+                if (!Q.color || e.peluchines[o].color !== Q.color) return false;
             }
         }
-        return { alcance: a, huecos };
+        return true;
     }
-    function caminoHasta(a, i) {
-        const r = [];
-        for (let k = i; k >= 0; k = a.prev[k]) r.push(k);
-        return r.reverse();
-    }
-
-    /* ---------- JUGADAS ----------
-       Mover el peluchín b a la casilla «destino»: libre y alcanzable
-       (aparcar) o de un hueco de su color con sitio (entregar). Devuelve el
-       camino recorrido (para la animación) o null si no se puede */
-    function mover(e, b, destino) {
-        const d = destinos(e, b);
-        if (!d) return null;
-        const o = e.ocup[destino];
-        if (o >= HUECO && o < BLOQUE) {
-            const h = o - HUECO;
-            if (!d.huecos.has(h)) return null;
-            const camino = caminoHasta(d.alcance, d.huecos.get(h));
-            entregar(e, b, h, destino);
-            camino.push(destino);
-            asentar(e);
-            return camino;
-        }
-        if (o !== VACIA || d.alcance.prev[destino] === -2) return null;
-        const camino = caminoHasta(d.alcance, destino);
-        const bo = e.bolitas[b];
-        e.ocup[bo.i] = VACIA;
-        bo.i = destino;
-        e.ocup[destino] = b;
-        e.eventos.push({ tipo: 'aparca', b });
-        asentar(e);
-        return camino;
-    }
-    /* Mete el peluchín en el hueco. Ocupa la primera casilla libre del hueco
-       empezando por la que se tocó (solo para dibujarlo) */
-    function entregar(e, b, h, tocada) {
-        const bo = e.bolitas[b], H = e.huecos[h];
-        if (bo.i >= 0) e.ocup[bo.i] = VACIA;
-        bo.i = -1; bo.h = h;
-        const usadas = new Set(e.bolitas.filter(x => x.h === h && x !== bo).map(x => x.celda));
-        bo.celda = (tocada !== undefined && H.celdas.includes(tocada) && !usadas.has(tocada)) ? tocada : H.celdas.find(i => !usadas.has(i));
-        H.llenas++;
-        e.eventos.push({ tipo: 'entra', b, h, buho: bo.buho });
-    }
-
-    /* Empuja el bloque k una casilla en la dirección dada si todas las
-       casillas nuevas están libres o son suyas. Devuelve si se movió */
-    function moverBloque(e, k, dir) {
+    /* Mueve la pieza p (con su otra mitad) una casilla. Recoge lo que pise,
+       quita las que se llenen y deja que los dispensadores den. Devuelve si
+       se movió */
+    function mover(e, p, dir) {
+        if (!puedeMover(e, p, dir)) return false;
         const [dc, df] = DIRS[dir];
-        const K = e.bloques[k];
-        const nuevas = celdasBloque(e, k, K.c + dc, K.f + df);
-        for (const [c, f] of nuevas) {
-            if (c < 0 || f < 0 || c >= e.ancho || f >= e.alto) return false;
-            const o = e.ocup[f * e.ancho + c];
-            if (o !== VACIA && o !== BLOQUE + k) return false;
+        const grupo = grupoDe(e, p);
+        for (const q of grupo) for (const i of celdasDe(e, q)) e.ocup[i] = VACIA;
+        for (const q of grupo) { e.piezas[q].c += dc; e.piezas[q].f += df; }
+        for (const q of grupo) {
+            const Q = e.piezas[q];
+            for (const i of celdasDe(e, q)) {
+                const o = e.ocup[i];
+                if (o >= 0 && o < PIEZA && Q.viva && resta(Q) > 0) recoger(e, o, q, i);
+            }
+            if (Q.viva) for (const i of celdasDe(e, q)) e.ocup[i] = PIEZA + q;
         }
-        for (const [c, f] of celdasBloque(e, k)) e.ocup[f * e.ancho + c] = VACIA;
-        K.c += dc; K.f += df;
-        for (const [c, f] of nuevas) e.ocup[f * e.ancho + c] = BLOQUE + k;
-        e.eventos.push({ tipo: 'bloque', k, dir });
+        e.eventos.push({ tipo: 'mueve', p, dir });
         asentar(e);
         return true;
     }
+    /* El peluchín b entra en la pieza q. «celda» es la casilla del tablero
+       donde estaba; dentro de la pieza se sienta en esa casilla si está
+       libre, y si no en la primera libre (solo para dibujarlo) */
+    function recoger(e, b, q, celda, desdeDisp) {
+        const B = e.peluchines[b], Q = e.piezas[q];
+        if (B.i >= 0 && e.ocup[B.i] === b) e.ocup[B.i] = VACIA;
+        const rel = celdasDe(e, q).indexOf(celda);
+        const usadas = new Set(e.peluchines.filter(x => x.pieza === q).map(x => x.celda));
+        B.i = -1; B.pieza = q;
+        B.celda = rel >= 0 && !usadas.has(rel) ? rel : Q.forma.findIndex((_, k) => !usadas.has(k));
+        Q.llenas++;
+        e.eventos.push({ tipo: 'entra', b, p: q, desdeDisp: !!desdeDisp, buho: B.buho });
+        if (resta(Q) <= 0) quitarPieza(e, q);
+    }
+    function quitarPieza(e, q) {
+        const Q = e.piezas[q];
+        if (!Q.viva) return;
+        Q.viva = false;
+        for (const i of celdasDe(e, q)) if (e.ocup[i] === PIEZA + q) e.ocup[i] = VACIA;
+        e.eventos.push({ tipo: 'llena', p: q });
+    }
+    /* Después de cada jugada: los dispensadores dan a la pieza que tengan
+       delante mientras sea de su color y le quepa */
+    function asentar(e) {
+        let otra = true;
+        while (otra) {
+            otra = false;
+            e.disp.forEach((d, n) => {
+                if (d.sacadas >= d.cola.length) return;
+                const o = e.ocup[d.salida];
+                if (o < PIEZA) return;
+                const q = o - PIEZA, Q = e.piezas[q];
+                if (!Q.viva || Q.color !== d.cola[d.sacadas] || resta(Q) <= 0) return;
+                e.peluchines.push({ color: d.cola[d.sacadas++], i: -1, buho: false, pieza: -1, celda: -1 });
+                e.eventos.push({ tipo: 'sale', d: n, b: e.peluchines.length - 1 });
+                recoger(e, e.peluchines.length - 1, q, d.salida, true);
+                otra = true;
+            });
+        }
+        if (!e.ganado && ganado(e)) { e.ganado = true; e.eventos.push({ tipo: 'ganado' }); }
+    }
+    const ganado = (e) => !e.piezas.some(P => P.viva && P.color);
 
     /* ---------- AYUDAS ----------
-       Imán: todos los peluchines del tablero de ese color se van a sus
-       huecos, sin mirar caminos (primero a los que menos les falta).
-       Garra: coge un peluchín y lo deja en cualquier casilla libre o en un
-       hueco de su color, sin mirar caminos.
-       Pistola: a un hueco le falta uno menos (el peluchín que sobre se va
-       contento al acabar el nivel) */
+       Imán: los peluchines del tablero de ese color entran en sus piezas
+       (primero en las que menos les falta), sin mover nada.
+       Garra: coge un peluchín y lo deja en una casilla libre o en una pieza
+       de su color con sitio.
+       Pistola: a una pieza le falta uno menos (si con eso se llena, se va;
+       el peluchín que sobre se va contento al acabar) */
     function iman(e, color) {
         if (e.ayudas.iman <= 0) return 0;
         let n = 0;
-        for (let b = 0; b < e.bolitas.length; b++) {
-            const bo = e.bolitas[b];
-            if (bo.i < 0 || bo.color !== color) continue;
-            const libres = e.huecos.map((h, k) => k).filter(k => e.huecos[k].color === color && !e.huecos[k].completo && resta(e.huecos[k]) > 0);
+        for (let b = 0; b < e.peluchines.length; b++) {
+            const B = e.peluchines[b];
+            if (B.i < 0 || B.color !== color) continue;
+            const libres = e.piezas.map((_, k) => k).filter(k => e.piezas[k].viva && e.piezas[k].color === color && resta(e.piezas[k]) > 0);
             if (!libres.length) break;
-            libres.sort((x, y) => resta(e.huecos[x]) - resta(e.huecos[y]));
-            entregar(e, b, libres[0]);
+            libres.sort((x, y) => resta(e.piezas[x]) - resta(e.piezas[y]));
+            const q = libres[0], usadas = new Set(e.peluchines.filter(x => x.pieza === q).map(x => x.celda));
+            const rel = e.piezas[q].forma.findIndex((_, k) => !usadas.has(k));
+            recoger(e, b, q, celdasDe(e, q)[rel]);
             n++;
-            asentar(e);   // un hueco lleno puede soltar al siguiente del dispensador
         }
-        if (n) { e.ayudas.iman--; e.eventos.push({ tipo: 'iman', color, n }); }
+        if (n) { e.ayudas.iman--; e.eventos.push({ tipo: 'iman', color, n }); asentar(e); }
         return n;
     }
     function garra(e, b, destino) {
         if (e.ayudas.garra <= 0) return false;
-        const bo = e.bolitas[b];
-        if (!bo || bo.i < 0 || bo.i === destino) return false;
+        const B = e.peluchines[b];
+        if (!B || B.i < 0 || B.i === destino) return false;
         const o = e.ocup[destino];
-        if (o >= HUECO && o < BLOQUE) {
-            const H = e.huecos[o - HUECO];
-            if (H.color !== bo.color || H.completo || resta(H) <= 0) return false;
-            entregar(e, b, o - HUECO, destino);
+        if (o >= PIEZA) {
+            const Q = e.piezas[o - PIEZA];
+            if (!Q.viva || Q.color !== B.color || resta(Q) <= 0) return false;
+            recoger(e, b, o - PIEZA, destino);
         } else if (o === VACIA) {
-            e.ocup[bo.i] = VACIA; bo.i = destino; e.ocup[destino] = b;
+            e.ocup[B.i] = VACIA; B.i = destino; e.ocup[destino] = b;
         } else return false;
         e.ayudas.garra--;
         e.eventos.push({ tipo: 'garra', b });
         asentar(e);
         return true;
     }
-    function pistola(e, h) {
-        const H = e.huecos[h];
-        if (e.ayudas.pistola <= 0 || !H || H.completo || resta(H) <= 0) return false;
-        H.quitadas++;
+    function pistola(e, p) {
+        const Q = e.piezas[p];
+        if (e.ayudas.pistola <= 0 || !Q || !Q.viva || !Q.color || resta(Q) <= 0) return false;
+        Q.quitadas++;
         e.ayudas.pistola--;
-        e.eventos.push({ tipo: 'pistola', h });
+        e.eventos.push({ tipo: 'pistola', p });
+        if (resta(Q) <= 0) quitarPieza(e, p);
         asentar(e);
         return true;
     }
 
-    /* ---------- DESHACER ----------
-       Se guarda lo que cambia; el resto (formas, colas) no cambia nunca */
+    /* ---------- DESHACER Y GUARDAR ----------
+       Se guarda lo que cambia; formas y colas no cambian nunca. Los
+       peluchines que dieron los dispensadores se rehacen enteros, así que
+       una foto guardada vale sobre una partida recién creada (CONTINUAR) */
     function foto(e) {
         return {
-            n: e.bolitas.length,
-            b: e.bolitas.map(b => [b.i, b.h, b.celda, b.color, b.buho ? 1 : 0]),
-            h: e.huecos.map(h => [h.llenas, h.quitadas, h.completo]),
-            k: e.bloques.map(k => [k.c, k.f]),
+            p: e.piezas.map(P => [P.c, P.f, P.llenas, P.quitadas, P.viva ? 1 : 0]),
+            b: e.peluchines.map(B => [B.i, B.pieza, B.celda, B.color, B.buho ? 1 : 0]),
             d: e.disp.map(d => d.sacadas),
             a: Object.assign({}, e.ayudas),
-            g: !!e.ganado
+            g: e.ganado ? 1 : 0
         };
     }
     function volver(e, s) {
-        /* Se rehacen enteros: así una foto guardada vale también sobre una
-           partida recién creada, que aún no tiene los que soltaron los
-           dispensadores (lo usa CONTINUAR) */
-        e.bolitas = s.b.map(([i, h, celda, color, buho]) => ({ i, h, celda, color, buho: !!buho }));
-        s.h.forEach(([llenas, quitadas, completo], n) => Object.assign(e.huecos[n], { llenas, quitadas, completo }));
-        s.k.forEach(([c, f], n) => Object.assign(e.bloques[n], { c, f }));
+        s.p.forEach(([c, f, llenas, quitadas, viva], n) => Object.assign(e.piezas[n], { c, f, llenas, quitadas, viva: !!viva }));
+        e.peluchines = s.b.map(([i, pieza, celda, color, buho]) => ({ i, pieza, celda, color, buho: !!buho }));
         s.d.forEach((x, n) => { e.disp[n].sacadas = x; });
         e.ayudas = Object.assign({}, s.a);
-        e.ganado = s.g;
+        e.ganado = !!s.g;
         rehacerOcup(e);
     }
-
-    /* ---------- PARA EL GENERADOR Y LAS PISTAS ---------- */
-    /* Todas las entregas posibles ahora: [peluchín, hueco] */
-    /* Rápida (la usan el resolutor y el generador miles de veces): en vez
-       de un recorrido por peluchín, se etiquetan una vez las zonas de
-       casillas libres y qué huecos toca cada zona. Un peluchín llega a los
-       huecos que tocan las zonas pegadas a él, o que toca él mismo */
-    function entregas(e) {
-        const N = e.ocup.length, W = e.ancho, nh = e.huecos.length;
-        const zona = new Int32Array(N).fill(-1);
-        const tocan = [];                          // por zona, huecos que toca
-        const sello = new Int32Array(nh).fill(-1); // para no repetir hueco en una zona
-        const pila = new Int32Array(N);
-        for (let i0 = 0; i0 < N; i0++) {
-            if (e.ocup[i0] !== VACIA || zona[i0] >= 0) continue;
-            const z = tocan.length, lista = [];
-            tocan.push(lista);
-            let tope = 0;
-            zona[i0] = z; pila[tope++] = i0;
-            while (tope) {
-                const i = pila[--tope], c = i % W;
-                for (let k = 0; k < 4; k++) {
-                    const j = k === 0 ? (c > 0 ? i - 1 : -1) : k === 1 ? (c < W - 1 ? i + 1 : -1) : k === 2 ? i - W : i + W;
-                    if (j < 0 || j >= N) continue;
-                    const o = e.ocup[j];
-                    if (o === VACIA) { if (zona[j] < 0) { zona[j] = z; pila[tope++] = j; } }
-                    else if (o >= HUECO && o < BLOQUE && sello[o - HUECO] !== z) { sello[o - HUECO] = z; lista.push(o - HUECO); }
-                }
-            }
-        }
-        const r = [];
-        const visto = new Int32Array(nh).fill(-1);
-        for (let b = 0; b < e.bolitas.length; b++) {
-            const bo = e.bolitas[b];
-            if (bo.i < 0) continue;
-            const i = bo.i, c = i % W;
-            for (let k = 0; k < 4; k++) {
-                const j = k === 0 ? (c > 0 ? i - 1 : -1) : k === 1 ? (c < W - 1 ? i + 1 : -1) : k === 2 ? i - W : i + W;
-                if (j < 0 || j >= N) continue;
-                const o = e.ocup[j];
-                if (o === VACIA) { for (const h of tocan[zona[j]]) mirar(h); }
-                else if (o >= HUECO && o < BLOQUE) mirar(o - HUECO);
-            }
-            function mirar(h) {
-                if (visto[h] === b) return;
-                visto[h] = b;
-                const H = e.huecos[h];
-                if (H.color === bo.color && !H.completo && H.celdas.length - H.llenas - H.quitadas > 0) r.push([b, h]);
-            }
-        }
-        return r;
-    }
-    /* «seguro»: quien llama ya sabe que se puede (viene de entregas()) y se
-       ahorra el recorrido de comprobarlo */
-    function hacerEntrega(e, b, h, seguro) {
-        if (!seguro) {
-            const d = destinos(e, b);
-            if (!d || !d.huecos.has(h)) return false;
-        }
-        entregar(e, b, h);
-        asentar(e);
-        return true;
-    }
-    const clave = (e) => e.bolitas.map(b => b.i).join(',') + '|' + e.huecos.map(h => h.llenas).join(',') + '|' + e.bloques.map(k => k.c + ':' + k.f).join(',');
-
-    /* Busca una solución solo con entregas y empujones de bloque (sin
-       aparcar: si así sale, el nivel tiene solución seguro). Búsqueda en
-       profundidad con memoria de posiciones ya vistas. Devuelve la lista de
-       jugadas o null; nodos = posiciones exploradas */
-    function resolver(e0, maxNodos = 200000) {
-        const e = clonarPartida(e0);
-        const vistas = new Set();
-        const pasos = [];
-        let nodos = 0;
-        function buscar() {
-            if (ganado(e)) return true;
-            if (++nodos > maxNodos) return false;
-            const k = clave(e);
-            if (vistas.has(k)) return false;
-            vistas.add(k);
-            /* Primero lo que completa un hueco: suele ser lo bueno */
-            const lista = entregas(e).sort((x, y) => resta(e.huecos[x[1]]) - resta(e.huecos[y[1]]));
-            for (const [b, h] of lista) {
-                const s = foto(e);
-                hacerEntrega(e, b, h, true);
-                pasos.push({ tipo: 'entrega', b, h });
-                if (buscar()) return true;
-                pasos.pop(); volver(e, s);
-            }
-            for (let kb = 0; kb < e.bloques.length; kb++) for (const dir of LADOS) {
-                const s = foto(e);
-                if (!moverBloque(e, kb, dir)) continue;
-                pasos.push({ tipo: 'bloque', k: kb, dir });
-                if (buscar()) return true;
-                pasos.pop(); volver(e, s);
-            }
-            return false;
-        }
-        const ok = buscar();
-        return { ok, pasos: ok ? pasos : null, nodos };
-    }
-    function clonarPartida(e) {
-        const c = {
+    function clonar(e) {
+        return {
             ancho: e.ancho, alto: e.alto,
-            huecos: e.huecos.map(h => Object.assign({}, h, { celdas: h.celdas })),
-            bolitas: e.bolitas.map(b => Object.assign({}, b)),
-            bloques: e.bloques.map(k => ({ forma: k.forma, c: k.c, f: k.f })),
+            piezas: e.piezas.map(P => Object.assign({}, P)),
+            peluchines: e.peluchines.map(B => Object.assign({}, B)),
             disp: e.disp.map(d => Object.assign({}, d)),
             ocup: Int32Array.from(e.ocup),
             ayudas: Object.assign({}, e.ayudas),
             eventos: [], ganado: e.ganado
         };
-        return c;
     }
 
-    /* Cómo de traicionero es: jugando entregas al azar (sin pensar ni
-       aparcar), en cuántas partidas de cada 100 se llega a un callejón sin
-       entregas posibles. 0 = da igual el orden */
-    function trampas(e0, azar, partidas = 100) {
-        let atascos = 0;
-        for (let p = 0; p < partidas; p++) {
-            const e = clonarPartida(e0);
-            for (let paso = 0; paso < 500 && !ganado(e); paso++) {
-                const l = entregas(e);
-                if (!l.length) {
-                    /* Si hay bloque, se prueba a empujarlo una vez al azar */
-                    let movido = false;
-                    if (e.bloques.length) for (let t = 0; t < 8 && !movido; t++) movido = moverBloque(e, Math.floor(azar() * e.bloques.length), LADOS[Math.floor(azar() * 4)]);
-                    if (!movido) { atascos++; break; }
-                    continue;
+    /* ==========================================================
+       PARA EL GENERADOR: JUGADAS GRANDES Y RESOLUTOR
+       Una jugada = arrastrar una pieza por un camino de pasos. Para cada
+       pieza se recorren las posiciones a las que llega (lo que la para no
+       depende de lo recogido por el camino, ver puedeMover) y se proponen:
+       - las que pisan un peluchín de su color o la salida de un dispensador
+         que le da (la más cercana para cada uno);
+       - las de apartarse: un paso en cada dirección y lo más lejos posible
+         en cada dirección.
+       ========================================================== */
+    function posiciones(e, p) {
+        /* Recorrido en anchura sobre desplazamientos (dc, df) del grupo,
+           probando cada paso en una copia de las ocupaciones */
+        const P = e.piezas[p];
+        const grupo = grupoDe(e, p);
+        const base = Int32Array.from(e.ocup);
+        for (const q of grupo) for (const i of celdasDe(e, q)) base[i] = VACIA;
+        const vale = (dc, df) => {
+            for (const q of grupo) {
+                const Q = e.piezas[q];
+                for (const [a, b] of Q.forma) {
+                    const c = Q.c + a + dc, f = Q.f + b + df;
+                    if (c < 0 || f < 0 || c >= e.ancho || f >= e.alto) return false;
+                    const o = base[f * e.ancho + c];
+                    if (o === VACIA) continue;
+                    if (o >= PIEZA) return false;
+                    if (!Q.color || e.peluchines[o].color !== Q.color) return false;
                 }
-                const [b, h] = l[Math.floor(azar() * l.length)];
-                hacerEntrega(e, b, h, true);
+            }
+            return true;
+        };
+        const ejeH = grupo.some(q => e.piezas[q].eje === 'v'), ejeV = grupo.some(q => e.piezas[q].eje === 'h');
+        const dirs = LADOS.filter(d => !((d === 'izq' || d === 'der') && ejeH) && !((d === 'arr' || d === 'aba') && ejeV));
+        const clave = (dc, df) => dc + ',' + df;
+        const prev = new Map([[clave(0, 0), null]]);
+        const lista = [[0, 0, 0]];
+        for (let k = 0; k < lista.length; k++) {
+            const [dc, df, dist] = lista[k];
+            for (const d of dirs) {
+                const [x, y] = DIRS[d];
+                const nc = dc + x, nf = df + y, kk = clave(nc, nf);
+                if (prev.has(kk) || !vale(nc, nf)) continue;
+                prev.set(kk, [clave(dc, df), d]);
+                lista.push([nc, nf, dist + 1]);
             }
         }
-        return atascos / partidas;
+        const camino = (dc, df) => {
+            const r = [];
+            for (let k = clave(dc, df); prev.get(k); k = prev.get(k)[0]) r.push(prev.get(k)[1]);
+            return r.reverse();
+        };
+        return { lista, camino, grupo };
+    }
+    function jugadas(e) {
+        const r = [];
+        const vistos = new Set();
+        e.piezas.forEach((P, p) => {
+            if (!P.viva) return;
+            /* Cada pieza doble, una sola vez (la mueve cualquiera de sus mitades) */
+            if (P.grupo !== null) { if (vistos.has(P.grupo)) return; vistos.add(P.grupo); }
+            const { lista, camino, grupo } = posiciones(e, p);
+            const objetivos = new Map();   // casilla objetivo → posición más cercana que la pisa
+            const colores = grupo.map(q => e.piezas[q].color);
+            for (const [dc, df, dist] of lista) {
+                if (!dist) continue;
+                for (const q of grupo) {
+                    const Q = e.piezas[q];
+                    if (!Q.color) continue;
+                    for (const [a, b] of Q.forma) {
+                        const i = (Q.f + b + df) * e.ancho + Q.c + a + dc;
+                        const o = e.ocup[i];
+                        const pisa = (o >= 0 && o < PIEZA && e.peluchines[o].color === Q.color) ||
+                            e.disp.some(d => d.salida === i && d.sacadas < d.cola.length && d.cola[d.sacadas] === Q.color);
+                        if (pisa && !objetivos.has(i)) objetivos.set(i, [dc, df]);
+                    }
+                }
+            }
+            for (const [dc, df] of objetivos.values()) r.push({ p, pasos: camino(dc, df), recoge: true });
+            /* Apartarse */
+            const extremos = {};
+            for (const [dc, df, dist] of lista) {
+                if (!dist) continue;
+                const pon = (k, v) => { if (!extremos[k] || v > extremos[k][2]) extremos[k] = [dc, df, v]; };
+                pon('der', dc * 10 - Math.abs(df)); pon('izq', -dc * 10 - Math.abs(df));
+                pon('aba', df * 10 - Math.abs(dc)); pon('arr', -df * 10 - Math.abs(dc));
+                if (dist === 1) r.push({ p, pasos: camino(dc, df), recoge: false });
+            }
+            for (const k in extremos) { const [dc, df] = extremos[k]; if (Math.abs(dc) + Math.abs(df) > 1) r.push({ p, pasos: camino(dc, df), recoge: false }); }
+            void colores;
+        });
+        return r;
+    }
+    /* Hace una jugada grande. Devuelve cuántos peluchines se recogieron */
+    function jugar(e, j) {
+        const antes = cuantosQuedan(e);
+        for (const d of j.pasos) { if (!e.piezas[j.p].viva) break; if (!mover(e, j.p, d)) break; }
+        e.eventos.length = 0;
+        return antes - cuantosQuedan(e);
+    }
+    function cuantosQuedan(e) {
+        let n = 0;
+        for (const B of e.peluchines) if (B.i >= 0) n++;
+        for (const d of e.disp) n += d.cola.length - d.sacadas;
+        return n;
+    }
+    const clave = (e) => e.piezas.map(P => P.viva ? P.c + ',' + P.f + ',' + P.llenas : 'x').join(';') + '|' + e.peluchines.map(B => B.i >= 0 ? 1 : 0).join('') + '|' + e.disp.map(d => d.sacadas).join(',');
+
+    /* Busca una solución: búsqueda «primero el más prometedor» (lo que
+       queda por recoger pesa más que las jugadas hechas), con memoria de
+       posiciones vistas y tope de posiciones abiertas. Sin recursión: en
+       profundidad se iba a miles de jugadas de apartar piezas y reventaba
+       la pila. Si la encuentra, es buena seguro (son jugadas de verdad); si
+       no, el nivel se descarta aunque quizá tuviera solución */
+    function resolver(e0, maxNodos = 6000) {
+        const e = clonar(e0);
+        const montón = [];
+        const meter = (x) => { montón.push(x); let k = montón.length - 1; while (k) { const pa = (k - 1) >> 1; if (montón[pa].f <= x.f) break; montón[k] = montón[pa]; k = pa; } montón[k] = x; };
+        const sacar = () => { const top = montón[0], ult = montón.pop(); if (montón.length) { let k = 0; for (;;) { const a = 2 * k + 1, b = a + 1; let m = k; const fm = () => (m === k ? ult.f : montón[m].f); if (a < montón.length && montón[a].f < fm()) m = a; if (b < montón.length && montón[b].f < fm()) m = b; if (m === k) break; montón[k] = montón[m]; k = m; } montón[k] = ult; } return top; };
+        const padres = new Map();
+        const k0 = clave(e);
+        padres.set(k0, null);
+        meter({ f: 0, g: 0, k: k0, s: foto(e) });
+        let nodos = 0;
+        while (montón.length && nodos < maxNodos) {
+            const x = sacar();
+            nodos++;
+            volver(e, x.s);
+            if (ganado(e)) {
+                const pasos = [];
+                for (let k = x.k; padres.get(k); k = padres.get(k).k) pasos.push(padres.get(k).j);
+                return { ok: true, pasos: pasos.reverse(), nodos };
+            }
+            for (const j of jugadas(e)) {
+                volver(e, x.s);
+                jugar(e, j);
+                const k = clave(e);
+                if (padres.has(k)) continue;
+                padres.set(k, { k: x.k, j });
+                meter({ f: x.g + 1 + 4 * cuantosQuedan(e), g: x.g + 1, k, s: foto(e) });
+            }
+        }
+        return { ok: false, pasos: null, nodos };
     }
 
-    /* Una pista: la primera jugada de una solución desde aquí */
-    function pista(e) {
-        const r = resolver(e, 60000);
-        return r.ok && r.pasos.length ? r.pasos[0] : null;
+    /* Cómo de traicionero es: jugando sin pensar (si hay algo que recoger,
+       se recoge, al azar; si no, se aparta una pieza al azar), en cuántas
+       partidas de cada 100 no se termina en «tope» jugadas */
+    function trampas(e0, azar, partidas = 60, tope = 60) {
+        let fallos = 0;
+        for (let k = 0; k < partidas; k++) {
+            const e = clonar(e0);
+            let n = 0;
+            while (!ganado(e) && n++ < tope) {
+                const l = jugadas(e);
+                if (!l.length) break;
+                const buenas = l.filter(j => j.recoge);
+                const lista = buenas.length && azar() < 0.85 ? buenas : l;
+                jugar(e, lista[Math.floor(azar() * lista.length)]);
+            }
+            if (!ganado(e)) fallos++;
+        }
+        return fallos / partidas;
     }
 
     const api = {
-        VACIA, HUECO, BLOQUE, COLORES, LADOS, DIRS,
-        crear, salidaDe, celdasBloque, resta, alcance, destinos, caminoHasta, vecinas,
-        mover, moverBloque, iman, garra, pistola, foto, volver, ganado,
-        entregas, hacerEntrega, resolver, trampas, pista, clonarPartida
+        VACIA, PIEZA, COLORES, LADOS, DIRS,
+        crear, salidaDe, celdasDe, resta, grupoDe, puedeMover, mover, iman, garra, pistola,
+        foto, volver, clonar, ganado, cuantosQuedan, jugadas, jugar, resolver, trampas
     };
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
     else raiz.Peluchines = api;
@@ -1497,115 +1491,116 @@ const EST = (() => {
 <script>
 /* GENERADO por generar.js (100 niveles, semilla 1). No editar a mano. */
 const NIVELES_PELUCHINES = [
-    {"a":5,"h":6,"H":[["z",[6]],["v",[4,9,14]],["a",[0]],["z",[18,23]],["a",[25]],["v",[7,8]]],"B":[["a",13],["z",5],["a",29],["z",21],["z",17],["v",10],["v",20],["v",16],["v",24],["v",27]],"t":0},
-    {"a":5,"h":6,"H":[["z",[18,17]],["r",[10]],["a",[7]],["a",[29,28]],["r",[11]],["a",[1]],["r",[4]]],"B":[["r",26],["a",22],["a",0],["r",2],["a",9],["z",6],["r",5],["a",14],["z",8]],"t":0},
-    {"a":5,"h":6,"H":[["a",[28]],["z",[22,27,21]],["v",[5,6]],["z",[15]],["v",[13]],["a",[20]]],"B":[["v",24],["a",3],["v",2],["v",29],["z",0],["a",1],["z",8],["z",17],["z",26]],"t":0},
-    {"a":6,"h":7,"H":[["r",[35,29]],["a",[6,7]],["z",[41]],["v",[18]],["v",[13]],["a",[30,24]],["a",[15,16]],["z",[36]],["r",[17]],["v",[26,20,27,21]]],"B":[["v",22],["r",3],["v",38],["a",33],["z",34],["v",31],["v",32],["a",11],["a",2],["z",10],["v",1],["r",5],["r",14],["a",19],["a",39],["v",0]],"D":[["arr",4,"a"]],"t":13},
-    {"a":6,"h":7,"H":[["m",[35,34]],["v",[37]],["r",[13]],["z",[15,21]],["z",[8,9]],["v",[10,11,16,17]],["r",[27,28]],["z",[36,30,31,25]]],"B":[["z",39],["v",1],["z",7],["m",22],["r",38],["z",26],["v",5],["r",18],["m",4],["z",24],["v",3],["z",2],["v",32],["z",40],["v",41]],"D":[["der",3,"rzz"]],"t":13},
-    {"a":6,"h":7,"H":[["z",[8]],["r",[26]],["m",[3,9,15,16]],["a",[21,22,28,29]],["a",[33,32,31,37]],["z",[25,19]]],"B":[["a",18],["a",27],["m",38],["z",10],["m",36],["r",11],["m",1],["a",39],["a",5],["a",4],["a",40],["z",35],["a",14],["a",17]],"D":[["izq",4,"zm"]],"t":8},
-    {"a":6,"h":7,"H":[["r",[38,32,26]],["v",[33,27,34]],["a",[7]],["m",[28,29]],["a",[22,16]],["v",[4,10,3,9]]],"B":[["r",17],["r",8],["m",39],["v",41],["a",19],["v",6],["a",35],["v",31],["v",15],["m",21],["v",30],["r",25],["v",23],["v",11]],"D":[["aba",1,"a"]],"t":14},
-    {"a":6,"h":7,"H":[["v",[32,26]],["r",[13]],["z",[25]],["m",[15,16,17]],["z",[34,40,33,39]],["r",[0,1,6]],["v",[22,28,21,27]]],"B":[["r",29],["v",11],["v",12],["m",9],["z",36],["z",14],["r",41],["m",3],["r",37],["z",18],["r",8],["z",7],["v",2],["v",38],["z",31]],"D":[["arr",4,"vvm"]],"t":14},
-    {"a":6,"h":7,"H":[["m",[38,37,31,30]],["r",[4,5,10]],["v",[22,16]],["a",[28]],["m",[33,27,21,20]],["m",[2,8,14]]],"B":[["m",15],["m",9],["a",35],["r",32],["v",40],["m",17],["r",0],["v",6],["m",13],["m",7],["m",3],["r",29],["m",18],["m",26],["m",19]],"D":[["der",3,"mm"]],"t":8},
-    {"a":6,"h":7,"H":[["v",[12,6]],["r",[33,27,21]],["z",[32,31,30,36]],["m",[0]],["z",[2]],["m",[13,14]],["m",[7]],["r",[17,16,10,9]]],"B":[["z",15,1],["r",20],["z",26,1],["m",22],["r",19],["r",23],["z",41,1],["r",1],["r",11],["v",34],["r",40],["r",28],["m",4],["v",25],["z",5],["m",38]],"D":[["aba",3,"mz"]],"t":16},
-    {"a":6,"h":8,"H":[["a",[28,34,40,41]],["v",[21,15]],["m",[19,25]],["n",[22,16,23]],["r",[43,42]],["v",[17,11]],["n",[33,32,31,37]]],"B":[["r",13],["n",8],["n",38],["v",39],["v",14],["m",20],["v",35],["n",26],["r",12],["a",5],["n",27],["n",44],["v",4],["m",47],["a",45],["a",1]],"D":[["izq",5,"ann"]],"t":31},
-    {"a":6,"h":8,"H":[["a",[14,8]],["v",[21,15,22]],["m",[46,47]],["n",[39,40]],["z",[13,19]],["z",[41,35,29]],["m",[11,10]],["z",[16,17]],["n",[24,18]]],"B":[["m",4],["m",38],["v",27],["n",1],["z",6,1],["z",23],["a",3],["v",37],["z",26],["m",44],["n",34],["a",7],["z",28],["n",2]],"D":[["aba",3,"vzznmz"]],"t":25},
-    {"a":6,"h":8,"H":[["n",[25,31]],["m",[16,15]],["v",[7,6,1]],["z",[44,43]],["a",[29,35,28,34]],["z",[23,22,17]],["n",[32,26]],["z",[14,20,13]]],"B":[["z",19,1],["n",0],["a",18],["z",47,1],["z",37,1],["m",4],["v",12],["n",10],["z",5],["a",9],["a",2],["z",38,1],["z",33,1],["m",27]],"D":[["izq",5,"nnvavzz"]],"t":29},
-    {"a":6,"h":8,"H":[["n",[10,4]],["r",[20,14,8,15]],["v",[45,39,46]],["z",[7,6]],["a",[27,28]],["n",[24,18]],["v",[31,37]],["v",[33,32]]],"B":[["n",30],["n",25],["n",13],["z",41],["r",29],["v",21],["a",1],["v",26],["r",2],["v",35],["r",34],["n",17],["v",11],["a",3]],"D":[["aba",2,"vvvzr"]],"t":31},
-    {"a":6,"h":8,"H":[["r",[5,4]],["v",[21,15,9,8]],["n",[14,20,26]],["z",[6,0,7]],["m",[35,41,34]],["z",[31,32]],["n",[38,44]]],"B":[["v",16],["r",27],["n",33],["v",11],["z",22],["m",37],["m",24],["n",2],["n",40],["z",30],["n",1],["m",25],["z",28],["v",3],["z",10,1],["z",42,1],["r",36],["v",46]],"D":[["aba",1,"n"]],"t":29},
-    {"a":6,"h":8,"H":[["v",[37,38,43]],["z",[34,40]],["a",[29,28,27]],["m",[5,11,4]],["n",[19,13]],["m",[9,3]],["a",[21,20,15]],["n",[45,46,47,41]]],"B":[["a",23],["m",18],["v",17],["z",44],["a",22],["n",12],["m",25],["n",32],["z",8,1],["a",26],["n",24],["a",39],["v",10],["n",7],["n",31],["m",0],["v",16]],"D":[["arr",2,"mnmaa"]],"t":30},
-    {"a":6,"h":8,"H":[["a",[45,39,46]],["r",[26,20]],["m",[2,3,4,5]],["z",[37,36,31]],["v",[21,22,27,28]],["z",[7,1]],["z",[13,19,25,18]]],"B":[["z",38],["m",32],["v",11],["v",16],["z",41,1],["z",15,1],["z",47],["m",6],["v",29],["v",17],["z",34,1],["m",33],["a",42],["r",23],["r",40],["m",9],["z",43,1]],"D":[["izq",4,"zazaz"]],"t":30},
-    {"a":6,"h":8,"H":[["v",[41,47]],["a",[12,18]],["r",[45,46]],["m",[9,8,3]],["z",[2,1,0,6]],["r",[25,26]],["r",[10,16,15,21]]],"B":[["v",14],["z",24,1],["a",32],["m",34],["m",31],["z",11,1],["a",7],["r",27],["m",33],["r",20],["v",38],["r",28],["r",44],["r",22],["r",39],["z",42],["r",30]],"D":[["der",3,"zr"]],"t":30},
-    {"a":6,"h":8,"H":[["v",[44,38]],["r",[32,31,26,25]],["m",[43,42,37]],["n",[13,14,19,20]],["z",[35,41]],["m",[40,46]],["v",[6,0]]],"B":[["z",1],["r",24],["n",11],["m",9],["m",4],["v",39],["n",45],["r",27],["v",47],["m",7],["v",36],["m",12],["n",34]],"K":[["cruz",3,1]],"D":[["arr",3,"nvrrmz"]],"t":29},
-    {"a":6,"h":8,"H":[["a",[14,8,2]],["n",[32,26]],["r",[1,0]],["z",[16,17]],["v",[39,40,46,47]],["z",[18,12]],["v",[19,13]],["z",[37,31]]],"B":[["v",5],["z",25],["v",35],["a",3],["r",4],["z",7],["v",36],["v",24],["a",9],["v",43],["z",30,1],["v",33]],"K":[["cruz",2,2]],"D":[["aba",3,"nzarzzn"]],"t":33},
-    {"a":6,"h":8,"H":[["a",[40,41]],["r",[32,38,31]],["m",[35,29]],["z",[23,17]],["v",[7,1,8]],["m",[27,21]],["v",[18,19]],["r",[39,45]],["v",[26,20]]],"B":[["z",5,1],["r",30],["v",33],["r",36],["v",25],["m",42],["r",43],["v",13],["r",34],["m",28],["v",37],["m",46],["r",6],["m",2]],"K":[["te",3,1]],"D":[["izq",2,"aavvvz"]],"t":33},
-    {"a":6,"h":8,"H":[["z",[18,19,20]],["a",[8,2]],["r",[31,30]],["m",[1,7,0,6]],["n",[47,46,45]],["m",[35,41]],["r",[15,14,13]]],"B":[["z",10],["n",37],["m",36],["m",26],["z",12],["r",21],["r",9],["m",42],["a",24],["m",43],["m",5],["r",40],["m",22]],"K":[["te",3,4]],"D":[["aba",2,"nznrar"]],"t":29},
-    {"a":6,"h":8,"H":[["n",[3,2,1,0]],["m",[45,44,39]],["r",[12,13]],["v",[40,46]],["a",[17,16]],["r",[9,15]],["r",[24,25]],["a",[30,36]]],"B":[["v",27],["n",42],["a",21],["r",11],["m",35],["r",5],["v",34],["a",10],["r",29],["n",6],["r",22],["m",4],["r",43],["a",18],["r",14]],"K":[["cruz",1,4]],"D":[["der",3,"nnam"]],"t":33},
-    {"a":6,"h":8,"H":[["m",[7,1,8]],["a",[11,10]],["n",[22,23]],["z",[18,12]],["v",[36,37]],["v",[2,3]],["v",[26,25,20,19]],["v",[29,28]]],"B":[["v",17],["v",5],["v",21],["v",15],["m",16],["n",42],["v",40],["n",6],["z",47,1],["v",0],["v",41],["v",46],["m",38]],"K":[["cruz",2,4]],"D":[["izq",4,"zvmaav"]],"t":30},
-    {"a":6,"h":8,"H":[["m",[43,42]],["z",[31,32,37]],["a",[4,10,3]],["n",[0,6]],["r",[8,7,2]],["z",[34,33]],["n",[28,27]],["z",[29,35]]],"B":[["z",22,1],["n",26],["n",20],["z",23],["m",30],["n",40],["m",38],["z",12],["z",13,1],["r",25],["a",11],["n",24],["z",36]],"K":[["cruz",2,1]],"D":[["aba",3,"rzraaz"]],"t":28},
-    {"a":7,"h":8,"H":[["r",[12,13]],["m",[40,39,33]],["z",[15,16,17,10]],["v",[32,25,18,11]],["c",[4,5]],["a",[50,43]],["a",[34,27,20,19]],["a",[38,37,31]]],"B":[["a",2],["m",52],["r",6],["m",47],["a",29],["a",1],["z",24],["a",8],["c",35],["a",51],["z",26,1],["a",23],["r",14],["z",0],["z",48],["v",45],["v",53]],"D":[["izq",4,"mvca"],["aba",5,"vaa"]],"t":45},
-    {"a":7,"h":8,"H":[["v",[37,38]],["n",[46,53]],["r",[39,32]],["z",[24,31]],["a",[22,23]],["c",[16,17]],["c",[8,15,14,21]],["c",[47,54]],["n",[12,19]],["r",[41,34]],["z",[13,6]]],"B":[["c",30],["n",36],["r",43],["r",33],["v",3],["z",44,1],["z",9],["n",7],["a",27],["z",48,1],["z",50],["n",29],["c",18],["r",35],["v",1],["c",4],["c",45]],"D":[["izq",6,"ccan"],["arr",2,"rcc"]],"t":48},
-    {"a":7,"h":8,"H":[["z",[13,12,11]],["c",[21,22,28]],["v",[24,17]],["a",[46,45,44,51]],["n",[27,26,19,18]],["m",[15,8]],["a",[1,2]],["v",[16,23]],["z",[29,30]]],"B":[["z",43],["a",54],["a",49],["a",38],["v",14],["n",5],["a",53],["a",9],["z",4],["z",10,1],["z",36,1],["c",37],["n",48],["v",55],["n",42],["m",34]],"K":[["te",4,5]],"D":[["der",2,"vcn"],["aba",1,"vamzc"]],"t":44},
-    {"a":7,"h":8,"H":[["a",[26,25,18,17]],["v",[9,16,23,24]],["m",[38,37,31,30]],["r",[28,21,14]],["n",[52,51]],["c",[5,12]],["r",[15,22,29,36]]],"B":[["m",10],["r",4],["v",0],["v",27],["a",13],["r",32],["a",6],["m",34],["r",3],["v",7],["n",11],["r",55],["v",40],["m",39],["r",49],["n",8],["a",43],["a",20],["c",41]],"D":[["der",6,"mrcr"]],"t":46},
-    {"a":7,"h":8,"H":[["z",[55,48]],["n",[36,37]],["r",[41,34]],["c",[10,3,11,4]],["a",[23,24,31,32]],["m",[38,39,40]],["a",[44,51,43]],["r",[26,25,19]]],"B":[["z",52],["a",1],["a",28],["a",30],["m",2],["n",9],["c",20],["z",14,1],["r",29],["a",15],["c",42],["r",46],["a",54],["n",7],["a",18],["c",35],["c",27],["m",12],["a",0],["r",33]],"D":[["aba",1,"r"],["arr",5,"mr"]],"t":45},
-    {"a":7,"h":8,"H":[["z",[4,5]],["a",[39,46,38]],["M",[33,32,26]],["v",[43,44,50]],["A",[18,11]],["N",[40,41]],["v",[15,16]],["A",[45,52]],["A",[10,3]],["v",[21,14]]],"B":[["v",49],["A",54],["v",48],["M",24],["a",47],["N",0],["M",7],["v",12],["z",1,1],["M",55],["A",31],["A",53],["v",6],["v",17],["A",27],["N",42],["v",37]],"K":[["cruz",0,3]],"D":[["der",2,"Avaz"],["arr",2,"Aa"]],"t":39},
-    {"a":7,"h":8,"H":[["c",[31,30]],["m",[53,46]],["A",[41,48]],["z",[27,20]],["N",[52,51]],["n",[36,37,38,39]],["n",[10,17,24]],["N",[47,40,33]],["z",[18,11,4]]],"B":[["A",23],["n",28],["N",45],["N",55],["z",19],["n",5],["c",25],["n",26],["z",12,1],["z",8,1],["n",22],["m",1],["n",6],["m",14],["N",0],["N",21],["z",54]],"D":[["izq",1,"zn"],["izq",5,"cANn"]],"t":40},
-    {"a":7,"h":8,"H":[["n",[37,36,30]],["A",[41,48]],["M",[4,5]],["c",[10,3]],["z",[38,31,24,17]],["a",[39,46,53,54]],["a",[19,26,33,40]],["n",[16,23]]],"B":[["a",1],["z",7,1],["n",11],["a",45],["a",43],["a",50],["z",18,1],["a",32],["c",6],["A",52],["a",20],["c",21],["n",51],["z",25],["n",0],["M",35],["n",29],["a",13],["n",47],["A",49],["M",12]],"D":[["arr",2,"a"],["izq",2,"z"]],"t":46},
-    {"a":7,"h":8,"H":[["A",[25,24,23,22]],["a",[31,30]],["n",[27,20,13]],["v",[38,45,52,53]],["r",[43,44]],["M",[3,4]],["a",[14,21]],["A",[46,47]],["r",[33,26]]],"B":[["n",17],["r",5],["v",18],["v",50],["v",36],["r",16],["M",51],["a",29],["n",54],["M",0],["A",12],["A",28],["A",48],["r",34],["a",35]],"K":[["te",0,1]],"D":[["der",5,"AvrAa"],["arr",1,"nAa"]],"t":50},
-    {"a":7,"h":8,"H":[["n",[11,12,13]],["M",[39,38]],["m",[24,23]],["r",[2,9,16,8]],["a",[49,42,35]],["v",[43,44,51,52]],["a",[34,41,48,40]],["m",[29,30,31,32]]],"B":[["a",25],["n",45],["m",0],["a",47],["r",10],["m",50],["v",17],["n",5],["n",54],["r",19],["a",4],["m",21],["a",15],["M",36],["M",37],["v",14],["v",28]],"D":[["aba",4,"mamaa"],["arr",3,"vrmr"]],"t":44},
-    {"a":7,"h":8,"H":[["m",[23,22,21]],["A",[9,10,11]],["N",[29,30]],["a",[32,33]],["n",[27,26,20,19]],["z",[50,43]],["a",[38,37]],["N",[40,47,39]],["A",[8,15]]],"B":[["z",3,1],["n",31],["n",24],["N",5],["a",41],["a",16],["A",28],["N",18],["A",12],["N",46],["z",48],["N",34],["m",45],["A",13],["A",1],["A",14],["n",0],["m",44],["m",6],["N",17]],"D":[["aba",3,"a"],["arr",4,"an"]],"t":45},
-    {"a":7,"h":8,"H":[["r",[25,18]],["N",[12,11,10]],["M",[41,40,39]],["c",[16,15]],["m",[47,46,45,44]],["n",[53,52]],["m",[28,21]],["c",[42,49]],["c",[14,7,0]]],"B":[["N",51],["m",6],["m",48],["c",13],["c",8],["M",55],["m",3],["c",34],["N",26],["c",43],["r",37],["M",32],["r",9],["c",5],["m",27],["M",19],["c",54]],"K":[["te",1,3]],"D":[["izq",5,"cnmmNn"]],"t":46},
-    {"a":7,"h":8,"H":[["M",[21,28,35,36]],["r",[34,33,26,25]],["A",[51,44,37,30]],["v",[23,24]],["a",[7,8]],["n",[47,46]],["a",[19,12,5]],["M",[49,42]]],"B":[["n",52],["M",9],["r",50],["M",48],["a",54],["a",45],["n",55],["A",32],["M",40],["A",27],["r",2],["r",38],["r",6],["M",53],["a",18]],"D":[["der",1,"aMAa"],["arr",3,"MAvv"]],"t":40},
-    {"a":7,"h":8,"H":[["A",[29,28]],["m",[25,24]],["z",[44,37,30]],["c",[8,7]],["v",[34,33]],["M",[55,54]],["m",[18,11]],["A",[38,45]],["z",[19,12]],["z",[48,41]],["v",[14,15,21]]],"B":[["z",0,1],["v",49],["c",26],["m",42],["v",17],["c",39],["A",3],["z",46],["v",32],["M",51],["A",16],["z",43,1],["z",27],["m",13],["m",20],["v",1],["A",35],["A",10],["z",31]],"D":[["arr",2,"Mz"],["aba",3,"mvz"]],"t":40},
-    {"a":7,"h":8,"H":[["v",[20,27,34]],["c",[42,43,44,50]],["r",[41,48]],["n",[16,15]],["a",[38,39,45]],["N",[54,53,47]],["v",[17,24,31,32]],["n",[12,11]]],"B":[["N",7],["r",51],["v",28],["v",40],["c",35],["v",9],["N",49],["n",46],["N",37],["r",36],["n",55],["v",19],["v",13],["c",25],["c",8],["a",52],["n",33]],"K":[["te",0,3]],"D":[["arr",4,"vav"],["arr",1,"acn"]],"t":48},
-    {"a":7,"h":8,"H":[["c",[23,16,17,10]],["N",[38,37]],["m",[18,11]],["A",[46,39]],["z",[36,43,35,42]],["v",[19,26]],["A",[1,2]],["z",[54,47]],["m",[52,51]],["m",[33,32]]],"B":[["A",34],["A",20],["m",40],["c",45],["v",50],["z",5],["c",0],["m",53],["N",15],["N",8],["c",27],["z",6],["c",49],["m",30],["A",55],["v",28],["z",24],["A",29]],"D":[["izq",2,"m"],["der",1,"mzzzm"]],"t":45},
-    {"a":7,"h":8,"H":[["c",[15,16,22]],["N",[32,25]],["z",[46,45]],["v",[50,49]],["n",[43,36,44,37]],["A",[28,21]],["v",[11,12]],["c",[7,14]],["v",[40,47,39]],["N",[24,31]]],"B":[["N",5],["n",34],["n",10],["A",27],["A",51],["N",19],["z",41,1],["v",20],["c",48],["c",0],["c",9],["z",42,1],["c",55],["N",6],["v",17],["N",54],["v",53],["v",8],["c",3]],"D":[["arr",4,"nnvvv"]],"t":48},
-    {"a":7,"h":8,"H":[["A",[42,43,44,50]],["a",[12,19]],["c",[47,46]],["z",[34,33,27,26]],["N",[15,16,17]],["v",[0,1,2]],["z",[52,45,38]],["z",[7,8]]],"B":[["A",9],["v",49],["z",18],["A",25],["z",32],["N",6],["z",40],["z",39,1],["A",14],["z",51],["z",28,1],["v",11],["A",53],["v",54],["c",36]],"K":[["cruz",1,3]],"D":[["izq",5,"N"],["der",5,"azcNzaz"]],"t":50},
-    {"a":7,"h":8,"H":[["A",[39,38]],["z",[55,54]],["r",[16,9,17]],["v",[31,24,32]],["m",[53,52,51]],["M",[43,36,44]],["A",[7,8]],["A",[19,12]],["m",[50,49]],["v",[33,26,34]]],"B":[["v",27],["m",37],["v",42],["v",41],["A",28],["A",35],["r",6],["A",30],["A",3],["v",23],["M",13],["z",21],["z",14],["r",11],["A",25],["M",29],["A",5],["v",2],["m",20]],"D":[["arr",4,"Mmmr"],["arr",1,"vm"]],"t":48},
-    {"a":7,"h":8,"H":[["z",[0,7,14]],["m",[37,30]],["r",[29,22]],["c",[5,12,19]],["M",[20,27]],["A",[38,31,39]],["r",[47,46,40]],["m",[17,16]],["M",[32,33]],["z",[42,35]]],"B":[["M",34],["c",50],["z",6,1],["r",21],["c",25],["z",49,1],["M",8],["A",36],["r",26],["M",28],["r",15],["c",53],["m",1],["m",23],["A",18],["z",24,1]],"D":[["der",5,"zmzmM"],["aba",5,"Arr"]],"t":45},
-    {"a":7,"h":8,"H":[["N",[53,52,46]],["m",[35,28]],["r",[5,12]],["a",[0,1]],["M",[27,26]],["v",[55,48,41]],["N",[9,10]],["m",[47,40,33]],["r",[31,32]],["m",[7,8]]],"B":[["r",29],["N",38],["m",49],["v",42],["m",44],["M",34],["N",22],["m",51],["a",39],["v",6],["M",30],["N",45],["m",4],["m",13]],"K":[["cruz",3,1]],"D":[["aba",5,"rm"],["aba",1,"NvraNrm"]],"t":50},
-    {"a":7,"h":8,"H":[["A",[18,11,4]],["r",[53,46,39,32]],["m",[47,48]],["c",[36,35]],["M",[17,16]],["z",[15,8,1]],["A",[51,52]],["M",[41,40]],["z",[20,27]],["A",[42,49]]],"B":[["A",38],["A",24],["r",2],["m",7],["r",12],["z",31,1],["M",33],["z",50,1],["A",10],["r",3],["M",19],["c",30],["A",9],["z",0,1],["z",6],["c",43],["A",45],["A",44],["M",5]],"D":[["der",1,"mAzrM"]],"t":44},
-    {"a":7,"h":8,"H":[["c",[30,23,16]],["n",[25,32]],["m",[46,47]],["r",[28,29,35]],["z",[7,8]],["v",[33,34,40,41]],["z",[52,53]],["r",[26,19]],["v",[12,11,10,17]]],"B":[["r",43],["v",15],["r",24],["r",27],["z",2,1],["n",20],["v",49],["v",18],["v",9],["c",6],["r",55],["z",31,1],["n",45],["m",37],["v",0]],"D":[["arr",5,"crvvc"],["aba",2,"zvmz"]],"t":46},
-    {"a":7,"h":8,"H":[["z",[43,36,29,28]],["A",[30,31]],["c",[25,24,18,17]],["M",[10,3,11,4]],["n",[46,53]],["N",[16,15,14]],["A",[22,21]],["n",[6,13]]],"B":[["A",12],["c",26],["z",42],["N",55],["n",52],["M",34],["M",54],["c",51],["z",20],["N",44],["M",41],["z",19,1],["n",9],["c",33],["N",2],["M",27],["n",40],["A",32]],"K":[["te",2,5]],"D":[["der",6,"ncA"],["arr",1,"Az"]],"t":44},
-    {"a":7,"h":8,"H":[["N",[42,35,43]],["n",[45,52,44]],["M",[48,41,34,33]],["A",[32,31]],["a",[25,18,19,12]],["r",[10,9]],["A",[36,29,37]],["A",[40,47,39]]],"B":[["M",22],["n",1],["a",46],["A",30],["M",24],["n",14],["N",53],["M",55],["a",50],["n",0],["A",5],["a",6],["N",51],["M",20],["A",7],["A",49],["A",15],["N",28],["r",13],["a",54]],"D":[["arr",2,"rAAA"]],"t":45},
-    {"a":7,"h":9,"H":[["z",[30,37,44,36]],["v",[46,53]],["p",[61,60]],["r",[38,31]],["M",[15,22,21,28]],["A",[12,5]],["N",[59,52]],["N",[58,57]],["z",[11,4]],["z",[26,33,40]],["p",[42,35]]],"B":[["p",49],["r",20],["z",9],["z",39,1],["p",32],["M",0],["z",14],["z",25],["z",3],["M",43],["A",47],["M",19],["z",8],["N",41],["z",13,1],["N",54],["p",27],["z",45,1]],"K":[["cruz",2,1]],"D":[["arr",1,"zpvMrN"],["der",4,"NAv"]],"t":59},
-    {"a":7,"h":9,"H":[["z",[45,38,39,32]],["v",[26,33,40,41]],["A",[62,61,60]],["m",[24,17,10,18]],["a",[48,55,47]],["M",[13,6]],["n",[53,54]],["M",[51,50,49]],["z",[43,36,44,37]]],"B":[["n",42],["z",9,1],["A",27],["z",2,1],["m",16],["z",11,1],["v",35],["a",59],["m",20],["M",31],["n",21],["A",46],["a",1],["m",22],["z",4,1],["v",8],["z",56,1]],"D":[["arr",5,"zMmMMvzz"],["aba",1,"AaMv"]],"t":60},
-    {"a":7,"h":9,"H":[["N",[34,27,20]],["a",[51,52,59,60]],["c",[9,2]],["M",[0,7,14,21]],["p",[12,19,26,33]],["A",[40,39]],["n",[47,54]],["p",[22,23,29]],["c",[49,50]],["M",[25,32]]],"B":[["M",5],["M",42],["N",16],["A",8],["p",55],["M",4],["p",10],["A",46],["p",53],["p",13],["c",28],["p",58],["n",62],["c",57],["M",56],["c",44],["N",38],["p",41]],"K":[["te",0,5]],"D":[["arr",3,"Mapaaca"],["aba",5,"nMN"]],"t":64},
-    {"a":7,"h":9,"H":[["n",[32,31,30]],["N",[0,7]],["A",[43,42]],["a",[24,23,22,16]],["m",[60,59,53]],["p",[11,4,12]],["r",[55,54,47,46]],["A",[28,29]],["N",[27,26,25]],["p",[38,37]]],"B":[["p",36],["N",14],["p",35],["m",49],["N",51],["r",40],["m",33],["n",17],["a",1],["N",8],["A",52],["p",44],["N",39],["r",50],["A",41],["n",19],["N",6],["m",62]],"D":[["arr",2,"Aaa"],["aba",2,"pnparAr"]],"t":60},
-    {"a":7,"h":9,"H":[["z",[32,25]],["v",[5,4]],["M",[51,52]],["p",[47,54]],["c",[11,12,18]],["N",[60,53]],["m",[20,27]],["M",[36,37,38,44]],["z",[62,61,55]],["z",[7,8,14]],["M",[50,43]]],"B":[["M",1],["z",33],["z",34],["M",35],["z",22,1],["N",57],["M",21],["z",28],["c",46],["M",40],["M",10],["z",29,1],["p",41],["M",39],["v",56],["c",31],["M",13],["m",45]],"K":[["te",1,2]],"D":[["aba",2,"MzNpzz"],["arr",2,"cmv"]],"t":56},
-    {"a":7,"h":9,"H":[["z",[17,10,3]],["n",[31,38]],["v",[29,22,15]],["a",[60,61]],["A",[40,41]],["N",[44,51]],["r",[12,19]],["n",[49,42]],["r",[9,16,8]],["a",[35,28,21,14]],["r",[0,1]]],"B":[["r",59],["z",46,1],["v",6],["r",26],["A",2],["r",48],["r",62],["r",30],["n",32],["n",45],["a",39],["a",27],["z",5],["v",58],["z",36],["r",54],["a",23],["a",24],["a",37],["r",55],["N",52],["n",11]],"D":[["aba",1,"AN"],["arr",4,"avn"]],"t":56},
-    {"a":7,"h":9,"H":[["z",[55,62,54,61]],["m",[24,17]],["a",[39,40,41]],["c",[33,34]],["r",[15,16]],["p",[7,0]],["M",[29,22]],["c",[31,38]],["a",[56,57]],["m",[58,59]],["m",[43,50,42]],["c",[44,37]]],"B":[["z",5,1],["r",52],["a",26],["p",3],["z",30,1],["m",8],["c",48],["m",28],["M",13],["m",14],["c",19],["m",25],["a",20],["z",11,1],["c",35],["m",49],["c",32],["z",36,1]],"K":[["te",3,6]],"D":[["izq",3,"cmcaa"],["arr",2,"pmrMa"]],"t":60},
-    {"a":7,"h":9,"H":[["m",[13,12]],["N",[37,44,36,43]],["v",[50,51,52,45]],["n",[8,1,9]],["r",[59,58,57]],["z",[19,18,17,16]],["p",[62,61,55,54]],["p",[42,49,56]]],"B":[["p",6],["z",15],["p",27],["p",46],["r",38],["m",2],["N",47],["v",23],["p",22],["p",10],["v",4],["p",40],["p",25],["v",24],["r",14],["m",30],["r",0],["n",60],["n",26],["v",11]],"D":[["izq",5,"NnzzNz"],["der",5,"N"]],"t":66},
-    {"a":7,"h":9,"H":[["A",[17,18,24]],["p",[37,44]],["a",[30,29,28,35]],["m",[33,40,47,54]],["c",[48,55]],["n",[39,46]],["z",[36,43]],["a",[49,50]],["a",[9,10]],["a",[20,27]],["a",[14,21]]],"B":[["a",6],["a",8],["a",2],["A",38],["a",23],["a",26],["a",16],["m",32],["m",53],["p",60],["a",31],["n",52],["a",15],["a",62],["m",59],["n",34],["z",25],["m",4]],"K":[["te",4,1]],"D":[["der",5,"caaAzAa"],["arr",5,"cp"]],"t":63},
-    {"a":7,"h":9,"H":[["c",[54,61]],["p",[8,15]],["r",[46,45,38,37]],["N",[4,3]],["M",[10,17]],["A",[25,32]],["a",[50,51]],["N",[26,19,12,20]],["A",[48,47,41]],["a",[0,1]],["p",[58,59,60,53]]],"B":[["c",36],["c",35],["r",31],["N",2],["N",57],["p",39],["p",62],["N",56],["A",13],["A",30],["N",27],["A",11],["p",43],["A",9],["N",28],["M",55],["a",34],["p",14],["M",6],["A",18],["p",33]],"D":[["izq",3,"raa"],["izq",7,"arrpN"]],"t":63},
-    {"a":7,"h":9,"H":[["a",[9,2,10,3]],["m",[55,48]],["p",[11,4]],["r",[35,42]],["z",[47,54]],["A",[40,39,33]],["c",[20,19,13,12]],["A",[37,36]],["z",[25,24]],["r",[57,50,43,51]]],"B":[["A",16],["a",31],["A",26],["z",21],["r",8],["p",7],["p",28],["A",5],["A",1],["z",30],["a",49],["a",56],["r",0],["m",53],["c",34],["c",61],["c",29],["r",32]],"K":[["cruz",2,5]],"D":[["aba",3,"armA"],["der",3,"rrzzc"]],"t":59},
-    {"a":7,"h":9,"H":[["n",[51,52]],["A",[2,1,0]],["N",[22,15,8]],["p",[36,37]],["M",[53,54]],["a",[32,39,46]],["z",[60,59,58]],["n",[34,33]],["a",[23,24,30,31]],["a",[18,17,11,10]]],"B":[["A",7],["n",21],["A",45],["a",5],["A",43],["a",35],["a",29],["a",26],["a",25],["p",44],["a",50],["p",49],["N",48],["n",38],["n",13],["n",27],["M",14],["z",55],["N",16],["a",41]],"D":[["izq",4,"azaMza"],["der",2,"Na"]],"t":63},
-    {"a":7,"h":9,"H":[["n",[61,54,47,55]],["c",[20,27]],["M",[23,24,30]],["r",[26,33,25]],["m",[53,60]],["p",[44,43,42]],["a",[57,56]],["n",[10,11,12]],["c",[37,38,39]],["n",[51,52]]],"B":[["p",31],["p",18],["c",19],["a",50],["r",45],["n",32],["M",0],["n",62],["r",13],["c",28],["c",21],["c",46],["M",6],["p",9],["n",29],["n",40],["n",35],["m",3]],"K":[["cruz",0,1]],"D":[["der",6,"ncnm"],["arr",1,"Mnnar"]],"t":63},
-    {"a":7,"h":9,"H":[["A",[25,26,27]],["z",[34,33]],["v",[56,57,58,51]],["n",[48,47]],["M",[59,52]],["a",[50,49]],["N",[29,22,15,23]],["v",[60,53,46,45]],["A",[39,40,41]],["M",[13,20]]],"B":[["v",44],["a",1],["v",17],["A",30],["n",18],["v",0],["A",55],["M",54],["M",28],["v",37],["n",62],["v",14],["A",6],["z",24],["a",16],["N",38],["v",21],["N",32],["z",19],["v",9],["N",3],["M",11]],"D":[["izq",1,"AA"],["aba",5,"NMAv"]],"t":55},
-    {"a":7,"h":9,"H":[["m",[39,46,45,52]],["A",[51,44]],["r",[33,40]],["c",[56,49]],["a",[34,41,48]],["n",[25,18,26]],["z",[29,36,43]],["A",[37,30,38]],["n",[61,62]],["m",[9,10,11]]],"B":[["z",6,1],["m",19],["m",7],["r",60],["c",32],["n",3],["n",47],["r",58],["A",0],["a",27],["A",21],["c",2],["m",50],["n",57],["m",31],["m",23],["m",4],["A",17]],"K":[["cruz",0,1]],"D":[["arr",1,"Anan"],["arr",5,"Aazmz"]],"t":59},
-    {"a":7,"h":9,"H":[["M",[31,30,24,23]],["v",[20,19,13]],["N",[1,2]],["n",[43,50,57]],["A",[52,45]],["r",[25,26,33,34]],["z",[36,37,38,44]],["M",[61,54]],["N",[55,48]],["z",[35,42]]],"B":[["N",5],["z",18],["M",0],["N",47],["N",27],["r",53],["M",3],["n",15],["n",22],["z",51,1],["v",29],["M",41],["M",10],["r",39],["n",7],["v",59],["z",28],["r",62],["M",12],["A",21],["z",4,1]],"D":[["aba",4,"zAv"],["aba",2,"NMrz"]],"t":57},
-    {"a":7,"h":9,"H":[["n",[53,52,46,45]],["M",[15,8]],["A",[35,42]],["c",[12,19]],["N",[50,57]],["p",[3,4]],["a",[7,0]],["n",[5,6]],["A",[25,24]],["N",[16,9]],["c",[13,20]],["a",[21,22,28]]],"B":[["N",51],["a",47],["N",48],["n",41],["n",18],["a",49],["a",1],["a",40],["M",59],["A",17],["c",56],["A",32],["c",23],["A",43],["p",60],["n",29],["n",27],["N",14]],"K":[["te",1,5]],"D":[["arr",2,"cac"],["der",4,"MAnpNn"]],"t":59},
-    {"a":7,"h":9,"H":[["n",[44,51]],["A",[39,38,37,31]],["r",[53,46]],["m",[10,3]],["p",[26,25,18,17]],["M",[47,48]],["v",[50,43,36]],["A",[21,22,23]],["m",[20,27,34]],["m",[1,8]]],"B":[["r",15],["r",61],["m",13],["v",49],["A",6],["A",56],["m",55],["p",57],["m",54],["M",52],["A",42],["p",7],["m",0],["A",45],["n",59],["A",16],["p",40],["p",58],["A",41]],"D":[["izq",2,"vvmm"],["arr",4,"AMnm"]],"t":64},
-    {"a":7,"h":9,"H":[["N",[60,59,58,57]],["M",[43,36]],["p",[42,35,28]],["v",[2,3]],["r",[20,13]],["a",[38,39,40,41]],["c",[6,5,4]],["r",[54,53,52,51]],["v",[25,26]],["p",[12,11,10]]],"B":[["N",16],["r",19],["M",55],["a",31],["N",47],["p",21],["a",29],["r",46],["N",8],["c",17],["p",37],["r",1],["p",48],["c",45]],"K":[["te",1,3]],"D":[["izq",2,"vaNrMrv"],["der",3,"vrcpppav"]],"t":60},
-    {"a":7,"h":9,"H":[["M",[35,28,29,22]],["n",[32,25,18]],["v",[47,40,48]],["z",[53,46,54]],["a",[51,52,58,59]],["A",[6,13]],["N",[43,36,44,37]],["M",[17,24,31]],["z",[61,60]]],"B":[["z",9,1],["M",45],["M",34],["a",20],["a",62],["v",27],["z",26],["M",23],["z",14],["z",57,1],["N",41],["A",55],["N",21],["A",30],["n",50],["v",8],["M",0],["z",4],["v",12],["M",10],["n",19]],"D":[["arr",5,"Nn"],["arr",1,"aMNaM"]],"t":55},
-    {"a":7,"h":9,"H":[["N",[6,13,20,27]],["z",[36,35]],["r",[1,2]],["m",[30,31,37]],["v",[14,15]],["p",[12,19]],["c",[54,61,53]],["m",[58,57]],["r",[4,3]],["N",[17,10]],["m",[52,45,38]]],"B":[["m",39],["v",47],["m",56],["r",46],["c",22],["m",8],["N",41],["r",42],["N",33],["N",50],["m",55],["N",5],["m",44],["c",29],["c",11]],"K":[["cruz",3,2]],"D":[["aba",4,"vNppmmNr"],["izq",7,"zmzr"]],"t":63},
-    {"a":7,"h":9,"H":[["M",[32,33]],["A",[53,52,51,58]],["m",[23,22]],["a",[7,0,8,1]],["N",[17,10,3]],["c",[49,56]],["r",[41,48,55,47]],["c",[18,19,25]],["m",[60,61,62]]],"B":[["a",57],["m",9],["r",50],["A",54],["c",31],["A",6],["c",29],["N",59],["a",42],["N",44],["r",16],["m",5],["c",30],["c",40],["a",24],["r",43],["N",45],["r",11],["A",12],["m",35],["m",38]],"D":[["izq",2,"m"],["arr",4,"aMMAc"]],"t":59},
-    {"a":7,"h":9,"H":[["N",[16,9,17]],["A",[56,49,42]],["r",[4,11,3]],["M",[22,23]],["p",[39,40,41,34]],["n",[0,7,14,21]],["z",[46,53]],["N",[33,26]],["r",[19,18]],["p",[37,30]]],"B":[["M",58],["r",50],["r",48],["N",27],["z",32],["z",61],["p",24],["N",29],["A",25],["n",13],["A",10],["N",28],["n",2],["p",6],["p",38],["N",55],["A",5],["r",20],["p",62]],"K":[["te",1,6]],"D":[["arr",1,"nMNprprn"]],"t":64},
-    {"a":7,"h":9,"H":[["M",[59,58]],["a",[37,30]],["N",[47,40]],["z",[26,25,18,17]],["n",[39,32]],["c",[36,43,50,57]],["m",[8,9,10]],["a",[45,46]],["M",[34,41]],["a",[24,23]],["M",[1,0]]],"B":[["z",29],["M",54],["z",38],["M",22],["z",6],["M",56],["a",62],["M",53],["n",55],["a",44],["a",52],["c",16],["N",31],["M",19],["N",49],["z",11],["c",5],["m",14],["a",2],["c",15],["m",60],["a",4]],"D":[["arr",3,"Mcm"],["der",3,"na"]],"t":61},
-    {"a":7,"h":9,"H":[["a",[20,19,12,11]],["A",[51,58]],["n",[42,35]],["v",[27,34,41]],["r",[10,9,3]],["m",[22,15,8,1]],["z",[61,60,54]],["z",[25,32]],["v",[40,33]],["r",[45,52,44]]],"B":[["v",47],["m",13],["m",7],["m",46],["a",5],["r",26],["v",23],["a",29],["z",56,1],["r",31],["r",36],["A",53],["r",48],["n",57],["v",2],["r",37],["v",62],["r",21]],"K":[["te",2,2]],"D":[["arr",4,"avmz"],["aba",3,"zzznaA"]],"t":56},
-    {"a":8,"h":10,"H":[["r",[49,50,51]],["n",[69,61]],["v",[63,71,62]],["p",[30,38,37,45]],["a",[67,59,68]],["N",[13,5,14,6]],["b",[54,53]],["c",[77,76]],["v",[8,0]],["r",[41,40]],["r",[74,73]],["b",[65,64]],["a",[7,15,23]],["n",[34,33,32]]],"B":[["b",70],["r",2],["b",36],["p",4],["n",47],["r",42],["v",79],["r",10],["n",48],["a",72],["b",25],["c",19],["N",55],["v",12],["b",43],["v",46],["r",3],["r",1],["v",78],["r",9],["v",56],["N",29],["c",24]],"K":[["te",2,3]],"D":[["aba",3,"NpapnrnN"],["der",4,"naaapa"]],"t":73},
-    {"a":8,"h":10,"H":[["A",[28,20]],["p",[21,13,14,6]],["r",[49,57,48]],["b",[9,17,8]],["N",[22,30]],["c",[37,38,46,47]],["m",[70,78]],["n",[23,31]],["b",[69,68]],["A",[32,24,16]],["c",[52,51,44,43]],["A",[18,10,2]],["c",[67,59]]],"B":[["N",36],["N",72],["c",62],["A",3],["A",0],["b",19],["b",53],["r",27],["p",63],["c",79],["n",74],["p",56],["r",64],["c",71],["A",45],["m",50],["c",61],["n",4],["b",39],["b",77],["p",66],["c",25],["A",26],["c",33],["c",65]],"D":[["arr",1,"Arc"],["der",1,"mbccAA"],["aba",3,"pA"]],"t":71},
-    {"a":8,"h":10,"H":[["m",[68,67,66,59]],["c",[10,11]],["b",[13,12,5,4]],["n",[36,28]],["A",[44,52,43]],["N",[56,57]],["a",[7,6]],["z",[61,60]],["a",[46,45]],["a",[54,62,70,78]],["a",[8,9]],["b",[27,19]],["z",[21,22,29]],["a",[73,72]]],"B":[["a",32],["a",3],["a",74],["m",69],["m",38],["m",17],["b",71],["n",30],["a",64],["b",53],["c",1],["z",25],["m",51],["z",63,1],["z",14,1],["z",79,1],["a",2],["a",37],["a",65],["a",58],["a",18]],"K":[["te",1,4]],"D":[["izq",5,"aNzncb"],["der",4,"aAbb"],["aba",5,"NbAaA"]],"t":73},
-    {"a":8,"h":10,"H":[["m",[30,22,14,23]],["M",[43,51,59]],["z",[0,8]],["n",[24,25,32,33]],["a",[26,34]],["A",[69,68]],["p",[3,4,5]],["c",[18,19]],["p",[50,49,48,41]],["c",[44,36]],["p",[66,67,74]],["z",[10,2]],["p",[45,46,53]]],"B":[["p",27],["m",28],["a",7],["p",37],["p",9],["A",20],["p",17],["n",61],["n",73],["c",55],["n",15],["p",71],["m",42],["A",78],["c",29],["M",47],["c",35],["n",75],["p",1],["m",60],["M",13],["p",64],["m",31],["p",40],["p",65],["p",57],["p",16]],"D":[["izq",7,"azzpp"],["arr",6,"zMc"],["aba",4,"z"]],"t":73},
-    {"a":8,"h":10,"H":[["p",[21,13,22]],["v",[2,1,0]],["n",[20,28,36,37]],["M",[5,4]],["r",[50,51,58]],["z",[49,57]],["a",[59,67,75]],["N",[43,42,41]],["r",[46,38,30,39]],["p",[62,61,60,68]],["v",[8,9]],["M",[65,66,73,74]]],"B":[["M",31],["a",79],["z",45],["N",44],["v",29],["M",76],["n",27],["M",23],["n",15],["p",71],["r",53],["r",55],["v",16],["M",56],["N",72],["r",69],["v",12],["r",52],["p",35],["a",47],["v",24]],"K":[["cruz",1,1]],"D":[["arr",6,"npN"],["aba",6,"nMMppz"],["izq",8,"rprvrpa"]],"t":73},
-    {"a":8,"h":10,"H":[["v",[71,70,62,61]],["m",[59,67,75,76]],["n",[4,12]],["r",[34,33,32]],["M",[31,39]],["A",[48,40]],["a",[36,35,28]],["z",[44,43,42,41]],["n",[25,24]],["r",[50,58]],["z",[68,60]],["m",[22,14]],["z",[1,0]],["n",[21,29,20]]],"B":[["r",64],["m",27],["r",56],["z",8],["v",72],["m",30],["z",3],["n",66],["m",37],["z",65],["n",79],["r",16],["A",26],["A",19],["v",13],["n",73],["n",53],["m",57],["M",38],["n",9],["a",49],["z",5],["m",7],["z",63,1],["n",18]],"D":[["aba",5,"zarmz"],["aba",2,"vrMzavn"]],"t":71},
-    {"a":8,"h":10,"H":[["r",[50,51,52]],["z",[20,19,12,11]],["N",[59,67,75]],["a",[26,34,25]],["m",[44,36]],["c",[7,15,23,14]],["v",[71,70]],["A",[8,9]],["m",[77,69,78]],["m",[32,40]],["c",[64,72]],["m",[43,42,41]],["N",[45,53,61]]],"B":[["r",5],["N",6],["z",66,1],["A",27],["c",39],["A",55],["N",60],["m",13],["m",16],["m",35],["m",37],["c",21],["z",47,1],["c",48],["m",30],["c",54],["a",4],["N",29],["m",62],["z",1],["r",28],["N",33]],"K":[["cruz",0,6]],"D":[["arr",2,"NmcN"],["der",7,"maz"],["izq",3,"mvmacvr"]],"t":73},
-    {"a":8,"h":10,"H":[["M",[52,51]],["c",[70,69]],["v",[58,59,60]],["z",[43,35]],["p",[64,56,65,57]],["A",[6,14,5]],["m",[23,31,30,38]],["N",[74,73,72]],["v",[13,21,12]],["N",[0,8]],["N",[34,33,26]],["M",[55,54,47]],["v",[50,49,48]]],"B":[["M",41],["v",45],["N",27],["A",71],["m",39],["v",36],["v",24],["A",62],["N",42],["v",7],["c",15],["N",22],["N",40],["N",67],["c",1],["N",44],["p",66],["z",37,1],["z",16],["m",20],["v",11]],"D":[["aba",5,"pmpp"],["arr",4,"NvmvMMvMA"],["der",7,"NMv"]],"t":74},
-    {"a":8,"h":10,"H":[["c",[69,68,67]],["A",[0,1,2,3]],["N",[43,51,59]],["m",[35,27,36]],["v",[79,78,77]],["z",[73,74,75]],["r",[45,53]],["b",[57,65]],["z",[20,19,18,17]],["N",[42,34]],["m",[50,49]],["b",[54,62,70]],["m",[10,9]]],"B":[["z",14],["b",41],["m",66],["A",61],["r",60],["c",39],["z",11,1],["m",58],["N",12],["v",5],["z",6],["z",32],["A",55],["z",64,1],["c",29],["A",48],["z",16],["A",8],["r",4],["b",63],["b",23],["m",46]],"K":[["te",0,3]],"D":[["izq",7,"bbvN"],["der",1,"vzN"],["izq",5,"mcmmNNm"]],"t":78},
-    {"a":8,"h":10,"H":[["z",[50,51,58,59]],["A",[26,34]],["m",[65,73]],["M",[19,11,3]],["a",[1,9,17]],["r",[74,66]],["p",[60,61]],["v",[54,53]],["v",[5,6,7,14]],["A",[43,35]],["v",[21,22,23,15]],["r",[27,28]],["a",[29,37,45,36]]],"B":[["p",44],["A",4],["v",55],["z",64],["v",33],["v",75],["M",63],["a",71],["a",76],["v",70],["M",78],["m",40],["a",2],["v",72],["a",18],["v",69],["A",56],["m",42],["v",12],["A",20],["v",48],["a",41],["a",8],["M",32],["z",49],["p",79],["r",52],["z",46,1]],"D":[["izq",2,"rv"],["der",5,"z"],["aba",5,"rvAra"]],"t":80},
-    {"a":8,"h":10,"H":[["m",[63,71,62]],["c",[44,43,42,41]],["r",[26,25,17,16]],["N",[67,68,75,76]],["a",[27,19]],["n",[55,47,39,38]],["v",[53,54,61]],["A",[66,74]],["N",[34,35,36]],["n",[40,32,24,33]],["v",[56,64,72,73]]],"B":[["v",52],["v",10],["v",58],["n",5],["N",8],["m",12],["c",59],["n",51],["n",14],["r",57],["v",48],["v",69],["N",18],["N",3],["r",15],["a",6],["N",37],["N",7],["n",1],["m",11],["n",23],["r",0],["m",65]],"K":[["cruz",4,1]],"D":[["aba",6,"cnvnvAN"],["arr",2,"arcnAcN"]],"t":69},
-    {"a":8,"h":10,"H":[["a",[68,60,69]],["N",[75,74,73]],["b",[11,19,18,26]],["M",[51,59,58,66]],["v",[5,4]],["A",[54,62,53]],["m",[28,29,30]],["z",[32,40]],["a",[46,38]],["a",[71,70]],["v",[1,9]],["a",[65,64,57,56]],["N",[0,8,16,17]]],"B":[["b",78],["N",15],["v",24],["M",41],["A",72],["N",14],["N",3],["b",77],["m",36],["N",10],["M",33],["a",50],["a",39],["a",61],["z",22,1],["a",21],["N",55],["a",34],["b",25],["M",7],["v",49],["v",23],["v",45]],"D":[["der",5,"Aba"],["der",7,"NaAmNaz"],["der",3,"Mmaaa"]],"t":73},
-    {"a":8,"h":10,"H":[["z",[62,61]],["M",[29,30]],["b",[65,73]],["N",[70,78]],["p",[49,48,41]],["A",[68,67,66]],["a",[14,13,12,11]],["m",[60,52]],["a",[55,47]],["z",[28,27,26]],["p",[69,77]],["M",[15,7]],["b",[1,2,3,10]],["m",[9,17,8]]],"B":[["a",21],["z",53,1],["z",34],["p",57],["b",5],["b",4],["b",58],["a",22],["m",25],["p",45],["b",33],["A",40],["p",71],["b",31],["z",0],["p",6],["z",36],["A",56],["a",74],["a",19],["p",50]],"K":[["cruz",2,4]],"D":[["izq",4,"mAMMm"],["izq",8,"mMaNa"],["izq",2,"NmzMb"]],"t":73},
-    {"a":8,"h":10,"H":[["c",[49,57,65]],["N",[37,29,30,22]],["b",[1,0]],["m",[36,44,35]],["a",[55,63,54]],["r",[19,20]],["z",[43,42]],["n",[79,78,71]],["z",[59,67]],["z",[23,31]],["m",[10,11,12]],["a",[60,61]],["c",[69,68]],["m",[48,40]],["c",[16,8]]],"B":[["b",50],["r",73],["a",21],["m",70],["r",75],["n",66],["a",47],["m",38],["z",51,1],["m",18],["m",24],["c",14],["c",58],["N",62],["b",64],["z",33],["m",72],["z",25],["a",7],["c",4],["N",26],["N",52],["c",17],["n",15],["m",76],["m",53],["m",3]],"D":[["aba",5,"czn"],["arr",6,"ca"],["arr",2,"zazNc"]],"t":73},
-    {"a":8,"h":10,"H":[["m",[24,32,40,41]],["c",[57,65,56]],["a",[71,63]],["r",[1,9,17]],["M",[21,22,29]],["n",[35,36]],["z",[19,27,18]],["v",[4,3]],["r",[68,69]],["z",[39,38,37]],["n",[58,50,59]],["n",[47,46]],["m",[7,6]],["v",[14,15]]],"B":[["c",10],["m",16],["m",62],["a",55],["n",66],["n",51],["v",77],["m",44],["v",28],["n",5],["M",13],["c",67],["n",78],["m",20],["m",60],["n",25],["z",79],["n",48],["z",49,1],["z",34],["v",8],["z",12]],"K":[["cruz",4,5]],"D":[["aba",4,"zrrvr"],["der",3,"cna"],["arr",2,"MrzrMm"]],"t":74},
-    {"a":8,"h":10,"H":[["p",[36,28,37]],["a",[64,65,66,73]],["m",[52,53,54,46]],["b",[23,22]],["M",[3,11]],["c",[18,26]],["v",[2,10]],["r",[61,60]],["c",[71,79]],["M",[34,42,41,49]],["M",[7,15]],["p",[4,5,6]],["b",[33,25,17]],["r",[75,67,59]]],"B":[["c",56],["p",48],["v",51],["a",31],["r",70],["M",20],["m",29],["p",13],["a",72],["M",76],["p",78],["M",24],["c",57],["M",27],["r",47],["m",62],["c",40],["M",45],["r",68],["b",43],["M",69],["r",44],["p",8],["b",74],["M",1],["p",50]],"D":[["izq",4,"cbMmbrm"],["der",6,"bpaav"]],"t":75},
-    {"a":8,"h":10,"H":[["a",[29,30,31,23]],["r",[25,26,33]],["z",[2,10,18]],["c",[39,38]],["A",[28,36]],["v",[42,43]],["m",[72,64,73,65]],["b",[75,74,67]],["b",[70,62,71,63]],["c",[13,21]],["A",[69,77]],["b",[53,52,51]],["c",[49,41]]],"B":[["b",5],["m",3],["A",1],["a",11],["c",12],["m",79],["b",8],["A",48],["v",76],["v",47],["c",54],["c",17],["A",45],["c",44],["a",16],["z",55,1],["b",68],["b",7],["b",60],["m",78],["A",27],["b",56]],"K":[["cruz",1,6]],"D":[["arr",6,"cbabbbr"],["izq",5,"zzrrcma"]],"t":74},
-    {"a":8,"h":10,"H":[["n",[33,25]],["N",[73,65]],["b",[51,52,59,60]],["m",[36,28,20,29]],["p",[9,1]],["A",[46,47]],["M",[69,61,53]],["r",[6,7,14]],["p",[78,77]],["p",[34,42,50,41]],["n",[22,23,30]],["n",[27,19]],["n",[56,48,40,32]]],"B":[["n",63],["p",18],["M",3],["N",37],["A",11],["n",35],["m",17],["m",39],["A",12],["n",4],["n",26],["n",54],["r",62],["b",45],["n",31],["r",68],["p",15],["m",64],["n",70],["n",57],["p",67],["n",66],["b",24]],"D":[["aba",3,"MMbppnpnN"],["izq",1,"bpmrp"]],"t":75},
-    {"a":8,"h":10,"H":[["r",[16,17]],["M",[30,31,38]],["A",[35,34,27,26]],["m",[47,39]],["v",[78,77]],["n",[18,10,2,11]],["p",[5,6,13]],["z",[59,51,60,52]],["m",[0,1,8]],["z",[12,4]],["n",[41,33,25]],["z",[43,44,45]],["m",[67,75]]],"B":[["v",14],["p",72],["n",32],["M",79],["z",3,1],["n",57],["p",21],["m",22],["n",74],["r",48],["m",53],["M",23],["p",68],["z",19],["z",64],["z",55,1],["z",9],["z",65],["n",37],["A",49],["M",71],["m",7]],"K":[["cruz",5,6]],"D":[["izq",5,"nzmmvA"],["izq",7,"Azz"],["izq",3,"Ammnrn"]],"t":74},
-    {"a":8,"h":10,"H":[["r",[22,21,14]],["A",[5,6]],["c",[47,46]],["p",[40,32,24]],["N",[70,62,63,55]],["m",[19,27]],["M",[58,57]],["v",[2,3]],["M",[79,71]],["v",[68,69]],["A",[73,65]],["A",[26,25]],["M",[45,53,61]],["N",[42,43]],["M",[37,36,35,28]]],"B":[["M",13],["M",11],["A",67],["p",56],["p",29],["M",72],["r",4],["N",31],["M",44],["m",54],["c",10],["v",41],["A",30],["M",60],["c",77],["N",64],["M",74],["r",59],["N",66],["N",48],["v",18],["M",17],["M",51]],"D":[["izq",2,"NMMAvp"],["der",4,"ANmv"],["aba",6,"MrAA"]],"t":70},
-    {"a":8,"h":10,"H":[["p",[2,1]],["v",[45,46,47]],["A",[59,67]],["M",[12,20,28,36]],["N",[17,16,9]],["a",[70,69,68]],["z",[73,65]],["c",[52,53,60,61]],["v",[25,26,33]],["p",[21,13]],["a",[40,32]],["N",[7,15]],["c",[5,6]],["A",[62,54]]],"B":[["M",14],["v",48],["a",38],["p",4],["v",23],["N",43],["N",8],["v",37],["c",55],["v",34],["c",63],["A",75],["c",0],["N",64],["a",74],["M",44],["a",78],["A",24],["M",79],["c",57],["v",41],["N",19],["p",22]],"K":[["cruz",1,5]],"D":[["der",8,"pANzvcMa"],["aba",5,"pAcza"]],"t":81},
-    {"a":8,"h":10,"H":[["r",[21,29,37]],["b",[68,67,60,59]],["m",[6,7]],["a",[25,17,26,18]],["M",[38,30]],["N",[54,55]],["p",[51,50,49]],["v",[76,75]],["r",[64,65]],["a",[52,53]],["m",[44,45]],["M",[42,43]],["v",[9,1]],["M",[35,34]],["N",[58,57]]],"B":[["a",69],["a",41],["M",20],["v",15],["v",47],["a",10],["N",3],["r",4],["r",48],["M",22],["a",31],["v",32],["M",63],["M",16],["b",66],["r",13],["m",72],["N",62],["b",27],["m",33],["r",78],["p",74],["M",71],["a",2]],"D":[["izq",1,"N"],["der",4,"Nmmpb"],["izq",3,"prMvab"]],"t":71},
-    {"a":8,"h":10,"H":[["z",[49,48]],["n",[64,65,66]],["p",[74,75]],["A",[77,69,78]],["M",[9,17,16,24]],["r",[62,54,55,47]],["N",[61,60,53,52]],["a",[39,38]],["A",[12,13,20,21]],["n",[71,79]],["p",[31,30]],["A",[32,33,40,41]]],"B":[["p",34],["n",45],["a",36],["p",7],["A",14],["M",72],["n",10],["A",27],["n",5],["A",25],["r",2],["A",46],["p",58],["N",50],["A",0],["A",19],["M",57],["z",3],["n",15],["n",73],["A",56],["A",70]],"K":[["cruz",2,4]],"D":[["arr",6,"zMrN"],["der",7,"pNNaMr"],["arr",1,"ArAA"]],"t":74},
-    {"a":8,"h":10,"H":[["N",[33,25,34]],["c",[63,62]],["m",[10,18,26,27]],["b",[58,66,74]],["r",[37,45,53,54]],["a",[48,56,64,72]],["M",[28,20]],["z",[59,67]],["z",[13,12]],["c",[41,42,43]],["z",[78,70]],["M",[76,68]],["b",[77,69,61,60]]],"B":[["N",47],["b",7],["M",57],["r",5],["b",4],["z",30,1],["c",36],["r",49],["a",2],["m",46],["a",32],["b",31],["c",38],["c",0],["M",3],["a",44],["z",35,1],["m",24],["c",39],["r",65],["c",22],["z",6],["b",71],["M",21],["z",79,1]],"D":[["der",1,"NMb"],["arr",1,"mbzN"],["der",6,"azbrm"]],"t":71},
-    {"a":8,"h":10,"H":[["M",[43,51]],["m",[29,30]],["N",[35,27]],["v",[50,42,34]],["p",[41,49,48,56]],["r",[36,37,38]],["n",[9,17,8]],["A",[71,70,63]],["v",[68,76,67]],["r",[22,21]],["p",[12,20]],["A",[5,6,7]],["p",[58,66,65,73]]],"B":[["v",16],["p",69],["r",40],["r",19],["p",72],["p",74],["A",47],["r",14],["p",79],["n",62],["v",11],["r",75],["p",10],["A",60],["N",24],["v",55],["M",31],["A",61],["n",3],["p",54],["p",78],["n",1],["A",33],["v",18]],"K":[["te",4,5]],"D":[["der",4,"MvAAv"],["der",2,"mNpr"],["izq",8,"ppm"]],"t":76}
+    {"a":5,"h":6,"P":[["z",[0],0,4],["v",[10,0],1,0],["z",[2,1,0],1,3],["v",[0],1,2]],"B":[["v",0],["v",5],["v",10],["z",21],["z",22],["z",23],["z",25]],"t":0},
+    {"a":5,"h":6,"P":[["r",[0,1],2,0],["a",[0,10,20],0,3],["z",[0,10],3,3]],"B":[["a",1],["a",11],["r",13],["r",14],["a",21],["z",24],["z",29]],"t":0},
+    {"a":5,"h":6,"P":[["v",[0,1],0,2],["r",[0],3,5],["v",[2,1,0],0,0]],"B":[["v",4],["v",8],["v",9],["v",17],["v",19],["r",27]],"t":0},
+    {"a":6,"h":7,"P":[["v",[0],4,0],["r",[0],0,0],["z",[0],4,4],["r",[2,1,0],3,1]],"B":[["v",5],["r",7],["r",20],["r",21],["r",22],["z",33]],"t":0},
+    {"a":6,"h":7,"P":[["v",[0,1,10],2,0],["a",[2,1,0],2,5],["z",[1,0],0,0],["a",[1,0],0,5]],"B":[["z",7],["z",10],["v",15],["v",16],["v",21],["a",24],["a",26],["a",37],["a",38],["a",41]],"t":0},
+    {"a":6,"h":7,"P":[["z",[0],4,2],["r",[0],4,5],["a",[0],4,6],["r",[0,1],0,4]],"B":[["z",11],["r",18],["r",19],["r",33],["a",39]],"t":0},
+    {"a":6,"h":7,"P":[["a",[0,10],3,4],["m",[0,10],5,5],["r",[0,10],0,0],["z",[1,11,0,10],2,1],["r",[0,10],5,2]],"B":[["z",1],["z",7],["r",10],["r",12],["r",16],["r",25],["m",28],["m",29],["a",34],["a",40]],"D":[["arr",3,"zz"]],"t":0},
+    {"a":6,"h":7,"P":[["z",[0],0,4],["r",[0],5,3],["v",[1,11,21,10],3,1],["a",[1,0],2,6]],"B":[["v",21],["v",26],["v",27],["r",29],["v",33],["z",36],["a",37],["a",40]],"t":0},
+    {"a":6,"h":7,"P":[["r",[0],2,1],["v",[0,10],4,1],["a",[20,10,0],0,0],["z",[1,11,10,20],2,4]],"B":[["a",1],["a",7],["r",9],["v",17],["a",19],["z",25,1],["v",28],["z",30,1],["z",36],["z",37,1]],"t":0},
+    {"a":6,"h":7,"P":[["m",[0],4,2],["z",[0],1,2],["a",[10,0],4,4],["r",[0,1],1,1],["m",[0,1,2],1,6]],"B":[["r",4],["z",6,1],["r",10],["a",22],["m",31],["m",32],["m",33],["a",40]],"D":[["der",2,"m"]],"t":0},
+    {"a":6,"h":8,"P":[["r",[1,0],0,1],["m",[0],1,5],["z",[0],1,3],["a",[0],4,7],["r",[1,11,0],3,3]],"B":[["r",1],["r",2],["r",4],["r",10],["z",14],["r",16],["m",33],["a",39]],"t":0},
+    {"a":6,"h":8,"P":[["r",[0],4,4],["m",[0,10],2,6],["z",[11,10,1],1,0],["a",[10,0,11,1],2,3],["a",[0,1],3,1]],"B":[["z",6],["a",12],["a",14],["a",15],["a",16],["a",18],["a",19],["m",30],["r",35],["m",36]],"D":[["arr",3,"zz"]],"t":0},
+    {"a":6,"h":8,"P":[["v",[0],5,0],["m",[0,10],1,0],["a",[20,10,0,11],0,1],["z",[0],5,5],["z",[1,11,21,10],0,5],["a",[0],4,6]],"B":[["m",2],["v",4],["m",8],["a",19],["a",20],["a",24],["a",25],["z",32,1],["z",33],["z",34],["z",38,1],["z",39],["a",41]],"t":0},
+    {"a":6,"h":8,"P":[["v",[0],5,3],["a",[30,20,10,0],2,4],["m",[0,10,20],2,0],["z",[0],3,5],["m",[10,0],4,6]],"B":[["m",3],["a",13],["a",20],["m",21],["a",25],["m",27],["v",35],["a",37],["z",39],["m",41],["m",47]],"t":0},
+    {"a":6,"h":8,"P":[["z",[0],4,6],["a",[1,0],2,5],["r",[30,20,10,0],5,3],["v",[0,1,10],2,3],["z",[0,10],1,6]],"B":[["v",12],["v",15],["r",16],["v",18],["r",22],["a",30],["a",31],["r",34],["z",38,1],["z",44,1],["z",47]],"D":[["der",2,"r"]],"t":0},
+    {"a":6,"h":8,"P":[["r",[1,11,0],2,3],["z",[0,10],0,3],["v",[10,0,11,1],4,5],["m",[1,0],4,3],["v",[0],2,1],["r",[0],1,7]],"B":[["v",7],["m",9],["m",10],["r",13],["r",14],["r",19],["v",28],["v",32],["v",33],["z",37,1],["z",42,1],["r",44],["v",47]],"t":0},
+    {"a":6,"h":8,"P":[["a",[0],3,6],["v",[0],5,7],["r",[0],4,5],["z",[0],2,1],["v",[30,20,10,0],0,1]],"B":[["z",7,1],["v",14],["v",26],["a",27],["v",31],["v",32],["r",35],["v",41]],"t":0},
+    {"a":6,"h":8,"P":[["m",[0,1,2],0,7],["r",[0],1,5],["a",[1,0],1,0],["z",[2,1,0],2,5],["z",[0,10],0,2]],"B":[["a",0],["a",7],["z",19,1],["z",22,1],["z",25,1],["z",26],["z",29],["m",36],["m",37],["m",38],["r",45]],"t":0},
+    {"a":6,"h":8,"P":[["r",[10,0],4,6],["z",[10,0,11],1,2],["a",[0],1,4],["n",[0],0,2],["m",[0],3,3],["m",[0,10],4,2],["#",[0,1],1,6]],"B":[["z",1],["r",5],["n",6],["z",7,1],["z",8,1],["m",18],["r",23],["a",44]],"D":[["arr",4,"mm"]],"t":0},
+    {"a":6,"h":8,"P":[["a",[0],5,6],["r",[2,1,0,10],1,2],["z",[0],0,2],["v",[20,10,0],4,3],["n",[0],0,4],["r",[1,11,0],0,5],["#",[0,1,2,11],1,4]],"B":[["z",6],["n",7],["r",8],["r",16],["r",17],["r",21],["a",29],["v",33],["r",38],["v",40],["r",43],["r",44],["v",45]],"t":0},
+    {"a":6,"h":8,"P":[["z",[0],3,7],["r",[0,10,20],1,4],["m",[0,1,10],1,0],["a",[0,1],4,5],["n",[1,0],2,6],["#",[1,10,11,12,21],3,1]],"B":[["r",0],["m",9],["r",12],["m",13],["m",14],["a",28],["a",29],["r",30],["n",32],["n",33]],"D":[["aba",4,"z"]],"t":0},
+    {"a":6,"h":8,"P":[["r",[0,1,2],3,0],["v",[0,1],4,6],["n",[10,0,11],4,3],["a",[0,10],3,2],["z",[0],5,2],["a",[1,0],0,5],["#",[0,1,2,11],1,1]],"B":[["r",0],["z",11],["n",16],["a",20],["a",26],["n",34],["n",35],["v",38],["v",39],["a",42],["a",43]],"D":[["arr",2,"rr"]],"t":0},
+    {"a":6,"h":8,"P":[["r",[0],0,6],["a",[2,1,0],1,7],["n",[0],3,2],["v",[0,1,2,3],1,5],["z",[2,1,0],0,1],["#",[0,1],4,6]],"B":[["z",0,1],["z",2],["z",3,1],["n",16],["v",25],["v",27],["v",28],["v",29],["a",38],["a",42],["a",46]],"D":[["izq",5,"r"]],"t":0},
+    {"a":6,"h":8,"P":[["m",[10,0],5,2],["n",[0,10],4,0],["v",[0],1,7],["z",[0,1,2],3,5],["a",[0,10],0,2],["a",[1,0],1,4],["#",[0,1,10,11],0,0]],"B":[["n",3],["n",9],["m",11],["a",13],["a",19],["a",20],["a",21],["m",22],["z",39,1],["z",41],["v",42],["z",44]],"t":0},
+    {"a":6,"h":8,"P":[["v",[0],0,5],["n",[0],3,2],["z",[10,0,11,1],2,5],["m",[0,10,20,30],4,0],["r",[10,0,11],2,3],["#",[0,1],2,1]],"B":[["m",5],["n",13],["r",18],["r",19],["r",24],["m",29],["z",31],["m",35],["z",37],["v",42],["z",44],["z",45,1]],"D":[["der",1,"m"]],"t":0},
+    {"a":7,"h":8,"P":[["m",[0,10],6,0],["a",[2,1,0,10],2,6],["r",[0,10,20,30],1,1],["z",[0,1],5,5],["n",[10,0],0,2],["z",[0],0,5],["#",[0,1],3,3]],"B":[["n",7],["r",9],["r",16],["m",19],["r",23],["m",26],["n",28],["r",30],["z",36],["a",37],["a",38],["a",39],["a",43],["z",47],["z",55]],"t":0},
+    {"a":7,"h":8,"P":[["a",[0,10],1,6],["v",[0],1,3],["n",[11,10,1],0,4],["r",[10,0],3,0],["m",[10,0],5,0],["v",[10,11,12,2],3,5],["#",[0,1,10,11],4,3]],"B":[["r",2],["m",6],["r",16],["m",19],["v",21],["n",23],["n",24],["n",31],["v",34],["v",39],["v",41],["a",44],["v",48],["a",51]],"t":0},
+    {"a":7,"h":8,"P":[["z",[0,10],5,5],["r",[1,0],1,7],["m",[1,0],3,2],["v",[0],3,6],["n",[0,10,20,30],0,2],["v",[20,10,0],5,1],["#",[0,1],3,3]],"B":[["m",4],["m",10],["v",13],["n",15],["v",20],["n",22],["v",27],["n",29],["z",33],["n",36],["v",39],["r",43],["r",44],["z",55]],"t":0},
+    {"a":7,"h":8,"P":[["r",[0],2,3],["a",[30,20,10,0],4,4],["v",[0,10,20],2,5],["n",[2,1,0],3,0],["z",[0],2,2],["z",[0],5,7],["#",[0,1,10,11],0,0]],"B":[["r",2],["z",9],["n",10],["n",11],["n",13],["v",21],["v",28],["a",31],["a",38],["a",45],["v",50],["a",52],["z",55,1]],"t":0},
+    {"a":7,"h":8,"P":[["n",[0],1,3],["v",[10,0],0,3],["r",[0],4,6],["a",[0],4,1],["m",[11,10,1],5,4],["m",[0],1,7],["#",[0,1,2,11],2,2]],"B":[["a",4],["m",26],["v",29],["m",32],["m",33],["v",35],["n",37],["r",39],["m",42]],"t":0},
+    {"a":7,"h":8,"P":[["A",[10,0],3,0,"h"],["z",[10,0],0,1],["M",[0,1,10,11],1,5],["v",[1,11,10,20],5,2],["a",[0],1,4],["A",[10,0],3,2],["M",[0],6,4],["#",[0,1,10,11],4,5]],"B":[["z",1],["A",4],["z",8],["A",11],["v",12],["v",13],["A",16],["v",18],["A",23],["v",25],["a",28],["M",41],["M",45],["M",49],["M",51],["M",52]],"t":13},
+    {"a":7,"h":8,"P":[["A",[0],4,7],["n",[0],6,7],["m",[0],6,6],["M",[1,0],2,1,"v"],["z",[10,0],3,3],["m",[0,10],1,1],["#",[0,1,2,11],0,4]],"B":[["m",0],["M",2],["M",3],["m",7],["z",32],["m",34],["z",39,1],["A",46],["n",47]],"t":0},
+    {"a":7,"h":8,"P":[["a",[0],4,6],["z",[0],3,4],["M",[1,11,0],5,3,"v"],["m",[11,10,1,0],2,2],["n",[0],2,6],["M",[10,0],1,0],["z",[11,10,1,0],0,5],["#",[0,1,10,11],2,0]],"B":[["M",0],["M",5],["M",6],["M",7],["m",14],["m",15],["M",19],["m",21],["m",22],["z",25,1],["z",28,1],["z",30,1],["z",37],["a",40],["n",45],["z",49,1]],"t":0},
+    {"a":7,"h":8,"P":[["a",[10,0],1,0,"h"],["M",[10,0],6,4],["r",[10,0,11],3,2],["A",[0,10],0,4],["n",[0],2,3],["A",[12,11,10,1],2,4],["a",[0],4,0],["#",[0,1],5,6]],"B":[["a",0],["a",3],["a",7],["n",16],["r",18],["r",19],["r",27],["A",29],["M",32],["A",36],["M",40],["A",43],["A",45],["A",50],["A",51]],"t":0},
+    {"a":7,"h":8,"P":[["M",[10,0],4,1,"h"],["a",[0],5,0],["n",[0],3,3],["N",[2,1,0],1,5],["z",[0,10,20],5,3],["M",[10,0],1,2],["#",[0,1,2,11],0,6]],"B":[["M",9],["M",12],["a",13],["n",17],["M",19],["M",23],["N",29],["N",30],["N",31],["z",32,1],["z",39,1],["z",46]],"t":5},
+    {"a":7,"h":8,"P":[["r",[10,0],4,3,"h"],["m",[0],2,0],["A",[0,10],6,1],["M",[0],5,4],["n",[0],2,6],["n",[20,10,0],2,3],["r",[11,10,1,0],4,1],["#",[0,1],4,6]],"B":[["r",4],["r",5],["A",6],["m",9],["r",10],["r",17],["r",24],["A",27],["n",29],["r",31],["M",34],["n",36],["n",49]],"D":[["aba",1,"n"]],"t":10},
+    {"a":7,"h":8,"P":[["r",[0,1],5,5],["N",[0],0,3],["n",[0,10],1,6,"v"],["v",[1,0],3,0],["A",[0],6,3],["N",[12,11,1,0],3,2],["n",[0],5,6],["#",[0,1,10,11],3,6]],"B":[["v",10],["v",11],["N",16],["N",23],["N",28],["n",29],["N",31],["N",32],["n",36],["r",38],["r",39],["n",55]],"D":[["der",4,"A"]],"t":15},
+    {"a":7,"h":8,"P":[["v",[1,0],5,7],["r",[0,1],2,2,"v"],["M",[2,1,0],0,4],["z",[0],6,1],["a",[0],0,0],["a",[0,1,10,11],3,4],["z",[20,10,0,11],1,5],["#",[0,1],0,3]],"B":[["a",3],["z",6],["r",10],["r",24],["a",25],["a",26],["a",33],["M",37],["a",40],["z",42],["z",49]],"D":[["izq",5,"zzMM"],["aba",3,"vv"]],"t":3},
+    {"a":7,"h":8,"P":[["A",[0],0,7],["a",[20,10,0],2,0],["n",[0],6,6],["r",[0,10,20],5,5,"h"],["v",[0,10],4,0],["m",[2,1,0],3,3],["#",[0,1],5,0]],"B":[["v",3],["v",10],["a",22],["m",31],["m",32],["m",33],["r",39],["A",45],["r",46],["r",53],["n",55]],"D":[["arr",1,"aa"]],"t":0},
+    {"a":7,"h":8,"P":[["M",[10,0,11],1,2,"v"],["c",[0,10],0,5],["m",[0,1],3,2],["r",[1,0],5,7],["z",[0],1,1],["n",[0,10,20],5,1],["#",[1,10,11,12,21],4,4]],"B":[["n",6],["m",10],["m",11],["n",13],["c",14],["n",20],["c",28],["M",30],["M",36],["M",37],["r",52],["r",53]],"D":[["izq",1,"z"]],"t":0},
+    {"a":7,"h":8,"P":[["m",[0,1],4,3,"h"],["r",[0,10,20],5,5],["N",[0,1],0,0],["z",[10,0,11,1],1,2],["A",[0],0,3],["M",[0,10],6,0],["m",[0,1],3,2],["#",[0,1],5,4]],"B":[["M",5],["N",7],["N",8],["M",12],["A",14],["m",19],["m",20],["m",24],["m",27],["z",29,1],["z",31,1],["z",37],["z",38,1],["r",39],["r",46],["r",53]],"t":20},
+    {"a":7,"h":8,"P":[["a",[3,2,1,0],2,7],["m",[0],6,0],["z",[10,0,11],4,1,"v"],["v",[0],5,5],["N",[0,10],3,2],["n",[0],3,5],["z",[0,10],0,0],["#",[1,10,11,12,21],0,3]],"B":[["z",1],["m",5],["z",8,1],["N",9],["z",25],["z",26,1],["N",31],["n",39],["v",41],["a",43],["a",45],["a",47],["a",55]],"D":[["arr",4,"z"]],"t":3},
+    {"a":7,"h":8,"P":[["v",[10,0],4,5,"v"],["n",[2,1,0],4,1],["m",[0],1,2],["a",[0],2,2],["N",[0],0,3],["r",[1,0],1,0],["#",[0,1],5,7]],"B":[["n",4],["n",6],["m",7],["r",8],["r",9],["n",10],["a",23],["N",28],["v",32],["v",53]],"t":0},
+    {"a":7,"h":8,"P":[["v",[0],3,4],["A",[0],1,3],["n",[1,0],4,2,"v"],["z",[0],1,1],["N",[10,0,11,1],0,4],["m",[0],6,4],["#",[0,1,2,11],4,0]],"B":[["z",15],["A",24],["n",25],["n",26],["v",30],["m",33],["N",45],["N",46],["N",52],["N",53]],"t":0},
+    {"a":7,"h":8,"P":[["r",[0,1],3,4],["c",[0],0,0],["z",[0],0,3],["M",[0],0,4],["N",[10,0,11],3,0,"v"],["n",[0],0,5],["#",[0,1],4,6]],"B":[["c",1],["N",18],["z",22],["N",24],["N",25],["M",30],["n",37],["r",39],["r",40]],"t":0},
+    {"a":7,"h":8,"P":[["z",[0,10],1,3,0,0],["c",[0,1],2,3,0,0],["n",[10,0],4,2],["r",[0,1,2],3,4],["v",[0],2,2],["a",[0],5,6],["v",[0,10],0,0],["c",[0,1],3,7,"h"],["#",[0,1],5,0]],"B":[["v",1],["v",8],["v",17],["n",20],["r",36],["r",37],["r",38],["n",41],["z",42,1],["c",43],["c",45],["a",46],["z",49,1]],"D":[["aba",2,"cc"]],"t":13},
+    {"a":7,"h":8,"P":[["N",[0,10],0,4,0,0],["m",[0,10],1,4,0,0],["n",[1,0],3,2],["M",[10,0],6,6,"h"],["a",[11,10,1],5,2],["z",[0],5,5],["M",[0],0,2],["n",[0,1],0,0],["#",[0,1,2,11],1,3]],"B":[["n",2],["n",3],["a",6],["n",9],["n",10],["a",12],["a",13],["M",16],["N",37],["m",39],["z",41,1],["m",46],["M",47],["M",54]],"D":[["aba",1,"N"]],"t":13},
+    {"a":7,"h":8,"P":[["c",[0,10],5,4,0,0],["n",[0],5,6,0,0],["v",[0,1],2,0],["A",[0],5,3],["M",[11,10,1],5,0,"h"],["m",[0],1,5],["n",[1,0],0,4],["M",[1,0],2,2],["A",[10,0],3,6],["#",[0,1,10,11],3,4]],"B":[["v",8],["v",9],["A",18],["n",21],["n",22],["M",23],["M",24],["c",34],["A",37],["c",41],["A",44],["m",50],["n",55]],"D":[["arr",5,"MMM"]],"t":3},
+    {"a":7,"h":8,"P":[["v",[0,1],4,0,0,0],["a",[0,10],4,1,0,0],["z",[10,0],6,3,"v"],["A",[10,0],0,1],["M",[0],1,5],["N",[0],0,6],["M",[0],5,3],["z",[0,10,20],5,4],["#",[0,1],2,6]],"B":[["A",0],["v",2],["v",3],["A",8],["a",9],["z",13],["a",23],["M",29],["z",32],["z",39],["z",46,1],["N",49]],"D":[["der",2,"zM"]],"t":5},
+    {"a":7,"h":8,"P":[["N",[0,1],3,7,0,0],["n",[0],5,7,0,0],["a",[0,10],6,6,"v"],["c",[10,0],5,0],["M",[1,0],0,6],["z",[0,10,20,21],0,1],["N",[1,11,0],4,2],["M",[2,1,0],1,4],["#",[1,10,11,12,21],2,0]],"B":[["z",8],["z",15],["c",20],["c",27],["N",32],["N",33],["a",34],["M",36],["M",37],["M",38],["N",39],["a",41],["N",44],["N",45],["n",47],["M",49],["M",50]],"D":[["arr",1,"zz"]],"t":0},
+    {"a":7,"h":9,"P":[["r",[0,1],1,6,0,0],["a",[0,10],1,7,0,0],["c",[0],0,3],["n",[0],5,5],["v",[0,1,2],3,3,"v"],["m",[0,10],4,5,"v"],["a",[0,1,2],1,0],["m",[0],6,8],["a",[0],3,7],["#",[1,10,11,12,21],1,1]],"B":[["a",0],["a",4],["a",5],["c",14],["v",31],["v",32],["v",33],["r",35],["r",37],["n",41],["a",42],["a",45],["m",53],["a",56],["m",60],["m",61]],"t":18},
+    {"a":7,"h":9,"P":[["A",[0,1],2,3,0,0],["z",[0,10],4,3,0,0],["v",[1,0],4,7,"v"],["M",[2,1,0],1,7,"v"],["n",[0,10],0,0],["c",[0,1,10],0,2],["n",[0],1,6],["n",[0],6,1],["M",[20,10,0],4,0],["c",[0],5,8],["#",[0,1,10,11],2,0]],"B":[["M",5],["n",8],["M",12],["n",20],["c",22],["M",26],["c",29],["A",30],["A",31],["z",33],["c",35],["z",40,1],["n",42],["v",46],["v",47],["M",57],["M",58],["M",59],["c",62]],"D":[["arr",1,"n"]],"t":30},
+    {"a":7,"h":9,"P":[["m",[0,1],0,1,0,0],["r",[1,0],0,2,0,0],["v",[0],3,1],["a",[0],6,4],["N",[0],5,8],["M",[30,20,10,0],4,0],["M",[0],5,2],["a",[2,1,0,10],0,4,"v"],["v",[0],3,3],["v",[0],3,7],["#",[0,1],5,5]],"B":[["m",9],["v",17],["r",22],["r",23],["v",26],["M",27],["M",32],["a",33],["M",46],["a",49],["a",50],["a",51],["M",53],["N",54],["a",56],["v",59],["M",60]],"D":[["arr",1,"m"]],"t":3},
+    {"a":7,"h":9,"P":[["M",[0,1],1,5,0,0],["r",[10,0],3,5,0,0],["v",[0],0,5],["A",[0],4,0],["a",[0],1,7],["n",[0],2,4],["a",[0],6,7],["n",[0,1],3,1,"h"],["r",[0,10],3,3,"h"],["v",[0],1,4],["#",[1,10,11,12,21],4,4]],"B":[["A",2],["n",12],["n",13],["v",22],["n",23],["r",25],["v",28],["r",32],["M",43],["M",44],["r",46],["r",53],["a",54],["a",57]],"t":10},
+    {"a":7,"h":9,"P":[["v",[0,10],0,3,0,0],["A",[0,1],0,5,0,0],["a",[0,1],3,8,"h"],["c",[0],4,5],["r",[0,1,10],3,1,"v"],["M",[1,11,0],1,0],["r",[0],0,8],["a",[10,0],3,5],["M",[0,1],5,6],["#",[1,10,11,12,21],4,1]],"B":[["r",3],["M",8],["v",14],["M",15],["v",22],["M",23],["a",31],["M",40],["M",41],["r",42],["A",43],["A",44],["a",52],["c",53],["a",62]],"D":[["aba",5,"a"],["arr",4,"rr"]],"t":13},
+    {"a":7,"h":9,"P":[["M",[0,10],5,0,0,0],["z",[0,1],5,2,0,0],["n",[0,1],3,4,"h"],["A",[1,0],2,8,"h"],["a",[0,1,2],1,6],["N",[0,1,10],0,1],["z",[0],2,7],["n",[0],6,7],["a",[0],2,0],["#",[0,1,10,11],4,5]],"B":[["a",0],["M",4],["M",11],["N",15],["N",22],["z",25,1],["z",26],["N",28],["n",29],["n",33],["a",35],["a",36],["a",38],["z",50],["A",56],["A",57],["n",62]],"t":30},
+    {"a":7,"h":9,"P":[["z",[0,10],1,2,0,0],["A",[0,1],1,4,0,0],["v",[10,0],5,2,"v"],["a",[0],6,0],["N",[0],5,4],["r",[12,11,10,1],2,6,"h"],["a",[0],0,4],["v",[1,0],3,2],["r",[0],6,6],["#",[0,1,10,11],5,7]],"B":[["v",9],["v",11],["z",16],["z",23,1],["N",34],["a",35],["A",37],["A",38],["r",41],["r",43],["r",44],["r",49],["r",50]],"D":[["arr",5,"avv"]],"t":35},
+    {"a":7,"h":9,"P":[["a",[0,10],2,6,0,0],["m",[0],3,6,0,0],["r",[0],5,4],["n",[0],4,8],["z",[0],4,6],["A",[0,10,20,30],1,3],["m",[0],6,3],["z",[11,10,1],1,0,"h"],["A",[0],3,5],["#",[0,1],3,2]],"B":[["z",4,1],["z",10],["z",13,1],["A",14],["A",21],["A",28],["r",32],["m",34],["A",35],["A",37],["z",47],["a",50],["m",52],["a",57],["n",61]],"t":33},
+    {"a":7,"h":9,"P":[["z",[0,1],1,7,0,0],["v",[0],3,7,0,0],["A",[0,10],4,7],["a",[0],5,7],["n",[0,1],4,2,"v"],["c",[11,10,1,0],1,1],["n",[0],6,4],["z",[0],6,7],["n",[0],1,8],["#",[1,10,11,12,21],0,3]],"B":[["c",1],["c",4],["c",10],["c",11],["n",25],["n",26],["n",33],["A",38],["z",41],["z",42,1],["v",45],["a",47],["z",49],["n",56],["A",59]],"t":18},
+    {"a":7,"h":9,"P":[["v",[0,10],5,1,0,0],["c",[0],5,3,0,0],["M",[1,11,10,20],4,6,"h"],["z",[0,10],6,3,"v"],["r",[10,0],1,1],["a",[0],0,7],["c",[10,0,11,1],3,4],["a",[0],1,0],["M",[11,10,1],1,6],["#",[0,1,10,11],2,1]],"B":[["a",0],["v",4],["r",7],["v",11],["z",20],["M",22],["c",25],["M",28],["c",33],["M",36],["c",40],["z",41,1],["c",45],["c",46],["M",48],["M",52],["a",56]],"D":[["izq",3,"r"],["aba",3,"MM"]],"t":48},
+    {"a":7,"h":9,"P":[["m",[0,10],2,4,0,0],["A",[0],2,6,0,0],["a",[0],3,4],["v",[0,10],6,5],["N",[0],1,2],["n",[0],4,7],["n",[0],1,8],["n",[0,1,2,3],1,0],["v",[1,0],5,3,"h"],["#",[0,1],1,3]],"B":[["n",0],["n",8],["n",9],["n",10],["v",24],["v",25],["m",28],["a",33],["m",35],["n",46],["A",49],["n",50],["v",54],["v",61]],"D":[["izq",2,"N"]],"t":33},
+    {"a":7,"h":9,"P":[["n",[0,10],4,2,0,0],["M",[10,0],5,2,0,0],["m",[0,1],4,5,"h"],["z",[0],4,6],["N",[0],5,1],["v",[1,11,0],1,2,"v"],["M",[0],3,7],["z",[10,0],0,4],["z",[0],2,8],["v",[1,0],3,0],["#",[0,1,10,11],0,6]],"B":[["v",1],["v",2],["v",8],["v",9],["v",11],["N",13],["n",17],["z",21,1],["n",32],["z",36,1],["m",37],["m",38],["z",44],["M",51],["z",59,1]],"D":[["der",3,"MM"]],"t":20},
+    {"a":7,"h":9,"P":[["c",[0,1],1,3,0,0],["r",[0],3,3,0,0],["M",[0],3,5],["v",[10,0],0,6,"h"],["A",[0],6,1],["n",[1,0],5,2,"v"],["r",[0,1],2,7],["A",[0],2,8],["A",[10,0,11],2,0],["#",[1,10,11,12,21],4,6]],"B":[["A",0],["A",6],["A",7],["A",16],["n",26],["n",27],["c",28],["c",29],["r",31],["M",39],["v",43],["r",44],["r",45],["v",50],["A",59]],"t":43},
+    {"a":7,"h":9,"P":[["N",[0,10],3,2,0,0],["c",[10,0],3,4,0,0],["v",[0],4,6],["z",[0],1,8],["a",[0],2,1],["M",[1,11,0],5,1],["A",[11,10,1],1,2,"v"],["A",[0],0,5],["N",[0,1,10],2,6,"h"],["#",[0,1],5,4]],"B":[["a",1],["N",4],["N",11],["M",18],["A",21],["c",25],["M",26],["M",27],["A",29],["c",32],["A",36],["A",37],["v",41],["z",43],["N",48],["N",52],["N",53]],"t":45},
+    {"a":7,"h":9,"P":[["p",[0,10],4,4,0,0],["m",[0],5,4,0,0],["z",[10,0],3,3],["v",[0],2,7],["n",[0,10],6,0],["M",[10,0,11,1],0,3,"v"],["N",[10,0],1,6,"h"],["z",[10,0],6,6],["m",[1,11,0],3,7],["N",[0],2,3],["#",[1,10,11,12,21],1,4]],"B":[["M",0],["M",1],["n",5],["z",10],["n",12],["M",14],["M",15],["N",16],["z",17,1],["p",18],["m",20],["p",25],["z",27,1],["z",34],["m",46],["m",47],["v",56],["m",61]],"D":[["izq",7,"NN"]],"t":15},
+    {"a":7,"h":9,"P":[["p",[0,10],0,2,0,0],["m",[0],0,4,0,0],["c",[1,0],3,4,"v"],["N",[0],2,5],["v",[10,0],4,7,"v"],["r",[10,0],6,5],["M",[0],1,3],["c",[0,1],5,7],["N",[0,1],5,2],["v",[0],2,6],["#",[1,10,11,12,21],1,0]],"B":[["N",4],["N",11],["M",23],["c",24],["c",25],["r",26],["p",29],["N",30],["p",36],["v",39],["r",40],["v",43],["v",46],["m",50],["c",62]],"D":[["aba",5,"c"]],"t":53},
+    {"a":7,"h":9,"P":[["p",[0,1],2,6,0,0],["M",[0],2,7,0,0],["n",[0,1,2],0,3],["v",[0,10,20],1,5,"h"],["z",[0],5,3],["c",[0,1,2],2,8,"h"],["a",[0],5,6],["c",[3,2,1,0],1,1],["c",[0],6,4],["#",[0,1,2,11],2,2]],"B":[["c",2],["c",3],["c",12],["z",20,1],["c",27],["n",31],["n",32],["n",33],["v",35],["p",38],["p",40],["a",41],["v",42],["v",49],["M",53],["c",56],["c",57]],"D":[["arr",4,"c"],["aba",5,"c"]],"t":18},
+    {"a":7,"h":9,"P":[["v",[0,1],4,5,0,0],["A",[0],6,5,0,0],["z",[0],4,8],["m",[1,0],2,2,"v"],["a",[0],0,2],["p",[1,11,0],1,5,"v"],["c",[0,1,2],1,0],["m",[0],4,0],["m",[11,10,1],5,2],["#",[0,1],3,7]],"B":[["c",8],["c",9],["c",10],["m",11],["m",12],["m",13],["m",19],["a",28],["m",30],["m",31],["p",43],["v",45],["v",46],["A",48],["p",50],["p",58],["z",59,1]],"t":30},
+    {"a":7,"h":9,"P":[["z",[0,10],1,3,0,0],["m",[0,10],1,5,0,0],["r",[1,0],2,3,"v"],["N",[0],4,5],["a",[0],0,1],["A",[0,1],2,0],["M",[0],4,6],["a",[10,0,11,1],4,3,"v"],["m",[0],2,4],["#",[0,1],0,2]],"B":[["A",0],["A",1],["a",4],["a",5],["a",9],["r",10],["a",11],["a",12],["r",16],["z",28],["z",35],["m",49],["N",53],["m",56],["M",59]],"D":[["izq",3,"m"]],"t":8},
+    {"a":7,"h":9,"P":[["A",[0,10],0,0,0,0],["N",[0,1],0,2,0,0],["r",[0],1,4],["a",[11,10,1],2,6],["c",[0],0,5],["z",[1,11,0],5,4],["n",[0,10],1,7],["c",[1,0],4,6],["c",[1,11,21,10],5,1,"h"],["#",[0,1,10,11],1,5]],"B":[["A",9],["c",11],["A",16],["c",17],["c",25],["c",26],["N",30],["N",31],["z",32,1],["z",40,1],["c",42],["z",48],["n",49],["a",53],["c",55],["n",56],["a",58],["a",60],["c",62]],"D":[["izq",4,"r"]],"t":57},
+    {"a":7,"h":9,"P":[["p",[0,1],3,3,0,0],["c",[10,0],5,3,0,0],["m",[0],2,4],["r",[0,1,10,11],0,7],["A",[30,20,10,0],0,0,"h"],["a",[0],4,4],["N",[0,1],2,8],["A",[0],6,4],["r",[10,0],0,4],["#",[1,10,11,12,21],4,5]],"B":[["p",3],["A",8],["c",12],["c",13],["r",15],["p",18],["A",27],["r",36],["m",37],["a",38],["r",44],["r",45],["r",51],["r",52],["N",60],["N",61]],"D":[["arr",1,"AAA"]],"t":0},
+    {"a":7,"h":9,"P":[["n",[0,1],4,2,0,0],["c",[0],6,2,0,0],["r",[0],5,6],["a",[0,1,10],0,4],["M",[0],5,8],["m",[2,1,0],0,1,"v"],["N",[2,1,0],0,6,"v"],["N",[0,1,2,11],4,3],["N",[0,1],3,7],["#",[0,1],1,8]],"B":[["m",0],["m",1],["m",2],["n",10],["a",14],["a",15],["n",17],["a",22],["N",23],["N",24],["N",31],["N",32],["r",48],["N",49],["N",50],["N",51],["N",54],["N",59],["M",62]],"D":[["der",1,"c"]],"t":33},
+    {"a":7,"h":9,"P":[["n",[0,1],0,1,0,0],["z",[10,0],2,1,0,0],["c",[0],0,8],["v",[1,0],2,5,"h"],["M",[0,10],5,5],["a",[0],6,2],["N",[0],0,6],["c",[11,10,1],4,3],["c",[0,1,2,11],2,7,"h"],["v",[0],5,0],["#",[0,1,10,11],0,2]],"B":[["n",1],["n",2],["v",3],["z",10],["z",11,1],["c",18],["c",24],["c",25],["a",27],["M",34],["v",36],["v",39],["N",49],["c",54],["c",57],["c",60]],"D":[["aba",2,"cc"],["der",6,"M"]],"t":33},
+    {"a":7,"h":9,"P":[["a",[0,1],2,3,0,0],["z",[1,0],4,3,0,0],["v",[0,1],1,6,"h"],["A",[0],2,5],["r",[0],1,8],["n",[0],2,0],["p",[0],1,1],["a",[10,0],5,1,"h"],["p",[0],0,7],["#",[0,1,10,11],5,7]],"B":[["n",9],["a",10],["p",15],["a",17],["a",22],["z",27,1],["a",29],["z",33,1],["A",36],["p",42],["v",45],["v",46],["r",56]],"t":3},
+    {"a":7,"h":9,"P":[["a",[0,10],3,3,0,0],["c",[0,1],3,5,0,0],["N",[0],1,4],["M",[0],4,0],["z",[0],0,8],["m",[0,10],5,6,"h"],["r",[10,11,12,2],3,1],["m",[1,11,0],5,4],["r",[0],1,0],["M",[0],6,8],["#",[0,1],1,1]],"B":[["r",2],["M",3],["r",5],["r",6],["r",10],["r",13],["a",23],["m",25],["a",30],["m",32],["N",35],["z",36,1],["m",40],["c",45],["c",46],["m",48],["M",53],["m",55]],"t":30},
+    {"a":8,"h":10,"P":[["N",[0,1],3,1,0,0],["M",[1,0],5,1,0,0],["v",[0,1],4,7,0,1],["p",[0],4,8,0,1],["c",[0],5,2],["a",[0],1,5],["z",[0],5,9],["a",[11,10,1],5,2,"v"],["v",[0],3,5],["N",[21,11,1,0],0,2],["z",[0],2,5],["N",[20,10,0],7,7],["#",[0,1],2,8]],"B":[["N",3],["N",4],["M",7],["N",10],["M",15],["N",19],["N",27],["c",28],["N",35],["a",38],["a",45],["a",48],["z",50,1],["v",51],["v",52],["a",54],["v",59],["N",62],["N",70],["p",75],["z",76],["N",78]],"t":20},
+    {"a":8,"h":10,"P":[["z",[0,1],3,3,0,0],["r",[1,0],3,4,0,0],["p",[0,10],3,5,0,1],["m",[0],4,5,0,1],["M",[10,0,11],6,0,"h"],["c",[0],0,9],["n",[0],6,8],["M",[0],3,0],["r",[20,10,0],0,0],["r",[0],4,8],["p",[0,1],0,5,"v"],["z",[0,1],6,7],["z",[0],7,9],["#",[1,10,11,12,21],5,2]],"B":[["r",2],["M",4],["M",5],["M",11],["M",12],["r",17],["r",18],["z",20],["z",26],["r",32],["r",33],["m",54],["p",59],["p",60],["z",61],["p",64],["p",65],["r",67],["z",71],["n",75],["z",78,1]],"D":[["aba",1,"c"]],"t":50},
+    {"a":8,"h":10,"P":[["M",[0,10],0,0,0,0],["v",[0],1,0,0,0],["N",[0,1],2,5,0,1],["c",[0,1],2,6,0,1],["p",[0],1,9],["a",[0],3,9],["A",[0,10],6,1,"v"],["N",[0],0,7],["A",[1,11,0],6,5],["a",[0],4,1],["a",[10,0],5,5],["v",[21,11,1,0],0,3,"v"],["A",[0],5,9],["A",[0],4,2],["#",[0,1],4,4]],"B":[["v",7],["M",9],["M",10],["a",11],["A",29],["A",30],["N",35],["v",40],["v",48],["v",49],["N",52],["a",61],["A",62],["N",64],["v",65],["a",66],["c",67],["c",68],["a",69],["A",70],["p",72],["A",78]],"D":[["arr",6,"A"],["der",4,"A"]],"t":28},
+    {"a":8,"h":10,"P":[["m",[0,1],5,0,0,0],["n",[0],5,1,0,0],["r",[0,1],6,4,0,1],["N",[10,0],6,5,0,1],["p",[0],0,5],["M",[0],7,3],["c",[0],3,0],["p",[0,1],2,6,"h"],["N",[0],1,5],["m",[0,1],3,8],["m",[0,10,20,30],1,1],["M",[0],4,2],["#",[0,1,2,11],4,3]],"B":[["c",2],["m",4],["m",7],["M",21],["n",22],["M",23],["m",26],["m",27],["m",35],["N",42],["m",43],["r",45],["r",47],["p",49],["p",52],["N",53],["p",57],["m",58],["m",60],["N",69]],"t":48},
+    {"a":8,"h":10,"P":[["m",[0,1],2,2,0,0],["z",[1,0],2,3,0,0],["a",[0,1],0,1,0,1],["r",[0],0,2,0,1],["N",[0],4,9],["v",[0,1,2],0,7,"v"],["n",[0],7,9],["N",[10,0],5,6,"v"],["z",[0,10],6,7],["n",[1,0],1,8],["v",[1,0],6,1],["n",[10,0],5,0],["#",[0,1],6,2]],"B":[["a",1],["m",10],["m",11],["a",17],["n",20],["v",21],["N",29],["r",32],["z",34],["z",35,1],["N",43],["N",45],["z",46,1],["v",48],["v",49],["v",50],["z",63,1],["n",74],["n",75],["n",78]],"D":[["der",3,"v"],["arr",4,"n"]],"t":53},
+    {"a":8,"h":10,"P":[["c",[0,1],2,8,0,0],["m",[0],2,9,0,0],["N",[0,10],6,1,0,1],["a",[10,0],6,3,0,1],["A",[10,0],4,0],["M",[0],7,7],["p",[0,10],0,3,"v"],["a",[0],2,0],["p",[0],3,2],["c",[0,1,2],3,7,"v"],["A",[10,0,11,1],0,0],["N",[0],2,6],["#",[0,1],4,3]],"B":[["A",5],["a",11],["N",15],["A",16],["A",18],["p",20],["A",21],["N",23],["A",25],["A",26],["a",39],["N",42],["c",43],["c",44],["c",45],["a",47],["p",48],["c",57],["c",58],["M",71],["m",73]],"D":[["izq",5,"p"]],"t":53},
+    {"a":8,"h":10,"P":[["r",[0,10],4,6,0,0],["m",[0,10],5,6,0,0],["c",[0,1],3,5,0,1],["p",[0],5,5,0,1],["v",[0],4,0],["z",[0],0,4],["A",[0],7,4],["r",[0,10],7,5],["v",[0,1],2,0,"v"],["r",[21,11,1,0],0,7],["z",[0],1,4],["v",[0],1,0],["#",[0,1,10,11],6,0]],"B":[["v",8],["v",10],["v",12],["v",18],["z",24,1],["r",28],["m",30],["p",35],["r",36],["m",38],["z",40,1],["c",41],["c",42],["r",49],["r",50],["A",63],["r",66],["r",69],["r",74],["r",78]],"t":50},
+    {"a":8,"h":10,"P":[["A",[0,10],5,5,0,0],["m",[1,0],5,7,0,0],["N",[0,10],1,1,0,1],["c",[0,10],2,1,0,1],["p",[0],2,4],["v",[10,0,11],3,4],["n",[0],5,2],["n",[0,10,20],4,7,"h"],["p",[0],0,2],["c",[0],7,9],["v",[0],7,4],["v",[0],6,0],["#",[0,1],0,6]],"B":[["N",1],["N",3],["c",5],["v",7],["p",8],["c",13],["p",26],["n",29],["v",36],["A",46],["v",47],["v",51],["v",52],["A",54],["n",59],["n",67],["m",69],["m",70],["n",75]],"D":[["aba",6,"c"]],"t":40},
+    {"a":8,"h":10,"P":[["A",[0,1],0,0,0,0],["p",[10,0],0,1,0,0],["N",[0,1],1,8,0,1],["M",[0],3,8,0,1],["z",[21,11,1,0],6,5],["r",[0,10],5,6],["v",[0],2,7],["A",[0],6,0],["r",[0],4,5],["r",[1,11,0],4,0],["M",[0],0,6],["A",[1,11,0],2,4,"h"],["#",[0,1],6,8]],"B":[["A",2],["A",3],["A",7],["p",10],["p",26],["r",27],["r",29],["A",33],["r",36],["z",37,1],["z",38],["A",41],["A",42],["r",45],["M",49],["r",52],["z",54],["v",57],["r",60],["z",62],["N",73],["N",74],["M",76]],"t":48},
+    {"a":8,"h":10,"P":[["m",[0,10],1,1,0,0],["N",[0],1,3,0,0],["p",[0,10],1,4,0,1],["M",[0],1,6,0,1],["A",[1,11,0],2,2,"v"],["a",[0],7,4],["n",[0],4,4],["N",[1,0],6,0],["m",[0,10],5,2,"h"],["A",[0],4,1],["M",[1,11,10,20],0,7],["p",[0,10],3,4],["m",[1,0],6,5],["#",[0,1,2,11],4,7]],"B":[["m",0],["A",2],["A",3],["N",5],["m",8],["A",10],["A",14],["m",22],["N",24],["m",30],["p",32],["p",34],["p",40],["n",44],["a",45],["p",50],["m",53],["m",55],["M",56],["M",59],["M",67],["M",74]],"D":[["aba",1,"M"],["arr",4,"N"]],"t":50},
+    {"a":8,"h":10,"P":[["v",[0,1],0,5,0,0],["r",[0,1],0,6,0,0],["n",[0,10],4,3,0,1],["p",[1,0],4,5,0,1],["m",[0,1,10],6,4,"v"],["a",[1,0],6,7],["c",[0],4,0],["n",[0],4,7],["p",[0],2,0],["a",[0,1,10],0,3,"h"],["v",[0,10],1,7],["m",[0],1,2],["p",[0],6,0],["#",[0,1],0,0],["#",[0,1],5,1]],"B":[["p",7],["p",10],["c",12],["m",16],["m",22],["m",23],["a",26],["a",27],["n",29],["a",34],["n",37],["v",42],["v",51],["n",52],["p",53],["p",54],["v",64],["r",66],["r",67],["a",70],["v",72],["a",77]],"D":[["der",3,"m"]],"t":60},
+    {"a":8,"h":10,"P":[["z",[0,10],5,3,0,0],["N",[1,0],6,3,0,0],["r",[0,1],2,9,0,1],["M",[1,0],4,9,0,1],["m",[2,1,0],2,6,"v"],["v",[1,0],1,4,"h"],["A",[0,1],3,0],["v",[0],6,2],["z",[0,1],0,5],["m",[0],5,5],["r",[0,1],6,6],["z",[0],7,4],["v",[0],0,1],["#",[0,1,10,11],2,2],["#",[0,1],2,5]],"B":[["v",0],["A",6],["A",7],["v",14],["z",20],["N",21],["N",23],["v",32],["v",35],["z",36,1],["m",44],["z",47,1],["z",48],["z",49,1],["m",58],["m",59],["m",60],["r",62],["r",63],["r",66],["r",67],["M",68],["M",70]],"t":48},
+    {"a":8,"h":10,"P":[["n",[0,1],1,2,0,0],["a",[0],3,2,0,0],["A",[0,10],6,1,0,1],["M",[0,10],7,1,0,1],["p",[0,1],1,4],["z",[10,0],5,2],["v",[0],7,0],["A",[0],0,2],["p",[1,0],3,5,"v"],["a",[0,1,2,3],3,9],["a",[10,0],1,5],["z",[0],4,3],["#",[1,10,11,12,21],3,6],["#",[1,10,11,12,21],3,0]],"B":[["A",0],["v",2],["z",5],["z",6],["n",24],["n",25],["p",35],["p",36],["z",37,1],["p",42],["A",45],["M",47],["a",50],["A",53],["M",55],["a",58],["a",67],["a",72],["a",73],["a",74],["a",79]],"D":[["izq",5,"p"]],"t":55},
+    {"a":8,"h":10,"P":[["c",[0,1],5,9,0,0],["a",[0],7,9,0,0],["m",[0,10],2,5,0,1],["v",[1,0],3,5,0,1],["p",[10,0],0,3,"v"],["M",[10,0],1,6],["n",[10,11,12,2],5,4],["r",[0,1],3,0],["M",[0],4,4],["p",[0],3,4],["a",[1,0],1,0,"v"],["p",[0],6,1],["#",[0,1,2,11],2,2],["#",[1,10,11,12,21],1,7]],"B":[["a",9],["a",10],["r",12],["r",13],["p",15],["p",16],["n",23],["M",28],["n",29],["n",30],["n",31],["p",34],["p",40],["M",48],["m",51],["v",52],["v",54],["M",56],["m",59],["c",69],["a",71],["c",75]],"t":38},
+    {"a":8,"h":10,"P":[["b",[0,10],3,0,0,0],["a",[1,0],4,0,0,0],["m",[0,10],3,3,0,1],["M",[0],4,3,0,1],["n",[0],0,9],["z",[2,1,0],4,5],["N",[10,0],7,1,"h"],["r",[0],6,9],["M",[10,0],6,3,"h"],["r",[0],0,4],["b",[1,0],2,9],["b",[0],3,2],["#",[1,10,11,12,21],0,0],["#",[1,10,11,12,21],3,6]],"B":[["b",2],["a",7],["b",12],["N",14],["b",20],["N",22],["m",26],["M",29],["M",37],["r",42],["z",43],["z",47,1],["M",51],["z",53,1],["m",57],["r",63],["n",65],["b",66],["b",67]],"D":[["arr",6,"a"]],"t":53},
+    {"a":8,"h":10,"P":[["p",[0,1],2,1,0,0],["n",[0,10],4,1,0,0],["r",[0,1],0,6,0,1],["v",[0,1],2,6,0,1],["m",[0],3,3],["M",[0,1],1,9],["A",[1,11,0],6,4],["z",[0],1,5],["m",[1,0],2,0,"h"],["n",[0,10,20],0,1],["m",[0],4,0],["r",[0,1],3,5],["n",[0,1],3,8,"h"],["m",[0],1,2],["#",[1,10,11,12,21],5,0],["#",[0,1,10,11],6,8]],"B":[["m",0],["m",1],["m",5],["p",18],["p",19],["n",21],["m",26],["m",28],["n",29],["z",33],["r",35],["r",36],["n",40],["A",53],["A",54],["n",56],["r",57],["r",58],["v",59],["v",61],["A",62],["n",64],["n",66],["M",75],["M",76]],"D":[["izq",4,"n"]],"t":57},
+    {"a":8,"h":10,"P":[["c",[0,10],0,3,0,0],["v",[0],0,5,0,0],["a",[0,1],1,8,0,1],["M",[0,1],3,8,0,1],["m",[10,0],6,3,"h"],["r",[1,0],0,2,"v"],["b",[0],3,3],["z",[20,10,0],4,5],["M",[0],6,8],["c",[0],3,4],["v",[0,10],6,5],["r",[1,0],1,0],["#",[0,1,2,11],4,1],["#",[0,1],2,7]],"B":[["r",3],["r",8],["r",9],["r",10],["c",25],["b",28],["m",29],["c",33],["z",36,1],["m",37],["c",43],["v",49],["z",53],["z",61],["v",62],["v",63],["a",73],["a",74],["M",75],["M",78]],"D":[["aba",5,"M"]],"t":50},
+    {"a":8,"h":10,"P":[["p",[0,10],6,1,0,0],["z",[0],7,1,0,0],["m",[0,10],3,6,0,1],["b",[0,1],3,8,0,1],["n",[0],7,5],["v",[0,10,20,21],4,1,"h"],["A",[0,10,20],1,0,"h"],["N",[0],1,3],["A",[0],3,0],["v",[1,11,0],0,5],["v",[0,10],2,8],["b",[2,1,0],3,4],["#",[0,1,2,11],5,6],["#",[0,1],1,7]],"B":[["A",0],["A",4],["p",5],["z",7,1],["A",8],["v",10],["A",16],["v",18],["p",21],["N",24],["v",26],["v",27],["v",32],["v",33],["b",34],["n",38],["v",42],["b",43],["b",46],["v",48],["m",52],["m",60],["v",64],["b",69]],"D":[["aba",5,"b"]],"t":15},
+    {"a":8,"h":10,"P":[["p",[0,1],6,3,0,0],["N",[0],6,4,0,0],["b",[0,10],4,1,0,1],["a",[10,0],5,1,0,1],["M",[0,10],5,5,"h"],["m",[0],0,4],["z",[1,11,0],2,0],["A",[1,0],1,9],["A",[0,1],3,7,"h"],["m",[0],7,9],["A",[0],1,1],["A",[0],7,1],["#",[0,1,2,11],2,5],["#",[0,1],3,4]],"B":[["b",4],["a",6],["A",7],["z",10,1],["a",14],["A",17],["z",19],["p",23],["b",28],["m",33],["M",46],["p",47],["M",54],["A",57],["A",58],["N",62],["A",66],["A",67],["m",71]],"D":[["arr",1,"z"]],"t":40},
+    {"a":8,"h":10,"P":[["a",[0,10],0,4,0,0],["r",[10,0],0,6,0,0],["c",[0,1],2,3,0,1],["v",[0],2,4,0,1],["M",[0,1],0,1],["n",[0,1,2],4,5,"v"],["N",[0],5,1],["A",[2,1,0],4,7,"v"],["v",[0],1,7],["n",[0],6,3],["M",[1,0],1,9],["M",[20,10,0],2,5],["n",[0,1,2],4,2],["v",[0],7,3],["#",[0,1],5,8],["#",[0,1,10,11],6,0]],"B":[["M",0],["M",1],["n",10],["n",11],["n",12],["c",18],["c",19],["n",23],["M",25],["M",33],["n",36],["n",37],["n",38],["M",41],["v",43],["A",52],["A",53],["A",54],["v",63],["r",64],["M",66],["v",67],["r",72],["M",75]],"D":[["izq",3,"aa"],["der",5,"N"]],"t":57},
+    {"a":8,"h":10,"P":[["b",[0,10],5,5,0,0],["z",[0],6,5,0,0],["m",[0,1],0,7,0,1],["p",[0],2,7,0,1],["v",[2,1,0],1,9,"v"],["a",[0],2,5],["r",[10,0,11],5,8],["A",[0],4,1],["A",[0,1],1,2,"v"],["A",[0],7,5],["b",[0],6,1],["A",[0],3,6],["r",[0,1,2],5,2],["#",[0,1],4,4],["#",[0,1,10,11],3,2]],"B":[["A",1],["A",3],["A",10],["r",29],["r",30],["r",31],["m",32],["m",33],["a",34],["p",35],["A",39],["b",52],["z",55,1],["A",59],["b",61],["r",62],["v",65],["v",66],["v",67],["r",71],["r",79]],"D":[["arr",6,"b"]],"t":33},
+    {"a":8,"h":10,"P":[["v",[0,1],3,1,0,0],["m",[0,1],5,1,0,0],["r",[0,10],1,1,0,1],["N",[0],2,1,0,1],["M",[2,1,0],4,6,"h"],["c",[0,1],5,2],["a",[0],1,6],["b",[0,1],0,7,"h"],["v",[1,11,0],2,2],["b",[0],7,2],["m",[0],3,5],["M",[0],0,5],["a",[10,0,11],4,8],["N",[0],0,8],["#",[0,1,2,11],1,8],["#",[0,1,2,11],5,4]],"B":[["r",0],["N",2],["v",3],["v",4],["m",6],["m",7],["r",8],["b",15],["c",20],["M",24],["v",25],["v",26],["c",29],["v",34],["a",41],["m",42],["M",50],["b",58],["b",59],["a",61],["a",69],["a",70],["N",73]],"D":[["der",6,"MM"]],"t":20},
+    {"a":8,"h":10,"P":[["a",[0,10],4,1,0,0],["v",[0],4,3,0,0],["m",[0,1],1,6,0,1],["z",[0],1,7,0,1],["r",[0],4,4],["N",[0],5,8],["c",[10,0],1,3],["M",[10,11,12,2],5,6],["z",[0,10],3,4,"v"],["a",[0,1],0,1,"v"],["a",[0],4,6],["v",[0],0,5],["#",[0,1,2,11],4,0],["#",[0,1,10,11],2,8]],"B":[["a",14],["a",16],["a",17],["a",22],["r",27],["v",31],["c",34],["c",41],["v",48],["z",51,1],["a",53],["M",54],["m",56],["m",58],["z",59],["M",70],["z",72],["N",76],["M",78],["M",79]],"t":40},
+    {"a":8,"h":10,"P":[["m",[0,10],0,8,0,0],["N",[0],1,8,0,0],["a",[0,10],4,0,0,1],["p",[0],5,0,0,1],["M",[0],7,1],["v",[0],4,2],["b",[0],7,3],["r",[0],6,1],["v",[0,10,20],3,7,"v"],["v",[0,10],2,5],["p",[0,10,20,21],0,2,"v"],["m",[20,10,0,11],5,3],["N",[2,1,0],4,9],["#",[0,1,10,11],1,0],["#",[0,1,10,11],0,5]],"B":[["p",0],["a",3],["p",8],["p",13],["p",17],["v",18],["a",19],["r",21],["M",23],["p",25],["v",28],["b",30],["v",34],["v",35],["m",36],["v",43],["m",44],["v",51],["m",52],["m",53],["m",56],["N",58],["N",60],["N",61],["N",62],["m",73]],"t":60},
+    {"a":8,"h":10,"P":[["c",[0,10],4,6,0,0],["M",[0],4,8,0,0],["v",[0,10],0,6,0,1],["z",[0],0,8,0,1],["a",[1,0],3,1],["m",[0],4,9],["N",[0],6,4],["n",[0],5,8],["z",[2,1,0],5,0,"v"],["c",[0],2,1],["c",[2,1,0],2,2,"v"],["N",[0,1],4,5],["#",[0,1],5,7],["#",[0,1,10,11],0,2]],"B":[["c",3],["a",9],["z",14],["z",21,1],["z",23],["c",26],["c",27],["c",28],["N",30],["N",34],["N",43],["v",49],["c",50],["v",57],["c",58],["z",73],["M",74],["m",75],["n",77]],"D":[["izq",1,"a"]],"t":25}
 ];
 if (typeof module !== 'undefined' && module.exports) module.exports = NIVELES_PELUCHINES;
 
 </script>
 <script>
 /* ==========================================================
-   PELUCHINES — pantalla, arrastre, ayudas y progreso
-   Las reglas están en motor-peluchines.js; los niveles, ya comprobados,
-   en niveles.js. Aquí no se decide nada del juego.
+   PELUCHINES — pantalla, arrastre de piezas, ayudas y progreso
+   Versión 2: se arrastran las PIEZAS; los peluchines están quietos y entran
+   en la pieza de su color que pasa por encima. Las reglas están en
+   motor-peluchines.js; los niveles, ya comprobados, en niveles.js.
    ========================================================== */
 'use strict';
 const $ = (id) => document.getElementById(id);
@@ -1616,30 +1611,34 @@ const NIV = NIVELES_PELUCHINES;
 
 /* ---------- ESTADO ---------- */
 let e = null;              // la partida del motor
-let nivel = 0;             // índice en NIV
+let nivel = 0;
 let historial = [];        // fotos para deshacer
 let modo = null;           // null | 'iman' | 'garra' | 'garra2' | 'pistola'
 let garraB = -1;
-let arrastre = null;       // lo que lleva el dedo
-let cursor = null;         // teclado: { i, cogido: b | 'k'+n | null }
-let anims = [];            // peluchines viajando: { b, pts: [[x, y]…], t, dur, retraso }
-let efectos = [];          // chispas, anillos, textos
-let desapareciendo = [];   // huecos llenos que se van: { h, t }
-let fiesta = null;         // confeti al ganar
-let finPendiente = null;   // segundos hasta enseñar la capa de fin
+let arrastre = null;       // { p, agarre: [dc, df], x, y, foto, movida }
+let dedo = null;
+let cursor = null;         // teclado: { i, pieza: p | null }
+let vis = [];              // posición dibujada de cada pieza (se acerca a la real)
+let anims = [];            // peluchines volando: { b, desde: [x, y], t, dur }
+let efectos = [];
+let saliendo = [];         // piezas llenas que se van: { p, t, c, f }
+let fiesta = null;
+let finPendiente = null;
 let pintando = null;       // id del único requestAnimationFrame
 let ultimo = 0;
-let L = null;              // tablero en pantalla: { s, ox, oy, W, H, dpr }
+let L = null;              // medidas: { s, ox, oy, W, H, dpr }
 
-/* ---------- GUARDADO (todo en try/catch dentro de EST.leer/guardar) ---------- */
+/* ---------- GUARDADO ---------- */
 const CLAVE_PROGRESO = 'peluchinesProgreso';
-const CLAVE_PARTIDA = 'peluchinesPartida';
+/* Clave nueva en la versión 2: una partida a medias de la primera (otras
+   reglas, otros niveles) no vale para esta */
+const CLAVE_PARTIDA = 'peluchinesPartida2';
 const CLAVE_AYUDAS = 'peluchinesAyudas';
 const AYUDAS_INICIO = { iman: 2, garra: 2, pistola: 2 };
 const AYUDAS_TOPE = 9;
 function progreso() {
     const p = EST.leer(CLAVE_PROGRESO, null);
-    return p && Number.isInteger(p.max) ? p : { max: 0 };   // max: índice del último desbloqueado
+    return p && Number.isInteger(p.max) ? { max: Math.min(NIV.length - 1, Math.max(0, p.max)) } : { max: 0 };
 }
 function ayudasGuardadas() {
     const a = EST.leer(CLAVE_AYUDAS, null);
@@ -1647,6 +1646,18 @@ function ayudasGuardadas() {
     const r = {};
     for (const k in AYUDAS_INICIO) r[k] = Math.max(0, Math.min(AYUDAS_TOPE, Number(a[k]) || 0));
     return r;
+}
+/* Premio de una ayuda: lo pidió el usuario más espaciado que uno por nivel:
+   cada 5 niveles hasta el 50, cada 3 hasta el 80 y cada 2 hasta el 100 */
+function hayPremio(n) {
+    const N = n + 1;
+    return N <= 50 ? N % 5 === 0 : N <= 80 ? (N - 50) % 3 === 0 : (N - 80) % 2 === 0;
+}
+function cualPremio(n) {
+    /* Por turnos, contando los premios dados hasta ese nivel */
+    let k = 0;
+    for (let x = 0; x < n; x++) if (hayPremio(x)) k++;
+    return ['iman', 'garra', 'pistola'][k % 3];
 }
 
 /* ---------- SONIDO ---------- */
@@ -1660,13 +1671,11 @@ const musica = EST.musica({
     ]
 });
 const sonar = {
-    coger() { EST.efecto('coger', 60, [[660, 0.06, 'sine', 0.08, 0, 880]]); },
-    aparcar() { EST.efecto('aparcar', 60, [[440, 0.08, 'triangle', 0.08, 0, 330]]); },
+    coger() { EST.efecto('coger', 60, [[520, 0.05, 'sine', 0.06, 0, 700]]); },
+    paso() { EST.efecto('paso', 45, [[180, 0.035, 'triangle', 0.05, 0, 140]]); },
     entra(lleno) { const f = 520 + lleno * 90; EST.efecto('entra', 40, [[f, 0.09, 'sine', 0.12, 0, f * 1.5], [f * 2, 0.05, 'triangle', 0.04, 0.05]]); },
-    completo() { EST.efecto('completo', 120, [[784, 0.1, 'triangle', 0.08], [988, 0.1, 'triangle', 0.08, 0.08], [1319, 0.22, 'triangle', 0.08, 0.16]]); },
-    sale() { EST.efecto('sale', 80, [[300, 0.07, 'sine', 0.07, 0, 600]]); },
+    llena() { EST.efecto('llena', 120, [[784, 0.1, 'triangle', 0.08], [988, 0.1, 'triangle', 0.08, 0.08], [1319, 0.22, 'triangle', 0.08, 0.16]]); },
     no() { EST.efecto('no', 200, [[180, 0.12, 'square', 0.04], [150, 0.14, 'square', 0.04, 0.1]]); },
-    bloque() { EST.efecto('bloque', 70, [[120, 0.06, 'square', 0.05, 0, 90]]); EST.ruido(0.06, 0.06, 900, 300); },
     ayuda() { EST.efecto('ayuda', 200, [[523, 0.08, 'sine', 0.08], [784, 0.08, 'sine', 0.08, 0.07], [1047, 0.15, 'sine', 0.08, 0.14]]); },
     pistola() { EST.ruido(0.18, 0.18, 3000, 600); EST.efecto('pistola', 100, [[900, 0.12, 'sawtooth', 0.05, 0, 200]]); },
     ganar() { EST.efecto('ganar', 900, [[523, 0.14, 'triangle', 0.09], [659, 0.14, 'triangle', 0.09, 0.14], [784, 0.14, 'triangle', 0.09, 0.28], [1047, 0.5, 'triangle', 0.09, 0.42]]); },
@@ -1675,15 +1684,14 @@ const sonar = {
 
 /* ==========================================================
    NIVELES: del formato compacto a la definición del motor
+   P: [color ('#' = gris), casillas (a + 10·b), c, f, eje (0 si no), grupo?]
    ========================================================== */
-const FORMAS_BLOQUE = { cruz: [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]], te: [[0, 0], [1, 0], [2, 0], [1, 1]] };
 function definicion(n, ayudas) {
     const N = NIV[n];
     return {
         ancho: N.a, alto: N.h,
-        huecos: N.H.map(([color, celdas]) => ({ color, celdas })),
-        bolitas: N.B.map(([color, i, buho]) => ({ color, i, buho: !!buho })),
-        bloques: (N.K || []).map(([forma, c, f]) => ({ forma: FORMAS_BLOQUE[forma], c, f, nombre: forma })),
+        piezas: N.P.map(([color, cod, c, f, eje, grupo]) => ({ color: color === '#' ? null : color, forma: cod.map(x => [x % 10, Math.floor(x / 10)]), c, f, eje: eje || null, grupo })),
+        peluchines: N.B.map(([color, i, buho]) => ({ color, i, buho: !!buho })),
         dispensadores: (N.D || []).map(([lado, pos, cola]) => ({ lado, pos, cola })),
         ayudas
     };
@@ -1691,9 +1699,8 @@ function definicion(n, ayudas) {
 function etiqueta(t) { return t < 15 ? 'FÁCIL' : t < 40 ? 'NORMAL' : t < 65 ? 'DIFÍCIL' : 'MUY DIFÍCIL'; }
 
 /* ==========================================================
-   MEDIDAS
-   El tablero se encaja en el lienzo dejando alrededor sitio para los
-   dispensadores (MARGEN casillas por cada lado)
+   MEDIDAS: el tablero se encaja en el lienzo dejando alrededor sitio para
+   los dispensadores (MARGEN casillas por lado)
    ========================================================== */
 const MARGEN = 0.68;
 function medir() {
@@ -1705,16 +1712,10 @@ function medir() {
     if (!e) return;
     const s = Math.min(r.width / (e.ancho + 2 * MARGEN), r.height / (e.alto + 2 * MARGEN));
     const nuevo = { s, ox: (r.width - e.ancho * s) / 2, oy: (r.height - e.alto * s) / 2, W: r.width, H: r.height, dpr };
-    if (!L || L.s !== nuevo.s || L.dpr !== dpr) sprites.clear();   // otro tamaño: se rehacen
+    if (!L || L.s !== nuevo.s || L.dpr !== dpr) sprites.clear();
     L = nuevo;
     pedirPintar();
 }
-const centro = (i) => [L.ox + (i % e.ancho + 0.5) * L.s, L.oy + (Math.floor(i / e.ancho) + 0.5) * L.s];
-function casillaEn(x, y) {
-    const c = Math.floor((x - L.ox) / L.s), f = Math.floor((y - L.oy) / L.s);
-    return c >= 0 && f >= 0 && c < e.ancho && f < e.alto ? f * e.ancho + c : -1;
-}
-
 /* ==========================================================
    DIBUJO DE UN PELUCHÍN (propio: bolita de pelo con ojos)
    Se pinta una vez por color y tamaño en un lienzo aparte y luego solo se
@@ -1807,126 +1808,151 @@ function pintarPeluchin(c, color, buho, x, y, lado, alfa = 1, escala = 1) {
 }
 
 /* ==========================================================
-   PIEZAS (huecos y bloques): la forma unida de sus casillas
+   PIEZAS: la forma unida de sus casillas
    Se pinta la unión metida «hacia dentro» una distancia: el cuerpo de cada
    casilla, las tiras hacia las vecinas de la misma pieza y las esquinas
    solo si también está la casilla en diagonal. Así los rincones de una L
-   salen bien sin calcular contornos.
+   salen bien sin calcular contornos. (x, y): esquina de la pieza en px
    ========================================================== */
-function formaUnida(c, celdas, dentro) {
-    const S = L.s, set = new Set(celdas), W = e.ancho;
-    const tiene = (cc, ff) => cc >= 0 && ff >= 0 && cc < W && ff < e.alto && set.has(ff * W + cc);
+function formaUnida(c, forma, x0, y0, dentro) {
+    const S = L.s, set = new Set(forma.map(([a, b]) => a + ',' + b));
+    const tiene = (a, b) => set.has(a + ',' + b);
     c.beginPath();
-    for (const i of celdas) {
-        const cc = i % W, ff = (i - cc) / W, x = L.ox + cc * S, y = L.oy + ff * S, d = dentro;
+    for (const [a, b] of forma) {
+        const x = x0 + a * S, y = y0 + b * S, d = dentro;
         c.rect(x + d, y + d, S - 2 * d, S - 2 * d);
-        const iz = tiene(cc - 1, ff), de = tiene(cc + 1, ff), ar = tiene(cc, ff - 1), ab = tiene(cc, ff + 1);
+        const iz = tiene(a - 1, b), de = tiene(a + 1, b), ar = tiene(a, b - 1), ab = tiene(a, b + 1);
         if (iz) c.rect(x, y + d, d, S - 2 * d);
         if (de) c.rect(x + S - d, y + d, d, S - 2 * d);
         if (ar) c.rect(x + d, y, S - 2 * d, d);
         if (ab) c.rect(x + d, y + S - d, S - 2 * d, d);
-        if (iz && ar && tiene(cc - 1, ff - 1)) c.rect(x, y, d, d);
-        if (de && ar && tiene(cc + 1, ff - 1)) c.rect(x + S - d, y, d, d);
-        if (iz && ab && tiene(cc - 1, ff + 1)) c.rect(x, y + S - d, d, d);
-        if (de && ab && tiene(cc + 1, ff + 1)) c.rect(x + S - d, y + S - d, d, d);
+        if (iz && ar && tiene(a - 1, b - 1)) c.rect(x, y, d, d);
+        if (de && ar && tiene(a + 1, b - 1)) c.rect(x + S - d, y, d, d);
+        if (iz && ab && tiene(a - 1, b + 1)) c.rect(x, y + S - d, d, d);
+        if (de && ab && tiene(a + 1, b + 1)) c.rect(x + S - d, y + S - d, d, d);
     }
     c.fill();
 }
-function pintarHueco(c, h, t, brillo, escala, alfa) {
-    const H = e.huecos[h], col = P.COLORES[H.color], S = L.s;
+/* Dónde se dibuja la pieza p (esquina, en px): su posición dibujada y, si
+   la lleva el dedo, un poco hacia él */
+function esquinaPieza(p) {
+    const v = vis[p] || { c: e.piezas[p].c, f: e.piezas[p].f };
+    let x = L.ox + v.c * L.s, y = L.oy + v.f * L.s;
+    if (arrastre && P.grupoDe(e, arrastre.p).includes(p) && arrastre.tirón) { x += arrastre.tirón[0]; y += arrastre.tirón[1]; }
+    return [x, y];
+}
+function pintarPieza(c, p, t, escala = 1, alfa = 1) {
+    const Q = e.piezas[p], S = L.s;
+    const [x0, y0] = esquinaPieza(p);
     c.save();
     if (escala !== 1) {
-        /* Al llenarse se hincha y se desvanece desde su centro */
-        const xs = H.celdas.map(i => centro(i)[0]), ys = H.celdas.map(i => centro(i)[1]);
-        const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+        const mx = x0 + (Q.forma.reduce((s, [a]) => s + a, 0) / Q.forma.length + 0.5) * S;
+        const my = y0 + (Q.forma.reduce((s, [, b]) => s + b, 0) / Q.forma.length + 0.5) * S;
         c.translate(mx, my); c.scale(escala, escala); c.translate(-mx, -my);
     }
     c.globalAlpha = alfa;
-    /* Borde de neón con resplandor y, encima, el interior oscuro teñido */
-    c.shadowColor = col.hex; c.shadowBlur = S * (0.18 + brillo * 0.25);
-    c.fillStyle = col.hex; formaUnida(c, H.celdas, S * 0.06);
+    const cogida = arrastre && P.grupoDe(e, arrastre.p).includes(p) || (cursor && cursor.pieza !== null && P.grupoDe(e, cursor.pieza).includes(p));
+    if (!Q.color) {
+        /* Bloque gris: no recoge nada, solo estorba */
+        c.fillStyle = '#5d6275'; formaUnida(c, Q.forma, x0, y0, S * 0.05);
+        const g = c.createLinearGradient(0, y0, 0, y0 + 3 * S);
+        g.addColorStop(0, '#e6e8ef'); g.addColorStop(1, '#a9aec0');
+        c.fillStyle = g; formaUnida(c, Q.forma, x0, y0, S * 0.1);
+        flechas(c, Q, x0, y0, '#5d6275', null);
+        c.restore();
+        return;
+    }
+    const col = P.COLORES[Q.color];
+    /* Borde de neón (más vivo si está cogida) y, encima, el interior oscuro teñido */
+    c.shadowColor = col.hex; c.shadowBlur = S * (cogida ? 0.45 : 0.2);
+    c.fillStyle = col.hex; formaUnida(c, Q.forma, x0, y0, S * 0.06);
     c.shadowBlur = 0;
-    c.fillStyle = mezclar(col.hex, -0.72); formaUnida(c, H.celdas, S * 0.11);
-    c.fillStyle = col.hex; c.globalAlpha = alfa * (0.18 + brillo * 0.25); formaUnida(c, H.celdas, S * 0.11);
+    c.fillStyle = mezclar(col.hex, -0.72); formaUnida(c, Q.forma, x0, y0, S * 0.11);
+    c.fillStyle = col.hex; c.globalAlpha = alfa * (cogida ? 0.4 : 0.22); formaUnida(c, Q.forma, x0, y0, S * 0.11);
     c.globalAlpha = alfa;
     if (col.estrella) {
-        /* Huecos de estrellas: fondo morado oscuro con estrellas, como sus peluchines */
         c.save(); c.beginPath();
-        for (const i of H.celdas) { const [x, y] = centro(i); c.rect(x - S * 0.39, y - S * 0.39, S * 0.78, S * 0.78); }
+        for (const [a, b] of Q.forma) c.rect(x0 + a * S + S * 0.11, y0 + b * S + S * 0.11, S * 0.78, S * 0.78);
         c.clip();
-        const az = azarFijo(h * 31 + 7);
-        for (const i of H.celdas) { const [x, y] = centro(i); for (let k = 0; k < 4; k++) estrella(c, x + (az() - 0.5) * S * 0.7, y + (az() - 0.5) * S * 0.7, S * (0.06 + az() * 0.05), 'rgba(255,225,77,0.85)'); }
+        const az = azarFijo(p * 31 + 7);
+        for (const [a, b] of Q.forma) for (let k = 0; k < 4; k++) estrella(c, x0 + (a + 0.5 + (az() - 0.5) * 0.7) * S, y0 + (b + 0.5 + (az() - 0.5) * 0.7) * S, S * (0.06 + az() * 0.05), 'rgba(255,225,77,0.85)');
         c.restore();
     }
-    /* Los que ya entraron, sentados en sus casillas */
-    for (let b = 0; b < e.bolitas.length; b++) {
-        const bo = e.bolitas[b];
-        if (bo.h !== h || viajando(b)) continue;
-        const [x, y] = centro(bo.celda);
-        pintarPeluchin(c, bo.color, bo.buho, x, y, S * 0.92, alfa * 0.95, 0.86);
+    /* Los que ya recogió, sentados dentro (los que vuelan aún no) */
+    e.peluchines.forEach((B, b) => {
+        if (B.pieza !== p || volando(b)) return;
+        const [a, bb] = Q.forma[B.celda] || Q.forma[0];
+        pintarPeluchin(c, B.color, B.buho, x0 + (a + 0.5) * S, y0 + (bb + 0.5) * S, S * 0.92, alfa * 0.95, 0.84);
+    });
+    /* Huecos quitados con la pistola: una cruz */
+    if (Q.quitadas) {
+        const ocupadas = new Set(e.peluchines.filter(B => B.pieza === p).map(B => B.celda));
+        const libres = Q.forma.map((_, k) => k).filter(k => !ocupadas.has(k)).slice(-Q.quitadas);
+        c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = S * 0.06; c.lineCap = 'round';
+        for (const k of libres) { const [a, b] = Q.forma[k], x = x0 + (a + 0.5) * S, y = y0 + (b + 0.5) * S; c.beginPath(); c.moveTo(x - S * 0.15, y - S * 0.15); c.lineTo(x + S * 0.15, y + S * 0.15); c.moveTo(x + S * 0.15, y - S * 0.15); c.lineTo(x - S * 0.15, y + S * 0.15); c.stroke(); }
     }
-    /* Las que quitó la pistola: una cruz */
-    if (H.quitadas) {
-        const libres = H.celdas.filter(i => !e.bolitas.some(bo => bo.h === h && bo.celda === i));
-        for (const i of libres.slice(-H.quitadas)) {
-            const [x, y] = centro(i);
-            c.strokeStyle = 'rgba(255,255,255,0.55)'; c.lineWidth = S * 0.06; c.lineCap = 'round';
-            c.beginPath(); c.moveTo(x - S * 0.15, y - S * 0.15); c.lineTo(x + S * 0.15, y + S * 0.15); c.moveTo(x + S * 0.15, y - S * 0.15); c.lineTo(x - S * 0.15, y + S * 0.15); c.stroke();
-        }
-    }
+    if (Q.eje) flechas(c, Q, x0, y0, col.hex, Q.eje);
     /* El número: lo que falta, en la casilla de más abajo a la derecha */
-    const falta = H.celdas.length - H.llenas - H.quitadas + enCamino(h);
+    const falta = P.resta(Q) + anims.filter(a => e.peluchines[a.b].pieza === p).length;
     if (falta > 0) {
-        const ult = H.celdas.reduce((a, i) => (Math.floor(i / e.ancho) * 100 + i % e.ancho > Math.floor(a / e.ancho) * 100 + a % e.ancho ? i : a));
-        const [x, y] = centro(ult), t2 = S * 0.34;
-        const bx = x + S * 0.5 - t2 - S * 0.05, by = y + S * 0.5 - t2 - S * 0.05;
+        const [a, b] = Q.forma.reduce((m, x) => (x[1] * 100 + x[0] > m[1] * 100 + m[0] ? x : m));
+        const t2 = S * 0.34, bx = x0 + (a + 1) * S - t2 - S * 0.05, by = y0 + (b + 1) * S - t2 - S * 0.05;
         c.fillStyle = col.hex;
         c.beginPath(); c.roundRect ? c.roundRect(bx, by, t2, t2, t2 * 0.25) : c.rect(bx, by, t2, t2); c.fill();
-        c.fillStyle = H.color === 'b' || H.color === 'a' || H.color === 'A' ? '#2a2140' : '#fff';
+        c.fillStyle = ['b', 'a', 'A'].includes(Q.color) ? '#2a2140' : '#fff';
         c.font = `bold ${Math.round(t2 * 0.78)}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
         c.fillText(String(falta), bx + t2 / 2, by + t2 / 2 + 1);
     }
     c.restore();
 }
-function pintarBloque(c, k, dx = 0, dy = 0) {
-    const K = e.bloques[k], S = L.s;
-    const celdas = P.celdasBloque(e, k).map(([cc, ff]) => ff * e.ancho + cc);
-    c.save(); c.translate(dx, dy);
-    c.fillStyle = '#5d6275'; formaUnida(c, celdas, S * 0.05);
-    const g = c.createLinearGradient(0, L.oy + K.f * S, 0, L.oy + (K.f + 3) * S);
-    g.addColorStop(0, '#e6e8ef'); g.addColorStop(1, '#a9aec0');
-    c.fillStyle = g; formaUnida(c, celdas, S * 0.1);
-    /* El símbolo de mover en la casilla del centro de la pieza */
-    const mc = K.forma.reduce((a, [x]) => a + x, 0) / K.forma.length, mf = K.forma.reduce((a, [, y]) => a + y, 0) / K.forma.length;
-    const x = L.ox + (K.c + mc + 0.5) * S, y = L.oy + (K.f + mf + 0.5) * S;
-    c.strokeStyle = '#5d6275'; c.fillStyle = '#5d6275'; c.lineWidth = S * 0.05; c.lineCap = 'round';
-    const r = S * 0.24;
-    c.beginPath(); c.moveTo(x - r, y); c.lineTo(x + r, y); c.moveTo(x, y - r); c.lineTo(x, y + r); c.stroke();
-    for (const [ax, ay] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        c.beginPath(); c.moveTo(x + ax * r * 1.25, y + ay * r * 1.25);
-        c.lineTo(x + ax * r * 0.75 - ay * r * 0.32, y + ay * r * 0.75 - ax * r * 0.32);
-        c.lineTo(x + ax * r * 0.75 + ay * r * 0.32, y + ay * r * 0.75 + ax * r * 0.32); c.fill();
+/* Flechas en la casilla central de la pieza: ✥ en los grises, ↔ o ↕ en
+   las de un eje */
+function flechas(c, Q, x0, y0, color, eje) {
+    const S = L.s;
+    const mc = Q.forma.reduce((s, [a]) => s + a, 0) / Q.forma.length, mf = Q.forma.reduce((s, [, b]) => s + b, 0) / Q.forma.length;
+    const x = x0 + (mc + 0.5) * S, y = y0 + (mf + 0.5) * S, r = S * 0.24;
+    c.strokeStyle = color; c.fillStyle = color; c.lineWidth = S * 0.05; c.lineCap = 'round';
+    const dirs = eje === 'h' ? [[1, 0], [-1, 0]] : eje === 'v' ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    c.beginPath();
+    for (const [ax, ay] of dirs) { c.moveTo(x, y); c.lineTo(x + ax * r, y + ay * r); }
+    c.stroke();
+    for (const [ax, ay] of dirs) {
+        c.beginPath(); c.moveTo(x + ax * r * 1.3, y + ay * r * 1.3);
+        c.lineTo(x + ax * r * 0.8 - ay * r * 0.32, y + ay * r * 0.8 - ax * r * 0.32);
+        c.lineTo(x + ax * r * 0.8 + ay * r * 0.32, y + ay * r * 0.8 + ax * r * 0.32); c.fill();
     }
-    c.restore();
+}
+/* Unión de una pieza doble: dos tornillos en la junta */
+function pintarUnion(c, g) {
+    const [p, q] = g, S = L.s;
+    const [xp, yp] = esquinaPieza(p), [xq, yq] = esquinaPieza(q);
+    for (const [a, b] of e.piezas[p].forma) for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+        const cc = e.piezas[p].c + a + dx, ff = e.piezas[p].f + b + dy;
+        if (!e.piezas[q].forma.some(([x, y]) => e.piezas[q].c + x === cc && e.piezas[q].f + y === ff)) continue;
+        const x = xp + (a + 0.5 + dx * 0.5) * S, y = yp + (b + 0.5 + dy * 0.5) * S;
+        c.fillStyle = '#d9dde8'; c.strokeStyle = '#4d5366'; c.lineWidth = 1.5;
+        for (const k of [-0.18, 0.18]) { const bx = x + (dy ? k * S : 0), by = y + (dx ? k * S : 0); c.beginPath(); c.arc(bx, by, S * 0.07, 0, 7); c.fill(); c.stroke(); }
+    }
+    void xq; void yq;
 }
 function pintarDispensador(c, n) {
     const d = e.disp[n], S = L.s, quedan = d.cola.length - d.sacadas;
-    const [sx, sy] = centro(d.salida);
-    const [vx, vy] = P.DIRS[d.lado];           // hacia fuera del tablero
+    const cs = d.salida % e.ancho, fs = Math.floor(d.salida / e.ancho);
+    const sx = L.ox + (cs + 0.5) * S, sy = L.oy + (fs + 0.5) * S;
+    const [vx, vy] = P.DIRS[d.lado];
     const x = sx + vx * S * (0.5 + MARGEN / 2), y = sy + vy * S * (0.5 + MARGEN / 2);
     const w = vx ? S * MARGEN * 0.92 : S * 0.9, h = vy ? S * MARGEN * 0.92 : S * 0.9;
     c.save();
     c.globalAlpha = quedan ? 1 : 0.4;
     c.fillStyle = '#3a2f7a'; c.strokeStyle = '#8f7dff'; c.lineWidth = 2;
     c.beginPath(); c.roundRect ? c.roundRect(x - w / 2, y - h / 2, w, h, S * 0.12) : c.rect(x - w / 2, y - h / 2, w, h); c.fill(); c.stroke();
-    /* Flechitas hacia el tablero */
+    /* Tres flechitas hacia el tablero */
     c.fillStyle = '#c9c0ff';
     for (const k of [-1, 0, 1]) {
-        const px = x - vx * h * 0.38 + (vy ? k * w * 0.18 : 0), py = y - vy * w * 0.38 * (vx ? 0 : 1) - (vx ? 0 : 0) + (vx ? k * h * 0.18 : 0);
-        const qx = vx ? x - vx * w * 0.42 : px, qy = vy ? y - vy * h * 0.42 : py;
-        c.beginPath(); c.moveTo(qx - vx * S * 0.05, qy - vy * S * 0.05);
-        c.lineTo(qx + vx * S * 0.03 + vy * S * 0.04, qy + vy * S * 0.03 + vx * S * 0.04);
-        c.lineTo(qx + vx * S * 0.03 - vy * S * 0.04, qy + vy * S * 0.03 - vx * S * 0.04); c.fill();
+        const bx = x - vx * w * 0.42 + (vy ? k * w * 0.2 : 0), by = y - vy * h * 0.42 + (vx ? k * h * 0.2 : 0);
+        c.beginPath(); c.moveTo(bx - vx * S * 0.06, by - vy * S * 0.06);
+        c.lineTo(bx + vx * S * 0.02 + vy * S * 0.045, by + vy * S * 0.02 + vx * S * 0.045);
+        c.lineTo(bx + vx * S * 0.02 - vy * S * 0.045, by + vy * S * 0.02 - vx * S * 0.045); c.fill();
     }
     if (quedan) {
         pintarPeluchin(c, d.cola[d.sacadas], false, x, y, Math.min(w, h) * 1.05);
@@ -1940,46 +1966,26 @@ function pintarDispensador(c, n) {
 
 /* ==========================================================
    ANIMACIONES
-   El motor ya hizo la jugada; aquí solo se enseña el viaje. Mientras un
-   peluchín viaja, se pinta en el camino y no en su sitio final
    ========================================================== */
-const viajando = (b) => anims.some(a => a.b === b);
-/* Cuántos van camino de este hueco (para no restarlos antes de llegar) */
-const enCamino = (h) => anims.filter(a => a.h === h).length;
-function viajar(b, pts, h, retraso = 0, rapido = false) {
-    const largo = pts.reduce((s, p, k) => k ? s + Math.hypot(p[0] - pts[k - 1][0], p[1] - pts[k - 1][1]) : 0, 0);
-    const dur = Math.min(0.9, 0.08 + largo / L.s * (rapido ? 0.035 : 0.055));
-    anims.push({ b, pts, h, t: -retraso, dur });
-    return dur + retraso;
+const volando = (b) => anims.some(a => a.b === b);
+function centroCasilla(i) { return [L.ox + (i % e.ancho + 0.5) * L.s, L.oy + (Math.floor(i / e.ancho) + 0.5) * L.s]; }
+/* Dónde está sentado ahora el peluchín b dentro de su pieza */
+function sitioEnPieza(b) {
+    const B = e.peluchines[b], Q = e.piezas[B.pieza];
+    const [x0, y0] = esquinaPieza(B.pieza), [a, bb] = Q.forma[B.celda] || Q.forma[0];
+    return [x0 + (a + 0.5) * L.s, y0 + (bb + 0.5) * L.s];
 }
-function posAnim(a) {
-    const k = Math.max(0, Math.min(1, a.t / a.dur));
-    const sk = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;    // sale y llega despacio
-    const pts = a.pts;
-    let total = 0;
-    const tramos = [];
-    for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); tramos.push(d); total += d; }
-    let falta = sk * total;
-    for (let i = 0; i < tramos.length; i++) {
-        if (falta <= tramos[i] || i === tramos.length - 1) {
-            const u = tramos[i] ? Math.min(1, falta / tramos[i]) : 1;
-            return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * u, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * u, sk];
-        }
-        falta -= tramos[i];
-    }
-    return [pts[0][0], pts[0][1], 1];
-}
+function volar(b, desde, retraso = 0, dur = 0.28) { anims.push({ b, desde, t: -retraso, dur }); }
 function efecto(tipo, datos) { efectos.push(Object.assign({ tipo, t: 0 }, datos)); pedirPintar(); }
-function chispas(x, y, color, n = 14) {
+function chispas(x, y, color, n = 10, retraso = 0) {
     for (let k = 0; k < n; k++) {
-        const a = Math.random() * Math.PI * 2, v = L.s * (1.5 + Math.random() * 3);
-        efecto('chispa', { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - L.s, col: k % 3 ? color : '#fff', dur: 0.5 + Math.random() * 0.4, r: L.s * (0.03 + Math.random() * 0.04) });
+        const a = Math.random() * Math.PI * 2, v = L.s * (1.5 + Math.random() * 2.5);
+        efecto('chispa', { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - L.s, col: k % 3 ? color : '#fff', dur: 0.5 + Math.random() * 0.3, r: L.s * 0.05, t: -retraso });
     }
 }
 
 /* ==========================================================
-   PINTAR
-   Un solo requestAnimationFrame, y solo mientras algo se mueve
+   PINTAR: un solo requestAnimationFrame y solo mientras algo se mueve
    ========================================================== */
 function pedirPintar() {
     if (pintando === null) { ultimo = performance.now(); pintando = requestAnimationFrame(fotograma); }
@@ -1990,23 +1996,31 @@ function fotograma(ahora) {
     ultimo = ahora;
     for (const a of anims) a.t += dt;
     anims = anims.filter(a => a.t < a.dur);
-    for (const d of desapareciendo) d.t += dt;
-    desapareciendo = desapareciendo.filter(d => d.t < 0.5);
+    for (const s of saliendo) s.t += dt;
+    saliendo = saliendo.filter(s => s.t < 0.45);
+    /* Las piezas se acercan a su sitio de verdad: el arrastre va a saltos de
+       casilla y así se ve suave */
+    let moviendo = false;
+    e && e.piezas.forEach((Q, p) => {
+        const v = vis[p];
+        if (!v) { vis[p] = { c: Q.c, f: Q.f }; return; }
+        const k = Math.min(1, dt * 22);
+        v.c += (Q.c - v.c) * k; v.f += (Q.f - v.f) * k;
+        if (Math.abs(Q.c - v.c) < 0.005) v.c = Q.c; else moviendo = true;
+        if (Math.abs(Q.f - v.f) < 0.005) v.f = Q.f; else moviendo = true;
+    });
     pintar(dt);
     if (finPendiente !== null) {
         finPendiente -= dt;
         if (finPendiente <= 0) { finPendiente = null; mostrarFin(); }
     }
-    const tiempo = performance.now() / 1000;
-    if (anims.length || efectos.length || desapareciendo.length || arrastre || fiesta || finPendiente !== null || (modo && $('pJuego').classList.contains('activa')) || brillaAlgo(tiempo)) pedirPintar();
+    if (moviendo || anims.length || efectos.length || saliendo.length || arrastre || fiesta || finPendiente !== null || (modo && $('pJuego').classList.contains('activa'))) pedirPintar();
 }
-const brillaAlgo = () => !!arrastre;
 function pintar(dt) {
     if (!L || !e) return;
     const c = ctx, S = L.s, t = performance.now() / 1000;
     c.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
     c.clearRect(0, 0, L.W, L.H);
-    /* Marco y fondo de casillas */
     const pad = S * 0.12;
     c.fillStyle = '#2b2370'; c.strokeStyle = '#6f5cff'; c.lineWidth = 2;
     c.beginPath(); c.roundRect ? c.roundRect(L.ox - pad, L.oy - pad, e.ancho * S + 2 * pad, e.alto * S + 2 * pad, S * 0.2) : c.rect(L.ox - pad, L.oy - pad, e.ancho * S + 2 * pad, e.alto * S + 2 * pad); c.fill(); c.stroke();
@@ -2016,58 +2030,33 @@ function pintar(dt) {
         c.beginPath(); c.roundRect ? c.roundRect(x, y, S * 0.92, S * 0.92, S * 0.12) : c.rect(x, y, S * 0.92, S * 0.92); c.fill();
     }
     for (let n = 0; n < e.disp.length; n++) pintarDispensador(c, n);
-    /* Huecos (los que brillan: a los que puede ir lo que lleva el dedo) */
-    const validos = arrastre && arrastre.tipo === 'peluchin' ? arrastre.d.huecos : null;
-    e.huecos.forEach((H, h) => {
-        const d = desapareciendo.find(x => x.h === h);
-        if (H.completo && !d && !anims.some(a => a.h === h)) return;
-        if (d && d.t > 0) { const k = d.t / 0.5; pintarHueco(c, h, t, 1, 1 + k * 0.25, 1 - k); return; }
-        const brillo = validos && validos.has(h) ? 0.5 + 0.5 * Math.sin(t * 8) : 0;
-        pintarHueco(c, h, t, brillo, 1, 1);
-    });
-    /* Bloques */
-    e.bloques.forEach((K, k) => {
-        const ar = arrastre && arrastre.tipo === 'bloque' && arrastre.k === k ? arrastre : null;
-        pintarBloque(c, k, ar ? ar.dx : 0, ar ? ar.dy : 0);
-    });
-    /* Peluchines en el tablero */
-    const elegido = modo === 'garra2' ? garraB : cursor && typeof cursor.cogido === 'number' ? cursor.cogido : -1;
-    e.bolitas.forEach((bo, b) => {
-        if (bo.i < 0 || viajando(b) || (arrastre && arrastre.b === b)) return;
-        const [x, y] = centro(bo.i);
+    /* Peluchines quietos en el tablero */
+    const elegido = modo === 'garra2' ? garraB : -1;
+    e.peluchines.forEach((B, b) => {
+        if (B.i < 0) return;
+        const [x, y] = centroCasilla(B.i);
         if (b === elegido) { c.strokeStyle = '#00ffc8'; c.lineWidth = S * 0.06; c.beginPath(); c.arc(x, y, S * 0.46, 0, 7); c.stroke(); }
-        const bota = modo && modo !== 'pistola' ? 1 + Math.sin(t * 6 + b) * 0.04 : 1;
-        pintarPeluchin(c, bo.color, bo.buho, x, y, S * 0.98, 1, bota);
+        const bota = modo === 'iman' || modo === 'garra' ? 1 + Math.sin(t * 6 + b) * 0.04 : 1;
+        pintarPeluchin(c, B.color, B.buho, x, y, S * 0.98, 1, bota);
     });
-    /* Lo que va de viaje */
+    /* Piezas: primero las que no se mueven, encima la que lleva el dedo */
+    const arriba = arrastre ? P.grupoDe(e, arrastre.p) : [];
+    const orden = e.piezas.map((_, p) => p).filter(p => e.piezas[p].viva).sort((a, b) => arriba.includes(a) - arriba.includes(b));
+    for (const p of orden) pintarPieza(c, p, t, arrastre && arriba.includes(p) ? 1.03 : 1);
+    const grupos = {};
+    e.piezas.forEach((Q, p) => { if (Q.viva && Q.grupo !== null) (grupos[Q.grupo] = grupos[Q.grupo] || []).push(p); });
+    for (const g in grupos) if (grupos[g].length === 2) pintarUnion(c, grupos[g]);
+    /* Las llenas, hinchándose y desvaneciéndose */
+    for (const s of saliendo) if (s.t >= 0) { const k = s.t / 0.45; pintarPieza(c, s.p, t, 1 + k * 0.25, 1 - k); }
+    /* Peluchines volando hacia su pieza */
     for (const a of anims) {
-        const bo = e.bolitas[a.b];
-        if (a.t < 0) {
-            /* Aún no ha salido: se queda en su primer punto */
-            pintarPeluchin(c, bo.color, bo.buho, a.pts[0][0], a.pts[0][1], S * 0.98);
-            continue;
-        }
-        const [x, y, k] = posAnim(a);
-        const salto = Math.sin(k * Math.PI) * S * 0.12;
-        pintarPeluchin(c, bo.color, bo.buho, x, y - salto, S * 0.98, 1, a.h >= 0 ? 1 - k * 0.14 : 1);
+        const B = e.peluchines[a.b];
+        if (B.pieza < 0) continue;
+        const [x1, y1] = sitioEnPieza(a.b);
+        const k = Math.max(0, Math.min(1, a.t / a.dur)), sk = 1 - (1 - k) * (1 - k);
+        const x = a.desde[0] + (x1 - a.desde[0]) * sk, y = a.desde[1] + (y1 - a.desde[1]) * sk - Math.sin(k * Math.PI) * S * 0.35;
+        pintarPeluchin(c, B.color, B.buho, x, y, S * 0.98, 1, 1 - k * 0.16);
     }
-    /* El arrastre: el camino en puntos y el peluchín bajo el dedo */
-    if (arrastre && arrastre.tipo === 'peluchin') {
-        const bo = e.bolitas[arrastre.b];
-        if (arrastre.camino) {
-            c.fillStyle = 'rgba(0,255,200,0.75)';
-            for (let k = 1; k < arrastre.camino.length; k++) { const [x, y] = centro(arrastre.camino[k]); c.beginPath(); c.arc(x, y, S * 0.07, 0, 7); c.fill(); }
-        }
-        if (arrastre.objetivo >= 0) {
-            const [x, y] = centro(arrastre.objetivo);
-            c.strokeStyle = arrastre.camino ? '#00ffc8' : '#ff5c7a'; c.lineWidth = S * 0.06;
-            c.beginPath(); c.roundRect ? c.roundRect(x - S * 0.44, y - S * 0.44, S * 0.88, S * 0.88, S * 0.15) : c.rect(x - S * 0.44, y - S * 0.44, S * 0.88, S * 0.88); c.stroke();
-        }
-        const [ox, oy] = centro(bo.i);
-        c.globalAlpha = 0.25; pintarPeluchin(c, bo.color, bo.buho, ox, oy, S * 0.98); c.globalAlpha = 1;
-        pintarPeluchin(c, bo.color, bo.buho, arrastre.x, arrastre.y - S * 0.3, S * 0.98, arrastre.camino ? 1 : 0.75, 1.15);
-    }
-    /* Cursor del teclado */
     if (cursor && document.activeElement === lienzo) {
         const cc = cursor.i % e.ancho, ff = Math.floor(cursor.i / e.ancho);
         c.strokeStyle = '#ffd54f'; c.lineWidth = 3; c.setLineDash([6, 4]);
@@ -2095,9 +2084,8 @@ function pintarEfectos(c, dt) {
             c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.7)'; c.strokeText(f.txt, f.x, f.y - u * L.s * 0.8);
             c.fillStyle = f.col; c.fillText(f.txt, f.x, f.y - u * L.s * 0.8); c.globalAlpha = 1;
         } else if (f.tipo === 'temblor') {
-            /* Peluchín que no puede ir: se dibuja encima temblando */
-            const bo = e.bolitas[f.b];
-            if (bo && bo.i >= 0) { const [x, y] = centro(bo.i); pintarPeluchin(c, bo.color, bo.buho, x + Math.sin(u * 40) * L.s * 0.08 * (1 - u), y, L.s * 0.98); }
+            /* Pieza que no puede ir: un meneo */
+            if (vis[f.p]) vis[f.p].c = e.piezas[f.p].c + Math.sin(u * 30) * 0.08 * (1 - u);
         }
     }
 }
@@ -2114,10 +2102,6 @@ function pintarFiesta(c, dt) {
 /* ==========================================================
    JUGADAS
    ========================================================== */
-function guardarFoto() {
-    historial.push(P.foto(e));
-    if (historial.length > 300) historial.shift();
-}
 function trasJugar() {
     tratarEventos();
     EST.guardar(CLAVE_AYUDAS, e.ayudas);
@@ -2125,72 +2109,79 @@ function trasJugar() {
     pintarBarra();
     pedirPintar();
 }
-/* Lo que pasó en el motor, con su retardo: lo que se llena o sale tiene
-   que esperar a que llegue el que viaja */
-function tratarEventos(retraso = 0) {
-    let espera = retraso;
-    for (const a of anims) espera = Math.max(espera, a.dur - a.t);
+/* Lo que pasó en el motor. Lo que se llena espera a que lleguen los que
+   vuelan hacia ella */
+function tratarEventos() {
+    let espera = 0;
+    const llegada = {};
     for (const ev of e.eventos) {
         if (ev.tipo === 'entra') {
-            const H = e.huecos[ev.h];
-            setTimeout(() => { sonar.entra(H.llenas); if (ev.buho) sonar.buho(); }, espera * 1000);
-            if (ev.buho) { const [x, y] = centro(e.bolitas[ev.b].celda); efecto('texto', { x, y, txt: '🦉', col: '#9be7ff', dur: 1.1, t: -espera }); }
-        } else if (ev.tipo === 'completo') {
-            desapareciendo.push({ h: ev.h, t: -espera });
-            const H = e.huecos[ev.h], col = P.COLORES[H.color].hex;
-            setTimeout(sonar.completo, espera * 1000);
-            for (const i of H.celdas) { const [x, y] = centro(i); for (let k = 0; k < 5; k++) { const a = Math.random() * 7, v = L.s * (1.5 + Math.random() * 2.5); efecto('chispa', { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - L.s, col: k % 2 ? col : '#fff', dur: 0.6, r: L.s * 0.05, t: -espera }); } }
-        } else if (ev.tipo === 'sale') {
-            const d = e.disp[ev.d], [sx, sy] = centro(d.salida), [vx, vy] = P.DIRS[d.lado];
-            const desde = [sx + vx * L.s * (0.5 + MARGEN / 2), sy + vy * L.s * (0.5 + MARGEN / 2)];
-            viajar(ev.b, [desde, [sx, sy]], -1, espera + 0.05);
-            setTimeout(sonar.sale, (espera + 0.05) * 1000);
+            const B = e.peluchines[ev.b];
+            let desde;
+            if (ev.desdeDisp) {
+                const d = e.disp.find(d => d.salida >= 0 && P.celdasDe(e, ev.p).includes(d.salida)) || e.disp[0];
+                const [sx, sy] = centroCasilla(d.salida), [vx, vy] = P.DIRS[d.lado];
+                desde = [sx + vx * L.s * (0.5 + MARGEN / 2), sy + vy * L.s * (0.5 + MARGEN / 2)];
+            } else {
+                /* Estaba en la casilla donde ahora se sienta (la pieza pasó por encima) */
+                desde = sitioEnPieza(ev.b);
+            }
+            const r = (llegada[ev.p] || 0);
+            volar(ev.b, desde, r, ev.desdeDisp ? 0.32 : 0.18);
+            llegada[ev.p] = r + (ev.desdeDisp ? 0.12 : 0.04);
+            espera = Math.max(espera, r + 0.3);
+            setTimeout(() => { sonar.entra(e.piezas[ev.p] ? e.piezas[ev.p].llenas : 1); if (ev.buho) sonar.buho(); }, r * 1000);
+            if (ev.buho) { const [x, y] = sitioEnPieza(ev.b); efecto('texto', { x, y, txt: '🦉', col: '#9be7ff', dur: 1.1 }); }
+            void B;
+        } else if (ev.tipo === 'llena') {
+            const r = (llegada[ev.p] || 0) + 0.2;
+            saliendo.push({ p: ev.p, t: -r });
+            const Q = e.piezas[ev.p], [x0, y0] = esquinaPieza(ev.p);
+            for (const [a, b] of Q.forma) chispas(x0 + (a + 0.5) * L.s, y0 + (b + 0.5) * L.s, P.COLORES[Q.color].hex, 5, r);
+            setTimeout(sonar.llena, r * 1000);
+            espera = Math.max(espera, r + 0.45);
         } else if (ev.tipo === 'ganado') {
-            setTimeout(() => { sonar.ganar(); fiesta = { t: 0 }; pedirPintar(); }, (espera + 0.3) * 1000);
+            setTimeout(() => { sonar.ganar(); fiesta = { t: 0 }; pedirPintar(); }, (espera + 0.2) * 1000);
             finPendiente = espera + 1.6;
             EST.guardar(CLAVE_PARTIDA, null);
         }
     }
     e.eventos.length = 0;
 }
-/* Mover el peluchín b a la casilla i (entregar o aparcar) */
-function jugarMover(b, i) {
-    const bo = e.bolitas[b], desde = bo.i;
-    const foto = P.foto(e);
-    const camino = P.mover(e, b, i);
-    if (!camino) return false;
-    historial.push(foto);
-    const pts = camino.map(centro);
-    viajar(b, pts, bo.h);
-    if (bo.h < 0) sonar.aparcar();
-    trasJugar();
-    return desde !== bo.i || bo.h >= 0;
-}
-/* Tocar sin arrastrar: a su hueco, el que menos le falte, si tiene camino */
-function mandarSolo(b) {
-    const d = P.destinos(e, b);
-    if (!d || !d.huecos.size) { noPuede(b, 'No tiene camino libre a un hueco de su color'); return; }
-    const h = [...d.huecos.keys()].sort((x, y) => P.resta(e.huecos[x]) - P.resta(e.huecos[y]))[0];
-    /* Entra por la casilla del hueco pegada a la de entrada */
-    const entrada = d.huecos.get(h);
-    const dentro = P.vecinas(e, entrada).find(j => e.ocup[j] === P.HUECO + h) ?? e.huecos[h].celdas[0];
-    jugarMover(b, dentro);
-}
-function noPuede(b, txt) {
-    sonar.no();
-    if (b >= 0) efecto('temblor', { b, dur: 0.35 });
-    if (txt) indicar(txt, 1800);
+/* Empujar la pieza p (con su otra mitad) hacia la posición (tc, tf) casilla
+   a casilla: primero por el eje que más falta y, si choca, por el otro.
+   Recoge lo que pise por el camino */
+function empujarHacia(p, tc, tf) {
+    let pasos = 0;
+    while (pasos < 40 && e.piezas[p].viva) {
+        const Q = e.piezas[p], dx = tc - Q.c, dy = tf - Q.f;
+        if (!dx && !dy) break;
+        const h = dx ? (dx > 0 ? 'der' : 'izq') : null, v = dy ? (dy > 0 ? 'aba' : 'arr') : null;
+        const orden = Math.abs(dx) >= Math.abs(dy) ? [h, v] : [v, h];
+        let hecho = false;
+        for (const d of orden) if (d && P.mover(e, p, d)) { hecho = true; break; }
+        if (!hecho) break;
+        pasos++;
+    }
+    if (pasos) { sonar.paso(); trasJugar(); }
+    return pasos;
 }
 function deshacer() {
     if (!historial.length) { EST.avisar('No hay nada que deshacer'); return; }
     cancelarModo();
     P.volver(e, historial.pop());
-    anims = []; desapareciendo = []; efectos = []; finPendiente = null; fiesta = null;
+    anims = []; saliendo = []; efectos = []; finPendiente = null; fiesta = null;
+    vis = e.piezas.map(Q => ({ c: Q.c, f: Q.f }));
     e.eventos.length = 0;
     EST.guardar(CLAVE_AYUDAS, e.ayudas);
     EST.guardar(CLAVE_PARTIDA, { nivel, foto: P.foto(e) });
     pintarBarra();
     pedirPintar();
+}
+function noPuede(p, txt) {
+    sonar.no();
+    if (p >= 0) efecto('temblor', { p, dur: 0.35 });
+    if (txt) indicar(txt, 2200);
 }
 
 /* ---------- AYUDAS ---------- */
@@ -2202,72 +2193,65 @@ function indicar(txt, ms) {
 }
 function textoModo() {
     return {
-        iman: '🧲 Toca un peluchín: todos los de su color irán a sus huecos',
+        iman: '🧲 Toca un peluchín: todos los de su color entrarán en sus piezas',
         garra: '🪝 Toca el peluchín que quieres coger',
-        garra2: '🪝 Ahora toca dónde dejarlo: una casilla libre o su hueco',
-        pistola: '🔫 Toca un hueco: le faltará uno menos'
+        garra2: '🪝 Ahora toca dónde dejarlo: una casilla libre o una pieza de su color',
+        pistola: '🔫 Toca una pieza de color: le faltará uno menos'
     }[modo] || '';
 }
 function elegirModo(m) {
     if (modo === m || (m === 'garra' && modo === 'garra2')) { cancelarModo(); return; }
-    if ((e.ayudas[m] || 0) <= 0) { EST.avisar('No te quedan. Ganas una más con cada nivel', true); return; }
+    if ((e.ayudas[m] || 0) <= 0) { EST.avisar('No te quedan. Se gana una de vez en cuando al pasar niveles', true); return; }
     modo = m; garraB = -1; arrastre = null;
-    pintarBarra();
-    indicar(textoModo());
-    pedirPintar();
+    pintarBarra(); indicar(textoModo()); pedirPintar();
 }
-function cancelarModo() {
-    modo = null; garraB = -1;
-    indicar('');
-    pintarBarra();
-    pedirPintar();
-}
+function cancelarModo() { modo = null; garraB = -1; indicar(''); pintarBarra(); pedirPintar(); }
 function usarIman(b) {
-    const color = e.bolitas[b].color;
-    const antes = e.bolitas.map(bo => bo.i);
+    const color = e.peluchines[b].color;
+    const antes = e.peluchines.map(B => B.i);
     const foto = P.foto(e);
-    const n = P.iman(e, color);
-    if (!n) { noPuede(b, 'Sus huecos ya están llenos'); return; }
+    if (!P.iman(e, color)) { noPuede(-1, 'Sus piezas ya están llenas'); return; }
     historial.push(foto);
-    /* Cada uno vuela en línea recta a su casilla del hueco */
-    e.bolitas.forEach((bo, k) => {
-        if (k < antes.length && antes[k] >= 0 && bo.i < 0 && bo.color === color && bo.h >= 0) viajar(k, [centro(antes[k]), centro(bo.celda)], bo.h, k * 0.04, true);
-    });
-    sonar.ayuda();
-    cancelarModo();
-    trasJugar();
+    /* Que vuelen desde donde estaban, no desde su sitio en la pieza */
+    for (const ev of e.eventos) if (ev.tipo === 'entra' && antes[ev.b] >= 0) ev.desdeCasilla = antes[ev.b];
+    const evs = e.eventos.slice();
+    e.eventos.length = 0;
+    let r = 0;
+    for (const ev of evs) {
+        if (ev.tipo === 'entra') { volar(ev.b, centroCasilla(ev.desdeCasilla ?? antes[ev.b]), r, 0.4); r += 0.05; }
+        else e.eventos.push(ev);
+    }
+    sonar.ayuda(); cancelarModo(); trasJugar();
 }
 function usarGarra(i) {
-    const bo = e.bolitas[garraB], desde = bo.i;
+    const B = e.peluchines[garraB], desde = centroCasilla(B.i);
     const foto = P.foto(e);
-    if (!P.garra(e, garraB, i)) { noPuede(-1, 'Ahí no: una casilla libre o un hueco de su color'); return; }
+    if (!P.garra(e, garraB, i)) { noPuede(-1, 'Ahí no: una casilla libre o una pieza de su color'); return; }
     historial.push(foto);
-    const [x0, y0] = centro(desde), [x1, y1] = centro(bo.i >= 0 ? bo.i : bo.celda);
-    viajar(garraB, [[x0, y0], [(x0 + x1) / 2, Math.min(y0, y1) - L.s], [x1, y1]], bo.h, 0, true);
-    sonar.ayuda();
-    cancelarModo();
-    trasJugar();
+    if (B.pieza >= 0) { e.eventos = e.eventos.filter(ev => !(ev.tipo === 'entra' && ev.b === garraB)); volar(garraB, desde, 0, 0.4); }
+    sonar.ayuda(); cancelarModo(); trasJugar();
 }
-function usarPistola(h) {
+function usarPistola(p) {
     const foto = P.foto(e);
-    if (!P.pistola(e, h)) { noPuede(-1, 'Ese hueco ya está lleno'); return; }
+    if (!P.pistola(e, p)) { noPuede(-1, e.piezas[p].color ? 'Esa pieza ya está llena' : 'Los bloques grises no tienen nada que quitar'); return; }
     historial.push(foto);
-    const H = e.huecos[h];
-    const [x, y] = centro(H.celdas[H.celdas.length - 1]);
+    const [x0, y0] = esquinaPieza(p), [a, b] = e.piezas[p].forma[e.piezas[p].forma.length - 1];
+    const x = x0 + (a + 0.5) * L.s, y = y0 + (b + 0.5) * L.s;
     efecto('anillo', { x, y, col: '#ffffff', dur: 0.4 });
     efecto('texto', { x, y, txt: '−1', col: '#ffe14d', dur: 0.9 });
-    sonar.pistola();
-    cancelarModo();
-    trasJugar();
+    sonar.pistola(); cancelarModo(); trasJugar();
 }
 
 /* ==========================================================
-   DEDO Y RATÓN
+   DEDO Y RATÓN: se arrastran las piezas
    ========================================================== */
 function puntoDe(ev) { const r = lienzo.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
-let dedo = null;
+function casillaEn(x, y) {
+    const c = Math.floor((x - L.ox) / L.s), f = Math.floor((y - L.oy) / L.s);
+    return c >= 0 && f >= 0 && c < e.ancho && f < e.alto ? f * e.ancho + c : -1;
+}
 lienzo.addEventListener('pointerdown', (ev) => {
-    if (!e || e.ganado || dedo !== null) return;
+    if (!e || e.ganado || dedo !== null || !L) return;
     ev.preventDefault();
     lienzo.focus({ preventScroll: true });
     cursor = null;
@@ -2275,79 +2259,50 @@ lienzo.addEventListener('pointerdown', (ev) => {
     const i = casillaEn(x, y);
     if (i < 0) { if (modo) cancelarModo(); return; }
     const o = e.ocup[i];
-    const esPeluchin = o >= 0 && o < P.HUECO;
-    const esHueco = o >= P.HUECO && o < P.BLOQUE;
-    /* Con una ayuda elegida, el toque es para ella */
+    const esPeluchin = o >= 0 && o < P.PIEZA, esPieza = o >= P.PIEZA;
     if (modo === 'iman') { if (esPeluchin) usarIman(o); else noPuede(-1, 'Toca un peluchín'); return; }
     if (modo === 'garra') { if (esPeluchin) { garraB = o; modo = 'garra2'; indicar(textoModo()); sonar.coger(); pedirPintar(); } else noPuede(-1, 'Toca un peluchín'); return; }
     if (modo === 'garra2') { if (esPeluchin && o !== garraB) { garraB = o; sonar.coger(); pedirPintar(); } else if (o !== garraB) usarGarra(i); return; }
-    if (modo === 'pistola') { if (esHueco) usarPistola(o - P.HUECO); else noPuede(-1, 'Toca un hueco'); return; }
-    if (anims.length) return;    // que acabe el viaje anterior
-    if (esPeluchin) {
-        dedo = ev.pointerId;
-        try { lienzo.setPointerCapture(ev.pointerId); } catch (x2) {}
-        arrastre = { tipo: 'peluchin', b: o, d: P.destinos(e, o), x, y, x0: x, y0: y, t0: performance.now(), objetivo: -1, camino: null, lejos: false };
-        sonar.coger();
-        pedirPintar();
-    } else if (o >= P.BLOQUE) {
-        dedo = ev.pointerId;
-        try { lienzo.setPointerCapture(ev.pointerId); } catch (x2) {}
-        arrastre = { tipo: 'bloque', k: o - P.BLOQUE, x0: x, y0: y, dx: 0, dy: 0, movido: false, foto: P.foto(e) };
-    }
+    if (modo === 'pistola') { if (esPieza) usarPistola(o - P.PIEZA); else noPuede(-1, 'Toca una pieza de color'); return; }
+    if (esPeluchin) { noPuede(-1, 'Los peluchines no se mueven: pasa por encima una pieza de su color'); return; }
+    if (!esPieza) return;
+    const p = o - P.PIEZA, Q = e.piezas[p];
+    dedo = ev.pointerId;
+    try { lienzo.setPointerCapture(ev.pointerId); } catch (x2) {}
+    const cc = i % e.ancho, ff = Math.floor(i / e.ancho);
+    arrastre = { p, agarre: [cc - Q.c, ff - Q.f], x, y, foto: P.foto(e), movida: false, tirón: [0, 0] };
+    sonar.coger();
+    pedirPintar();
 });
 lienzo.addEventListener('pointermove', (ev) => {
     if (ev.pointerId !== dedo || !arrastre) return;
     const [x, y] = puntoDe(ev);
-    if (arrastre.tipo === 'peluchin') {
-        arrastre.x = x; arrastre.y = y;
-        if (Math.hypot(x - arrastre.x0, y - arrastre.y0) > L.s * 0.3) arrastre.lejos = true;
-        /* La casilla es la que queda bajo el peluchín (dibujado un poco por
-           encima del dedo para que se vea) */
-        const i = casillaEn(x, y - L.s * 0.3);
-        if (i !== arrastre.objetivo) {
-            arrastre.objetivo = i;
-            arrastre.camino = caminoHacia(arrastre, i);
-        }
-    } else {
-        /* Bloque: se empuja casilla a casilla hacia donde va el dedo */
-        let dx = x - arrastre.x0, dy = y - arrastre.y0;
-        const S = L.s;
-        while (Math.abs(dx) >= S * 0.6 || Math.abs(dy) >= S * 0.6) {
-            const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'der' : 'izq') : (dy > 0 ? 'aba' : 'arr');
-            if (!P.moverBloque(e, arrastre.k, dir)) break;
-            if (!arrastre.movido) { historial.push(arrastre.foto); arrastre.movido = true; }
-            sonar.bloque();
-            const [vx, vy] = P.DIRS[dir];
-            arrastre.x0 += vx * S; arrastre.y0 += vy * S;
-            dx = x - arrastre.x0; dy = y - arrastre.y0;
-            trasJugar();
-        }
-        /* Lo que sobra se enseña como un pequeño desplazamiento, con tope */
-        const tope = S * 0.25;
-        arrastre.dx = Math.max(-tope, Math.min(tope, dx * 0.3)); arrastre.dy = Math.max(-tope, Math.min(tope, dy * 0.3));
+    arrastre.x = x; arrastre.y = y;
+    const Q = e.piezas[arrastre.p];
+    if (!Q.viva) return;
+    /* Casilla bajo el dedo → posición que tendría la pieza */
+    const fc = (x - L.ox) / L.s, ff = (y - L.oy) / L.s;
+    const tc = Math.floor(fc) - arrastre.agarre[0], tf = Math.floor(ff) - arrastre.agarre[1];
+    const antes = P.foto(e);
+    if (empujarHacia(arrastre.p, tc, tf) && !arrastre.movida) { historial.push(arrastre.foto); arrastre.movida = true; pintarBarra(); }
+    void antes;
+    /* Lo que el dedo se pasa de la casilla, como un pequeño tirón (con tope) */
+    if (e.piezas[arrastre.p].viva) {
+        const Q2 = e.piezas[arrastre.p];
+        const dx = (fc - arrastre.agarre[0] - 0.5 - Q2.c) * L.s, dy = (ff - arrastre.agarre[1] - 0.5 - Q2.f) * L.s;
+        const tope = L.s * 0.22;
+        arrastre.tirón = [Math.max(-tope, Math.min(tope, dx * 0.35)), Math.max(-tope, Math.min(tope, dy * 0.35))];
     }
     pedirPintar();
 });
-function caminoHacia(a, i) {
-    if (i < 0) return null;
-    const bo = e.bolitas[a.b];
-    if (i === bo.i) return null;
-    const o = e.ocup[i];
-    if (o === P.VACIA) return a.d.alcance.prev[i] !== -2 ? P.caminoHasta(a.d.alcance, i) : null;
-    if (o >= P.HUECO && o < P.BLOQUE && a.d.huecos.has(o - P.HUECO)) return P.caminoHasta(a.d.alcance, a.d.huecos.get(o - P.HUECO)).concat([i]);
-    return null;
-}
 function soltarDedo(ev) {
     if (ev.pointerId !== dedo) return;
     dedo = null;
     const a = arrastre;
     arrastre = null;
-    if (!a) return;
-    if (a.tipo === 'peluchin') {
-        const corto = !a.lejos && performance.now() - a.t0 < 400;
-        if (corto) mandarSolo(a.b);
-        else if (a.camino) jugarMover(a.b, a.objetivo);
-        else if (a.objetivo !== e.bolitas[a.b].i) noPuede(a.b, a.objetivo >= 0 && e.ocup[a.objetivo] >= P.HUECO && e.ocup[a.objetivo] < P.BLOQUE ? 'Ese hueco no es de su color o no tiene camino' : 'No hay camino libre hasta ahí');
+    if (a && !a.movida) {
+        const lejos = Math.hypot(a.x - (L.ox + (e.piezas[a.p].c + a.agarre[0] + 0.5) * L.s), a.y - (L.oy + (e.piezas[a.p].f + a.agarre[1] + 0.5) * L.s)) > L.s * 0.6;
+        if (lejos) noPuede(a.p, e.piezas[a.p].eje ? 'Esta pieza solo se mueve ' + (e.piezas[a.p].eje === 'h' ? 'de lado' : 'arriba y abajo') : 'Algo la frena: otra pieza o un peluchín de otro color');
     }
     pedirPintar();
 }
@@ -2355,18 +2310,23 @@ function soltarDedo(ev) {
 lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
 
 /* ==========================================================
-   TECLADO: flechas mueven el cursor; Intro coge y suelta
+   TECLADO: flechas mueven el cursor; Intro coge la pieza y las flechas la
+   empujan; Intro o Esc la sueltan
    ========================================================== */
 lienzo.addEventListener('keydown', (ev) => {
     if (!e || e.ganado) return;
     const dirs = { ArrowUp: 'arr', ArrowDown: 'aba', ArrowLeft: 'izq', ArrowRight: 'der' };
-    if (!cursor) cursor = { i: e.bolitas.find(b => b.i >= 0)?.i ?? 0, cogido: null };
+    if (!cursor) cursor = { i: Math.max(0, e.piezas.findIndex(Q => Q.viva && Q.color) >= 0 ? P.celdasDe(e, e.piezas.findIndex(Q => Q.viva && Q.color))[0] : 0), pieza: null };
     if (dirs[ev.key]) {
         ev.preventDefault();
-        if (typeof cursor.cogido === 'string') {
-            /* Con un bloque cogido, las flechas lo empujan */
-            const k = Number(cursor.cogido.slice(1)), foto = P.foto(e);
-            if (P.moverBloque(e, k, dirs[ev.key])) { historial.push(foto); sonar.bloque(); trasJugar(); } else sonar.no();
+        if (cursor.pieza !== null) {
+            const p = cursor.pieza, foto = P.foto(e);
+            if (P.mover(e, p, dirs[ev.key])) {
+                historial.push(foto); sonar.paso();
+                const [vx, vy] = P.DIRS[dirs[ev.key]]; cursor.i += vy * e.ancho + vx;
+                trasJugar();
+                if (!e.piezas[p].viva) cursor.pieza = null;
+            } else noPuede(p);
         } else {
             const [vx, vy] = P.DIRS[dirs[ev.key]];
             const c = cursor.i % e.ancho + vx, f = Math.floor(cursor.i / e.ancho) + vy;
@@ -2378,23 +2338,16 @@ lienzo.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter' || ev.key === ' ') {
         ev.preventDefault();
         const o = e.ocup[cursor.i];
-        if (typeof cursor.cogido === 'string') { cursor.cogido = null; }
-        else if (typeof cursor.cogido === 'number') {
-            const b = cursor.cogido;
-            if (cursor.i === e.bolitas[b].i) { cursor.cogido = null; mandarSolo(b); }
-            else if (jugarMover(b, cursor.i)) cursor.cogido = null;
-            else noPuede(b, 'No hay camino libre hasta ahí');
-        } else if (o >= 0 && o < P.HUECO) {
-            if (modo === 'iman') usarIman(o);
-            else if (modo === 'garra' || modo === 'garra2') { garraB = o; modo = 'garra2'; indicar(textoModo()); }
-            else { cursor.cogido = o; sonar.coger(); }
-        } else if (o >= P.HUECO && o < P.BLOQUE && modo === 'pistola') usarPistola(o - P.HUECO);
+        if (cursor.pieza !== null) cursor.pieza = null;
+        else if (modo === 'iman' && o >= 0 && o < P.PIEZA) usarIman(o);
+        else if (modo === 'garra' && o >= 0 && o < P.PIEZA) { garraB = o; modo = 'garra2'; indicar(textoModo()); }
         else if (modo === 'garra2') usarGarra(cursor.i);
-        else if (o >= P.BLOQUE) { cursor.cogido = 'k' + (o - P.BLOQUE); indicar('Flechas para empujar el bloque; Intro para soltarlo', 2500); }
+        else if (modo === 'pistola' && o >= P.PIEZA) usarPistola(o - P.PIEZA);
+        else if (o >= P.PIEZA) { cursor.pieza = o - P.PIEZA; sonar.coger(); indicar('Flechas para mover la pieza; Intro para soltarla', 2500); }
         pedirPintar();
         return;
     }
-    if (ev.key === 'Escape' && (cursor.cogido !== null || modo)) { ev.stopPropagation(); cursor.cogido = null; cancelarModo(); }
+    if (ev.key === 'Escape' && (cursor.pieza !== null || modo)) { ev.stopPropagation(); cursor.pieza = null; cancelarModo(); }
 });
 lienzo.addEventListener('blur', () => pedirPintar());
 
@@ -2408,19 +2361,31 @@ function empezarNivel(n, foto) {
         try { P.volver(e, foto); e.ayudas = ayudasGuardadas(); } catch (x) { e = P.crear(definicion(nivel, ayudasGuardadas())); }
     }
     e.eventos.length = 0;
-    historial = []; anims = []; efectos = []; desapareciendo = []; fiesta = null; finPendiente = null;
+    historial = []; anims = []; efectos = []; saliendo = []; fiesta = null; finPendiente = null;
     arrastre = null; dedo = null; cursor = null; modo = null; garraB = -1;
+    vis = e.piezas.map(Q => ({ c: Q.c, f: Q.f }));
     sprites.clear(); L = null;
     ['capaFin', 'capaPausa', 'capaNiveles', 'capaAyuda'].forEach(EST.cerrar);
     EST.mostrar('pJuego');
     $('dNivel').textContent = nivel + 1;
     $('dDif').textContent = etiqueta(NIV[nivel].t);
-    $('datoBuhos').style.display = e.bolitas.some(b => b.buho) ? '' : 'none';
-    indicar(nivel === 0 && !foto ? 'Arrastra cada peluchín a un hueco de su color' : '', nivel === 0 ? 6000 : 0);
+    $('datoBuhos').style.display = e.peluchines.some(b => b.buho) ? '' : 'none';
+    const novedad = novedades(nivel);
+    indicar(novedad || (nivel === 0 && !foto ? 'Arrastra las piezas por encima de los peluchines de su color' : ''), novedad || nivel === 0 ? 7000 : 0);
     EST.guardar(CLAVE_PARTIDA, { nivel, foto: P.foto(e) });
     musica.arrancar();
     medir();
     pintarBarra();
+}
+/* La primera vez que sale algo nuevo, una línea que lo explica */
+function novedades(n) {
+    const tiene = (k, f) => NIV[k].P.some(f);
+    const primero = (f) => { for (let k = 0; k < NIV.length; k++) if (tiene(k, f)) return k; return -1; };
+    if (n === primero(p => p[0] === '#')) return 'Nuevo: los bloques grises no recogen nada; apártalos';
+    if (n === primero(p => p[4] && p[5] === undefined)) return 'Nuevo: las piezas con flechas solo se mueven en esa dirección';
+    if (n === primero(p => p[5] !== undefined)) return 'Nuevo: las piezas dobles van juntas hasta que una se llena';
+    if (NIV[n].D && n === NIV.findIndex(x => x.D)) return 'Nuevo: pon una pieza delante del dispensador de su color';
+    return '';
 }
 function pintarBarra() {
     if (!e) return;
@@ -2429,24 +2394,24 @@ function pintarBarra() {
     $('btnGarra').setAttribute('aria-pressed', modo === 'garra' || modo === 'garra2');
     $('btnPistola').setAttribute('aria-pressed', modo === 'pistola');
     $('btnDeshacer').disabled = !historial.length;
-    $('dBuhos').textContent = e.bolitas.filter(b => b.buho && b.i >= 0).length;
+    $('dBuhos').textContent = e.peluchines.filter(b => b.buho && b.i >= 0).length;
 }
-const PREMIOS = ['iman', 'garra', 'pistola'];
 const NOMBRE_PREMIO = { iman: '🧲 IMÁN', garra: '🪝 GARRA', pistola: '🔫 PISTOLA' };
 function mostrarFin() {
     musica.parar();
     const p = progreso();
-    if (nivel + 1 > p.max) EST.guardar(CLAVE_PROGRESO, { max: Math.min(NIV.length - 1, nivel + 1), hechos: nivel + 1 });
-    /* Premio: una ayuda más, por turnos */
-    const premio = PREMIOS[nivel % 3];
-    const a = ayudasGuardadas();
-    const sube = a[premio] < AYUDAS_TOPE;
-    if (sube) { a[premio]++; EST.guardar(CLAVE_AYUDAS, a); }
+    if (nivel + 1 > p.max) EST.guardar(CLAVE_PROGRESO, { max: Math.min(NIV.length - 1, nivel + 1) });
+    let txtPremio = '';
+    if (hayPremio(nivel) && nivel + 1 > p.max) {
+        /* Solo la primera vez que se pasa: repetir un nivel no da más */
+        const premio = cualPremio(nivel), a = ayudasGuardadas();
+        if (a[premio] < AYUDAS_TOPE) { a[premio]++; EST.guardar(CLAVE_AYUDAS, a); txtPremio = 'Premio: +1 ' + NOMBRE_PREMIO[premio]; }
+    }
     const ultimo = nivel === NIV.length - 1;
     $('finTitulo').textContent = ultimo ? '🏆 ¡TODOS SUPERADOS!' : '🎉 ¡NIVEL ' + (nivel + 1) + ' SUPERADO!';
-    const sobran = e.bolitas.filter(b => b.i >= 0).length;
+    const sobran = e.peluchines.filter(b => b.i >= 0).length;
     $('finDetalle').textContent = sobran ? 'Los que sobraban se van a dormir contentos.' : 'Todos los peluchines en su sitio.';
-    $('finPremio').textContent = sube ? 'Premio: +1 ' + NOMBRE_PREMIO[premio] : '';
+    $('finPremio').textContent = txtPremio;
     $('btnSiguiente').style.display = ultimo ? 'none' : '';
     EST.abrir('capaFin');
 }
@@ -2466,9 +2431,9 @@ function pintarListaNiveles() {
     }
 }
 function pintarMenu() {
-    const guardada = EST.leer(CLAVE_PARTIDA, null);
-    const n = guardada && Number.isInteger(guardada.nivel) ? guardada.nivel : progreso().max;
-    $('btnJugar').textContent = (guardada ? 'CONTINUAR' : 'JUGAR') + ' · NIVEL ' + (n + 1);
+    const g = EST.leer(CLAVE_PARTIDA, null);
+    const n = g && Number.isInteger(g.nivel) ? g.nivel : progreso().max;
+    $('btnJugar').textContent = (g ? 'CONTINUAR' : 'JUGAR') + ' · NIVEL ' + (n + 1);
 }
 function jugar() {
     const g = EST.leer(CLAVE_PARTIDA, null);
@@ -2530,7 +2495,10 @@ EST.iniciar({ claveAudio: 'peluchinesAudio', alCambiarMusica });
 pintarMenu();
 
 /* Para las pruebas */
-window.__pel = { partida: () => e, nivel: () => nivel, medidas: () => L, centro: (i) => centro(i), anims: () => anims.length, bucle: () => pintando !== null };
+window.__pel = {
+    partida: () => e, nivel: () => nivel, medidas: () => L, anims: () => anims.length, bucle: () => pintando !== null,
+    centro: (i) => centroCasilla(i), premio: (n) => hayPremio(n) ? cualPremio(n) : null
+};
 
 </script>
 </body>
