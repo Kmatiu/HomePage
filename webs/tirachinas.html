@@ -1,0 +1,3233 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="menus">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Pajaritos al Rescate</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/tirachinas (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE PAJARITOS AL RESCATE ---------- */
+        #pJuego, #pMapa { max-width: 1200px; }
+        #notaGuardada { display: none; color: var(--c-cfc39a, #cfc39a); font-size: 0.72rem; line-height: 1.5; margin: 8px 2px 0; text-align: center; }
+        .grupo-j2 { display: contents; }
+        .dato.turno b { color: var(--c-ffd54f, #ffd54f); text-shadow: 0 0 6px rgba(var(--c-255-213-79, 255, 213, 79), 0.6); }
+        @media (orientation: landscape) and (max-height: 520px) {
+            .est-barra { padding: 2px 6px; }
+            .est-barra .dato b { font-size: 0.85rem; }
+            .est-icono { height: 28px; }
+        }
+        /* El lienzo ocupa todo el hueco que deja la barra. El tamaño lo da el
+           CSS; el código solo lee cuánto mide para dibujar a esa resolución */
+        #zonaJuego { flex: 1 1 auto; min-height: 0; width: 100%; margin-top: 6px; position: relative; }
+        #gameCanvas {
+            position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+            border-radius: 8px; touch-action: none; background: var(--c-87ceeb, #87ceeb);
+            -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ---------- MAPA DE NIVELES ---------- */
+        #pMapa .est-scroll { width: 100%; }
+        .mapa-cab { display: flex; align-items: center; gap: 8px; width: 100%; margin: 4px 0 8px; }
+        .mapa-cab h2 { flex: 1; margin: 0; font-size: 1rem; text-align: center; }
+        .mapa-cab .total { font-size: 0.8rem; color: var(--c-ffd54f, #ffd54f); white-space: nowrap; }
+        #grpMundo .opcion { flex: 1 1 28%; }
+        #grpMundo .opcion[disabled] { opacity: 0.45; }
+        .rejilla {
+            display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;
+            width: 100%; max-width: 560px; margin: 10px auto;
+        }
+        .casilla {
+            aspect-ratio: 1; border-radius: 10px; border: 2px solid var(--c-5a4fcf, #5a4fcf);
+            background: var(--c-1c1847, #1c1847); color: var(--c-fff, #fff);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            font: bold 1.05rem/1 var(--fuente, sans-serif); cursor: pointer; padding: 0;
+        }
+        .casilla .est { font-size: 0.62rem; letter-spacing: 1px; color: var(--c-ffd54f, #ffd54f); min-height: 0.8em; }
+        .casilla.hecha { border-color: var(--c-3ecf8e, #3ecf8e); }
+        .casilla.saltada { border-style: dashed; }
+        .casilla.siguiente { border-color: var(--c-ffd54f, #ffd54f); box-shadow: 0 0 10px rgba(var(--c-255-213-79, 255, 213, 79), 0.55); }
+        .casilla[disabled] { opacity: 0.35; cursor: default; }
+        .casilla.premio { grid-column: 1 / -1; aspect-ratio: auto; padding: 10px; font-size: 0.85rem; border-color: var(--c-e0a800, #e0a800); }
+        .mapa-nota { font-size: 0.72rem; color: var(--apagado); text-align: center; margin: 4px 0; }
+
+        /* Tema claro en el mapa: construir.js añade #pMapa a la regla común
+           de vista.css (que en «menus» solo lo da con #pMenu delante). Aquí,
+           solo los colores propios del mapa */
+        :root[data-tema="claro"][data-vista="menus"] body:has(#pMapa.activa) {
+            --c-1c1847: #ffffff; --c-5a4fcf: #8f88d8; --c-fff: #1b2030; --c-ffd54f: #7a5200;
+            --c-255-213-79: 138, 93, 0; --c-3ecf8e: #1d7f53; --c-e0a800: #7a5200;
+        }
+
+        /* ---------- FIN DE NIVEL ---------- */
+        .estrellas { font-size: 2.4rem; letter-spacing: 6px; margin: 4px 0; min-height: 1.2em; }
+        .estrellas span { display: inline-block; opacity: 0.22; filter: grayscale(1); transform: scale(0.8); transition: transform 0.25s, opacity 0.25s; }
+        .estrellas span.si { opacity: 1; filter: none; transform: scale(1); }
+        @media (prefers-reduced-motion: reduce) { .estrellas span { transition: none; } }
+        .logros { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 0.82rem; text-align: left; margin: 8px 0; }
+        .logros .ico { font-size: 1.2rem; text-align: center; }
+        .logros .no { opacity: 0.38; filter: grayscale(1); }
+        .logros small { display: block; color: var(--apagado); font-size: 0.7rem; }
+        .duelo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+        .duelo div { border: 1px solid var(--c-5a4fcf, #5a4fcf); border-radius: 8px; padding: 6px; }
+        .duelo b { display: block; font-size: 1.3rem; }
+        .duelo .gana { border-color: var(--c-ffd54f, #ffd54f); }
+    </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMapa.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMapa.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">PAJARITOS <span>AL RESCATE</span></div>
+        <p class="est-lema">Los zorros se han llevado los huevos. ¡Al tirachinas!</p>
+
+        <fieldset class="est-grupo">
+            <legend>JUGADORES</legend>
+            <div class="opciones iguales" id="grpJugadores">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">1 JUGADOR<span class="sub">a por las 3 estrellas</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2 JUGADORES<span class="sub">por turnos, el mismo nivel</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+        <p id="notaGuardada"></p>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnNiveles" type="button">🗺️ NIVELES</button>
+            <button class="secundario" id="btnLogros" type="button">🏅 LOGROS</button>
+            <button class="secundario" id="btnInstructions" type="button">📖 CÓMO SE JUEGA</button>
+            <button class="secundario" id="btnDeCero" type="button">↺ EMPEZAR DE CERO</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== MAPA ===================== -->
+<section class="pantalla" id="pMapa">
+    <div class="est-scroll">
+        <div class="mapa-cab">
+            <button class="secundario" id="btnMapaMenu" type="button">← MENÚ</button>
+            <h2 id="mapaTitulo">NIVELES</h2>
+            <span class="total" id="mapaTotal">⭐ 0</span>
+        </div>
+        <div class="opciones" id="grpMundo"></div>
+        <div class="rejilla" id="rejilla"></div>
+        <p class="mapa-nota" id="mapaNota"></p>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="bNivel">1-1</b><span>NIVEL</span></div>
+        <div class="dato" id="datoJ1"><b id="bS1">0</b><span id="etJ1">PUNTOS</span></div>
+        <div class="grupo-j2" id="barraJ2" style="display:none">
+            <div class="dato" id="datoJ2"><b id="bS2">—</b><span>J2</span></div>
+        </div>
+        <div class="dato" id="datoRecord"><b id="bRecord">—</b><span>RÉCORD</span></div>
+        <div class="hueco"></div>
+        <button id="btnVer" class="est-icono" type="button" aria-label="Ver la construcción" aria-pressed="false">👁</button>
+        <button id="btnRepetir" class="est-icono" type="button" aria-label="Repetir el nivel">↻</button>
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zonaJuego">
+        <canvas id="gameCanvas" aria-label="Tirachinas: arrastra hacia atrás y suelta para lanzar"></canvas>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p id="pausaTexto">Los zorros esperan.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnResume" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnPausaRepetir" type="button">↻ REPETIR NIVEL</button>
+            <button class="secundario" id="btnPausaMapa" type="button">🗺️ NIVELES</button>
+            <button class="secundario" id="btnPauseToMenu" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">¡NIVEL SUPERADO!</h2>
+        <div class="estrellas" id="finEstrellas" aria-label=""><span>⭐</span><span>⭐</span><span>⭐</span></div>
+        <div class="marcador" id="finalScore">0</div>
+        <p id="finDetalle"></p>
+        <button class="principal" id="btnSiguiente" type="button">SIGUIENTE ▶</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnFinRepetir" type="button">↻ REPETIR</button>
+            <button class="secundario" id="btnSaltar" type="button" style="display:none">⏭ SALTAR NIVEL</button>
+            <button class="secundario" id="btnFinMapa" type="button">🗺️ NIVELES</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaTurno">
+    <div class="caja">
+        <h2 id="turnoTitulo">TURNO DE J2</h2>
+        <p id="turnoTexto"></p>
+        <div class="duelo" id="duelo"></div>
+        <button class="principal" id="btnTurno" type="button">¡A JUGAR!</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnTurnoMapa" type="button">🗺️ NIVELES</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaLogros">
+    <div class="caja">
+        <h2>🏅 LOGROS</h2>
+        <p id="logrosResumen"></p>
+        <div class="logros" id="logros"></div>
+        <button class="principal" id="btnCerrarLogros" type="button">CERRAR</button>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Los zorros se han escondido en sus casetas con los huevos. Lanza a los pajaritos con el tirachinas y tira las casetas hasta que no quede ningún zorro. Cada nivel te da unos pajaritos en un orden fijo; si se acaban y queda algún zorro, a repetir.</p>
+            <h3>LANZAR</h3>
+            <ul>
+                <li><b>Arrastra hacia atrás</b> desde cualquier sitio del dibujo y <b>suelta</b>: el pajarito sale hacia el lado contrario. Cuanto más estiras, más fuerte. Los puntitos te enseñan el principio del vuelo, y los blancos, por dónde fue el tiro anterior.</li>
+                <li>Si te arrepientes, vuelve con el dedo cerca del punto donde empezaste y suelta: no lanza.</li>
+                <li><b>Toca la pantalla</b> mientras vuela para usar su poder.</li>
+                <li><b>👁</b> enseña la construcción de cerca (o todo el nivel). <b>↻</b> repite el nivel. <b>⏸</b> pausa.</li>
+                <li><b>Teclado:</b> ← → apuntan, ↑ ↓ fuerza, espacio o Intro lanza y, en vuelo, usa el poder. R repite, V ver, P o Esc pausa.</li>
+            </ul>
+            <h3>LOS PAJARITOS</h3>
+            <ul>
+                <li><b>Pío</b> (turquesa): el de siempre, sin poder.</li>
+                <li><b>Trío</b> (rosa): se parte en tres. Con el cristal es el mejor.</li>
+                <li><b>Zas</b> (verde): acelera de golpe y atraviesa la madera.</li>
+                <li><b>Pum</b> (morado): explota al tocar la pantalla, o solo un rato después de chocar. Rompe hasta la piedra.</li>
+                <li><b>Bolo</b> (azul, grandote): pesa mucho. Con la piedra puede.</li>
+            </ul>
+            <h3>MATERIALES</h3>
+            <ul>
+                <li>El <b>cristal</b> se rompe con nada, la <b>madera</b> aguanta un poco y la <b>piedra</b> mucho. Las cajas <b>TNT</b> explotan si les das.</li>
+                <li>No hace falta darles a los zorros: si se les cae la caseta encima o caen de alto, también.</li>
+                <li>Los zorros con <b>casco</b> y el <b>zorro grande</b> aguantan más. Al final te espera el jefe.</li>
+            </ul>
+            <h3>ESTRELLAS Y PUNTOS</h3>
+            <ul>
+                <li>Cada zorro da 5.000 puntos (más con casco), cada pieza rota da puntos, y cada pajarito que sobra al ganar, 10.000. Con más puntos, más estrellas (hasta 3).</li>
+                <li>Si fallas un nivel 3 veces, puedes <b>saltarlo</b> (sin estrellas) y volver luego.</li>
+                <li>En cada mundo hay un <b>huevo dorado</b> escondido: rómpelo y se abre un nivel de premio.</li>
+            </ul>
+            <h3>DOS JUGADORES</h3>
+            <ul><li>Juega primero J1 el nivel entero y luego J2 el mismo nivel desde el principio. Gana el nivel quien haga más puntos, y se van sumando victorias.</li></ul>
+            <p>Se guarda solo: en el menú, <b>CONTINUAR</b> te lleva al siguiente nivel pendiente. <b>↺ EMPEZAR DE CERO</b> borra estrellas, huevos y niveles hechos (los logros se quedan).</p>
+        </div>
+        <button class="principal" id="closeInstructions" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* Motor de física 2D propio para el tirachinas: cajas (giradas o no) y
+   círculos, con impulsos secuenciales acumulados y arranque en caliente
+   (lo que deja apilar sin temblar), fricción, rebote, reposo por grupos,
+   daño por golpe y explosiones.
+
+   Unidades: metros, segundos, y hacia ARRIBA es +y (el dibujo da la vuelta).
+   Paso fijo PASO = 1/120 s: a 1/60 un pajarito acelerado (28 m/s) avanza
+   0,47 m por paso y atravesaba los tablones de 0,2 m.
+
+   Sin dependencias. Se usa en el navegador (global Fisica) y en Node
+   (require) para el jugador simulado y las pruebas. */
+(function (raiz, fabrica) {
+    if (typeof module === 'object' && module.exports) module.exports = fabrica();
+    else raiz.Fisica = fabrica();
+})(typeof self !== 'undefined' ? self : this, function () {
+    'use strict';
+
+    const PASO = 1 / 120;
+    const GRAVEDAD = -10;
+    /* Ajustes del resolvedor (medidos en prueba-fisica.js; se exportan para
+       poder medir alternativas sin tocar el código) */
+    const AJ = { iter: 8, baum: 0.2, holgura: 0.005, tolRel: 0.95, tolAbs: 0.005, casarPos: 0.04 };
+    /* Reposo: quieto 0,5 s por debajo de esto, y todo lo que toca también */
+    const REPOSO_V2 = 0.02, REPOSO_W2 = 0.03, REPOSO_T = 0.5;
+    /* Un cuerpo despierto que roza a uno dormido lo despierta si va a más de esto */
+    const DESPERTAR_V = 0.35;
+    /* Golpe que cuenta como daño: velocidad de acercamiento en el contacto */
+    const GOLPE_V = 1.0;
+    const REBOTE_V = 1.0;
+    const EMPUJON_MAX = 12;
+
+    /* Materiales. densidad en kg/m². El daño de un golpe es la SACUDIDA que
+       sufre la pieza (impulso / su masa, en m/s), no el impulso: con el
+       impulso, una piedra que cae se dañaba más que una tabla que cae de la
+       misma altura, por pesar más, y un bloque de piedra rodando tras un
+       golpe se rompía solo. umbral = sacudida que no le hace nada; vida =
+       cuánta sacudida por encima del umbral aguanta en total. Medido en
+       calibrar.js: Pío rompe madera y cristal pero no piedra, Bolo y la
+       bomba sí rompen piedra, y un zorro no sobrevive a un golpe directo. */
+    const MATERIALES = {
+        suelo:   { densidad: 0, friccion: 0.9, rebote: 0.05, vida: Infinity, umbral: 0 },
+        madera:  { densidad: 1.0, friccion: 0.7, rebote: 0.1, vida: 6, umbral: 2.5 },
+        cristal: { densidad: 0.9, friccion: 0.4, rebote: 0.1, vida: 2.5, umbral: 1.5 },
+        piedra:  { densidad: 3.6, friccion: 0.8, rebote: 0.05, vida: 10, umbral: 4 },
+        tnt:     { densidad: 0.8, friccion: 0.7, rebote: 0.1, vida: 1.5, umbral: 1.5 },
+        zorro:   { densidad: 1.6, friccion: 0.6, rebote: 0.2, vida: 2.0, umbral: 1.0 },
+        pajaro:  { densidad: 2.6, friccion: 0.6, rebote: 0.35, vida: Infinity, umbral: 0 },
+        huevo:   { densidad: 0.6, friccion: 0.5, rebote: 0.2, vida: 1.0, umbral: 0.5 }
+    };
+
+    function crearMundo() {
+        return { cuerpos: [], arbitros: new Map(), sig: 1, t: 0, eventos: [], pendientesExplotar: [], orden: [] };
+    }
+
+    /* ---------- cuerpos ---------- */
+    function cuerpoBase(m, o) {
+        const mat = MATERIALES[o.mat || 'madera'];
+        const b = {
+            id: m.sig++, forma: o.forma, mat: o.mat || 'madera',
+            x: o.x, y: o.y, a: o.a || 0, vx: o.vx || 0, vy: o.vy || 0, av: o.av || 0,
+            estatico: !!o.estatico, dormido: false, quieto: 0,
+            friccion: o.friccion !== undefined ? o.friccion : mat.friccion,
+            rebote: o.rebote !== undefined ? o.rebote : mat.rebote,
+            vida: o.vida !== undefined ? o.vida : mat.vida, vidaMax: 0,
+            umbral: o.umbral !== undefined ? o.umbral : mat.umbral,
+            danoPaso: 0, golpePaso: 0, vivo: true, tipo: o.tipo || o.mat || 'madera', datos: o.datos || null,
+            /* Amortiguación: los círculos rodarían para siempre por el suelo */
+            amortV: o.amortV !== undefined ? o.amortV : 0.02, amortW: o.amortW !== undefined ? o.amortW : (o.forma === 'circulo' ? 1.2 : 0.1),
+            sinDano: !!o.sinDano, mult: o.mult || null
+        };
+        b.vidaMax = b.vida;
+        return b;
+    }
+    function caja(m, o) {
+        const b = cuerpoBase(m, Object.assign({ forma: 'caja' }, o));
+        b.hx = o.w / 2; b.hy = o.h / 2;
+        const dens = o.densidad !== undefined ? o.densidad : MATERIALES[b.mat].densidad;
+        const masa = b.estatico ? 0 : dens * o.w * o.h;
+        b.masa = masa;
+        b.im = masa > 0 ? 1 / masa : 0;
+        const I = masa * (o.w * o.w + o.h * o.h) / 12;
+        b.ii = I > 0 ? 1 / I : 0;
+        b.radio = Math.hypot(b.hx, b.hy);
+        m.cuerpos.push(b); m.orden.push(b);
+        return b;
+    }
+    function circulo(m, o) {
+        const b = cuerpoBase(m, Object.assign({ forma: 'circulo' }, o));
+        b.r = o.r;
+        const dens = o.densidad !== undefined ? o.densidad : MATERIALES[b.mat].densidad;
+        const masa = b.estatico ? 0 : dens * Math.PI * o.r * o.r;
+        b.masa = masa;
+        b.im = masa > 0 ? 1 / masa : 0;
+        const I = masa * o.r * o.r / 2;
+        b.ii = I > 0 ? 1 / I : 0;
+        b.radio = o.r;
+        m.cuerpos.push(b); m.orden.push(b);
+        return b;
+    }
+    function quitar(m, b, razon) {
+        if (!b.vivo) return;
+        b.vivo = false;
+        /* Lo que se apoyaba en él tiene que caer: se despierta su grupo */
+        for (const [k, ar] of m.arbitros) {
+            if (ar.a === b || ar.b === b) {
+                const otro = ar.a === b ? ar.b : ar.a;
+                despertar(m, otro);
+                m.arbitros.delete(k);
+            }
+        }
+        m.cuerpos = m.cuerpos.filter(c => c !== b);
+        m.orden = m.orden.filter(c => c !== b);
+        m.eventos.push({ tipo: 'quita', cuerpo: b, razon: razon || 'roto' });
+    }
+    /* Despierta el cuerpo y todo su grupo de contactos (inundación): si solo
+       se despertara él, lo de encima seguiría dormido flotando en el aire */
+    function despertar(m, b) {
+        if (!b || b.estatico || !b.dormido) { if (b) b.quieto = 0; return; }
+        const pila = [b];
+        while (pila.length) {
+            const c = pila.pop();
+            if (!c.dormido) continue;
+            c.dormido = false; c.quieto = 0;
+            for (const ar of m.arbitros.values()) {
+                if (ar.a === c && ar.b.dormido) pila.push(ar.b);
+                else if (ar.b === c && ar.a.dormido) pila.push(ar.a);
+            }
+        }
+    }
+    function dormirTodo(m) { for (const b of m.cuerpos) if (!b.estatico) { b.dormido = true; b.vx = b.vy = b.av = 0; b.quieto = REPOSO_T; } }
+
+    /* ---------- geometría ---------- */
+    /* Vértices en el mundo, en sentido antihorario */
+    function vertices(b) {
+        const c = Math.cos(b.a), s = Math.sin(b.a);
+        const ex = b.hx, ey = b.hy;
+        const L = [[-ex, -ey], [ex, -ey], [ex, ey], [-ex, ey]];
+        return L.map(([x, y]) => [b.x + c * x - s * y, b.y + s * x + c * y]);
+    }
+    function normales(b) {
+        const c = Math.cos(b.a), s = Math.sin(b.a);
+        /* normales de las aristas v0→v1 (abajo), v1→v2 (derecha), v2→v3 (arriba), v3→v0 (izquierda) */
+        return [[s, -c], [c, s], [-s, c], [-c, -s]];
+    }
+    function aabb(b) {
+        if (b.forma === 'circulo') return [b.x - b.r, b.y - b.r, b.x + b.r, b.y + b.r];
+        const c = Math.abs(Math.cos(b.a)), s = Math.abs(Math.sin(b.a));
+        const ex = c * b.hx + s * b.hy, ey = s * b.hx + c * b.hy;
+        return [b.x - ex, b.y - ey, b.x + ex, b.y + ey];
+    }
+
+    function maxSeparacion(VA, NA, VB) {
+        let mejor = -Infinity, cual = 0;
+        for (let i = 0; i < 4; i++) {
+            const n = NA[i], v = VA[i];
+            let mn = Infinity;
+            for (let j = 0; j < 4; j++) {
+                const d = n[0] * (VB[j][0] - v[0]) + n[1] * (VB[j][1] - v[1]);
+                if (d < mn) mn = d;
+            }
+            if (mn > mejor) { mejor = mn; cual = i; }
+        }
+        return [cual, mejor];
+    }
+    function recortar(p, nx, ny, off) {
+        /* Recorta el segmento p[0]-p[1] por el semiplano n·x <= off */
+        const out = [];
+        const d0 = nx * p[0].x + ny * p[0].y - off, d1 = nx * p[1].x + ny * p[1].y - off;
+        if (d0 <= 0) out.push(p[0]);
+        if (d1 <= 0) out.push(p[1]);
+        if (d0 * d1 < 0) {
+            const t = d0 / (d0 - d1);
+            out.push({ x: p[0].x + t * (p[1].x - p[0].x), y: p[0].y + t * (p[1].y - p[0].y), id: d0 > 0 ? p[0].id | 64 : p[1].id | 64 });
+        }
+        return out;
+    }
+    /* Caja contra caja (como b2CollidePolygons): cara de referencia, arista
+       incidente y recorte. Devuelve la normal de A hacia B y hasta 2 puntos */
+    function cajaCaja(A, B) {
+        const VA = vertices(A), NA = normales(A), VB = vertices(B), NB = normales(B);
+        const [ea, sa] = maxSeparacion(VA, NA, VB);
+        if (sa > 0) return null;
+        const [eb, sb] = maxSeparacion(VB, NB, VA);
+        if (sb > 0) return null;
+        let V1, N1, V2, N2, e1, flip;
+        if (sb > AJ.tolRel * sa + AJ.tolAbs) { V1 = VB; N1 = NB; V2 = VA; N2 = NA; e1 = eb; flip = 1; }
+        else { V1 = VA; N1 = NA; V2 = VB; N2 = NB; e1 = ea; flip = 0; }
+        const n = N1[e1];
+        /* Arista incidente: la de normal más opuesta */
+        let ie = 0, mn = Infinity;
+        for (let i = 0; i < 4; i++) { const d = n[0] * N2[i][0] + n[1] * N2[i][1]; if (d < mn) { mn = d; ie = i; } }
+        const i1 = ie, i2 = (ie + 1) % 4;
+        let pts = [{ x: V2[i1][0], y: V2[i1][1], id: i1 }, { x: V2[i2][0], y: V2[i2][1], id: i2 }];
+        const v11 = V1[e1], v12 = V1[(e1 + 1) % 4];
+        let tx = v12[0] - v11[0], ty = v12[1] - v11[1];
+        const tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+        const lado1 = -(tx * v11[0] + ty * v11[1]), lado2 = tx * v12[0] + ty * v12[1];
+        pts = recortar(pts, -tx, -ty, lado1); if (pts.length < 2) return null;
+        pts = recortar(pts, tx, ty, lado2); if (pts.length < 2) return null;
+        const frente = n[0] * v11[0] + n[1] * v11[1];
+        const nx = flip ? -n[0] : n[0], ny = flip ? -n[1] : n[1];
+        const c = [];
+        for (const p of pts) {
+            const sep = n[0] * p.x + n[1] * p.y - frente;
+            if (sep <= 0) c.push({ px: p.x, py: p.y, sep, id: (flip << 8) | (e1 << 4) | p.id });
+        }
+        return c.length ? { nx, ny, c } : null;
+    }
+    /* Caja (A) contra círculo (B): normal de la caja hacia el círculo */
+    function cajaCirculo(A, B) {
+        const c = Math.cos(A.a), s = Math.sin(A.a);
+        const dx = B.x - A.x, dy = B.y - A.y;
+        const lx = c * dx + s * dy, ly = -s * dx + c * dy;
+        const qx = Math.max(-A.hx, Math.min(A.hx, lx)), qy = Math.max(-A.hy, Math.min(A.hy, ly));
+        let nlx, nly, sep, plx, ply;
+        if (qx === lx && qy === ly) {
+            /* Centro dentro de la caja: sale por la cara más cercana */
+            const fx = A.hx - Math.abs(lx), fy = A.hy - Math.abs(ly);
+            if (fx < fy) { nlx = Math.sign(lx) || 1; nly = 0; sep = -fx - B.r; plx = nlx * A.hx; ply = ly; }
+            else { nlx = 0; nly = Math.sign(ly) || 1; sep = -fy - B.r; plx = lx; ply = nly * A.hy; }
+        } else {
+            const ex = lx - qx, ey = ly - qy, d = Math.hypot(ex, ey);
+            sep = d - B.r;
+            if (sep > 0) return null;
+            nlx = ex / d; nly = ey / d; plx = qx; ply = qy;
+        }
+        const nx = c * nlx - s * nly, ny = s * nlx + c * nly;
+        /* El punto, en la superficie del círculo (lo más hundido) */
+        return { nx, ny, c: [{ px: B.x - nx * B.r, py: B.y - ny * B.r, sep, id: 0 }] };
+    }
+    function circuloCirculo(A, B) {
+        const dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy);
+        const sep = d - A.r - B.r;
+        if (sep > 0) return null;
+        const nx = d > 1e-9 ? dx / d : 0, ny = d > 1e-9 ? dy / d : 1;
+        return { nx, ny, c: [{ px: A.x + nx * A.r, py: A.y + ny * A.r, sep, id: 0 }] };
+    }
+    function chocar(A, B) {
+        if (A.forma === 'caja' && B.forma === 'caja') return cajaCaja(A, B);
+        if (A.forma === 'caja') return cajaCirculo(A, B);
+        if (B.forma === 'caja') { const r = cajaCirculo(B, A); if (r) { r.nx = -r.nx; r.ny = -r.ny; } return r; }
+        return circuloCirculo(A, B);
+    }
+
+    /* ---------- paso ---------- */
+    function paso(m, cfg) {
+        const dt = PASO, idt = 1 / dt;
+        const g = cfg && cfg.gravedad !== undefined ? cfg.gravedad : GRAVEDAD;
+        m.t += dt;
+        const C = m.orden;
+        /* Barrido por x: la lista casi no cambia de orden entre pasos, así
+           que la ordenación por inserción sale casi gratis */
+        for (const b of C) b._bb = aabb(b);
+        for (let i = 1; i < C.length; i++) {
+            const b = C[i]; let j = i - 1;
+            while (j >= 0 && C[j]._bb[0] > b._bb[0]) { C[j + 1] = C[j]; j--; }
+            C[j + 1] = b;
+        }
+        const vivos = new Set();
+        for (let i = 0; i < C.length; i++) {
+            const A = C[i], ba = A._bb;
+            for (let j = i + 1; j < C.length; j++) {
+                const B = C[j], bb = B._bb;
+                if (bb[0] > ba[2]) break;
+                if (bb[1] > ba[3] || bb[3] < ba[1]) continue;
+                if ((A.estatico || A.dormido) && (B.estatico || B.dormido)) {
+                    /* Dos quietos: se conserva el contacto que tuvieran */
+                    const k0 = A.id < B.id ? A.id * 100000 + B.id : B.id * 100000 + A.id;
+                    if (m.arbitros.has(k0)) vivos.add(k0);
+                    continue;
+                }
+                const [P, Q] = A.id < B.id ? [A, B] : [B, A];
+                const k = P.id * 100000 + Q.id;
+                const r = chocar(P, Q);
+                if (!r) continue;
+                vivos.add(k);
+                const viejo = m.arbitros.get(k);
+                if (viejo) {
+                    for (const c of r.c) {
+                        /* Por su identificador y, si cambió (en una pila de
+                           cajas iguales, una milésima de deriva cambia qué
+                           vértice se recorta), por la posición: perder el
+                           impulso de un contacto es lo que hace temblar la pila */
+                        let o = viejo.c.find(x => x.id === c.id);
+                        if (!o && AJ.casarPos > 0) {
+                            let mejor = AJ.casarPos * AJ.casarPos;
+                            for (const x of viejo.c) { const d = (x.px - c.px) ** 2 + (x.py - c.py) ** 2; if (d < mejor && !x._usado) { mejor = d; o = x; } }
+                        }
+                        if (o) { c.pn = o.pn; c.pt = o.pt; o._usado = true; } else { c.pn = 0; c.pt = 0; }
+                    }
+                    viejo.nx = r.nx; viejo.ny = r.ny; viejo.c = r.c;
+                } else {
+                    for (const c of r.c) { c.pn = 0; c.pt = 0; }
+                    m.arbitros.set(k, { a: P, b: Q, nx: r.nx, ny: r.ny, c: r.c, mu: Math.sqrt(P.friccion * Q.friccion), e: Math.max(P.rebote, Q.rebote) });
+                }
+            }
+        }
+        for (const k of [...m.arbitros.keys()]) if (!vivos.has(k)) m.arbitros.delete(k);
+
+        /* Un despierto rápido despierta al dormido que toca */
+        for (const ar of m.arbitros.values()) {
+            const { a, b } = ar;
+            if (a.dormido && !b.dormido && !b.estatico && (b.vx * b.vx + b.vy * b.vy > DESPERTAR_V * DESPERTAR_V || b.av * b.av > 1)) despertar(m, a);
+            else if (b.dormido && !a.dormido && !a.estatico && (a.vx * a.vx + a.vy * a.vy > DESPERTAR_V * DESPERTAR_V || a.av * a.av > 1)) despertar(m, b);
+        }
+
+        /* Fuerzas */
+        for (const b of C) {
+            if (b.estatico || b.dormido) continue;
+            b.vy += g * dt;
+            const fv = 1 / (1 + dt * b.amortV), fw = 1 / (1 + dt * b.amortW);
+            b.vx *= fv; b.vy *= fv; b.av *= fw;
+        }
+
+        /* Preparación: masas efectivas, sesgo de posición, rebote, daño y
+           arranque en caliente */
+        const arbs = [...m.arbitros.values()].filter(ar => !(ar.a.dormido || ar.a.estatico) || !(ar.b.dormido || ar.b.estatico));
+        for (const ar of arbs) {
+            const A = ar.a, B = ar.b;
+            const imA = A.dormido ? 0 : A.im, iiA = A.dormido ? 0 : A.ii, imB = B.dormido ? 0 : B.im, iiB = B.dormido ? 0 : B.ii;
+            ar.imA = imA; ar.iiA = iiA; ar.imB = imB; ar.iiB = iiB;
+            const nx = ar.nx, ny = ar.ny, tx = ny, ty = -nx;
+            let golpe = 0;
+            for (const c of ar.c) {
+                const r1x = c.px - A.x, r1y = c.py - A.y, r2x = c.px - B.x, r2y = c.py - B.y;
+                c.r1x = r1x; c.r1y = r1y; c.r2x = r2x; c.r2y = r2y;
+                const rn1 = r1x * nx + r1y * ny, rn2 = r2x * nx + r2y * ny;
+                const kn = imA + imB + iiA * (r1x * r1x + r1y * r1y - rn1 * rn1) + iiB * (r2x * r2x + r2y * r2y - rn2 * rn2);
+                c.mn = kn > 0 ? 1 / kn : 0;
+                const rt1 = r1x * tx + r1y * ty, rt2 = r2x * tx + r2y * ty;
+                const kt = imA + imB + iiA * (r1x * r1x + r1y * r1y - rt1 * rt1) + iiB * (r2x * r2x + r2y * r2y - rt2 * rt2);
+                c.mt = kt > 0 ? 1 / kt : 0;
+                const dvx = B.vx - B.av * r2y - A.vx + A.av * r1y, dvy = B.vy + B.av * r2x - A.vy - A.av * r1x;
+                const vn = dvx * nx + dvy * ny;
+                c.sesgo = -AJ.baum * idt * Math.min(0, c.sep + AJ.holgura);
+                if (vn < -REBOTE_V) c.sesgo = Math.max(c.sesgo, -ar.e * vn);
+                /* Daño: solo lo que llega de golpe, no el peso que descansa.
+                   Se marca aquí y se mide DESPUÉS de resolver, con el
+                   impulso que de verdad se aplicó: con la masa efectiva de
+                   cada esquina (mn), una caja que cae de plano contaba el
+                   40 % del golpe y una piedra que caía 2 m no se hacía nada */
+                c.golpea = vn < -GOLPE_V;
+                if (c.golpea) golpe = 1;
+                if (cfg && cfg.calentar === false) { c.pn = 0; c.pt = 0; }
+            }
+            ar.golpea = golpe > 0;
+        }
+        /* Arranque en caliente, en una pasada APARTE: si se hace dentro del
+           bucle de arriba, la velocidad de acercamiento del contacto
+           siguiente ya lleva el impulso heredado del anterior (en la base de
+           una pila, grande), salía de más de 1 m/s en una torre en reposo,
+           disparaba el rebote y hacía daño: la torre se deshacía sola */
+        for (const ar of arbs) {
+            const A = ar.a, B = ar.b, nx = ar.nx, ny = ar.ny, tx = ny, ty = -nx;
+            const imA = ar.imA, iiA = ar.iiA, imB = ar.imB, iiB = ar.iiB;
+            for (const c of ar.c) {
+                const Px = c.pn * nx + c.pt * tx, Py = c.pn * ny + c.pt * ty;
+                A.vx -= imA * Px; A.vy -= imA * Py; A.av -= iiA * (c.r1x * Py - c.r1y * Px);
+                B.vx += imB * Px; B.vy += imB * Py; B.av += iiB * (c.r2x * Py - c.r2y * Px);
+            }
+        }
+        /* Iteraciones */
+        for (let it = 0; it < AJ.iter; it++) {
+            for (const ar of arbs) {
+                const A = ar.a, B = ar.b, nx = ar.nx, ny = ar.ny, tx = ny, ty = -nx;
+                const imA = ar.imA, iiA = ar.iiA, imB = ar.imB, iiB = ar.iiB;
+                for (const c of ar.c) {
+                    let dvx = B.vx - B.av * c.r2y - A.vx + A.av * c.r1y, dvy = B.vy + B.av * c.r2x - A.vy - A.av * c.r1x;
+                    const vn = dvx * nx + dvy * ny;
+                    let dp = c.mn * (-vn + c.sesgo);
+                    const p0 = c.pn; c.pn = Math.max(p0 + dp, 0); dp = c.pn - p0;
+                    let Px = dp * nx, Py = dp * ny;
+                    A.vx -= imA * Px; A.vy -= imA * Py; A.av -= iiA * (c.r1x * Py - c.r1y * Px);
+                    B.vx += imB * Px; B.vy += imB * Py; B.av += iiB * (c.r2x * Py - c.r2y * Px);
+                    dvx = B.vx - B.av * c.r2y - A.vx + A.av * c.r1y; dvy = B.vy + B.av * c.r2x - A.vy - A.av * c.r1x;
+                    const vt = dvx * tx + dvy * ty;
+                    let dt2 = c.mt * (-vt);
+                    const tope = ar.mu * c.pn;
+                    const t0 = c.pt; c.pt = Math.max(-tope, Math.min(tope, t0 + dt2)); dt2 = c.pt - t0;
+                    Px = dt2 * tx; Py = dt2 * ty;
+                    A.vx -= imA * Px; A.vy -= imA * Py; A.av -= iiA * (c.r1x * Py - c.r1y * Px);
+                    B.vx += imB * Px; B.vy += imB * Py; B.av += iiB * (c.r2x * Py - c.r2y * Px);
+                }
+            }
+        }
+        /* Golpes del paso: el impulso normal total de los contactos que
+           llegaban golpeando. Sacudida = impulso / masa de cada uno */
+        for (const ar of arbs) {
+            if (!ar.golpea) continue;
+            const A = ar.a, B = ar.b;
+            let golpe = 0;
+            for (const c of ar.c) if (c.golpea) golpe += c.pn;
+            if (golpe <= 0) continue;
+            A.golpePaso += golpe; B.golpePaso += golpe;
+            if (!A.sinDano && !B.sinDano && !(cfg && cfg.sinDano)) {
+                /* Cada uno recibe el golpe multiplicado por lo bueno que es el
+                   otro contra su material (el acelerón con la madera, el
+                   triple con el cristal…) */
+                A.danoPaso += golpe * A.im * ((B.mult && B.mult[A.mat]) || 1);
+                B.danoPaso += golpe * B.im * ((A.mult && A.mult[B.mat]) || 1);
+            }
+            m.eventos.push({ tipo: 'golpe', a: A, b: B, fuerza: golpe, x: ar.c[0].px, y: ar.c[0].py });
+        }
+        /* Integrar posiciones y reposo */
+        for (const b of C) {
+            if (b.estatico || b.dormido) continue;
+            b.x += b.vx * dt; b.y += b.vy * dt; b.a += b.av * dt;
+            if (b.vx * b.vx + b.vy * b.vy < REPOSO_V2 && b.av * b.av < REPOSO_W2) b.quieto += dt; else b.quieto = 0;
+        }
+        /* Se duerme solo si todo lo que toca está quieto o dormido: si no, lo
+           de encima se dormía mientras la base aún se deslizaba */
+        for (const b of C) {
+            if (b.estatico || b.dormido || b.quieto < REPOSO_T) continue;
+            let todos = true;
+            for (const ar of m.arbitros.values()) {
+                const o = ar.a === b ? ar.b : ar.b === b ? ar.a : null;
+                if (o && !o.estatico && !o.dormido && o.quieto < REPOSO_T) { todos = false; break; }
+            }
+            if (todos) b._dormir = true;
+        }
+        for (const b of C) if (b._dormir) { b._dormir = false; b.dormido = true; b.vx = b.vy = b.av = 0; }
+
+        /* Daño acumulado del paso */
+        const rotos = [];
+        for (const b of C) {
+            if (b.danoPaso > 0) {
+                const d = b.danoPaso - b.umbral;
+                if (d > 0 && isFinite(b.vida)) {
+                    b.vida -= d;
+                    m.eventos.push({ tipo: 'dano', cuerpo: b, cuanto: d });
+                    if (b.vida <= 0) rotos.push(b);
+                }
+            }
+            b.danoPaso = 0; b.golpePaso = 0;
+        }
+        for (const b of rotos) {
+            quitar(m, b, 'roto');
+            if (b.mat === 'tnt') m.pendientesExplotar.push({ x: b.x, y: b.y, radio: 2.6, fuerza: 9, de: b });
+        }
+        /* Fuera del mundo */
+        const lim = (cfg && cfg.limites) || { x0: -10, x1: 80, y0: -6 };
+        for (const b of m.cuerpos.slice()) if (!b.estatico && (b.y < lim.y0 || b.x < lim.x0 || b.x > lim.x1)) quitar(m, b, 'fuera');
+        /* Explosiones (de TNT): al final, para no tocar la lista a medias */
+        const pend = m.pendientesExplotar; m.pendientesExplotar = [];
+        for (const e of pend) explotar(m, e.x, e.y, e.radio, e.fuerza, e.de);
+    }
+
+    /* Onda: empuja hacia fuera y hace daño, menos cuanto más lejos. Igual
+       que en los golpes, lo que cuenta es la sacudida (impulso / masa). El
+       empujón se limita a EMPUJON_MAX: una tabla de 0,24 kg salía a 45 m/s */
+    function explotar(m, x, y, radio, fuerza, de) {
+        m.eventos.push({ tipo: 'explota', x, y, radio, de: de || null });
+        const rotos = [];
+        for (const b of m.cuerpos) {
+            if (b.estatico || b === de) continue;
+            const dx = b.x - x, dy = b.y - y;
+            const d = Math.max(0, Math.hypot(dx, dy) - b.radio * 0.6);
+            if (d >= radio) continue;
+            const f = 1 - d / radio;
+            despertar(m, b);
+            const dl = Math.hypot(dx, dy) || 1;
+            const J = fuerza * f;
+            const dv = Math.min(EMPUJON_MAX, J * b.im);
+            b.vx += (dx / dl) * dv; b.vy += (dy / dl) * dv + dv * 0.25;
+            /* Un giro pequeño, siempre hacia fuera: sin azar, el mismo tiro da lo mismo */
+            b.av += (dx > 0 ? -1 : 1) * J * b.ii * 0.02;
+            if (isFinite(b.vida) && !b.sinDano) {
+                const d = J * b.im * 1.2;
+                b.vida -= d;
+                m.eventos.push({ tipo: 'dano', cuerpo: b, cuanto: d });
+                if (b.vida <= 0) rotos.push(b);
+            }
+        }
+        for (const b of rotos) {
+            quitar(m, b, 'explota');
+            if (b.mat === 'tnt') m.pendientesExplotar.push({ x: b.x, y: b.y, radio: 2.6, fuerza: 9, de: b });
+        }
+    }
+
+    /* Copia profunda: cuerpos nuevos y contactos que apuntan a ellos.
+       mapa: cuerpo viejo → nuevo */
+    function clonar(m) {
+        const n = { cuerpos: [], arbitros: new Map(), sig: m.sig, t: m.t, eventos: [], pendientesExplotar: [], orden: [] };
+        const mapa = new Map();
+        for (const b of m.cuerpos) { const c = Object.assign({}, b); c._bb = null; mapa.set(b, c); n.cuerpos.push(c); }
+        for (const b of m.orden) if (mapa.has(b)) n.orden.push(mapa.get(b));
+        for (const [k, ar] of m.arbitros) {
+            if (!mapa.has(ar.a) || !mapa.has(ar.b)) continue;
+            n.arbitros.set(k, Object.assign({}, ar, { a: mapa.get(ar.a), b: mapa.get(ar.b), c: ar.c.map(c => Object.assign({}, c)) }));
+        }
+        return { m: n, mapa };
+    }
+
+    function energia(m) {
+        let e = 0;
+        for (const b of m.cuerpos) if (!b.estatico && !b.dormido) e += b.masa * (b.vx * b.vx + b.vy * b.vy) + (b.ii > 0 ? b.av * b.av / b.ii : 0);
+        return e / 2;
+    }
+    function todoQuieto(m, ignorar) {
+        for (const b of m.cuerpos) {
+            if (b.estatico || b.dormido || b === ignorar) continue;
+            if (b.vx * b.vx + b.vy * b.vy > 0.04 || b.av * b.av > 0.09) return false;
+        }
+        return true;
+    }
+
+    return { PASO, GRAVEDAD, AJ, MATERIALES, crearMundo, clonar, caja, circulo, quitar, despertar, dormirTodo, paso, explotar, energia, todoQuieto, vertices, aabb, _chocar: chocar };
+});
+
+</script>
+<script>
+/* Reglas del tirachinas, sin dibujo: pajaritos, habilidades, zorros, puntos
+   y fin de nivel. Usa Fisica (motor-fisica.js). Se usa en el navegador
+   (global Tirachinas) y en Node (jugador simulado, pruebas).
+
+   Coordenadas en metros, +y hacia arriba, suelo en y = 0. El tirachinas
+   está siempre en HONDA; las construcciones, hacia la derecha. */
+(function (raiz, fabrica) {
+    if (typeof module === 'object' && module.exports) module.exports = fabrica(require('./motor-fisica.js'));
+    else raiz.Tirachinas = fabrica(raiz.Fisica);
+})(typeof self !== 'undefined' ? self : this, function (F) {
+    'use strict';
+
+    const HONDA = { x: 3.2, y: 1.9 };
+    const TIRON_MAX = 1.3;          // m que se puede estirar la goma
+    const VEL_MAX = 17;             // m/s con la goma a tope
+    const VEL_TOPE = 28;            // el acelerón no pasa de aquí: más rápido atraviesa tablones de 0,2 m a 1/120 s
+    const PASO = F.PASO;
+
+    /* Los cinco pajaritos. mult: cuánto daño hacen a cada material (1 si no
+       se dice). Zas acelerado llega a 28 m/s y, sin el 0,35, rompía piedra:
+       en el juego es el de la madera, no el de la piedra */
+    const PAJAROS = {
+        pio:  { nombre: 'Pío',  r: 0.30, dens: 2.6, hab: null },
+        trio: { nombre: 'Trío', r: 0.23, dens: 2.6, hab: 'dividir', mult: { cristal: 2.6, madera: 0.5, piedra: 0.4 } },
+        zas:  { nombre: 'Zas',  r: 0.27, dens: 2.6, hab: 'acelerar', mult: { madera: 2.6, piedra: 0.35 } },
+        pum:  { nombre: 'Pum',  r: 0.33, dens: 3.0, hab: 'explotar' },
+        bolo: { nombre: 'Bolo', r: 0.50, dens: 4.0, hab: null, mult: { piedra: 1.5 }, vel: 0.92 }
+    };
+    const ZORROS = {
+        zorro:  { r: 0.34, vida: 2.0, puntos: 5000 },
+        casco:  { r: 0.36, vida: 5.0, puntos: 6000 },
+        grande: { r: 0.50, vida: 5.0, puntos: 8000 },
+        jefe:   { r: 0.70, vida: 9.0, puntos: 15000 }
+    };
+    const PUNTOS_PIEZA = { cristal: 300, madera: 500, piedra: 800, tnt: 500 };
+    const PUNTOS_SOBRANTE = 10000;
+    const BOMBA = { radio: 2.5, fuerza: 11, espera: 1.5 };
+
+    function crear(def, op) {
+        op = op || {};
+        const m = F.crearMundo();
+        const lim = { x0: -8, x1: (def.ancho || 32) + 12, y0: -6 };
+        /* Suelo y colinas: estáticos */
+        F.caja(m, { x: (lim.x0 + lim.x1) / 2, y: -1, w: lim.x1 - lim.x0 + 40, h: 2, estatico: true, mat: 'suelo', tipo: 'suelo' });
+        for (const c of def.colinas || []) F.caja(m, { x: c[0], y: c[1], w: c[2], h: c[3], a: c[4] || 0, estatico: true, mat: 'suelo', tipo: 'colina' });
+        for (const q of def.piezas || []) {
+            const [mat, x, y, w, h, a] = q;
+            if (mat === 'tronco' || mat === 'bola') F.circulo(m, { x, y, r: w, mat: h || 'madera', tipo: 'pieza' });
+            else F.caja(m, { x, y, w, h, a: a || 0, mat, tipo: 'pieza' });
+        }
+        let nz = 0;
+        for (const z of def.zorros || []) {
+            const s = ZORROS[z[0]];
+            F.circulo(m, { x: z[1], y: z[2], r: s.r, mat: 'zorro', vida: s.vida, tipo: 'zorro', datos: { clase: z[0] } });
+            nz++;
+        }
+        let huevo = null;
+        /* El huevo dorado es fijo (si no, se caería al asentar y no se
+           podría esconder en el aire) y se recoge al darle un pajarito */
+        if (def.huevo && !op.sinHuevo) huevo = F.circulo(m, { x: def.huevo[0], y: def.huevo[1], r: 0.25, mat: 'huevo', tipo: 'huevo', estatico: true });
+        /* Asentar sin daño y dormir: así el nivel empieza quieto y no se ve
+           tiritar. Lo que se mueva aquí lo mide el verificador */
+        const ini = m.cuerpos.filter(b => !b.estatico).map(b => [b, b.x, b.y]);
+        let i = 0;
+        for (; i < 300; i++) { F.paso(m, { sinDano: true, limites: lim }); if (m.cuerpos.every(b => b.estatico || b.dormido)) break; }
+        let asentado = 0;
+        for (const [b, x, y] of ini) asentado = Math.max(asentado, b.vivo ? Math.hypot(b.x - x, b.y - y) : 99);
+        F.dormirTodo(m);
+        m.eventos = [];
+        /* Se cuentan después de asentar: uno que se cayera del mundo al
+           empezar no cuenta (el verificador lo da por nivel malo) */
+        nz = m.cuerpos.filter(b => b.tipo === 'zorro').length;
+        return {
+            def, m, lim, cola: def.pajaros.slice(), usados: 0, fase: 'apuntar',
+            puntos: 0, zorros: nz, zorrosIni: nz, huevo, huevoCogido: false,
+            vuelo: null, eventos: [], t: 0, asentado, pasosAsentar: i,
+            tiros: [], fin: null
+        };
+    }
+
+    function siguiente(p) { return p.cola[0] || null; }
+
+    /* Posición y velocidad de salida para un ángulo (rad, 0 = derecha) y una
+       fuerza 0..1. El pajarito sale desde donde se soltó la goma */
+    function salida(p, ang, fuerza, tipo) {
+        const s = PAJAROS[tipo || siguiente(p)];
+        const f = Math.max(0, Math.min(1, fuerza));
+        const c = Math.cos(ang), sn = Math.sin(ang);
+        let x = HONDA.x - c * f * TIRON_MAX, y = HONDA.y - sn * f * TIRON_MAX;
+        y = Math.max(s.r + 0.05, y);
+        const v = VEL_MAX * f * (s.vel || 1);
+        return { x, y, vx: c * v, vy: sn * v };
+    }
+    /* Puntos de la trayectoria en vuelo libre, integrando igual que el motor
+       (gravedad y la misma amortiguación): la vista previa no miente */
+    function trayectoria(p, ang, fuerza, tiempo, tipo) {
+        const o = salida(p, ang, fuerza, tipo);
+        const fv = 1 / (1 + PASO * 0.02);
+        const pts = [];
+        let { x, y, vx, vy } = o;
+        const n = Math.round((tiempo || 1) / PASO);
+        for (let i = 0; i < n; i++) {
+            vy += F.GRAVEDAD * PASO; vx *= fv; vy *= fv;
+            x += vx * PASO; y += vy * PASO;
+            if (i % 6 === 5) pts.push([x, y]);
+            if (y < 0) break;
+        }
+        return pts;
+    }
+
+    function lanzar(p, ang, fuerza) {
+        if (p.fase !== 'apuntar' || !p.cola.length) return false;
+        const tipo = p.cola.shift();
+        const s = PAJAROS[tipo];
+        const o = salida(p, ang, fuerza, tipo);
+        const b = F.circulo(p.m, { x: o.x, y: o.y, r: s.r, mat: 'pajaro', densidad: s.dens, vx: o.vx, vy: o.vy, tipo: 'pajaro', mult: s.mult || null, datos: { clase: tipo }, amortW: 3 });
+        p.usados++;
+        p.vuelo = { tipo, cuerpos: [b], t: 0, golpe: null, habUsada: false, quieto: 0, explotada: false, zorros: 0, piezas: 0, puntos: 0, ang, fuerza };
+        p.fase = 'vuelo';
+        p.eventos.push({ tipo: 'lanza', clase: tipo, x: o.x, y: o.y });
+        return true;
+    }
+
+    function puedeHabilidad(p) {
+        const v = p.vuelo;
+        if (!v || p.fase === 'apuntar' || v.habUsada) return false;
+        const h = PAJAROS[v.tipo].hab;
+        if (!h) return false;
+        if (h === 'explotar') return !v.explotada && v.cuerpos.length > 0;
+        return v.golpe === null && v.cuerpos.length > 0;
+    }
+    function habilidad(p) {
+        if (!puedeHabilidad(p)) return false;
+        const v = p.vuelo, h = PAJAROS[v.tipo].hab, b = v.cuerpos[0];
+        v.habUsada = true;
+        if (h === 'dividir') {
+            /* Tres más pequeños, abiertos ±12°, a la misma velocidad */
+            const vel = Math.hypot(b.vx, b.vy), a0 = Math.atan2(b.vy, b.vx);
+            const nx = -Math.sin(a0), ny = Math.cos(a0);
+            F.quitar(p.m, b, 'divide');
+            v.cuerpos = [];
+            for (const k of [-1, 0, 1]) {
+                const a = a0 + k * 0.21;
+                v.cuerpos.push(F.circulo(p.m, { x: b.x + nx * k * 0.32, y: b.y + ny * k * 0.32, r: 0.17, mat: 'pajaro', densidad: 2.6, vx: Math.cos(a) * vel, vy: Math.sin(a) * vel, tipo: 'pajaro', mult: PAJAROS.trio.mult, datos: { clase: 'trio', mini: true }, amortW: 3 }));
+            }
+            p.eventos.push({ tipo: 'habilidad', clase: 'trio', x: b.x, y: b.y });
+        } else if (h === 'acelerar') {
+            const vel = Math.hypot(b.vx, b.vy) || 1;
+            const nv = Math.min(VEL_TOPE, Math.max(vel * 2.2, 18));
+            b.vx = b.vx / vel * nv; b.vy = b.vy / vel * nv;
+            p.eventos.push({ tipo: 'habilidad', clase: 'zas', x: b.x, y: b.y });
+        } else if (h === 'explotar') {
+            explotarBomba(p);
+        }
+        return true;
+    }
+    function explotarBomba(p) {
+        const v = p.vuelo, b = v.cuerpos[0];
+        if (!b || v.explotada) return;
+        v.explotada = true; v.habUsada = true;
+        F.quitar(p.m, b, 'explota');
+        v.cuerpos = [];
+        F.explotar(p.m, b.x, b.y, BOMBA.radio, BOMBA.fuerza, b);
+        p.eventos.push({ tipo: 'habilidad', clase: 'pum', x: b.x, y: b.y });
+    }
+
+    function sumar(p, n, x, y) {
+        p.puntos += n;
+        if (p.vuelo) p.vuelo.puntos += n;
+        p.eventos.push({ tipo: 'puntos', n, x, y });
+    }
+
+    /* Un paso de PASO segundos */
+    function avanzar(p) {
+        if (p.fase === 'apuntar' || p.fase === 'gana' || p.fase === 'pierde') return;
+        p.t += PASO;
+        const v = p.vuelo;
+        F.paso(p.m, { limites: p.lim });
+        for (const e of p.m.eventos) {
+            if (e.tipo === 'quita') {
+                const b = e.cuerpo;
+                if (b.tipo === 'zorro') {
+                    p.zorros--;
+                    sumar(p, ZORROS[b.datos.clase].puntos, b.x, b.y);
+                    if (v) v.zorros++;
+                    p.eventos.push({ tipo: 'zorro', clase: b.datos.clase, x: b.x, y: b.y, razon: e.razon });
+                } else if (b.tipo === 'pieza') {
+                    sumar(p, PUNTOS_PIEZA[b.mat] || 0, b.x, b.y);
+                    if (v) v.piezas++;
+                    p.eventos.push({ tipo: 'rompe', mat: b.mat, x: b.x, y: b.y, w: b.hx ? b.hx * 2 : b.r * 2, h: b.hy ? b.hy * 2 : b.r * 2, a: b.a, razon: e.razon });
+                } else if (b.tipo === 'pajaro' && v) {
+                    v.cuerpos = v.cuerpos.filter(c => c !== b);
+                }
+            } else if (e.tipo === 'golpe' && p.huevo && p.huevo.vivo && (e.a === p.huevo || e.b === p.huevo) && (e.a.tipo === 'pajaro' || e.b.tipo === 'pajaro')) {
+                F.quitar(p.m, p.huevo, 'cogido');
+                p.huevoCogido = true;
+                p.eventos.push({ tipo: 'huevo', x: p.huevo.x, y: p.huevo.y });
+            } else if (e.tipo === 'golpe') {
+                if (v && v.golpe === null && (v.cuerpos.includes(e.a) || v.cuerpos.includes(e.b))) {
+                    v.golpe = v.t;
+                    /* Tras el primer golpe frena: si no, rodaba 13 m por el suelo */
+                    for (const c of v.cuerpos) c.amortV = 0.9;
+                }
+                if (e.fuerza > 0.6) p.eventos.push({ tipo: 'choque', x: e.x, y: e.y, fuerza: e.fuerza, mat: e.a.tipo === 'pajaro' ? e.b.mat : e.a.mat });
+            } else if (e.tipo === 'explota') {
+                p.eventos.push({ tipo: 'explosion', x: e.x, y: e.y, radio: e.radio, tnt: !!(e.de && e.de.mat === 'tnt') });
+            } else if (e.tipo === 'dano' && e.cuerpo.tipo === 'zorro') {
+                p.eventos.push({ tipo: 'auch', x: e.cuerpo.x, y: e.cuerpo.y });
+            }
+        }
+        p.m.eventos = [];
+        if (!v) return;
+        v.t += PASO;
+        /* La bomba explota sola un rato después del primer golpe */
+        if (v.tipo === 'pum' && !v.explotada && v.golpe !== null && v.t - v.golpe >= BOMBA.espera) explotarBomba(p);
+        /* ¿Ha acabado el tiro? Todo quieto un momento, o se acabó el tiempo */
+        let quieto = F.todoQuieto(p.m);
+        for (const c of v.cuerpos) if (c.vx * c.vx + c.vy * c.vy > 0.09) quieto = false;
+        v.quieto = quieto ? v.quieto + PASO : 0;
+        /* Sin zorros, se deja 3 s más para que acabe de caer (y sume) */
+        if (p.zorros <= 0 && v.finZorros === undefined) v.finZorros = v.t;
+        const fueraDeTiempo = v.t >= 12 || (v.finZorros !== undefined && v.t - v.finZorros >= 3);
+        if ((v.t > 0.8 && v.quieto >= 0.4) || fueraDeTiempo) terminarTiro(p);
+    }
+
+    function terminarTiro(p) {
+        const v = p.vuelo;
+        for (const c of v.cuerpos.slice()) F.quitar(p.m, c, 'retira');
+        p.m.eventos = [];
+        p.tiros.push({ tipo: v.tipo, zorros: v.zorros, piezas: v.piezas, puntos: v.puntos, ang: v.ang, fuerza: v.fuerza });
+        p.vuelo = null;
+        if (p.zorros <= 0) {
+            const sobran = p.cola.length;
+            for (let i = 0; i < sobran; i++) sumar(p, PUNTOS_SOBRANTE, HONDA.x, HONDA.y + 1);
+            p.fase = 'gana';
+            p.fin = { gana: true, sobran, puntos: p.puntos };
+            p.eventos.push({ tipo: 'gana', sobran });
+        } else if (!p.cola.length) {
+            p.fase = 'pierde';
+            p.fin = { gana: false, puntos: p.puntos };
+            p.eventos.push({ tipo: 'pierde' });
+        } else {
+            p.fase = 'apuntar';
+            p.eventos.push({ tipo: 'turno', siguiente: p.cola[0] });
+        }
+    }
+
+    /* Juega un tiro entero de golpe (para el jugador simulado y las
+       pruebas). hab: segundos tras lanzar en que se usa la habilidad, o null */
+    function tiroCompleto(p, ang, fuerza, hab) {
+        if (!lanzar(p, ang, fuerza)) return false;
+        let n = 0;
+        while (p.fase === 'vuelo' && n < 3000) {
+            /* hab = 'golpe': justo al primer golpe (la bomba, al tocar) */
+            if (hab !== null && hab !== undefined && p.vuelo && !p.vuelo.habUsada && (hab === 'golpe' ? p.vuelo.golpe !== null : p.vuelo.t >= hab)) habilidad(p);
+            avanzar(p); n++;
+        }
+        return true;
+    }
+
+    /* Copia del estado para probar tiros sin tocar la partida: se vuelve a
+       crear el nivel y se repiten los tiros hechos (el motor no tiene azar:
+       mismo tiro, mismo resultado) */
+    /* Copia completa de una partida en reposo (fase «apuntar»): el
+       jugador simulado prueba tiros desde aquí sin repetir los anteriores */
+    function clonar(p) {
+        const q = Object.assign({}, p);
+        const { m, mapa } = F.clonar(p.m);
+        q.m = m;
+        q.huevo = p.huevo ? mapa.get(p.huevo) || null : null;
+        q.cola = p.cola.slice(); q.tiros = p.tiros.slice(); q.eventos = [];
+        q.vuelo = null;
+        return q;
+    }
+
+    function repetir(def, tiros, op) {
+        const p = crear(def, op);
+        for (const t of tiros) tiroCompleto(p, t.ang, t.fuerza, t.hab);
+        return p;
+    }
+
+    return { HONDA, TIRON_MAX, VEL_MAX, PASO, PAJAROS, ZORROS, PUNTOS_PIEZA, PUNTOS_SOBRANTE, BOMBA, crear, siguiente, salida, trayectoria, lanzar, puedeHabilidad, habilidad, avanzar, tiroCompleto, repetir, clonar };
+});
+
+</script>
+<script>
+/* Niveles del tirachinas: 3 mundos × 15 y un nivel de premio por mundo
+   (se abre con el huevo dorado escondido en ese mundo).
+
+   Cada nivel se escribe con piezas de construir (abajo): y0 es SIEMPRE la
+   altura de la base de la pieza, y cada función devuelve la altura de
+   arriba, para apilar sin hacer cuentas a mano. Las piezas tienen que
+   quedar justo tocándose: el verificador rechaza un nivel que se mueva más
+   de 3 cm al asentarse o que pierda un zorro al empezar.
+
+   Si cambias un nivel, vuelve a pasar el jugador simulado
+   (node jugador-simulado.js): las estrellas salen de ahí (estrellas.js) y
+   construir.js se niega a montar si no coinciden. */
+(function (raiz, fabrica) {
+    if (typeof module === 'object' && module.exports) module.exports = fabrica();
+    else raiz.NIVELES = fabrica();
+})(typeof self !== 'undefined' ? self : this, function () {
+    'use strict';
+
+    function constructor() {
+        const c = { piezas: [], zorros: [], colinas: [], huevo: null };
+        c.col = (mat, x, y0, h = 1.2, w = 0.2) => { c.piezas.push([mat, x, y0 + h / 2, w, h]); return y0 + h; };
+        c.tab = (mat, x, y0, w, h = 0.2) => { c.piezas.push([mat, x, y0 + h / 2, w, h]); return y0 + h; };
+        c.blq = (mat, x, y0, w = 0.6, h = w) => { c.piezas.push([mat, x, y0 + h / 2, w, h]); return y0 + h; };
+        /* Dos columnas y un tablón encima, de x0 a x1 */
+        c.piso = (mat, x0, x1, y0, h = 1.2, techo) => {
+            c.col(mat, x0 + 0.1, y0, h); c.col(mat, x1 - 0.1, y0, h);
+            return c.tab(techo || mat, (x0 + x1) / 2, y0 + h, x1 - x0);
+        };
+        c.torre = (mat, x, y0, n, ancho = 1.6, h = 1.2) => {
+            let y = y0;
+            for (let i = 0; i < n; i++) y = c.piso(Array.isArray(mat) ? mat[i % mat.length] : mat, x - ancho / 2, x + ancho / 2, y, h);
+            return y;
+        };
+        c.pila = (mat, x, y0, n, s = 0.5) => { let y = y0; for (let i = 0; i < n; i++) y = c.blq(Array.isArray(mat) ? mat[i % mat.length] : mat, x, y, s); return y; };
+        c.piramide = (mat, xc, y0, n, s = 0.5) => {
+            for (let f = 0; f < n; f++) for (let i = 0; i < n - f; i++) c.blq(Array.isArray(mat) ? mat[f % mat.length] : mat, xc + (i - (n - f - 1) / 2) * s, y0 + f * s, s);
+            return y0 + n * s;
+        };
+        c.zorro = (clase, x, y0) => { const r = { zorro: 0.34, casco: 0.36, grande: 0.5, jefe: 0.7 }[clase]; c.zorros.push([clase, x, y0 + r]); return y0 + 2 * r; };
+        c.tnt = (x, y0, s = 0.5) => c.blq('tnt', x, y0, s);
+        c.tronco = (x, y0, r = 0.3, mat = 'madera') => { c.piezas.push(['tronco', x, y0 + r, r, mat]); return y0 + 2 * r; };
+        c.colina = (x0, x1, h) => { c.colinas.push([(x0 + x1) / 2, h / 2, x1 - x0, h]); return h; };
+        c.esconder = (x, y) => { c.huevo = [x, y]; };
+        return c;
+    }
+
+    const LISTA = [];
+    function nivel(mundo, n, nombre, pajaros, construir) {
+        const c = constructor();
+        construir(c);
+        let xmax = 20;
+        for (const q of c.piezas) xmax = Math.max(xmax, q[1] + (q[3] || 0));
+        for (const z of c.zorros) xmax = Math.max(xmax, z[1] + 1);
+        for (const k of c.colinas) xmax = Math.max(xmax, k[0] + k[2] / 2);
+        LISTA.push({ id: mundo + '-' + n, mundo, n, nombre, pajaros, piezas: c.piezas, zorros: c.zorros, colinas: c.colinas, huevo: c.huevo, ancho: Math.ceil(xmax + 2) });
+    }
+
+    /* ==================== MUNDO 1 · LA PRADERA ==================== */
+    nivel(1, 1, 'Primer tiro', ['pio', 'pio', 'pio'], (c) => {
+        const y = c.piso('madera', 15, 17, 0);
+        c.zorro('zorro', 16, y);
+        c.zorro('zorro', 16, 0);
+    });
+    nivel(1, 2, 'Dos casitas', ['pio', 'pio', 'pio'], (c) => {
+        c.zorro('zorro', 14.5, c.piso('madera', 13.5, 15.5, 0));
+        c.zorro('zorro', 19.5, c.piso('madera', 18.5, 20.5, 0, 1.6));
+    });
+    nivel(1, 3, 'La vitrina', ['pio', 'pio', 'pio'], (c) => {
+        c.col('cristal', 15.1, 0, 1.2); c.col('cristal', 17.9, 0, 1.2);
+        c.tab('madera', 16.5, 1.2, 3.0);
+        c.zorro('zorro', 16.0, 0); c.zorro('zorro', 17.0, 0);
+        c.blq('cristal', 16.5, 1.4, 0.6);
+    });
+    nivel(1, 4, 'La escalera', ['pio', 'pio', 'pio'], (c) => {
+        c.blq('madera', 14, 0, 1.0, 0.6);
+        c.blq('madera', 15, 0, 1.0, 1.2);
+        c.blq('madera', 16, 0, 1.0, 1.8);
+        c.zorro('zorro', 14, 0.6); c.zorro('zorro', 15, 1.2); c.zorro('zorro', 16, 1.8);
+    });
+    nivel(1, 5, 'Llega Trío', ['trio', 'trio', 'pio', 'pio'], (c) => {
+        for (let i = 0; i < 5; i++) c.col('cristal', 14 + i * 0.7, 0, 1.4);
+        c.zorro('zorro', 17.8, 0); c.zorro('zorro', 18.6, 0); c.zorro('zorro', 19.4, 0);
+        c.tab('cristal', 18.6, 0.68, 0.2, 0.2);
+    });
+    nivel(1, 6, 'Tejadillo', ['pio', 'trio', 'pio'], (c) => {
+        const y = c.piso('madera', 14, 16.4, 0);
+        c.zorro('zorro', 15.2, 0);
+        c.piramide('cristal', 15.2, y, 2, 0.6);
+        c.zorro('zorro', 15.2, y + 1.2);
+    });
+    nivel(1, 7, 'En lo alto', ['pio', 'pio', 'trio'], (c) => {
+        const h = c.colina(13, 18, 1.5);
+        const y1 = c.piso('madera', 14.7, 16.5, h);
+        c.zorro('zorro', 15.6, h);
+        c.zorro('zorro', 15.6, c.piso('cristal', 14.7, 16.5, y1));
+        c.zorro('zorro', 17.4, h);
+        c.esconder(21.5, 6.6);
+    });
+    nivel(1, 8, 'El puente', ['pio', 'trio', 'trio', 'pio'], (c) => {
+        /* Pilas de cristal: Trío las rompe y el puente cae sobre el de abajo */
+        const y = c.pila('cristal', 14, 0, 3, 0.6);
+        c.pila('cristal', 19, 0, 3, 0.6);
+        c.tab('madera', 16.5, y, 5.8);
+        c.zorro('zorro', 15.6, y + 0.2); c.zorro('zorro', 17.4, y + 0.2);
+        c.zorro('zorro', 16.5, 0);
+    });
+    nivel(1, 9, 'Llega Zas', ['zas', 'zas', 'pio'], (c) => {
+        c.col('madera', 14, 0, 2.0, 0.4); c.col('madera', 14.4, 0, 2.0, 0.4);
+        const y = c.piso('madera', 15.2, 18.2, 0);
+        c.zorro('zorro', 16.1, 0); c.zorro('zorro', 17.2, 0);
+        c.zorro('zorro', 16.7, y);
+    });
+    nivel(1, 10, 'Con casco', ['pio', 'zas', 'trio'], (c) => {
+        const y = c.piso('madera', 15, 17.4, 0);
+        c.zorro('casco', 16.2, 0);
+        const y2 = c.piso('cristal', 15, 17.4, y);
+        c.zorro('zorro', 16.2, y);
+        c.zorro('zorro', 16.2, y2);
+    });
+    nivel(1, 11, 'Torre alta', ['pio', 'pio', 'zas', 'pio'], (c) => {
+        let y = 0;
+        for (let i = 0; i < 4; i++) { y = c.piso('madera', 15.1, 16.9, y); c.zorro('zorro', 16, y); y = y; }
+    });
+    nivel(1, 12, 'Troncos', ['pio', 'trio', 'zas', 'pio'], (c) => {
+        /* En lo alto de la loma, un zorro entre dos troncos; abajo, otro en
+           una caseta de cristal a la que se le pueden echar los troncos */
+        const h = c.colina(13, 16.2, 1.8);
+        c.tronco(13.9, h, 0.35); c.tronco(15.5, h, 0.35);
+        c.zorro('zorro', 14.7, h);
+        c.piso('cristal', 16.8, 18.4, 0, 1.0);
+        c.zorro('zorro', 17.6, 0);
+    });
+    nivel(1, 13, 'Cristal y madera', ['trio', 'zas', 'pio'], (c) => {
+        let y = c.piso('cristal', 13.8, 15.4, 0); c.zorro('zorro', 14.6, 0);
+        y = c.piso('cristal', 13.8, 15.4, y); c.zorro('zorro', 14.6, y);
+        let z = c.piso('madera', 18, 19.6, 0); c.zorro('zorro', 18.8, 0);
+        z = c.piso('madera', 18, 19.6, z); c.zorro('zorro', 18.8, z);
+    });
+    nivel(1, 14, 'El fortín', ['zas', 'trio', 'zas', 'pio', 'pio'], (c) => {
+        const y = c.piso('madera', 14, 16, 0); c.piso('cristal', 16, 18, 0); c.piso('madera', 18, 20, 0);
+        c.zorro('zorro', 15, 0); c.zorro('zorro', 17, 0); c.zorro('zorro', 19, 0);
+        c.piso('cristal', 15.2, 18.8, y, 1.0);
+        c.zorro('casco', 17, y);
+    });
+    nivel(1, 15, 'El zorro grande', ['pio', 'trio', 'zas', 'zas', 'pio'], (c) => {
+        let y = c.piso('madera', 16.4, 19.6, 0, 1.4);
+        c.zorro('zorro', 17.4, 0); c.zorro('zorro', 18.6, 0);
+        c.col('cristal', 16.6, y, 1.4); c.col('cristal', 19.4, y, 1.4);
+        c.zorro('grande', 18, y);
+        y = c.tab('madera', 18, y + 1.4, 3.2);
+        c.blq('cristal', 17.2, y, 0.6); c.blq('cristal', 18.8, y, 0.6);
+        c.col('madera', 14.6, 0, 1.6, 0.4);
+    });
+
+    /* ==================== MUNDO 2 · LA NIEVE ==================== */
+    nivel(2, 1, '¡Pum!', ['pum', 'pum', 'pio'], (c) => {
+        c.col('piedra', 15, 0, 1.0, 0.4); c.col('piedra', 17.6, 0, 1.0, 0.4);
+        c.tab('piedra', 16.3, 1.0, 3.0, 0.3);
+        c.zorro('zorro', 15.9, 0); c.zorro('zorro', 16.8, 0);
+    });
+    nivel(2, 2, 'Iglú', ['trio', 'pum', 'trio'], (c) => {
+        c.pila('cristal', 14.5, 0, 3, 0.6); c.pila('cristal', 17.5, 0, 3, 0.6);
+        const y = c.tab('cristal', 16, 1.8, 3.8);
+        c.zorro('zorro', 15.5, 0); c.zorro('zorro', 16.5, 0);
+        c.zorro('zorro', 16, y);
+    });
+    nivel(2, 3, 'Torres heladas', ['trio', 'trio', 'pum'], (c) => {
+        for (const x of [14, 17, 20]) { const y = c.torre('cristal', x, 0, 2, 1.4); c.zorro('zorro', x, y); }
+    });
+    nivel(2, 4, 'Cuidado: TNT', ['pio', 'pio', 'pum'], (c) => {
+        const y = c.piso('madera', 15, 18.6, 0);
+        c.tnt(16.8, 0, 0.6);
+        c.zorro('zorro', 15.8, 0); c.zorro('zorro', 17.8, 0);
+        c.zorro('zorro', 16.8, y);
+    });
+    nivel(2, 5, 'Escalones de hielo', ['trio', 'zas', 'pum'], (c) => {
+        c.blq('cristal', 14, 0, 1.2, 0.6); c.blq('cristal', 15.2, 0, 1.2, 1.2); c.blq('cristal', 16.4, 0, 1.2, 1.8); c.blq('madera', 17.6, 0, 1.2, 2.4);
+        c.zorro('zorro', 14, 0.6); c.zorro('zorro', 15.2, 1.2); c.zorro('zorro', 16.4, 1.8); c.zorro('casco', 17.6, 2.4);
+    });
+    nivel(2, 6, 'La muralla', ['pum', 'zas', 'pio', 'pum'], (c) => {
+        c.pila('piedra', 14, 0, 4, 0.5);
+        c.piso('madera', 15.6, 18.4, 0);
+        c.zorro('zorro', 16.4, 0); c.zorro('zorro', 17.5, 0);
+        c.zorro('zorro', 14, 2.0);
+    });
+    nivel(2, 7, 'Dos puentes', ['trio', 'pum', 'pio', 'trio'], (c) => {
+        const y = c.pila('cristal', 13.8, 0, 2, 0.6); c.pila('cristal', 17, 0, 2, 0.6); c.pila('cristal', 20.2, 0, 2, 0.6);
+        c.tab('madera', 15.4, y, 3.0); c.tab('madera', 18.6, y, 3.0);
+        c.zorro('zorro', 15.4, y + 0.2); c.zorro('zorro', 18.6, y + 0.2);
+        c.zorro('zorro', 15.4, 0); c.zorro('zorro', 18.6, 0);
+    });
+    nivel(2, 8, 'Cascos en el hielo', ['pum', 'trio', 'zas', 'pum'], (c) => {
+        let y = c.piso('cristal', 14.5, 16.3, 0); c.zorro('casco', 15.4, 0);
+        y = c.piso('cristal', 14.5, 16.3, y); c.zorro('casco', 15.4, y);
+        let z = c.piso('cristal', 18.5, 20.3, 0); c.zorro('casco', 19.4, 0);
+        c.zorro('zorro', 19.4, z);
+    });
+    nivel(2, 9, 'El polvorín', ['pio', 'pum', 'pio'], (c) => {
+        c.tnt(17, 0, 0.6); c.tnt(17.6, 0, 0.6); c.tnt(17.3, 0.6, 0.6);
+        c.piso('madera', 14.4, 16.2, 0); c.zorro('zorro', 15.3, 0); c.zorro('zorro', 15.3, 1.4);
+        c.piso('madera', 18.6, 20.4, 0); c.zorro('zorro', 19.5, 0); c.zorro('zorro', 19.5, 1.4);
+        c.col('madera', 24, 0, 5.0, 0.2); c.esconder(24, 5.4);
+    });
+    nivel(2, 10, 'Torre de piedra', ['pum', 'pum', 'trio', 'pio'], (c) => {
+        let y = c.piso('piedra', 15.6, 17.6, 0); c.zorro('zorro', 16.6, 0);
+        y = c.piso('madera', 15.6, 17.6, y); c.zorro('zorro', 16.6, y - 1.4);
+        c.zorro('zorro', 16.6, y);
+        y = c.piso('cristal', 15.6, 17.6, y, 1.0); c.zorro('casco', 16.6, y);
+    });
+    nivel(2, 11, 'Patas de cristal', ['trio', 'pio', 'trio'], (c) => {
+        for (const x of [14.5, 17.5, 20.5]) {
+            c.col('cristal', x - 0.5, 0, 2.2, 0.2); c.col('cristal', x + 0.5, 0, 2.2, 0.2);
+            const y = c.tab('piedra', x, 2.2, 1.4, 0.3);
+            c.zorro('zorro', x, y);
+        }
+    });
+    nivel(2, 12, 'Caja fuerte', ['pum', 'pio', 'pum', 'zas'], (c) => {
+        c.col('piedra', 16, 0, 1.2, 0.4); c.col('piedra', 18.4, 0, 1.2, 0.4);
+        const y = c.tab('piedra', 17.2, 1.2, 2.8, 0.3);
+        c.zorro('casco', 17.2, 0);
+        c.tnt(15.4, 0, 0.6);
+        c.zorro('zorro', 17.2, y);
+        c.piso('madera', 19.4, 21, 0); c.zorro('zorro', 20.2, 0);
+    });
+    nivel(2, 13, 'Avalancha', ['pio', 'pum', 'zas'], (c) => {
+        const h = c.colina(12.5, 15.5, 3.0);
+        c.piezas.push(['bola', 15.0, h + 0.45, 0.45, 'piedra']);
+        c.col('madera', 14.2, h, 0.6, 0.2);
+        c.piso('cristal', 16.2, 17.8, 0, 1.0); c.zorro('zorro', 17, 0);
+        c.piso('cristal', 18.4, 20, 0, 1.0); c.zorro('zorro', 19.2, 0);
+        c.zorro('zorro', 21, 0);
+    });
+    nivel(2, 14, 'Fortaleza helada', ['trio', 'pum', 'zas', 'pum', 'trio'], (c) => {
+        let y = c.piso('piedra', 15, 19, 0, 1.2);
+        c.zorro('zorro', 16, 0); c.zorro('casco', 18, 0);
+        const y2 = c.piso('cristal', 15.2, 17, y); c.zorro('zorro', 16.1, y);
+        c.piso('cristal', 17, 18.8, y); c.zorro('zorro', 17.9, y);
+        c.tnt(17, y2, 0.5);
+        c.zorro('zorro', 16.1, y2); c.zorro('zorro', 17.9, y2);
+    });
+    nivel(2, 15, 'Dos grandes', ['pum', 'trio', 'zas', 'pum', 'pio'], (c) => {
+        let y = c.piso('piedra', 15, 17.8, 0, 1.4); c.zorro('grande', 16.4, 0);
+        c.zorro('zorro', 16.4, y);
+        let z = c.piso('piedra', 19.4, 22.2, 0, 1.4); c.zorro('grande', 20.8, 0);
+        z = c.piso('cristal', 19.4, 22.2, z, 1.2); c.zorro('casco', 20.8, z - 1.4);
+        c.zorro('zorro', 20.8, z);
+        c.tnt(18.6, 0, 0.6);
+    });
+
+    /* ==================== MUNDO 3 · LA CANTERA ==================== */
+    nivel(3, 1, 'Llega Bolo', ['bolo', 'bolo', 'pio'], (c) => {
+        let y = c.piso('piedra', 15, 17, 0); c.zorro('zorro', 16, 0);
+        y = c.piso('piedra', 15, 17, y); c.zorro('zorro', 16, y - 1.4);
+        c.zorro('zorro', 16, y);
+    });
+    nivel(3, 2, 'Muro grueso', ['bolo', 'pum', 'bolo'], (c) => {
+        c.col('piedra', 14.5, 0, 2.0, 0.6);
+        c.piso('madera', 15.6, 18, 0, 1.2);
+        c.zorro('casco', 16.8, 0);
+        c.zorro('zorro', 14.5, 2.0);
+        c.zorro('zorro', 19, 0);
+    });
+    nivel(3, 3, 'La pirámide', ['bolo', 'pum', 'trio', 'bolo'], (c) => {
+        const y = c.piramide(['piedra', 'piedra', 'madera', 'cristal'], 17, 0, 5, 0.6);
+        c.zorro('zorro', 17, y);
+        c.zorro('zorro', 14.8, 0); c.zorro('zorro', 19.2, 0);
+    });
+    nivel(3, 4, 'La mina', ['pum', 'bolo', 'pio'], (c) => {
+        const h = c.colina(13, 15, 1.6); c.colina(19, 21, 1.6);
+        c.tab('madera', 17, h, 4.4);
+        c.zorro('zorro', 16.2, h + 0.2); c.zorro('zorro', 17.8, h + 0.2);
+        c.tnt(17, 0, 0.6); c.zorro('zorro', 16, 0); c.zorro('zorro', 18, 0);
+    });
+    nivel(3, 5, 'Tres alturas', ['bolo', 'zas', 'pum', 'trio'], (c) => {
+        c.zorro('zorro', 14.5, c.piso('piedra', 14, 15, 0, 1.0));
+        c.zorro('zorro', 16.5, c.piso('madera', 16, 17, 0, 2.2));
+        c.zorro('zorro', 18.6, c.piso('cristal', 18, 19.2, 0, 3.0));
+        c.zorro('casco', 17.5, 0);
+    });
+    nivel(3, 6, 'Al otro lado', ['pum', 'bolo', 'zas', 'pum'], (c) => {
+        const h = c.colina(14, 16.5, 2.8);
+        c.blq('piedra', 15.2, h, 0.8, 0.8);
+        c.piso('madera', 17.4, 19.4, 0); c.zorro('zorro', 18.4, 0);
+        c.piso('cristal', 20, 22, 0); c.zorro('casco', 21, 0);
+        c.zorro('zorro', 18.4, 1.4); c.zorro('zorro', 21, 1.4);
+        c.esconder(27.5, 1.2);
+    });
+    nivel(3, 7, 'Cajas y piedras', ['bolo', 'pum', 'pio', 'bolo'], (c) => {
+        c.tnt(15, 0, 0.5); c.blq('piedra', 15.5, 0, 0.5); c.tnt(16, 0, 0.5); c.blq('piedra', 16.5, 0, 0.5);
+        const y = c.tab('madera', 15.75, 0.5, 2.4);
+        c.zorro('zorro', 15.2, y); c.zorro('zorro', 16.3, y);
+        c.piso('piedra', 18, 19.8, 0); c.zorro('casco', 18.9, 0);
+    });
+    nivel(3, 8, 'Torre de vigía', ['zas', 'bolo', 'pum', 'trio'], (c) => {
+        let y = c.piso('piedra', 17, 18.6, 0); c.zorro('zorro', 17.8, 0);
+        y = c.piso('madera', 17, 18.6, y); c.zorro('zorro', 17.8, y - 1.4);
+        y = c.piso('madera', 17, 18.6, y); c.zorro('casco', 17.8, y - 1.4);
+        y = c.piso('cristal', 17, 18.6, y, 1.0); c.zorro('zorro', 17.8, y);
+        c.blq('piedra', 15, 0, 0.8, 1.2);
+    });
+    nivel(3, 9, 'Rampa', ['bolo', 'pio', 'pum'], (c) => {
+        c.colinas.push([14.5, 0.6, 3.0, 1.2]);
+        c.piezas.push(['bola', 15.3, 1.2 + 0.45, 0.45, 'piedra']);
+        c.piso('madera', 16.8, 18.6, 0); c.zorro('zorro', 17.7, 0);
+        c.piso('cristal', 19, 20.8, 0); c.zorro('zorro', 19.9, 0);
+        c.zorro('casco', 22, 0);
+    });
+    nivel(3, 10, 'El almacén', ['pum', 'bolo', 'zas', 'pum', 'trio'], (c) => {
+        let y = c.piso('piedra', 15, 20, 0, 1.4);
+        c.tnt(16.2, 0, 0.6); c.tnt(18.8, 0, 0.6);
+        c.zorro('zorro', 17.5, 0);
+        y = c.piso('madera', 15.4, 19.6, y, 1.2);
+        c.zorro('casco', 16.5, y - 1.4); c.zorro('casco', 18.5, y - 1.4);
+        c.zorro('grande', 17.5, y);
+    });
+    nivel(3, 11, 'Escalera de piedra', ['bolo', 'bolo', 'pum', 'zas'], (c) => {
+        c.blq('piedra', 14.5, 0, 1.0, 0.8); c.blq('piedra', 15.5, 0, 1.0, 1.6); c.blq('piedra', 16.5, 0, 1.0, 2.4); c.blq('piedra', 17.5, 0, 1.0, 3.2);
+        c.zorro('zorro', 14.5, 0.8); c.zorro('casco', 15.5, 1.6); c.zorro('zorro', 16.5, 2.4); c.zorro('grande', 17.5, 3.2);
+    });
+    nivel(3, 12, 'Columnas', ['zas', 'trio', 'bolo', 'pum'], (c) => {
+        for (const [x, m] of [[14.5, 'madera'], [16.5, 'cristal'], [18.5, 'piedra'], [20.5, 'madera']]) {
+            const y = c.col(m, x, 0, 2.4, 0.4);
+            c.zorro('zorro', x, y);
+        }
+        c.zorro('casco', 17.5, 0);
+    });
+    nivel(3, 13, 'Castillito', ['bolo', 'pum', 'trio', 'zas', 'bolo'], (c) => {
+        c.pila('piedra', 15, 0, 4, 0.5); c.pila('piedra', 20, 0, 4, 0.5);
+        let y = c.piso('madera', 15.6, 19.4, 0, 1.2); c.zorro('casco', 17.5, 0);
+        y = c.piso('cristal', 15.6, 19.4, y, 1.0); c.zorro('zorro', 16.5, y - 1.2); c.zorro('zorro', 18.5, y - 1.2);
+        c.zorro('zorro', 15, 2.0); c.zorro('zorro', 20, 2.0);
+        c.tnt(17.5, y, 0.5);
+    });
+    nivel(3, 14, 'La gran muralla', ['pum', 'bolo', 'pum', 'zas', 'trio'], (c) => {
+        c.col('piedra', 14.4, 0, 2.6, 0.6); c.col('piedra', 15.0, 0, 2.6, 0.6);
+        c.tab('piedra', 14.7, 2.6, 1.2, 0.3);
+        let y = c.piso('madera', 16.4, 19.6, 0, 1.3); c.zorro('casco', 17.4, 0); c.zorro('casco', 18.6, 0);
+        y = c.piso('madera', 16.4, 19.6, y, 1.3); c.zorro('zorro', 18, y - 1.5);
+        c.zorro('grande', 18, y);
+        c.tnt(20.4, 0, 0.6); c.zorro('zorro', 21.4, 0);
+    });
+    nivel(3, 15, 'El jefe', ['bolo', 'pum', 'zas', 'trio', 'bolo', 'pum'], (c) => {
+        c.pila('piedra', 15.2, 0, 3, 0.6);
+        c.zorro('casco', 15.2, 1.8);
+        let y = c.piso('piedra', 17, 21.4, 0, 1.8);
+        c.zorro('jefe', 19.2, 0);
+        c.tnt(17.7, 0, 0.6); c.tnt(20.7, 0, 0.6);
+        y = c.piso('madera', 17.2, 21.2, y, 1.2); c.zorro('casco', 18.2, y - 1.4); c.zorro('casco', 20.2, y - 1.4);
+        c.piramide('cristal', 19.2, y, 2, 0.6);
+        c.zorro('zorro', 19.2, y + 1.2);
+        c.pila('piedra', 23, 0, 3, 0.6); c.zorro('casco', 23, 1.8);
+    });
+
+    /* ==================== PREMIOS (huevo dorado) ==================== */
+    function premio(mundo, nombre, pajaros, construir) { nivel(mundo, 'P', nombre, pajaros, construir); LISTA[LISTA.length - 1].id = 'P' + mundo; }
+    premio(1, 'Fiesta de cristal', ['trio', 'trio', 'trio', 'zas'], (c) => {
+        for (let i = 0; i < 6; i++) { const x = 14 + i * 1.5; const y = c.torre('cristal', x, 0, 1 + (i % 3), 1.2); c.zorro('zorro', x, y); }
+    });
+    premio(2, 'Fuegos artificiales', ['pio', 'pio', 'pum'], (c) => {
+        for (let i = 0; i < 5; i++) { c.tnt(14.5 + i * 1.6, 0, 0.6); c.zorro('zorro', 15.3 + i * 1.6, 0); }
+        c.tnt(16.1, 0.6, 0.6); c.tnt(19.3, 0.6, 0.6);
+    });
+    premio(3, 'Bolos', ['bolo', 'bolo', 'bolo'], (c) => {
+        let k = 0;
+        for (let i = 0; i < 4; i++) { const x = 15 + i * 1.3; const y = c.col('madera', x, 0, 1.6, 0.25); c.zorro(k++ % 2 ? 'casco' : 'zorro', x, y); }
+        for (let i = 0; i < 3; i++) { const x = 15.65 + i * 1.3; c.zorro('zorro', x, 0); }
+    });
+    return LISTA;
+});
+
+</script>
+<script>
+/* GENERADO por jugador-simulado.js: no editar a mano.
+   id: [puntos para 2 estrellas, puntos para 3, huella del nivel] */
+(function (raiz) {
+    const E = {"1-1":[20000,31000,"80f49305"],"1-2":[11000,22000,"e4d12808"],"1-3":[11000,21000,"fb1de6c2"],"1-4":[16000,17000,"535e9201"],"1-5":[16000,26000,"950c7772"],"1-6":[20000,31000,"e4f3c34b"],"1-7":[16000,27000,"651e1643"],"1-8":[35000,46000,"338d49a5"],"1-9":[16000,27000,"ad439305"],"1-10":[26000,37000,"d6ec7b03"],"1-11":[43000,54000,"b1a9a4c"],"1-12":[20000,31000,"62c41e2"],"1-13":[21000,32000,"b10d71e4"],"1-14":[34000,45000,"d72fc716"],"1-15":[48000,59000,"80d85943"],"2-1":[19000,30000,"d4e83658"],"2-2":[16000,27000,"609a25df"],"2-3":[19000,30000,"f5a779ed"],"2-4":[26000,37000,"e8dc4a2f"],"2-5":[30000,41000,"10ce0f53"],"2-6":[35000,46000,"6b25929d"],"2-7":[40000,51000,"81150d99"],"2-8":[44000,55000,"64da5d9a"],"2-9":[33000,44000,"46bd0bb5"],"2-10":[43000,54000,"dbef63d6"],"2-11":[25000,36000,"f593bcb8"],"2-12":[37000,48000,"6251caff"],"2-13":[16000,27000,"4862090c"],"2-14":[62000,73000,"5bd2fd3d"],"2-15":[64000,75000,"c495174a"],"3-1":[26000,37000,"be7ebd92"],"3-2":[26000,37000,"1824684"],"3-3":[27000,38000,"fbe0fae5"],"3-4":[30000,41000,"3d4ccc47"],"3-5":[42000,53000,"9e66d34f"],"3-6":[41000,52000,"d1f619a0"],"3-7":[38000,49000,"5bd3242e"],"3-8":[42000,53000,"933d049b"],"3-9":[17000,18000,"52ba95f0"],"3-10":[57000,68000,"6c50f1d4"],"3-11":[43000,54000,"55df1666"],"3-12":[27000,37000,"bfff02ca"],"3-13":[58000,69000,"ea49581a"],"3-14":[63000,74000,"a9115799"],"3-15":[79000,90000,"dc237780"],"P1":[58000,69000,"58d03f7"],"P2":[37000,48000,"1b256783"],"P3":[48000,59000,"64b9531"]};
+    if (typeof module === 'object' && module.exports) module.exports = E; else raiz.ESTRELLAS = E;
+})(typeof self !== 'undefined' ? self : this);
+
+</script>
+<script>
+/* Pajaritos al Rescate: la parte del navegador (dibujo, cámara, toques,
+   sonido, menús y guardado). Las reglas están en reglas.js y la física en
+   motor-fisica.js: aquí no se decide nada del juego, solo se pinta y se
+   pasa el dedo a ángulo y fuerza. */
+'use strict';
+const T = Tirachinas;
+const F = Fisica;
+const $ = (id) => document.getElementById(id);
+
+/* ---------- DATOS ---------- */
+const NORMALES = NIVELES.filter(d => d.n !== 'P');
+const PREMIOS = NIVELES.filter(d => d.n === 'P');
+const porId = (id) => NIVELES.find(d => d.id === id) || null;
+const MUNDOS = {
+    1: { nombre: 'La pradera', icono: '🌼', cielo: ['#7ec8f2', '#d9f1ff'], lejos: '#9fd3a6', medio: '#6fbf73', cesped: '#5aa83c', tierra: '#7a5230', sol: '#fff3b0' },
+    2: { nombre: 'La nieve', icono: '❄️', cielo: ['#9cc3e6', '#eef6ff'], lejos: '#d7e6f4', medio: '#b8cfe6', cesped: '#f4f8fc', tierra: '#7d8ea3', sol: '#ffffff' },
+    3: { nombre: 'La cantera', icono: '⛰️', cielo: ['#f2a65a', '#ffe3b3'], lejos: '#e8b27a', medio: '#c98a4b', cesped: '#d9a35c', tierra: '#8a5a2e', sol: '#fff0c0' }
+};
+const COLOR_PAJARO = {
+    pio:  { cuerpo: '#20b8a8', tripa: '#bff3ec', pico: '#ffb020', copete: '#178f83' },
+    trio: { cuerpo: '#ff6fae', tripa: '#ffd6e8', pico: '#ffb020', copete: '#d94c8c' },
+    zas:  { cuerpo: '#8fd630', tripa: '#e4f8c2', pico: '#ff9a1f', copete: '#ffd400' },
+    pum:  { cuerpo: '#5b2aa6', tripa: '#c9b3ef', pico: '#ffb020', copete: '#2e1260' },
+    bolo: { cuerpo: '#2f4fb8', tripa: '#b9c8f5', pico: '#ffb020', copete: '#1b2f78' }
+};
+const LOGROS = [
+    ['primero', '🐣', 'Primer vuelo', 'Supera tu primer nivel'],
+    ['tres', '⭐', 'Tres estrellas', 'Consigue 3 estrellas en un nivel'],
+    ['doble', '✌️', 'Dos de un tiro', 'Tumba 2 zorros con un solo pajarito'],
+    ['triple', '🎯', 'Tres de un tiro', 'Tumba 3 zorros con un solo pajarito'],
+    ['ahorro', '💰', 'Ahorrador', 'Gana un nivel con 2 pajaritos de sobra'],
+    ['derribo', '🏚️', 'Derribo', 'Rompe 12 piezas con un solo pajarito'],
+    ['boom', '💥', '¡Bum!', 'Haz explotar una caja TNT'],
+    ['huevo', '🥚', 'Huevo dorado', 'Encuentra un huevo dorado'],
+    ['huevos', '🏆', 'Todos los huevos', 'Encuentra los 3 huevos dorados'],
+    ['mundo1', '🌼', 'La pradera', 'Termina el mundo 1'],
+    ['mundo2', '❄️', 'La nieve', 'Termina el mundo 2'],
+    ['mundo3', '⛰️', 'La cantera', 'Termina el mundo 3 y vence al jefe'],
+    ['perfecto', '🌟', 'Todo estrellas', '3 estrellas en los 45 niveles'],
+    ['duelo', '🤝', 'Duelo', 'Termina un nivel a dos jugadores']
+];
+const FALLOS_PARA_SALTAR = 3;
+
+/* ---------- GUARDADO ---------- */
+const CLAVE_PROGRESO = 'tirachinasProgreso', CLAVE_LOGROS = 'tirachinasLogros', CLAVE_OPCIONES = 'tirachinasOpciones';
+function progreso() {
+    const g = EST.leer(CLAVE_PROGRESO, null);
+    const base = { niveles: {}, huevos: {}, fallos: {} };
+    if (!g || typeof g !== 'object') return base;
+    for (const k of ['niveles', 'huevos', 'fallos']) if (g[k] && typeof g[k] === 'object') base[k] = g[k];
+    return base;
+}
+const guardarProgreso = (g) => EST.guardar(CLAVE_PROGRESO, g);
+function logros() { const l = EST.leer(CLAVE_LOGROS, {}); return l && typeof l === 'object' ? l : {}; }
+function opciones() { const o = EST.leer(CLAVE_OPCIONES, {}); return { nj: o && o.nj === 2 ? 2 : 1 }; }
+
+const hecho = (g, id) => !!g.niveles[id];
+function desbloqueado(g, id) {
+    const d = porId(id);
+    if (!d) return false;
+    if (d.n === 'P') return !!g.huevos[d.mundo];
+    const i = NORMALES.indexOf(d);
+    return i === 0 || hecho(g, NORMALES[i - 1].id);
+}
+function pendiente(g) { return NORMALES.find(d => desbloqueado(g, d.id) && !hecho(g, d.id)) || null; }
+function estrellasTotal(g) { let n = 0; for (const k in g.niveles) n += g.niveles[k].e || 0; return n; }
+function estrellasDe(id, puntos) {
+    const u = (typeof ESTRELLAS !== 'undefined' && ESTRELLAS[id]) || [Infinity, Infinity];
+    return puntos >= u[1] ? 3 : puntos >= u[0] ? 2 : 1;
+}
+
+/* ---------- LIENZO Y CÁMARA ---------- */
+const lienzo = $('gameCanvas');
+const ctx = lienzo.getContext('2d');
+let cw = 300, ch = 200, dpr = 1;
+const cam = { x: 0, y: -0.6, s: 30, modo: 'todo', objetivoX: 0, objetivoY: -0.6, ver: false, vistaS: 30 };
+const S_MIN = 26;
+const HUECO_COLA = 0.08;
+const PASOS_MAX = 4;          // px por metro: el pajarito (r 0,3 m) no baja de ~8 px de radio
+function ajustarLienzo() {
+    const r = $('zonaJuego').getBoundingClientRect();
+    cw = Math.max(50, r.width); ch = Math.max(50, r.height);
+    /* Tope de 2: a 3 en un móvil, el lienzo es de 9 veces los píxeles y
+       repintar el cielo cada fotograma se nota */
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    lienzo.width = Math.round(cw * dpr); lienzo.height = Math.round(ch * dpr);
+    calcularCamara(true);
+}
+function caja(d) {
+    let alto = 6.5;
+    for (const q of d.piezas) alto = Math.max(alto, q[2] + (q[4] && typeof q[4] === 'number' ? q[4] / 2 : 0.6));
+    for (const z of d.zorros) alto = Math.max(alto, z[2] + 0.8);
+    for (const k of d.colinas || []) alto = Math.max(alto, k[3] + 1);
+    /* El encuadre empieza donde acaba la cola de pajaritos en espera: con
+       4 o más, los últimos se salían por la izquierda (en el 3-15 hay 6) */
+    let cola = 0;
+    for (const t of d.pajaros.slice(1)) cola += T.PAJAROS[t].r * 2 + HUECO_COLA;
+    return { x0: Math.min(0.6, T.HONDA.x - 0.9 - cola - 0.25), x1: d.ancho, alto: alto + 1.2 };
+}
+function calcularCamara(saltar) {
+    if (!partida) return;
+    const b = caja(partida.def);
+    const sTodo = Math.min(cw / (b.x1 - b.x0), ch / (b.alto + 0.6));
+    cam.vistaS = sTodo;
+    if (sTodo >= S_MIN * 0.85) { cam.modo = 'todo'; cam.s = sTodo; }
+    else { cam.modo = 'seguir'; cam.s = Math.max(S_MIN, Math.min(ch / (b.alto + 0.6), cw / 12)); }
+    $('btnVer').style.display = cam.modo === 'todo' ? 'none' : '';
+    if (cam.modo === 'todo') { const sobra = cw / cam.s - (b.x1 - b.x0); cam.objetivoX = b.x0 - sobra / 2; }
+    if (saltar) { cam.x = cam.objetivoX; cam.y = cam.objetivoY; }
+}
+const sx = (x) => (x - cam.x) * cam.s;
+const sy = (y) => ch - (y - cam.y) * cam.s;
+const vistaAncho = () => cw / cam.s;
+
+/* ---------- ESTADO ---------- */
+let partida = null, nivelId = null, estado = 'menu';
+let nj = opciones().nj, turnoJ = 1, resultadoJ1 = null, marcador = { 1: 0, 2: 0 };
+let raf = 0, ultimoT = 0, acumulado = 0, pausado = false, finPendiente = 0;
+let apunte = null;           // { x0, y0, ang, fuerza } mientras se arrastra
+let apunteTeclado = { ang: 0.6, fuerza: 0.85, activo: false };
+let rastro = [], rastroViejo = [], particulas = [], textos = [], introT = 0, ultimoGolpeX = null, tiempo = 0;
+
+/* ---------- PARTIDA ---------- */
+function abrirNivel(id, conservarTurno) {
+    const d = porId(id);
+    if (!d) return;
+    const g = progreso();
+    nivelId = id;
+    if (!conservarTurno) { turnoJ = 1; resultadoJ1 = null; }
+    partida = T.crear(d, { sinHuevo: !!g.huevos[d.mundo] || d.n === 'P' });
+    rastro = []; rastroViejo = []; particulas = []; textos = []; apunte = null; ultimoGolpeX = null;
+    acumulado = 0; finPendiente = 0; pausado = false; introT = 0;
+    apunteTeclado = { ang: 0.6, fuerza: 0.85, activo: false };
+    EST.mostrar('pJuego');
+    ['capaFin', 'capaPausa', 'capaTurno', 'capaLogros', 'capaAyuda'].forEach(EST.cerrar);
+    estado = 'jugando';
+    ajustarLienzo();
+    /* En modo «seguir» la cámara empieza en la construcción y vuelve al
+       tirachinas: así se ve qué hay antes de apuntar */
+    if (cam.modo === 'seguir') { const b = caja(d); cam.x = Math.max(b.x0, b.x1 - vistaAncho()); introT = 1.4; }
+    cam.ver = false; $('btnVer').setAttribute('aria-pressed', 'false');
+    pintarBarra();
+    arrancarBucle();
+    musicaFondo(true);
+}
+function pintarBarra() {
+    if (!partida) return;
+    const d = partida.def;
+    $('bNivel').textContent = d.n === 'P' ? '🥚 ' + d.mundo : d.id;
+    const g = progreso();
+    const r = g.niveles[d.id];
+    $('bRecord').textContent = r && r.p ? r.p.toLocaleString('es-ES') : '—';
+    if (nj === 2) {
+        $('barraJ2').style.display = 'contents';
+        $('etJ1').textContent = 'J1';
+        const p1 = turnoJ === 1 ? partida.puntos : resultadoJ1 ? resultadoJ1.puntos : 0;
+        $('bS1').textContent = p1.toLocaleString('es-ES');
+        $('bS2').textContent = turnoJ === 2 ? partida.puntos.toLocaleString('es-ES') : '—';
+        $('datoJ1').classList.toggle('turno', turnoJ === 1);
+        $('datoJ2').classList.toggle('turno', turnoJ === 2);
+    } else {
+        $('barraJ2').style.display = 'none';
+        $('etJ1').textContent = 'PUNTOS';
+        $('bS1').textContent = partida.puntos.toLocaleString('es-ES');
+        $('datoJ1').classList.remove('turno');
+    }
+}
+function repetirNivel() { if (nivelId) abrirNivel(nivelId, nj === 2 && turnoJ === 2); }
+
+function lanzarAhora(ang, fuerza) {
+    if (!partida || partida.fase !== 'apuntar' || pausado || EST.hayCapa()) return false;
+    if (!T.lanzar(partida, ang, fuerza)) return false;
+    rastroViejo = rastro; rastro = [];
+    apunteTeclado.activo = false;
+    return true;
+}
+function usarPoder() {
+    if (partida && !pausado && T.habilidad(partida)) return true;
+    return false;
+}
+
+/* Fin de nivel: se espera un poco para ver caer lo último */
+function alTerminar() {
+    logrosFin = [];
+    try { terminarNivel(); } finally { logrosFin = null; }
+}
+function terminarNivel() {
+    const p = partida, d = p.def, g = progreso();
+    const gana = p.fase === 'gana';
+    const estrellas = gana ? estrellasDe(d.id, p.puntos) : 0;
+    if (nj === 2 && turnoJ === 1) {
+        resultadoJ1 = { gana, puntos: p.puntos, estrellas };
+        guardarResultado(g, d, gana, p.puntos, estrellas);
+        $('turnoTitulo').textContent = 'TURNO DE J2';
+        $('turnoTexto').textContent = (gana ? 'J1 ha pasado el nivel con ' : 'J1 no ha podido: ') + p.puntos.toLocaleString('es-ES') + ' puntos. Ahora J2, el mismo nivel desde el principio.' + textoLogros();
+        $('duelo').innerHTML = '';
+        $('btnTurno').textContent = '¡A JUGAR, J2!';
+        $('btnTurno').dataset.accion = 'j2';
+        EST.abrir('capaTurno');
+        sonar(gana ? 'gana' : 'pierde');
+        return;
+    }
+    if (nj === 2) {
+        const j1 = resultadoJ1, j2 = { gana, puntos: p.puntos, estrellas };
+        guardarResultado(g, d, gana, p.puntos, estrellas);
+        const quien = j1.puntos === j2.puntos ? 0 : j1.puntos > j2.puntos ? 1 : 2;
+        if (quien) marcador[quien]++;
+        conseguir('duelo');
+        $('turnoTitulo').textContent = quien ? '¡GANA J' + quien + '!' : '¡EMPATE!';
+        $('turnoTexto').textContent = 'Marcador: J1 ' + marcador[1] + ' – J2 ' + marcador[2] + '.' + textoLogros();
+        const celda = (n, r) => '<div class="' + (quien === n ? 'gana' : '') + '">J' + n + '<b>' + r.puntos.toLocaleString('es-ES') + '</b>' + (r.gana ? '⭐'.repeat(r.estrellas) : 'sin pasar') + '</div>';
+        $('duelo').innerHTML = celda(1, j1) + celda(2, j2);
+        const alguno = j1.gana || j2.gana;
+        const sig = siguienteDe(d);
+        $('btnTurno').textContent = alguno && sig ? 'SIGUIENTE NIVEL ▶' : 'OTRA VEZ ↻';
+        $('btnTurno').dataset.accion = alguno && sig ? 'siguiente' : 'repetir';
+        EST.abrir('capaTurno');
+        sonar('gana');
+        return;
+    }
+    guardarResultado(g, d, gana, p.puntos, estrellas);
+    const g2 = progreso();
+    $('finTitulo').textContent = gana ? (d.n === 'P' ? '¡PREMIO SUPERADO!' : '¡NIVEL SUPERADO!') : 'SE HAN ESCAPADO';
+    const es = $('finEstrellas').children;
+    for (let i = 0; i < 3; i++) es[i].classList.remove('si');
+    $('finEstrellas').setAttribute('aria-label', estrellas + ' de 3 estrellas');
+    $('finalScore').textContent = p.puntos.toLocaleString('es-ES');
+    const r = g2.niveles[d.id];
+    let det = '';
+    if (gana) det = (p.fin.sobran ? 'Te sobran ' + p.fin.sobran + (p.fin.sobran === 1 ? ' pajarito' : ' pajaritos') + '. ' : '') + (r && r.p === p.puntos ? '¡Récord del nivel!' : 'Récord: ' + (r ? r.p : 0).toLocaleString('es-ES'));
+    else det = 'Quedan ' + p.zorros + (p.zorros === 1 ? ' zorro' : ' zorros') + '. Prueba a darle a lo que los sujeta.';
+    $('finDetalle').textContent = det + textoLogros();
+    const sig = siguienteDe(d);
+    $('btnSiguiente').style.display = gana && sig ? '' : 'none';
+    $('btnSiguiente').textContent = sig && sig.mundo !== d.mundo ? 'MUNDO ' + sig.mundo + ' ▶' : 'SIGUIENTE ▶';
+    $('btnSaltar').style.display = !gana && !hecho(g2, d.id) && d.n !== 'P' && (g2.fallos[d.id] || 0) >= FALLOS_PARA_SALTAR ? '' : 'none';
+    EST.abrir('capaFin');
+    sonar(gana ? 'gana' : 'pierde');
+    /* Las estrellas entran de una en una */
+    for (let i = 0; i < estrellas; i++) setTimeout(() => { es[i].classList.add('si'); sonar('estrella', i); }, 350 + i * 300);
+}
+function siguienteDe(d) {
+    if (d.n === 'P') { const g = progreso(); return pendiente(g); }
+    const i = NORMALES.indexOf(d);
+    return NORMALES[i + 1] || null;
+}
+function guardarResultado(g, d, gana, puntos, estrellas) {
+    if (gana) {
+        const ant = g.niveles[d.id];
+        const nuevo = { e: Math.max(estrellas, ant ? ant.e || 0 : 0), p: Math.max(puntos, ant ? ant.p || 0 : 0) };
+        g.niveles[d.id] = nuevo;
+        delete g.fallos[d.id];
+        conseguir('primero');
+        if (estrellas === 3) conseguir('tres');
+        if (partida.fin && partida.fin.sobran >= 2) conseguir('ahorro');
+    } else if (!(nj === 2 && turnoJ === 1)) {
+        /* A dos jugadores, el fallo cuenta solo si fallan los dos */
+        if (!(nj === 2 && resultadoJ1 && resultadoJ1.gana)) g.fallos[d.id] = (g.fallos[d.id] || 0) + 1;
+    }
+    guardarProgreso(g);
+    for (const w of [1, 2, 3]) if (NORMALES.filter(x => x.mundo === w).every(x => g.niveles[x.id] && !g.niveles[x.id].saltado)) conseguir('mundo' + w);
+    if (NORMALES.every(x => g.niveles[x.id] && g.niveles[x.id].e === 3)) conseguir('perfecto');
+}
+function saltar() {
+    const g = progreso(), d = partida.def;
+    g.niveles[d.id] = { e: 0, p: 0, saltado: true };
+    delete g.fallos[d.id];
+    guardarProgreso(g);
+    EST.cerrar('capaFin');
+    const sig = siguienteDe(d);
+    if (sig) abrirNivel(sig.id); else irMapa();
+}
+/* Los logros del final de un nivel van dentro de la capa de fin: como
+   aviso flotante, tapaban el «¡NIVEL SUPERADO!» */
+let logrosFin = null;
+function conseguir(id) {
+    const l = logros();
+    if (l[id]) return;
+    l[id] = Date.now();
+    EST.guardar(CLAVE_LOGROS, l);
+    const x = LOGROS.find(a => a[0] === id);
+    if (!x) return;
+    if (logrosFin) logrosFin.push(x[1] + ' ' + x[2]);
+    else EST.avisar(x[1] + ' Logro: ' + x[2]);
+}
+const textoLogros = () => logrosFin && logrosFin.length ? ' 🏅 Logro: ' + logrosFin.join(' · ') : '';
+
+/* ---------- BUCLE ---------- */
+function arrancarBucle() {
+    /* Un solo bucle: si ya hay uno, no se arranca otro (dos a la vez
+       duplicaban la velocidad del juego) */
+    if (raf) return;
+    ultimoT = performance.now();
+    raf = requestAnimationFrame(fotograma);
+}
+function pararBucle() { if (raf) cancelAnimationFrame(raf); raf = 0; }
+function fotograma(t) {
+    raf = 0;
+    if (estado !== 'jugando') return;
+    const dt = Math.min(0.05, Math.max(0, (t - ultimoT) / 1000));
+    ultimoT = t;
+    if (!pausado) actualizar(dt);
+    dibujar();
+    raf = requestAnimationFrame(fotograma);
+}
+function actualizar(dt) {
+    tiempo += dt;
+    const p = partida;
+    if (p.fase === 'vuelo') {
+        acumulado += dt;
+        let n = 0;
+        /* Como mucho 4 pasos por fotograma (1/30 s de juego): con 10, tras un
+           fotograma lento el siguiente hacía 6 pasos, tardaba más y se
+           encadenaba (50 ms con la CPU a 1/4). Así, en un móvil flojo el juego
+           va algo más lento en vez de dar tirones */
+        while (acumulado >= T.PASO && n < PASOS_MAX) {
+            T.avanzar(p);
+            acumulado -= T.PASO; n++;
+            if (p.vuelo && p.vuelo.cuerpos[0] && Math.round(p.t / T.PASO) % 5 === 0) { const b = p.vuelo.cuerpos[0]; rastro.push([b.x, b.y]); }
+            if (p.fase !== 'vuelo') break;
+        }
+        if (n === PASOS_MAX) acumulado = 0;
+        tratarEventos();
+        if (p.fase === 'gana' || p.fase === 'pierde') finPendiente = 1.1;
+    } else tratarEventos();
+    if (finPendiente > 0) { finPendiente -= dt; if (finPendiente <= 0) { finPendiente = 0; alTerminar(); } }
+    /* Partículas y textos */
+    for (const q of particulas) { q.vy -= 9 * dt * (q.g === undefined ? 1 : q.g); q.x += q.vx * dt; q.y += q.vy * dt; q.a += q.w * dt; q.vida -= dt; }
+    particulas = particulas.filter(q => q.vida > 0);
+    for (const q of textos) { q.y += 0.9 * dt; q.vida -= dt; }
+    textos = textos.filter(q => q.vida > 0);
+    moverCamara(dt);
+}
+function moverCamara(dt) {
+    const p = partida, b = caja(p.def);
+    if (cam.modo === 'todo') {
+        const sobra = cw / cam.s - (b.x1 - b.x0);
+        cam.objetivoX = b.x0 - sobra / 2;
+    } else {
+        const ancho = vistaAncho();
+        const maxX = Math.max(b.x0, b.x1 - ancho);
+        let obj;
+        if (introT > 0) { introT -= dt; obj = introT > 0.5 ? maxX : b.x0; }
+        else if (cam.ver) obj = maxX;
+        else if (p.fase === 'vuelo' && p.vuelo && p.vuelo.cuerpos.length) { const c = p.vuelo.cuerpos[0]; obj = c.x - ancho * 0.35; ultimoGolpeX = obj; }
+        else if (p.fase === 'vuelo' && ultimoGolpeX !== null) obj = ultimoGolpeX;
+        else obj = b.x0;
+        cam.objetivoX = Math.max(b.x0, Math.min(maxX, obj));
+    }
+    /* En alto: solo si el pajarito se sale por arriba */
+    let objY = -0.6;
+    if (p.fase === 'vuelo' && p.vuelo && p.vuelo.cuerpos.length) {
+        const c = p.vuelo.cuerpos[0], altoVista = ch / cam.s;
+        if (c.y > -0.6 + altoVista - 1.2) objY = c.y - altoVista + 1.2;
+    }
+    cam.objetivoY = objY;
+    const k = 1 - Math.exp(-dt * 4.5);
+    cam.x += (cam.objetivoX - cam.x) * k;
+    cam.y += (cam.objetivoY - cam.y) * k;
+}
+
+/* ---------- EVENTOS → SONIDO, PARTÍCULAS, LOGROS ---------- */
+const COLOR_MAT = { madera: ['#c98a3d', '#8a5520'], cristal: ['#bfe6ff', '#86c5ef'], piedra: ['#9a9ca3', '#6a6c73'], tnt: ['#d8322f', '#ffcf3f'] };
+function chispas(x, y, colores, n, fuerza, tam) {
+    for (let i = 0; i < n && particulas.length < 320; i++) {
+        const a = Math.random() * Math.PI * 2, v = fuerza * (0.4 + Math.random() * 0.8);
+        particulas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 1.5, a: Math.random() * 6, w: (Math.random() - 0.5) * 12, vida: 0.6 + Math.random() * 0.7, color: colores[i % colores.length], tam: tam * (0.5 + Math.random() * 0.7), forma: 'rect' });
+    }
+}
+function humo(x, y, n, r) {
+    for (let i = 0; i < n && particulas.length < 320; i++) {
+        const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * 1.4;
+        particulas.push({ x: x + Math.cos(a) * r * 0.3, y: y + Math.sin(a) * r * 0.3, vx: Math.cos(a) * v, vy: Math.sin(a) * v, a: 0, w: 0, g: -0.05, vida: 0.7 + Math.random() * 0.5, color: 'rgba(255,255,255,0.85)', tam: r * (0.5 + Math.random() * 0.6), forma: 'humo' });
+    }
+}
+function texto(t, x, y, color, grande) { textos.push({ t, x, y, color: color || '#fff', vida: 1.1, grande: !!grande }); }
+function tratarEventos() {
+    const p = partida;
+    for (const e of p.eventos) {
+        switch (e.tipo) {
+            case 'lanza': sonar('lanza'); break;
+            case 'habilidad':
+                if (e.clase === 'pum') { sonar('bum'); humo(e.x, e.y, 14, 1.2); chispas(e.x, e.y, ['#ffcf3f', '#ff7a1a', '#5b2aa6'], 16, 7, 0.16); particulas.push({ x: e.x, y: e.y, vx: 0, vy: 0, a: 0, w: 0, g: 0, vida: 0.35, color: '#fff6c0', tam: T.BOMBA.radio, forma: 'destello' }); }
+                else if (e.clase === 'trio') { sonar('trio'); humo(e.x, e.y, 4, 0.4); }
+                else { sonar('zas'); chispas(e.x, e.y, ['#ffd400', '#fff'], 8, 4, 0.1); }
+                break;
+            case 'choque': sonar('choque', e); break;
+            case 'rompe':
+                sonar('rompe', e);
+                chispas(e.x, e.y, COLOR_MAT[e.mat] || ['#ccc'], e.mat === 'cristal' ? 12 : 8, 3.5, Math.min(0.28, Math.max(0.1, Math.min(e.w, e.h) * 0.8)));
+                break;
+            case 'zorro': sonar('zorro'); humo(e.x, e.y, 10, 0.7); break;
+            case 'puntos': texto(e.n.toLocaleString('es-ES'), e.x, e.y + 0.5, e.n >= 5000 ? '#fff36a' : '#fff', e.n >= 5000); break;
+            case 'explosion':
+                sonar('bum');
+                if (e.tnt) conseguir('boom');
+                humo(e.x, e.y, 16, 1.4); chispas(e.x, e.y, ['#ffcf3f', '#ff7a1a', '#d8322f'], 18, 8, 0.16);
+                particulas.push({ x: e.x, y: e.y, vx: 0, vy: 0, a: 0, w: 0, g: 0, vida: 0.35, color: '#fff6c0', tam: e.radio, forma: 'destello' });
+                break;
+            case 'huevo': {
+                sonar('huevo');
+                chispas(e.x, e.y, ['#ffd84a', '#fff4b0', '#ffb300'], 18, 4, 0.12);
+                texto('¡HUEVO DORADO!', e.x, e.y + 0.6, '#ffd84a', true);
+                const g = progreso(); g.huevos[p.def.mundo] = true; guardarProgreso(g);
+                conseguir('huevo');
+                if (g.huevos[1] && g.huevos[2] && g.huevos[3]) conseguir('huevos');
+                EST.avisar('🥚 ¡Huevo dorado! Se abre el nivel de premio del mundo ' + p.def.mundo);
+                break;
+            }
+            case 'turno': {
+                const t = p.tiros[p.tiros.length - 1];
+                if (t) {
+                    if (t.zorros >= 2) conseguir('doble');
+                    if (t.zorros >= 3) conseguir('triple');
+                    if (t.piezas >= 12) conseguir('derribo');
+                }
+                ultimoGolpeX = null;
+                break;
+            }
+            case 'gana': case 'pierde': {
+                const t = p.tiros[p.tiros.length - 1];
+                if (t) { if (t.zorros >= 2) conseguir('doble'); if (t.zorros >= 3) conseguir('triple'); if (t.piezas >= 12) conseguir('derribo'); }
+                break;
+            }
+        }
+    }
+    if (p.eventos.length) pintarBarra();
+    p.eventos = [];
+}
+
+/* ---------- SONIDO ---------- */
+function sonar(que, e) {
+    switch (que) {
+        case 'estirar': EST.efecto('estirar', 70, [[180 + (e || 0) * 420, 0.05, 'triangle', 0.025]]); break;
+        case 'lanza': EST.ruido(0.22, 0.12, 3500, 400); EST.efecto('lanza', 0, [[420, 0.16, 'triangle', 0.07, 0, 980]]); break;
+        case 'trio': EST.efecto('poder', 0, [[1150, 0.07, 'square', 0.04], [1450, 0.07, 'square', 0.04, 0.05], [1750, 0.08, 'square', 0.04, 0.1]]); break;
+        case 'zas': EST.efecto('poder', 0, [[260, 0.28, 'sawtooth', 0.06, 0, 1500]]); break;
+        case 'bum': EST.ruido(0.7, 0.5, 1800, 50); EST.efecto('bum', 120, [[70, 0.35, 'sine', 0.2, 0, 35]]); break;
+        case 'choque': {
+            const f = Math.min(1, e.fuerza / 6);
+            if (e.mat === 'cristal') EST.efecto('choque-c', 60, [[2300, 0.06, 'triangle', 0.02 + f * 0.03]]);
+            else if (e.mat === 'piedra') EST.efecto('choque-p', 60, [[95, 0.1, 'square', 0.03 + f * 0.04]]);
+            else EST.efecto('choque-m', 60, [[150, 0.07, 'square', 0.03 + f * 0.04]]);
+            break;
+        }
+        case 'rompe':
+            if (e.mat === 'cristal') EST.efecto('rompe-c', 50, [[2600, 0.12, 'triangle', 0.05], [3300, 0.1, 'triangle', 0.04, 0.03], [1900, 0.14, 'triangle', 0.03, 0.06]]);
+            else if (e.mat === 'piedra') { EST.ruido(0.25, 0.22, 900, 80); EST.efecto('rompe-p', 60, [[80, 0.18, 'square', 0.06]]); }
+            else if (e.mat === 'tnt') { /* suena la explosión */ }
+            else { EST.ruido(0.14, 0.12, 2200, 300); EST.efecto('rompe-m', 50, [[180, 0.1, 'square', 0.05, 0, 90]]); }
+            break;
+        case 'zorro': EST.efecto('zorro', 80, [[620, 0.09, 'square', 0.05, 0, 900], [420, 0.16, 'square', 0.05, 0.08, 200]]); break;
+        case 'huevo': EST.efecto('huevo', 0, [[1319, 0.12, 'triangle', 0.06], [1568, 0.12, 'triangle', 0.06, 0.09], [2093, 0.25, 'triangle', 0.06, 0.18]]); break;
+        case 'gana': EST.efecto('fin', 0, [[523, 0.14, 'square', 0.05], [659, 0.14, 'square', 0.05, 0.13], [784, 0.14, 'square', 0.05, 0.26], [1047, 0.35, 'square', 0.05, 0.39]]); break;
+        case 'pierde': EST.efecto('fin', 0, [[392, 0.2, 'triangle', 0.06], [330, 0.2, 'triangle', 0.06, 0.2], [262, 0.4, 'triangle', 0.06, 0.4]]); break;
+        case 'estrella': EST.efecto('estrella' + e, 0, [[880 * Math.pow(1.26, e), 0.18, 'triangle', 0.07]]); break;
+    }
+}
+let musica = null;
+function musicaFondo(on) {
+    if (!musica) musica = EST.musica({ bpm: 104, acordes: [{ bajo: 98, notas: [196, 247, 294] }, { bajo: 131, notas: [262, 330, 392] }, { bajo: 110, notas: [220, 262, 330] }, { bajo: 147, notas: [220, 294, 370] }] });
+    if (on && EST.audio.musica) musica.arrancar(); else musica.parar();
+}
+
+/* ---------- DIBUJO ---------- */
+function dibujar() {
+    const p = partida;
+    if (!p) return;
+    const M = MUNDOS[p.def.mundo] || MUNDOS[1];
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* Cielo */
+    const gr = ctx.createLinearGradient(0, 0, 0, ch);
+    gr.addColorStop(0, M.cielo[0]); gr.addColorStop(1, M.cielo[1]);
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, cw, ch);
+    /* Sol y lejanía, con paralaje (se mueven menos que la cámara) */
+    ctx.fillStyle = M.sol; ctx.globalAlpha = 0.8;
+    ctx.beginPath(); ctx.arc(cw * 0.82 - cam.x * cam.s * 0.05, ch * 0.18, Math.min(cw, ch) * 0.07, 0, 7); ctx.fill();
+    ctx.globalAlpha = 1;
+    paisaje(M.lejos, 0.25, 2.6, 0.8, 3.1);
+    paisaje(M.medio, 0.5, 1.6, 0.55, 1.7);
+    nubes();
+    /* Suelo */
+    const yS = sy(0);
+    ctx.fillStyle = M.tierra; ctx.fillRect(0, yS, cw, ch - yS + 2);
+    ctx.fillStyle = M.cesped; ctx.fillRect(0, yS - 0.12 * cam.s, cw, 0.22 * cam.s);
+    for (const b of p.m.cuerpos) if (b.tipo === 'colina') colina(b, M);
+    /* Rastros */
+    puntos(rastroViejo, 'rgba(255,255,255,0.55)', 0.05);
+    puntos(rastro, 'rgba(255,255,255,0.9)', 0.06);
+    honda(false);
+    for (const b of p.m.cuerpos) {
+        if (b.tipo === 'pieza') pieza(b);
+        else if (b.tipo === 'zorro') zorro(b);
+        else if (b.tipo === 'huevo') huevo(b);
+    }
+    if (p.vuelo) for (const b of p.vuelo.cuerpos) pajaro(b.x, b.y, b.r, b.datos.clase, Math.atan2(b.vy, b.vx), b.datos.mini);
+    /* Cola y el que espera en el tirachinas */
+    colaPajaros();
+    honda(true);
+    particulasDibujar();
+    for (const q of textos) {
+        ctx.globalAlpha = Math.min(1, q.vida * 2);
+        ctx.font = 'bold ' + Math.round((q.grande ? 0.55 : 0.4) * cam.s) + 'px system-ui, sans-serif';
+        ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.strokeText(q.t, sx(q.x), sy(q.y)); ctx.fillStyle = q.color; ctx.fillText(q.t, sx(q.x), sy(q.y));
+        ctx.globalAlpha = 1;
+    }
+    /* Pista para usar el poder */
+    if (p.fase === 'vuelo' && T.puedeHabilidad(p) && p.vuelo.t < 1.6) {
+        ctx.font = 'bold ' + Math.round(Math.max(13, ch * 0.035)) + 'px system-ui, sans-serif';
+        ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
+        const t = '¡Toca para usar su poder!';
+        ctx.strokeText(t, cw / 2, Math.max(22, ch * 0.08)); ctx.fillText(t, cw / 2, Math.max(22, ch * 0.08));
+    }
+    if (p.fase === 'apuntar' && !apunte && p.usados === 0 && !apunteTeclado.activo) {
+        ctx.font = 'bold ' + Math.round(Math.max(13, ch * 0.035)) + 'px system-ui, sans-serif';
+        ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
+        const t = 'Arrastra hacia atrás y suelta';
+        ctx.strokeText(t, cw / 2, Math.max(22, ch * 0.08)); ctx.fillText(t, cw / 2, Math.max(22, ch * 0.08));
+    }
+}
+function paisaje(color, paralaje, alto, frec, fase) {
+    const base = sy(0) + 1;
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(0, base);
+    for (let x = 0; x <= cw + 10; x += 10) {
+        const wx = x / cam.s + cam.x * paralaje;
+        const h = alto * (0.55 + 0.45 * Math.sin(wx * frec * 0.35 + fase) * Math.sin(wx * frec * 0.13 + fase * 2));
+        ctx.lineTo(x, base - h * cam.s * 0.9);
+    }
+    ctx.lineTo(cw + 10, base); ctx.closePath(); ctx.fill();
+}
+function nubes() {
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    for (let i = 0; i < 5; i++) {
+        const wx = ((i * 9.7 + tiempo * 0.25) % 60) - 5 + cam.x * 0.7;
+        const x = sx(wx) , y = ch * (0.12 + (i % 3) * 0.08);
+        const r = cam.s * (0.5 + (i % 2) * 0.25);
+        ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.arc(x + r, y - r * 0.4, r * 0.9, 0, 7); ctx.arc(x + r * 2, y, r * 0.8, 0, 7); ctx.fill();
+    }
+}
+function colina(b, M) {
+    ctx.save(); ctx.translate(sx(b.x), sy(b.y)); ctx.rotate(-b.a);
+    const w = b.hx * 2 * cam.s, h = b.hy * 2 * cam.s;
+    ctx.fillStyle = M.tierra; ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.fillStyle = M.cesped; ctx.fillRect(-w / 2, -h / 2, w, Math.min(h, 0.2 * cam.s));
+    ctx.restore();
+}
+function puntos(lista, color, r) {
+    ctx.fillStyle = color;
+    for (const [x, y] of lista) { ctx.beginPath(); ctx.arc(sx(x), sy(y), Math.max(1.5, r * cam.s), 0, 7); ctx.fill(); }
+}
+/* El tirachinas: horquilla de madera; la goma de atrás se pinta antes del
+   pajarito y la de delante después (delante = true) */
+function honda(delante) {
+    const H = T.HONDA, s = cam.s;
+    const izq = [H.x - 0.24, H.y + 0.16], der = [H.x + 0.26, H.y + 0.12], cruce = [H.x + 0.02, H.y - 0.55];
+    const p = partida;
+    let bx = H.x, by = H.y;
+    const a = apunte || (apunteTeclado.activo ? apunteTeclado : null);
+    const cargado = p.fase === 'apuntar' && p.cola.length;
+    if (cargado && a) { const o = T.salida(p, a.ang, a.fuerza); bx = o.x; by = o.y; }
+    if (!delante) {
+        /* Tronco y brazo de atrás, con un borde oscuro para que se lea
+           sobre cualquier fondo */
+        ctx.lineCap = 'round';
+        for (const [color, grosor] of [['#3f2410', 0.24], ['#8a5426', 0.16]]) {
+            ctx.strokeStyle = color; ctx.lineWidth = grosor * s;
+            ctx.beginPath(); ctx.moveTo(sx(cruce[0]), sy(0)); ctx.lineTo(sx(cruce[0]), sy(cruce[1])); ctx.lineTo(sx(der[0]), sy(der[1])); ctx.stroke();
+        }
+        if (cargado) { ctx.strokeStyle = '#3b1f0b'; ctx.lineWidth = 0.06 * s; ctx.beginPath(); ctx.moveTo(sx(der[0]), sy(der[1])); ctx.lineTo(sx(bx), sy(by)); ctx.stroke(); }
+        return;
+    }
+    if (cargado) {
+        const tipo = p.cola[0];
+        /* Vista previa del principio del vuelo */
+        if (a && a.fuerza > 0.12) puntos(T.trayectoria(p, a.ang, a.fuerza, 0.6), 'rgba(255,240,150,0.95)', 0.05);
+        pajaro(bx, by, T.PAJAROS[tipo].r, tipo, 0, false);
+        ctx.strokeStyle = '#3b1f0b'; ctx.lineWidth = 0.06 * s; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(sx(izq[0]), sy(izq[1])); ctx.lineTo(sx(bx), sy(by)); ctx.stroke();
+    }
+    ctx.lineCap = 'round';
+    for (const [color, grosor] of [['#3f2410', 0.22], ['#a0632d', 0.14]]) {
+        ctx.strokeStyle = color; ctx.lineWidth = grosor * s;
+        ctx.beginPath(); ctx.moveTo(sx(cruce[0]), sy(cruce[1])); ctx.lineTo(sx(izq[0]), sy(izq[1])); ctx.stroke();
+    }
+}
+function colaPajaros() {
+    const p = partida;
+    const cola = p.fase === 'apuntar' ? p.cola.slice(1) : p.cola;
+    let x = T.HONDA.x - 0.9;
+    for (const tipo of cola) {
+        const r = T.PAJAROS[tipo].r;
+        x -= r;
+        const salto = Math.max(0, Math.sin(tiempo * 3 + x * 2)) * 0.06;
+        pajaro(x, r + salto, r, tipo, 0, false);
+        x -= r + HUECO_COLA;
+    }
+}
+function pieza(b) {
+    const s = cam.s;
+    ctx.save(); ctx.translate(sx(b.x), sy(b.y)); ctx.rotate(-b.a);
+    const dano = isFinite(b.vidaMax) ? 1 - Math.max(0, b.vida) / b.vidaMax : 0;
+    if (b.forma === 'circulo') {
+        const r = b.r * s;
+        ctx.fillStyle = b.mat === 'piedra' ? '#9a9ca3' : '#b8792f';
+        ctx.strokeStyle = b.mat === 'piedra' ? '#5c5e64' : '#6e4218'; ctx.lineWidth = Math.max(1, 0.04 * s);
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(-r * 0.2, 0); ctx.lineTo(r * 0.9, 0); ctx.stroke();
+        ctx.restore(); return;
+    }
+    const w = b.hx * 2 * s, h = b.hy * 2 * s, x0 = -w / 2, y0 = -h / 2;
+    const lw = Math.max(1, 0.035 * s);
+    if (b.mat === 'madera') {
+        ctx.fillStyle = '#d49447'; ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = 'rgba(120,70,25,0.45)'; ctx.lineWidth = lw * 0.7;
+        const largo = w >= h;
+        for (let i = 1; i < 3; i++) { ctx.beginPath(); if (largo) { ctx.moveTo(x0 + 2, y0 + h * i / 3); ctx.lineTo(x0 + w - 2, y0 + h * i / 3); } else { ctx.moveTo(x0 + w * i / 3, y0 + 2); ctx.lineTo(x0 + w * i / 3, y0 + h - 2); } ctx.stroke(); }
+        ctx.strokeStyle = '#7a4a1c'; ctx.lineWidth = lw; ctx.strokeRect(x0, y0, w, h);
+    } else if (b.mat === 'cristal') {
+        ctx.fillStyle = 'rgba(180,225,255,0.55)'; ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = lw * 1.2;
+        ctx.beginPath(); ctx.moveTo(x0 + w * 0.2, y0 + h * 0.85); ctx.lineTo(x0 + w * 0.6, y0 + h * 0.15); ctx.stroke();
+        ctx.strokeStyle = '#6fb3e0'; ctx.lineWidth = lw; ctx.strokeRect(x0, y0, w, h);
+    } else if (b.mat === 'piedra') {
+        ctx.fillStyle = '#9ea0a8'; ctx.fillRect(x0, y0, w, h);
+        ctx.fillStyle = 'rgba(70,72,80,0.35)';
+        for (let i = 0; i < 4; i++) { const u = ((b.id * 37 + i * 53) % 100) / 100, v = ((b.id * 61 + i * 29) % 100) / 100; ctx.beginPath(); ctx.arc(x0 + w * (0.15 + u * 0.7), y0 + h * (0.15 + v * 0.7), Math.max(1, Math.min(w, h) * 0.08), 0, 7); ctx.fill(); }
+        ctx.strokeStyle = '#5a5c63'; ctx.lineWidth = lw * 1.2; ctx.strokeRect(x0, y0, w, h);
+    } else if (b.mat === 'tnt') {
+        ctx.fillStyle = '#cf2f2c'; ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = '#6e1010'; ctx.lineWidth = lw; ctx.strokeRect(x0, y0, w, h);
+        ctx.fillStyle = '#ffd84a';
+        ctx.font = 'bold ' + Math.round(Math.min(w, h) * 0.38) + 'px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('TNT', 0, 1);
+        ctx.textBaseline = 'alphabetic';
+    }
+    /* Grietas según el daño: mismo dibujo siempre para la misma pieza */
+    if (dano > 0.3) {
+        ctx.strokeStyle = b.mat === 'cristal' ? 'rgba(255,255,255,0.95)' : 'rgba(40,25,10,0.7)'; ctx.lineWidth = lw;
+        const n = dano > 0.65 ? 3 : 1;
+        for (let i = 0; i < n; i++) {
+            const u = ((b.id * 17 + i * 41) % 100) / 100;
+            ctx.beginPath(); ctx.moveTo(x0 + w * u, y0); ctx.lineTo(x0 + w * (0.5 + (u - 0.5) * 0.3), y0 + h * 0.5); ctx.lineTo(x0 + w * (1 - u), y0 + h); ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+/* Zorro: cabeza naranja con orejas, hocico blanco y ojos que miran al
+   tirachinas. Casco, tamaño grande o corona según la clase */
+function zorro(b) {
+    const s = cam.s, r = b.r * s, clase = b.datos.clase;
+    ctx.save(); ctx.translate(sx(b.x), sy(b.y)); ctx.rotate(-b.a);
+    const dano = 1 - Math.max(0, b.vida) / b.vidaMax;
+    ctx.fillStyle = '#e8732a';
+    /* orejas */
+    for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(k * r * 0.25, -r * 0.75); ctx.lineTo(k * r * 0.85, -r * 1.25); ctx.lineTo(k * r * 0.8, -r * 0.35); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#3a1f10';
+    for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(k * r * 0.55, -r * 0.82); ctx.lineTo(k * r * 0.8, -r * 1.12); ctx.lineTo(k * r * 0.76, -r * 0.6); ctx.closePath(); ctx.fill(); }
+    ctx.fillStyle = '#e8732a'; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff4e6'; ctx.beginPath(); ctx.ellipse(-r * 0.12, r * 0.38, r * 0.62, r * 0.48, 0, 0, 7); ctx.fill();
+    /* hocico hacia el tirachinas (izquierda) */
+    ctx.fillStyle = '#2a1408'; ctx.beginPath(); ctx.arc(-r * 0.55, r * 0.22, r * 0.12, 0, 7); ctx.fill();
+    const parpadea = ((tiempo + b.id * 0.7) % 4) < 0.12;
+    for (const k of [-1, 1]) {
+        const ex = -r * 0.18 + k * r * 0.32, ey = -r * 0.12;
+        if (parpadea) { ctx.strokeStyle = '#2a1408'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.beginPath(); ctx.moveTo(ex - r * 0.12, ey); ctx.lineTo(ex + r * 0.12, ey); ctx.stroke(); continue; }
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, r * 0.17, 0, 7); ctx.fill();
+        ctx.fillStyle = '#2a1408'; ctx.beginPath(); ctx.arc(ex - r * 0.06, ey + r * 0.02, r * 0.09, 0, 7); ctx.fill();
+    }
+    if (clase === 'casco') {
+        ctx.fillStyle = '#8b97a6'; ctx.strokeStyle = '#4e5866'; ctx.lineWidth = Math.max(1, r * 0.07);
+        ctx.beginPath(); ctx.arc(0, -r * 0.2, r * 0.95, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#d7dde5'; for (const k of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.arc(k * r, -r * 0.55 - Math.abs(k) * -r * 0.15, r * 0.07, 0, 7); ctx.fill(); }
+    } else if (clase === 'jefe') {
+        ctx.fillStyle = '#ffcc2e'; ctx.strokeStyle = '#b07a00'; ctx.lineWidth = Math.max(1, r * 0.05);
+        ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.8); ctx.lineTo(-r * 0.6, -r * 1.35); ctx.lineTo(-r * 0.3, -r * 1.05); ctx.lineTo(0, -r * 1.45); ctx.lineTo(r * 0.3, -r * 1.05); ctx.lineTo(r * 0.6, -r * 1.35); ctx.lineTo(r * 0.55, -r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e8322f'; ctx.beginPath(); ctx.arc(0, -r * 1.05, r * 0.08, 0, 7); ctx.fill();
+    } else if (clase === 'grande') {
+        ctx.strokeStyle = '#7a3a12'; ctx.lineWidth = Math.max(1, r * 0.07);
+        for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(-r * 0.25 + k * r * 0.15, -r * 0.36); ctx.lineTo(-r * 0.25 + k * r * 0.48, -r * 0.44 + (k > 0 ? 0 : r * 0.05)); ctx.stroke(); }
+    }
+    /* Tirita si está tocado */
+    if (dano > 0.35) {
+        ctx.save(); ctx.rotate(0.6); ctx.fillStyle = '#f5d3a8'; ctx.fillRect(r * 0.05, -r * 0.62, r * 0.55, r * 0.18); ctx.restore();
+    }
+    ctx.restore();
+}
+function huevo(b) {
+    const r = b.r * cam.s;
+    ctx.save(); ctx.translate(sx(b.x), sy(b.y));
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.4, r * 0.1, 0, 0, r * 1.3);
+    g.addColorStop(0, '#fff8c8'); g.addColorStop(1, '#e0a800');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, r * 0.82, r * 1.05, 0, 0, 7); ctx.fill();
+    const brillo = 0.5 + 0.5 * Math.sin(tiempo * 4);
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.4 + brillo * 0.5) + ')'; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.45, r * 0.18, 0, 7); ctx.fill();
+    ctx.restore();
+}
+/* Pajarito: cuerpo redondo con cola en pico por detrás, copete, ojo
+   grande y amable (sin cejas), pico pequeño y ala. ang = hacia dónde vuela */
+function pajaro(x, y, rm, clase, ang, mini) {
+    const s = cam.s, r = rm * s, c = COLOR_PAJARO[clase] || COLOR_PAJARO.pio;
+    ctx.save(); ctx.translate(sx(x), sy(y)); ctx.rotate(-(ang || 0));
+    /* cola */
+    ctx.fillStyle = c.copete; ctx.beginPath(); ctx.moveTo(-r * 0.7, -r * 0.25); ctx.lineTo(-r * 1.45, -r * 0.05); ctx.lineTo(-r * 1.3, r * 0.35); ctx.lineTo(-r * 0.7, r * 0.3); ctx.closePath(); ctx.fill();
+    /* copete */
+    if (clase === 'zas') {
+        ctx.fillStyle = c.copete; ctx.beginPath(); ctx.moveTo(-r * 0.1, -r * 0.9); ctx.lineTo(r * 0.25, -r * 1.55); ctx.lineTo(r * 0.12, -r * 1.12); ctx.lineTo(r * 0.45, -r * 1.25); ctx.lineTo(r * 0.15, -r * 0.8); ctx.closePath(); ctx.fill();
+    } else if (clase === 'pum') {
+        ctx.strokeStyle = '#3b2a1a'; ctx.lineWidth = Math.max(1, r * 0.1);
+        ctx.beginPath(); ctx.moveTo(0, -r * 0.9); ctx.quadraticCurveTo(r * 0.3, -r * 1.3, r * 0.15, -r * 1.5); ctx.stroke();
+        ctx.fillStyle = Math.sin(tiempo * 18) > 0 ? '#ffd84a' : '#ff7a1a'; ctx.beginPath(); ctx.arc(r * 0.15, -r * 1.55, r * 0.16, 0, 7); ctx.fill();
+    } else {
+        ctx.fillStyle = c.copete;
+        const n = clase === 'trio' || mini ? 3 : 2;
+        for (let i = 0; i < n; i++) { const a = -0.4 + i * 0.4; ctx.beginPath(); ctx.ellipse(Math.sin(a) * r * 0.4, -r * 1.05, r * 0.14, r * 0.34, a, 0, 7); ctx.fill(); }
+    }
+    ctx.fillStyle = c.cuerpo; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+    ctx.fillStyle = c.tripa; ctx.beginPath(); ctx.ellipse(r * 0.1, r * 0.42, r * 0.6, r * 0.45, 0, 0, 7); ctx.fill();
+    /* ala */
+    ctx.fillStyle = c.copete; ctx.beginPath(); ctx.ellipse(-r * 0.25, r * 0.12, r * 0.38, r * 0.22, -0.4 + Math.sin(tiempo * 10) * (partida && partida.fase === 'vuelo' ? 0.35 : 0.05), 0, 7); ctx.fill();
+    /* ojo grande */
+    const ojo = clase === 'bolo' ? 0.22 : 0.27;
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * 0.38, -r * 0.22, r * ojo, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1b1b2a'; ctx.beginPath(); ctx.arc(r * 0.46, -r * 0.2, r * ojo * 0.5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(r * 0.5, -r * 0.26, r * ojo * 0.18, 0, 7); ctx.fill();
+    if (clase === 'bolo') { ctx.fillStyle = c.cuerpo; ctx.fillRect(r * 0.12, -r * 0.5, r * 0.55, r * 0.22); }
+    /* pico */
+    ctx.fillStyle = c.pico; ctx.beginPath(); ctx.moveTo(r * 0.78, -r * 0.05); ctx.lineTo(r * 1.22, r * 0.08); ctx.lineTo(r * 0.78, r * 0.22); ctx.closePath(); ctx.fill();
+    ctx.restore();
+}
+function particulasDibujar() {
+    for (const q of particulas) {
+        const X = sx(q.x), Y = sy(q.y), t = q.tam * cam.s;
+        ctx.globalAlpha = Math.max(0, Math.min(1, q.vida * 1.6));
+        if (q.forma === 'humo') { ctx.fillStyle = q.color; ctx.beginPath(); ctx.arc(X, Y, t * (1.4 - q.vida * 0.5), 0, 7); ctx.fill(); }
+        else if (q.forma === 'destello') { ctx.fillStyle = q.color; ctx.globalAlpha = Math.max(0, q.vida * 2.5); ctx.beginPath(); ctx.arc(X, Y, t * (1.2 - q.vida), 0, 7); ctx.fill(); }
+        else { ctx.save(); ctx.translate(X, Y); ctx.rotate(q.a); ctx.fillStyle = q.color; ctx.fillRect(-t / 2, -t / 4, t, t / 2); ctx.restore(); }
+    }
+    ctx.globalAlpha = 1;
+}
+
+/* ---------- ENTRADA ---------- */
+const arrastreMax = () => Math.max(90, Math.min(cw, ch) * 0.3);
+function apunteDesde(x, y) {
+    /* Del arrastre en pantalla a ángulo y fuerza. Va en píxeles de pantalla
+       y no en metros: con la cámara lejos (móvil en vertical), 1,3 m de
+       goma eran 35 px y no se podía afinar */
+    const px = x - apunte.x0, py = y - apunte.y0;
+    const largo = Math.hypot(px, py);
+    apunte.fuerza = Math.min(1, largo / arrastreMax());
+    let ang = Math.atan2(py, -px);   // se tira hacia abajo-izquierda, sale hacia arriba-derecha
+    ang = Math.max(-0.6, Math.min(1.5, ang));
+    apunte.ang = ang;
+}
+lienzo.addEventListener('pointerdown', (e) => {
+    if (estado !== 'jugando' || pausado || EST.hayCapa() || !partida) return;
+    e.preventDefault();
+    const p = partida;
+    if (p.fase === 'apuntar' && introT <= 0.5) {
+        introT = 0;
+        const r = lienzo.getBoundingClientRect();
+        apunte = { x0: e.clientX - r.left, y0: e.clientY - r.top, ang: 0, fuerza: 0, id: e.pointerId };
+        try { lienzo.setPointerCapture(e.pointerId); } catch (er) {}
+        if (cam.ver) { cam.ver = false; $('btnVer').setAttribute('aria-pressed', 'false'); }
+    } else if (p.fase === 'vuelo') usarPoder();
+});
+lienzo.addEventListener('pointermove', (e) => {
+    if (!apunte || e.pointerId !== apunte.id) return;
+    const r = lienzo.getBoundingClientRect();
+    const antes = apunte.fuerza;
+    apunteDesde(e.clientX - r.left, e.clientY - r.top);
+    if (Math.abs(apunte.fuerza - antes) > 0.04) sonar('estirar', apunte.fuerza);
+});
+function soltar(e) {
+    if (!apunte || (e && e.pointerId !== apunte.id)) return;
+    const a = apunte; apunte = null;
+    if (e && e.type === 'pointercancel') return;
+    if (a.fuerza >= 0.12) lanzarAhora(a.ang, a.fuerza);
+}
+lienzo.addEventListener('pointerup', soltar);
+lienzo.addEventListener('pointercancel', soltar);
+lienzo.addEventListener('contextmenu', (e) => e.preventDefault());
+
+document.addEventListener('keydown', (e) => {
+    if (estado !== 'jugando') return;
+    const k = e.key;
+    if (k === 'Escape' || k === 'p' || k === 'P') { e.preventDefault(); if (EST.hayCapa()) { if ($('capaPausa').classList.contains('activa')) seguir(); } else pausar(); return; }
+    if (EST.hayCapa() || pausado || !partida) return;
+    const p = partida;
+    if (k === 'r' || k === 'R') { repetirNivel(); return; }
+    if (k === 'v' || k === 'V') { alternarVer(); return; }
+    if (p.fase === 'apuntar') {
+        const A = apunteTeclado;
+        if (k === 'ArrowLeft') { A.ang = Math.min(1.5, A.ang + 0.0175); A.activo = true; e.preventDefault(); }
+        else if (k === 'ArrowRight') { A.ang = Math.max(-0.6, A.ang - 0.0175); A.activo = true; e.preventDefault(); }
+        else if (k === 'ArrowUp') { A.fuerza = Math.min(1, A.fuerza + 0.02); A.activo = true; e.preventDefault(); }
+        else if (k === 'ArrowDown') { A.fuerza = Math.max(0.15, A.fuerza - 0.02); A.activo = true; e.preventDefault(); }
+        else if (k === ' ' || k === 'Enter') { e.preventDefault(); if (A.activo) lanzarAhora(A.ang, A.fuerza); else A.activo = true; }
+    } else if (p.fase === 'vuelo' && (k === ' ' || k === 'Enter')) { e.preventDefault(); usarPoder(); }
+});
+
+function alternarVer() {
+    if (cam.modo === 'todo') return;
+    cam.ver = !cam.ver;
+    $('btnVer').setAttribute('aria-pressed', String(cam.ver));
+}
+function pausar() {
+    if (estado !== 'jugando' || pausado) return;
+    pausado = true; apunte = null;
+    EST.abrir('capaPausa');
+}
+function seguir() {
+    EST.cerrar('capaPausa');
+    pausado = false;
+    ultimoT = performance.now();
+}
+function irMenu() {
+    estado = 'menu'; pararBucle(); pausado = false;
+    ['capaFin', 'capaPausa', 'capaTurno'].forEach(EST.cerrar);
+    musicaFondo(false);
+    pintarMenu();
+    EST.mostrar('pMenu');
+}
+
+/* ---------- MENÚ Y MAPA ---------- */
+let mundoMapa = 1;
+function pintarMenu() {
+    const g = progreso();
+    const sig = pendiente(g);
+    const alguno = Object.keys(g.niveles).length > 0;
+    $('btnJugar').textContent = !alguno ? 'JUGAR' : sig ? 'CONTINUAR · NIVEL ' + sig.id : 'JUGAR · ELIGE NIVEL';
+    const nota = $('notaGuardada');
+    if (alguno) {
+        const hechos = NORMALES.filter(d => hecho(g, d.id)).length;
+        nota.textContent = hechos + ' de ' + NORMALES.length + ' niveles · ⭐ ' + estrellasTotal(g) + ' de ' + NORMALES.length * 3 + (Object.keys(g.huevos).length ? ' · 🥚 ' + Object.keys(g.huevos).length + ' de 3' : '');
+        nota.style.display = 'block';
+    } else nota.style.display = 'none';
+}
+function irMapa(mundo) {
+    estado = 'mapa'; pararBucle(); pausado = false;
+    ['capaFin', 'capaPausa', 'capaTurno'].forEach(EST.cerrar);
+    musicaFondo(false);
+    const g = progreso();
+    if (mundo) mundoMapa = mundo;
+    else { const sig = pendiente(g); mundoMapa = sig ? sig.mundo : mundoMapa; }
+    pintarMapa();
+    EST.mostrar('pMapa');
+}
+function pintarMapa() {
+    const g = progreso();
+    const cont = $('grpMundo');
+    cont.innerHTML = '';
+    for (const w of [1, 2, 3]) {
+        const b = document.createElement('button');
+        b.className = 'opcion'; b.type = 'button'; b.dataset.v = String(w);
+        b.setAttribute('aria-pressed', String(w === mundoMapa));
+        const abierto = desbloqueado(g, w + '-1');
+        b.disabled = !abierto;
+        const est = NORMALES.filter(d => d.mundo === w).reduce((n, d) => n + ((g.niveles[d.id] && g.niveles[d.id].e) || 0), 0);
+        b.innerHTML = '';
+        b.append(MUNDOS[w].icono + ' ' + MUNDOS[w].nombre.toUpperCase());
+        const sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = abierto ? '⭐ ' + est + ' de 45' : '🔒 termina el mundo ' + (w - 1);
+        b.append(sub);
+        b.addEventListener('click', () => { mundoMapa = w; pintarMapa(); });
+        cont.append(b);
+    }
+    const rej = $('rejilla');
+    rej.innerHTML = '';
+    const sig = pendiente(g);
+    for (const d of NORMALES.filter(x => x.mundo === mundoMapa)) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'casilla';
+        const r = g.niveles[d.id];
+        const abierto = desbloqueado(g, d.id);
+        b.disabled = !abierto;
+        if (r) b.classList.add(r.saltado ? 'saltada' : 'hecha');
+        if (sig && sig.id === d.id) b.classList.add('siguiente');
+        const num = document.createElement('span'); num.textContent = abierto ? String(d.n) : '🔒';
+        const est = document.createElement('span'); est.className = 'est';
+        est.textContent = r ? (r.saltado ? '⏭' : '★'.repeat(r.e) + '☆'.repeat(3 - r.e)) : '';
+        b.append(num, est);
+        b.setAttribute('aria-label', 'Nivel ' + d.id + ': ' + d.nombre + (r ? (r.saltado ? ', saltado' : ', ' + r.e + ' estrellas') : abierto ? '' : ', cerrado'));
+        b.title = d.nombre;
+        b.addEventListener('click', () => abrirNivel(d.id));
+        rej.append(b);
+    }
+    const pr = PREMIOS.find(x => x.mundo === mundoMapa);
+    if (pr) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'casilla premio';
+        const abierto = desbloqueado(g, pr.id);
+        b.disabled = !abierto;
+        const r = g.niveles[pr.id];
+        b.textContent = abierto ? '🥚 PREMIO: ' + pr.nombre + (r ? '  ' + '★'.repeat(r.e) : '') : '🥚 Nivel de premio: encuentra el huevo dorado de este mundo';
+        b.addEventListener('click', () => abrirNivel(pr.id));
+        rej.append(b);
+    }
+    $('mapaTitulo').textContent = MUNDOS[mundoMapa].icono + ' ' + MUNDOS[mundoMapa].nombre.toUpperCase();
+    $('mapaTotal').textContent = '⭐ ' + estrellasTotal(g);
+    $('mapaNota').textContent = 'Si fallas un nivel ' + FALLOS_PARA_SALTAR + ' veces, puedes saltarlo y seguir.';
+}
+function abrirLogros() {
+    const l = logros(), cont = $('logros');
+    cont.innerHTML = '';
+    let n = 0;
+    for (const [id, ico, nombre, texto] of LOGROS) {
+        const si = !!l[id]; if (si) n++;
+        const a = document.createElement('span'); a.className = 'ico' + (si ? '' : ' no'); a.textContent = ico;
+        const b = document.createElement('span'); if (!si) b.className = 'no';
+        b.textContent = nombre; const sm = document.createElement('small'); sm.textContent = texto; b.append(sm);
+        cont.append(a, b);
+    }
+    $('logrosResumen').textContent = n + ' de ' + LOGROS.length + ' conseguidos';
+    EST.abrir('capaLogros');
+}
+function empezarDeCero() {
+    if (!confirm('¿Empezar de cero? Se borran las estrellas, los huevos y los niveles hechos. Los logros se quedan.')) return;
+    guardarProgreso({ niveles: {}, huevos: {}, fallos: {} });
+    pintarMenu();
+    EST.avisar('Vuelves al nivel 1-1');
+}
+
+/* ---------- ARRANQUE ---------- */
+EST.iniciar({ claveAudio: 'tirachinasAudio', alCambiarMusica: (on) => musicaFondo(on && estado === 'jugando') });
+EST.grupo('grpJugadores', (v) => { nj = v === '2' ? 2 : 1; EST.guardar(CLAVE_OPCIONES, { nj }); marcador = { 1: 0, 2: 0 }; });
+EST.elegir('grpJugadores', String(nj));
+$('btnJugar').addEventListener('click', () => { const g = progreso(), sig = pendiente(g); if (sig) abrirNivel(sig.id); else irMapa(); });
+$('btnNiveles').addEventListener('click', () => irMapa());
+$('btnMapaMenu').addEventListener('click', () => { estado = 'menu'; pintarMenu(); EST.mostrar('pMenu'); });
+$('btnLogros').addEventListener('click', abrirLogros);
+$('btnCerrarLogros').addEventListener('click', () => EST.cerrar('capaLogros'));
+$('btnInstructions').addEventListener('click', () => EST.abrir('capaAyuda'));
+$('closeInstructions').addEventListener('click', () => EST.cerrar('capaAyuda'));
+$('btnDeCero').addEventListener('click', empezarDeCero);
+$('pauseTouchBtn').addEventListener('click', pausar);
+$('btnResume').addEventListener('click', seguir);
+$('btnPausaRepetir').addEventListener('click', () => { EST.cerrar('capaPausa'); repetirNivel(); });
+$('btnPausaMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
+$('btnPauseToMenu').addEventListener('click', irMenu);
+$('btnRepetir').addEventListener('click', repetirNivel);
+$('btnVer').addEventListener('click', alternarVer);
+$('btnSiguiente').addEventListener('click', () => { const s = siguienteDe(partida.def); if (s) abrirNivel(s.id); else irMapa(); });
+$('btnFinRepetir').addEventListener('click', () => { EST.cerrar('capaFin'); repetirNivel(); });
+$('btnFinMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
+$('btnSaltar').addEventListener('click', saltar);
+$('btnTurno').addEventListener('click', () => {
+    const a = $('btnTurno').dataset.accion;
+    EST.cerrar('capaTurno');
+    if (a === 'j2') { turnoJ = 2; abrirNivel(nivelId, true); }
+    else if (a === 'siguiente') { const s = siguienteDe(partida.def); if (s) abrirNivel(s.id); else irMapa(); }
+    else abrirNivel(nivelId);
+});
+$('btnTurnoMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (estado === 'jugando') ajustarLienzo(); }).observe($('zonaJuego'));
+window.addEventListener('resize', () => { if (estado === 'jugando') ajustarLienzo(); });
+/* Al irse a otra app, pausa: al volver, el pajarito no puede haber volado solo */
+document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'jugando' && !EST.hayCapa()) pausar(); });
+pintarMenu();
+
+/* Para las pruebas en el navegador */
+window.__tira = {
+    partida: () => partida, estado: () => estado, camara: () => cam, abrir: abrirNivel, lanzar: lanzarAhora, poder: usarPoder,
+    progreso, logros, niveles: NIVELES, medidas: () => ({ cw, ch, dpr, s: cam.s, modo: cam.modo }), raf: () => raf
+};
+
+</script>
+</body>
+</html>
