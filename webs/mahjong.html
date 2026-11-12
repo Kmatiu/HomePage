@@ -1,0 +1,2546 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="todo">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Mahjong</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/mahjong (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DEL MAHJONG ---------- */
+        /* Sombras de la mesa y de las fichas en variables propias: el tema
+           claro aclara el negro de las sombras de la interfaz (--c-0-0-0) y la
+           mesa se quedaba con un borde blanquecino */
+        :root { --mj-sombra-mesa: rgba(0, 0, 0, 0.35); --mj-sombra-ficha: rgba(0, 0, 0, 0.45); }
+        #pJuego { max-width: 900px; }
+        .grupo-j2 { display: contents; }
+        .est-barra .dato.turno b { color: var(--c-ffd54f, #ffd54f); text-shadow: 0 0 8px rgba(var(--c-255-213-79, 255, 213, 79), 0.6); }
+        .est-barra .dato.turno span { color: var(--c-ffd54f, #ffd54f); }
+        .est-barra .dato b { font-variant-numeric: tabular-nums; }
+        #grpTema .opcion { flex: 1 1 30%; }
+        #grpTema .sub { font-size: 0.58rem; }
+        #twoPlayersNote, #notaGuardada { display: none; color: var(--c-cfc39a, #cfc39a); font-size: 0.72rem; margin: 8px 2px 0; line-height: 1.5; text-align: center; }
+
+        /* La mesa: tapete verde, como en las capturas, en los dos temas (es
+           la mesa, no la interfaz). Las fichas, marfil con el canto verde */
+        #zona {
+            flex: 1 1 auto; min-height: 0; width: 100%; margin-top: 6px;
+            display: flex; flex-direction: column; gap: 6px;
+        }
+        #mesa {
+            flex: 1 1 auto; min-height: 0; position: relative; border-radius: 12px; overflow: hidden;
+            background: radial-gradient(ellipse at 50% 40%, var(--c-237256, #237256) 0%, var(--c-17563f, #17563f) 60%, var(--c-0f3d2d, #0f3d2d) 100%);
+            box-shadow: inset 0 0 40px var(--mj-sombra-mesa);
+            touch-action: manipulation; -webkit-user-select: none; user-select: none;
+        }
+        #tablero { position: absolute; left: 0; top: 0; }
+        .ficha {
+            position: absolute; margin: 0; padding: 0; border: 0; cursor: pointer;
+            width: var(--w); height: var(--h);
+            border-radius: calc(var(--w) * 0.14);
+            background: linear-gradient(160deg, var(--c-fffdf7, #fffdf7) 0%, var(--c-f6efdd, #f6efdd) 70%, var(--c-ebe1c8, #ebe1c8) 100%);
+            /* El canto verde abajo y una sombra: así se ve qué está encima */
+            box-shadow: 0 calc(var(--h) * 0.06) 0 var(--c-2c8a57, #2c8a57), 0 calc(var(--h) * 0.06 + 1px) 0 var(--c-1c5e3b, #1c5e3b),
+                        calc(var(--w) * 0.05) calc(var(--h) * 0.1) calc(var(--w) * 0.12) var(--mj-sombra-ficha);
+            display: flex; align-items: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+            transition: opacity 0.22s, transform 0.22s, filter 0.2s;
+        }
+        .ficha .cara {
+            font-size: calc(var(--w) * 0.66); line-height: 1;
+            font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+            pointer-events: none;
+        }
+        .ficha svg { width: 82%; height: 82%; pointer-events: none; }
+        /* Comodín: esquina dorada (casa con cualquiera de su grupo) */
+        .ficha.comodin::after {
+            content: ""; position: absolute; right: 0; top: 0; width: 30%; height: 22%;
+            border-top-right-radius: calc(var(--w) * 0.14);
+            background: linear-gradient(225deg, var(--c-e0a800, #e0a800) 50%, transparent 50%);
+        }
+        /* Oculta: el dorso, hasta que se elige o se toca */
+        .ficha.oculta { background: repeating-linear-gradient(45deg, var(--c-f6efdd, #f6efdd) 0 5px, var(--c-dcebd9, #dcebd9) 5px 10px); }
+        .ficha.oculta .cara, .ficha.oculta svg { visibility: hidden; }
+        .ficha.oculta:not(.vista).comodin::after { content: none; }   /* la esquina dorada delataría la oculta */
+        .ficha.oculta::before { content: "?"; color: var(--c-1e7a3a, #1e7a3a); font: bold calc(var(--w) * 0.5) / 1 Georgia, serif; position: absolute; }
+        .ficha.vista { background: linear-gradient(160deg, var(--c-fffdf7, #fffdf7) 0%, var(--c-f6efdd, #f6efdd) 70%, var(--c-ebe1c8, #ebe1c8) 100%); }
+        .ficha.vista .cara, .ficha.vista svg { visibility: visible; }
+        .ficha.vista::before { content: none; }
+        .ficha.elegida {
+            background: linear-gradient(160deg, var(--c-fff7c2, #fff7c2) 0%, var(--c-ffe680, #ffe680) 100%);
+            outline: calc(var(--w) * 0.07) solid var(--c-ffb300, #ffb300); outline-offset: -1px;
+        }
+        .ficha.pista { animation: halo 1s ease-in-out infinite; }
+        @keyframes halo { 0%, 100% { outline: 3px solid rgba(var(--c-0-229-255, 0, 229, 255), 0.95); outline-offset: 1px; } 50% { outline: 6px solid rgba(var(--c-0-229-255, 0, 229, 255), 0.35); outline-offset: 3px; } }
+        .ficha.mal { animation: mal 0.35s ease-in-out; }
+        @keyframes mal { 0%, 100% { filter: none; } 50% { filter: sepia(1) saturate(4) hue-rotate(-40deg); } }
+        .ficha.sale { opacity: 0; transform: scale(0.6) translateY(-12px); pointer-events: none; }
+        /* Opción del menú: las bloqueadas, más oscuras (la regla se ve) */
+        #tablero.marcar .ficha.bloqueada { filter: brightness(0.62) saturate(0.7); }
+        @media (prefers-reduced-motion: reduce) { .ficha { transition: none; } .ficha.pista { animation: none; outline: 4px solid var(--c-00e5ff, #00e5ff); } }
+
+        .linea {
+            height: 1.6em; display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; color: var(--texto); text-align: center; overflow: hidden;
+        }
+        .herramientas { display: flex; justify-content: center; gap: 18px; padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
+        .herramientas button {
+            width: 4.1rem; height: 4.1rem; border-radius: 50%; margin: 0; padding: 0; cursor: pointer;
+            border: 2px solid var(--c-c9a14a, #c9a14a); color: var(--c-fff, #fff);
+            /* Color sólido debajo del degradado: lo que mide el contraste */
+            background-color: var(--c-5a3418, #5a3418);
+            background-image: radial-gradient(circle at 35% 30%, var(--c-7a4a26, #7a4a26), var(--c-3e2410, #3e2410));
+            font: bold 0.62rem/1.1 var(--fuente, sans-serif);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            box-shadow: 0 3px 8px rgba(var(--c-0-0-0, 0, 0, 0), 0.4);
+        }
+        .herramientas button .ico { font-size: 1.45rem; }
+        .herramientas button:disabled { opacity: 0.35; cursor: default; }
+        .herramientas button.llama { animation: llamar 1s ease-in-out infinite; }
+        @keyframes llamar { 50% { box-shadow: 0 0 0 6px rgba(var(--c-255-213-79, 255, 213, 79), 0.55); } }
+        @media (orientation: landscape) and (max-height: 520px) {
+            #zona { flex-direction: row; }
+            .lateral { display: flex; flex-direction: column; justify-content: center; gap: 6px; width: 6rem; }
+            .herramientas { flex-direction: column; gap: 10px; padding: 0; }
+            .herramientas button { width: 3.6rem; height: 3.6rem; }
+            .linea { height: auto; min-height: 3.2em; font-size: 0.72rem; }
+        }
+
+        /* Calendario del tablero del día */
+        .calendario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 8px 0; }
+        .calendario .dia-sem { font-size: 0.62rem; color: var(--apagado); text-align: center; }
+        .calendario button {
+            margin: 0; padding: 0; aspect-ratio: 1; border-radius: 8px; cursor: pointer;
+            border: 1px solid var(--borde); background: var(--panel); color: var(--texto);
+            font: bold 0.85rem/1 var(--fuente, sans-serif);
+        }
+        .calendario button.hecho { background: var(--c-1f6b43, #1f6b43); border-color: var(--c-46c27a, #46c27a); color: var(--c-fff, #fff); }
+        .calendario button.hoy { outline: 2px solid var(--acento); outline-offset: 1px; }
+        .calendario button:disabled { opacity: 0.3; cursor: default; }
+        .insignias { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: 0.75rem; }
+        .insignias span { border: 1px solid var(--c-c9a14a, #c9a14a); border-radius: 12px; padding: 3px 8px; }
+        .logros { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 0.85rem; text-align: left; margin: 8px 0; }
+        .logros b { color: var(--acento); text-align: right; }
+    </style>
+    <style>
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">MAH<span>JONG</span></div>
+        <p class="est-lema">Junta parejas de fichas libres</p>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR · NIVEL 1</button>
+        <p id="notaGuardada"></p>
+        <button class="secundario" id="btnDiario" type="button" style="width:100%;margin-top:8px;">📅 TABLERO DEL DÍA</button>
+
+        <fieldset class="est-grupo">
+            <legend>JUGADORES</legend>
+            <div class="opciones iguales" id="grpJugadores">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">1 JUGADOR<span class="sub">a tu ritmo</span></button>
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2 JUGADORES<span class="sub">por turnos</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>FICHAS</legend>
+            <div class="opciones" id="grpTema"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>FICHAS BLOQUEADAS</legend>
+            <div class="opciones iguales" id="grpBloq">
+                <button class="opcion" type="button" data-v="no" aria-pressed="true">SE VEN IGUAL<span class="sub">como el de verdad</span></button>
+                <button class="opcion" type="button" data-v="si" aria-pressed="false">MÁS OSCURAS<span class="sub">se ve cuáles están libres</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <div class="fila-btns">
+            <button class="secundario" id="btnLogros" type="button">🏆 LOGROS</button>
+            <button class="secundario" id="btnAyuda" type="button">📖 CÓMO SE JUEGA</button>
+            <button class="secundario" id="btnDeCero" type="button">↺ EMPEZAR DE CERO</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato" id="datoP1"><b id="dP1">0</b><span id="dP1t">PUNTOS</span></div>
+        <div class="grupo-j2" id="barraJ2" style="display:none">
+            <div class="dato" id="datoP2"><b id="dP2">0</b><span>J2</span></div>
+        </div>
+        <div class="dato"><b id="dNivel">1</b><span id="dNivelT">NIVEL</span></div>
+        <div class="dato"><b id="dParejas">0</b><span>PAREJAS</span></div>
+        <div class="hueco"></div>
+        <button id="btnPausa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zona">
+        <div id="mesa"><div id="tablero" role="group" aria-label="Tablero de fichas"></div></div>
+        <div class="lateral">
+            <p class="linea" id="linea" aria-live="polite"></p>
+            <div class="herramientas">
+                <button id="btnMezclar" type="button" aria-label="Mezclar"><span class="ico">🔀</span>MEZCLAR</button>
+                <button id="btnPista" type="button" aria-label="Pista"><span class="ico">💡</span>PISTA</button>
+                <button id="btnDeshacer" type="button" aria-label="Deshacer"><span class="ico">↶</span>DESHACER</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnSeguir" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnReiniciar" type="button">↻ EMPEZAR EL TABLERO OTRA VEZ</button>
+        </div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAbandonar" type="button">← MENÚ (SE GUARDA)</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAtasco">
+    <div class="caja">
+        <h2>🤔 NO QUEDAN PAREJAS</h2>
+        <p id="atascoTexto">Ninguna pareja está libre. Mezcla las fichas que quedan: seguro que sale.</p>
+        <button class="principal" id="btnAtascoMezclar" type="button">🔀 MEZCLAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnAtascoDeshacer" type="button">↶ DESHACER LA ÚLTIMA</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">🎉 ¡TABLERO LIMPIO!</h2>
+        <div class="marcador" id="finMarcador">0</div>
+        <p id="finDetalle"></p>
+        <button class="principal" id="btnSiguiente" type="button">SIGUIENTE NIVEL →</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnMenuFin" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaDiario">
+    <div class="caja">
+        <h2>📅 TABLERO DEL DÍA</h2>
+        <p id="diarioMes" style="margin:0;"></p>
+        <div class="calendario" id="calendario"></div>
+        <p style="font-size:0.72rem;margin:0 0 8px;">Cada día, un tablero nuevo. Los días que te saltes se pueden hacer mientras dure el mes. Con el mes entero, insignia.</p>
+        <div class="insignias" id="insignias"></div>
+        <button class="principal" id="btnHoy" type="button" style="margin-top:10px;">JUGAR EL DE HOY</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnCerrarDiario" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaLogros">
+    <div class="caja">
+        <h2>🏆 LOGROS</h2>
+        <div class="logros" id="logros"></div>
+        <div class="insignias" id="insignias2"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnCerrarLogros" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <h3>LA REGLA</h3>
+            <ul>
+                <li>Toca dos fichas <b>iguales</b> y <b>libres</b>, y se van. Quita todas para acabar el tablero.</li>
+                <li>Una ficha está <b>libre</b> si no tiene otra <b>encima</b> y tiene libre <b>al menos un lado</b>, el izquierdo o el derecho.</li>
+                <li><b>PAREJAS</b>, arriba, dice cuántas parejas puedes quitar ahora mismo.</li>
+                <li>Todos los tableros tienen solución. Pero el orden importa: si tienes cuatro iguales, mira cuál deja libre a más.</li>
+                <li>No hay reloj ni se pierde.</li>
+            </ul>
+            <h3>FICHAS ESPECIALES</h3>
+            <ul>
+                <li><b>Comodines</b>, con una esquina dorada: las cuatro flores 🌷🌹🌻🌼 casan entre sí aunque no sean iguales, y las cuatro estaciones 🌱☀️🍂❄️ también. Una flor no casa con una estación.</li>
+                <li><b>Ocultas</b>, con un «?»: al tocarlas enseñan el dibujo un momento. Si la eliges, se queda a la vista hasta que toques la otra.</li>
+            </ul>
+            <h3>AYUDAS (sin límite)</h3>
+            <ul>
+                <li>🔀 <b>MEZCLAR</b> reparte otra vez los dibujos de las que quedan, de forma que se pueda acabar.</li>
+                <li>💡 <b>PISTA</b> enseña una pareja que no te mete en un callejón.</li>
+                <li>↶ <b>DESHACER</b> vuelve atrás una jugada (o una mezcla).</li>
+                <li>Si acabas sin usar ninguna, el premio del tablero es el doble.</li>
+            </ul>
+            <h3>PUNTOS</h3>
+            <ul>
+                <li>Cada pareja vale 10 por la racha que llevas: la primera 10, la segunda 20… hasta 100. Tocar dos que no casan corta la racha; tocar una bloqueada, no.</li>
+            </ul>
+            <h3>DOS JUGADORES</h3>
+            <ul>
+                <li>Por turnos en el mismo tablero. Mientras aciertes, sigues; si tocas dos que no casan, le toca al otro. Gana quien quite más parejas.</li>
+                <li>A dos no hay pista ni deshacer (se resolvería la jugada del otro). Mezclar, sí, y no pasa el turno.</li>
+            </ul>
+            <h3>MÁS</h3>
+            <ul>
+                <li><b>FICHAS</b>, en el menú: el dibujo cambia solo con cada nivel o eliges uno fijo.</li>
+                <li>Se guarda solo: si sales, en el menú aparece <b>CONTINUAR</b>. <b>↺ EMPEZAR DE CERO</b> te devuelve al nivel 1 (los logros y el calendario se quedan).</li>
+                <li>Teclado: <b>H</b> pista, <b>M</b> mezclar, <b>Z</b> deshacer, <b>Tab</b> e <b>Intro</b> para elegir fichas, <b>P</b> o <b>Esc</b> pausa.</li>
+            </ul>
+        </div>
+        <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ==========================================================
+   TEMAS DE FICHAS DEL MAHJONG (12-11-2026)
+   Lo usan el de Ingenio y el de mayores. Cada símbolo lleva su nombre:
+   el de mayores lo dice en voz alta y los dos lo ponen en la etiqueta
+   accesible de la ficha.
+   Emoji de Unicode 11 o anteriores (2018): los más nuevos salen como un
+   cuadro vacío en los Android de hace unos años.
+   El clásico va DIBUJADO aquí (SVG propio, sin letras chinas): círculos,
+   cañas y números del 1 al 9, los cuatro vientos (N, S, E, O) y tres
+   «dragones» de colores.
+   Las flores y las estaciones son COMODINES: casan con cualquier otra de
+   su grupo, no solo con la igual. Son las mismas en todos los temas, así
+   se aprenden una vez.
+   ========================================================== */
+const TEMAS_MAHJONG = (() => {
+    const lista = (txt) => txt.trim().split('\n').map(l => { const [c, ...n] = l.trim().split(' '); return { c, n: n.join(' ') }; });
+
+    const animales = lista(`
+        🐶 el perro
+        🐱 el gato
+        🐭 el ratón
+        🐰 el conejo
+        🦊 el zorro
+        🐻 el oso
+        🐼 el panda
+        🐨 el koala
+        🐯 el tigre
+        🦁 el león
+        🐮 la vaca
+        🐷 el cerdo
+        🐸 la rana
+        🐵 el mono
+        🐔 la gallina
+        🐧 el pingüino
+        🦆 el pato
+        🦉 el búho
+        🐴 el caballo
+        🦄 el unicornio
+        🐝 la abeja
+        🦋 la mariposa
+        🐌 el caracol
+        🐞 la mariquita
+        🐢 la tortuga
+        🐍 la serpiente
+        🐙 el pulpo
+        🦀 el cangrejo
+        🐠 el pez
+        🐬 el delfín
+        🐳 la ballena
+        🐘 el elefante
+        🦒 la jirafa
+        🐊 el cocodrilo
+        🐑 la oveja
+        🐿️ la ardilla`);
+    const frutas = lista(`
+        🍎 la manzana
+        🍐 la pera
+        🍊 la naranja
+        🍋 el limón
+        🍌 el plátano
+        🍉 la sandía
+        🍇 las uvas
+        🍓 la fresa
+        🍒 las cerezas
+        🍑 el melocotón
+        🍍 la piña
+        🥝 el kiwi
+        🥥 el coco
+        🍅 el tomate
+        🥕 la zanahoria
+        🌽 el maíz
+        🥦 el brócoli
+        🍆 la berenjena
+        🥔 la patata
+        🍄 la seta
+        🥜 el cacahuete
+        🍞 el pan
+        🧀 el queso
+        🥚 el huevo
+        🍗 el muslo de pollo
+        🍕 la pizza
+        🍔 la hamburguesa
+        🍟 las patatas fritas
+        🍦 el helado
+        🍩 la rosquilla
+        🍪 la galleta
+        🎂 la tarta
+        🍫 el chocolate
+        🍯 la miel
+        🥐 el cruasán
+        ☕ el café`);
+    const caras = lista(`
+        😀 la sonrisa
+        😂 la risa
+        😍 el enamorado
+        😎 las gafas de sol
+        😴 el dormido
+        😭 el llorón
+        😡 el enfadado
+        😱 el susto
+        🤔 el pensativo
+        😜 la lengua fuera
+        😇 el angelito
+        🤓 el empollón
+        🥶 el congelado
+        🤢 el mareado
+        🤠 el vaquero
+        😷 la mascarilla
+        🤡 el payaso
+        👻 el fantasma
+        💀 la calavera
+        👽 el marciano
+        🤖 el robot
+        🎃 la calabaza
+        😺 el gato que ríe
+        🙈 el mono que no mira
+        👶 el bebé
+        👴 el abuelo
+        👵 la abuela
+        🧙 el mago
+        👮 el policía
+        👸 la princesa
+        🤴 el príncipe
+        🎅 Papá Noel
+        🧛 el vampiro
+        🧜 la sirena
+        🥳 la fiesta
+        🤩 las estrellas en los ojos`);
+    const deportes = lista(`
+        ⚽ el balón de fútbol
+        🏀 la canasta
+        🏈 el rugby americano
+        ⚾ el béisbol
+        🎾 el tenis
+        🏐 el voleibol
+        🎱 el billar
+        🏓 el ping-pong
+        🏸 el bádminton
+        🥊 el guante de boxeo
+        🎳 los bolos
+        ⛳ el golf
+        🏒 el hockey
+        🎣 la pesca
+        🎿 el esquí
+        ⛸️ el patinaje
+        🏊 la natación
+        🚴 el ciclismo
+        🏆 la copa
+        🥇 la medalla
+        🎯 la diana
+        🎲 el dado
+        🧩 el puzle
+        ♟️ el ajedrez
+        🎮 la consola
+        🎨 la pintura
+        🎸 la guitarra
+        🎺 la trompeta
+        🎻 el violín
+        🥁 el tambor
+        🎹 el piano
+        🎤 el micrófono
+        🎧 los cascos
+        🏹 el arco
+        🃏 la carta
+        🎭 el teatro`);
+    const transporte = lista(`
+        🚗 el coche
+        🚕 el taxi
+        🚌 el autobús
+        🏎️ el coche de carreras
+        🚓 la policía
+        🚑 la ambulancia
+        🚒 los bomberos
+        🚚 el camión
+        🚜 el tractor
+        🛵 la moto
+        🚲 la bici
+        🛴 el patinete
+        🚂 el tren de vapor
+        🚆 el tren
+        🚇 el metro
+        🚊 el tranvía
+        🚁 el helicóptero
+        ✈️ el avión
+        🚀 el cohete
+        🛸 el platillo volante
+        ⛵ el velero
+        🚤 la lancha
+        🚢 el barco
+        ⚓ el ancla
+        🚦 el semáforo
+        ⛽ la gasolinera
+        🏁 la bandera de meta
+        🎈 el globo
+        🚠 el teleférico
+        🗺️ el mapa
+        🧭 la brújula
+        🏠 la casa
+        ⛺ la tienda de campaña
+        🗼 la torre
+        🎡 la noria
+        🌉 el puente`);
+    const casa = lista(`
+        ⏰ el despertador
+        📱 el móvil
+        💡 la bombilla
+        🔑 la llave
+        ✂️ las tijeras
+        📎 el clip
+        📚 los libros
+        ✉️ la carta
+        🎁 el regalo
+        🔔 la campana
+        🧸 el osito
+        🛏️ la cama
+        🚪 la puerta
+        🧹 la escoba
+        🧺 la cesta
+        🛁 la bañera
+        📺 la tele
+        📷 la cámara
+        ☂️ el paraguas
+        👓 las gafas
+        👑 la corona
+        💍 el anillo
+        👟 la zapatilla
+        👒 el sombrero
+        🧦 los calcetines
+        🧤 los guantes
+        🧣 la bufanda
+        👜 el bolso
+        🎒 la mochila
+        🕯️ la vela
+        🔨 el martillo
+        🔧 la llave inglesa
+        🧲 el imán
+        🔦 la linterna
+        ⌚ el reloj
+        🖼️ el cuadro`);
+
+    /* ---------- CLÁSICO DIBUJADO ----------
+       Ficha de 60 × 80. Colores con contraste sobre el marfil; las tres
+       familias se distinguen por la forma (puntos, cañas, cifra), no solo
+       por el color */
+    const AZ = '#1f4fa8', VE = '#1e7a3a', RO = '#c62828', NE = '#1b2030';
+    const POS = {
+        1: [[30, 40]], 2: [[30, 22], [30, 58]], 3: [[16, 18], [30, 40], [44, 62]],
+        4: [[18, 22], [42, 22], [18, 58], [42, 58]], 5: [[18, 20], [42, 20], [30, 40], [18, 60], [42, 60]],
+        6: [[18, 16], [42, 16], [18, 40], [42, 40], [18, 64], [42, 64]],
+        7: [[14, 14], [30, 22], [46, 30], [18, 50], [42, 50], [18, 68], [42, 68]],
+        8: [[18, 12], [42, 12], [18, 31], [42, 31], [18, 50], [42, 50], [18, 69], [42, 69]],
+        9: [[14, 16], [30, 16], [46, 16], [14, 40], [30, 40], [46, 40], [14, 64], [30, 64], [46, 64]]
+    };
+    function circulo(n) {
+        const r = n === 1 ? 17 : n <= 4 ? 10 : n <= 6 ? 8.5 : 7;
+        const col = (i) => n === 1 ? RO : [AZ, VE, RO][i % 3];
+        return POS[n].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${col(i)}" stroke-width="${r > 12 ? 3 : 2.4}"/><circle cx="${x}" cy="${y}" r="${r * 0.45}" fill="${col(i)}"/>`).join('');
+    }
+    function cana(n) {
+        const colsDe = { 1: [30], 2: [30], 3: [30, 30], 4: [20, 40], 5: [16, 30, 44], 6: [16, 30, 44], 7: [16, 30, 44], 8: [12, 24, 36, 48], 9: [16, 30, 44] };
+        const filas = n <= 2 ? n : n <= 4 ? 2 : n <= 6 ? 2 : 3;
+        const tubos = [];
+        if (n === 1) tubos.push([30, 12, 56]);
+        else if (n === 3) tubos.push([30, 8, 30], [18, 44, 30], [42, 44, 30]);
+        else if (n === 5) tubos.push([16, 10, 28], [44, 10, 28], [30, 26, 28], [16, 44, 28], [44, 44, 28]);
+        else if (n === 7) tubos.push([30, 6, 20], [16, 30, 20], [30, 30, 20], [44, 30, 20], [16, 54, 20], [30, 54, 20], [44, 54, 20]);
+        else {
+            const cs = colsDe[n], alto = filas === 2 ? 30 : 20;
+            for (let f = 0; f < filas; f++) for (const x of cs) { if (tubos.length < n) tubos.push([x, 8 + f * (alto + 4), alto]); }
+        }
+        return tubos.map(([x, y, h], i) => {
+            const col = (n === 1 || (n >= 5 && i === Math.floor(n / 2))) ? RO : VE;
+            return `<rect x="${x - 4}" y="${y}" width="8" height="${h}" rx="4" fill="${col}"/><line x1="${x - 4}" y1="${y + h / 2}" x2="${x + 4}" y2="${y + h / 2}" stroke="#fff" stroke-width="1.6"/>`;
+        }).join('');
+    }
+    const numero = (n) => `<text x="30" y="46" font-size="40" font-weight="700" text-anchor="middle" font-family="Georgia,serif" fill="${RO}">${n}</text><path d="M14 60 q8 -6 16 0 t16 0" fill="none" stroke="${AZ}" stroke-width="3"/><circle cx="30" cy="70" r="2.6" fill="${AZ}"/>`;
+    const viento = (l) => `<text x="30" y="52" font-size="40" font-weight="700" text-anchor="middle" font-family="Georgia,serif" fill="${NE}">${l}</text><path d="M30 8 l5 9 h-10 z" fill="${RO}"/>`;
+    const DRAGONES = {
+        /* Una cruz: con un disco rojo se confundía con el «1 círculo» */
+        rojo: `<path d="M23 14 h14 v19 h15 v14 h-15 v19 h-14 v-19 h-15 v-14 h15 z" fill="${RO}"/><rect x="26" y="36" width="8" height="8" fill="#fff8ea"/>`,
+        verde: `<path d="M30 14 L50 40 L30 66 L10 40 Z" fill="${VE}"/><path d="M30 28 L39 40 L30 52 L21 40 Z" fill="#fff8ea"/>`,
+        blanco: `<rect x="12" y="14" width="36" height="52" rx="5" fill="none" stroke="${AZ}" stroke-width="4"/><rect x="19" y="21" width="22" height="38" rx="3" fill="none" stroke="${AZ}" stroke-width="2"/>`
+    };
+    const clasico = [];
+    for (let n = 1; n <= 9; n++) clasico.push({ svg: circulo(n), n: n === 1 ? 'un círculo' : n + ' círculos' });
+    for (let n = 1; n <= 9; n++) clasico.push({ svg: cana(n), n: n === 1 ? 'una caña' : n + ' cañas' });
+    for (let n = 1; n <= 9; n++) clasico.push({ svg: numero(n), n: 'el número ' + n });
+    for (const [l, nom] of [['N', 'el viento norte'], ['S', 'el viento sur'], ['E', 'el viento este'], ['O', 'el viento oeste']]) clasico.push({ svg: viento(l), n: nom });
+    clasico.push({ svg: DRAGONES.rojo, n: 'el dragón rojo' }, { svg: DRAGONES.verde, n: 'el dragón verde' }, { svg: DRAGONES.blanco, n: 'el dragón blanco' });
+
+    const temas = [
+        { id: 'clasico', nombre: 'CLÁSICO', sub: 'círculos, cañas y números', simbolos: clasico },
+        { id: 'animales', nombre: 'ANIMALES', sub: 'del perro a la ballena', simbolos: animales },
+        { id: 'frutas', nombre: 'FRUTAS Y COMIDA', sub: 'de la manzana a la tarta', simbolos: frutas },
+        { id: 'caras', nombre: 'CARAS', sub: 'emoji de caras y personajes', simbolos: caras },
+        { id: 'deportes', nombre: 'DEPORTES Y JUEGOS', sub: 'balones, música y juegos', simbolos: deportes },
+        { id: 'transporte', nombre: 'TRANSPORTE', sub: 'coches, trenes y barcos', simbolos: transporte },
+        { id: 'casa', nombre: 'COSAS DE CASA', sub: 'llaves, gafas y relojes', simbolos: casa }
+    ];
+    const grupos = {
+        flor: lista(`
+            🌷 el tulipán
+            🌹 la rosa
+            🌻 el girasol
+            🌼 la margarita`),
+        estacion: lista(`
+            🌱 la primavera
+            ☀️ el verano
+            🍂 el otoño
+            ❄️ el invierno`)
+    };
+    /* Para el de mayores: solo dibujos muy reconocibles y que no se
+       parezcan entre sí (nada de caras, ni la seta: el emoji es una seta
+       venenosa, como se vio en La lista de la compra) */
+    const MAYORES = {
+        animales: ['el perro', 'el gato', 'el conejo', 'el oso', 'la vaca', 'el cerdo', 'la rana', 'la gallina', 'el pingüino', 'el pato', 'el caballo', 'la abeja', 'la mariposa', 'el caracol', 'la tortuga', 'el pez', 'el elefante', 'la oveja'],
+        frutas: ['la manzana', 'la pera', 'la naranja', 'el limón', 'el plátano', 'la sandía', 'las uvas', 'la fresa', 'las cerezas', 'la piña', 'el tomate', 'la zanahoria', 'el pan', 'el queso', 'el huevo', 'el helado'],
+        casa: ['el despertador', 'la llave', 'las tijeras', 'los libros', 'el regalo', 'la campana', 'la cama', 'el paraguas', 'las gafas', 'la zapatilla', 'el sombrero', 'los calcetines', 'los guantes', 'el bolso', 'el martillo', 'la tele']
+    };
+    const mayores = {};
+    for (const id in MAYORES) {
+        const t = temas.find(x => x.id === id);
+        mayores[id] = MAYORES[id].map(n => { const i = t.simbolos.findIndex(s => s.n === n); if (i < 0) throw new Error('falta ' + n + ' en ' + id); return i; });
+    }
+    for (const t of temas) if (t.simbolos.length < 34) throw new Error('el tema ' + t.id + ' tiene ' + t.simbolos.length + ' símbolos (hacen falta 34)');
+    return { temas, grupos, mayores, porId: (id) => temas.find(t => t.id === id) || temas[0] };
+})();
+if (typeof module !== 'undefined') module.exports = TEMAS_MAHJONG;
+
+</script>
+<script>
+/* ==========================================================
+   FORMAS DE LOS TABLEROS DEL MAHJONG (diseño propio, 12-11-2026)
+   Cada fila es un texto; cada cifra, cuántas fichas hay apiladas en esa
+   casilla ('.' = ninguna). Las filas se centran: una fila con una casilla
+   menos que la más ancha queda desplazada media ficha (así salen los
+   tableros «al tresbolillo» de las capturas). Todas son simétricas, así
+   que el número de fichas sale par.
+   Como mucho 8 de ancho y 8 de alto: en un móvil en vertical de 360 px,
+   con 8 de ancho la ficha ya baja a ~42 px (medido en navegador/cabe.js).
+   NIVELES: las primeras 24 del de Ingenio, en este orden; a partir de la
+   25 salen formas hechas al azar (con semilla) en el motor.
+   MAYORES: las del de mayores, de 8 a 30 fichas, más anchas que altas.
+   ========================================================== */
+const FORMAS_MAHJONG = (() => {
+    const F = (nombre, filas) => ({ nombre, filas });
+    const niveles = [
+        F('Primeras parejas', ['1111', '1111', '1111']),
+        F('El marco', ['111111', '1....1', '111111']),
+        F('Las tres filas', ['11111111', '1111', '11111111']),
+        F('El escalón', ['111111', '122221', '111111']),
+        F('La almohada', ['11111111', '11222211', '11111111']),
+        F('El puente', ['11111111', '12222221', '11....11', '11....11', '11....11']),
+        F('Las torres', ['11....11', '12....21', '12....21', '11111111', '1221']),
+        F('La estrella', ['11', '11', '11122111', '112211', '1111', '11..11', '11....11']),
+        F('Las gafas', ['11..11', '12211221', '12211221', '11..11']),
+        F('La flor', ['1..1', '121121', '1111', '113311', '1111', '121121', '1..1']),
+        F('El árbol', ['11', '1221', '122221', '12233221', '11', '11']),
+        F('La casa', ['11', '1221', '122221', '11111111', '11.11.11', '11111111']),
+        F('La escalera', ['1......1', '12....21', '123..321', '12344321']),
+        F('El panal', ['12222221', '1222221', '12222221', '1222221']),
+        F('El corazón', ['11..11', '11111111', '11222211', '122221', '1221', '11']),
+        F('La rana', ['11..11', '12..21', '11111111', '12222221', '12111121', '111111']),
+        F('La cruz', ['11', '22', '11122111', '12233221', '11122111', '22', '11']),
+        F('La mariposa', ['11....11', '121..121', '12211221', '1221', '12211221', '121..121', '11....11']),
+        F('La muralla', ['22222222', '........', '23333332', '........', '22222222']),
+        F('La pirámide', ['111111', '122221', '123321', '123321', '122221', '111111']),
+        F('El diamante', ['11', '1221', '123321', '12344321', '123321', '1221', '11']),
+        F('La tortuga', ['1111', '122221', '11233211', '12344321', '11233211', '122221', '1111']),
+        F('El castillo', ['2.2..2.2', '22222222', '23333332', '23444432', '23333332', '22222222']),
+        F('La gran pirámide', ['11111111', '12222221', '12333321', '12344321', '12344321', '12333321', '12222221', '11111111'])
+    ];
+    /* Para el tablero del día: tamaños medios (de 34 a 60) */
+    const diario = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+    const mayores = [
+        F('Ocho fichas', ['1111', '1111']),
+        F('Doce fichas', ['1111', '1111', '1111']),
+        F('Dos filas largas', ['111111', '111111']),
+        F('Con un piso', ['1111', '1221', '1111']),
+        F('La almohada', ['111111', '122221']),
+        F('El tejado', ['1111', '122221', '111111']),
+        F('La caja', ['111111', '122221', '111111']),
+        F('El castillo', ['111111', '122221', '122221', '111111'])
+    ];
+    return { niveles, diario, mayores };
+})();
+if (typeof module !== 'undefined') module.exports = FORMAS_MAHJONG;
+
+</script>
+<script>
+/* ==========================================================
+   MOTOR DEL MAHJONG (solitario de parejas)
+   Sin DOM: se prueba en Node (prueba-motor.js). Lo usan el de Ingenio y
+   el de mayores.
+
+   Posiciones en MEDIAS fichas: una ficha en (x, y, z) ocupa x..x+2 de
+   ancho e y..y+2 de alto en el piso z. Así caben las filas desplazadas
+   media ficha.
+   Ficha LIBRE = nada encima (ninguna ficha del piso z+1 que la pise) y
+   al menos un lado (izquierdo o derecho) sin ficha pegada en su piso.
+
+   Tableros siempre resolubles: se «juega» el tablero vacío de dibujos
+   quitando parejas de fichas libres al azar hasta vaciarlo, y a cada
+   pareja quitada se le da el mismo dibujo. Ese orden es una solución.
+   Mezclar hace lo mismo con las que quedan. No hay que buscar si tiene
+   solución: la tiene por construcción.
+   ========================================================== */
+const Mahjong = (() => {
+    'use strict';
+    const TEMAS = typeof TEMAS_MAHJONG !== 'undefined' ? TEMAS_MAHJONG : require('./temas.js');
+    const FORMAS = typeof FORMAS_MAHJONG !== 'undefined' ? FORMAS_MAHJONG : require('./formas.js');
+    const ORDEN_TEMAS = ['clasico', 'animales', 'frutas', 'caras', 'deportes', 'transporte', 'casa'];
+    const NIVEL_COMODINES = 6, NIVEL_OCULTAS = 12;
+    const PUNTOS_PAREJA = 10, RACHA_MAX = 10;
+
+    function azar(s) {
+        let x = (s >>> 0) || 1;
+        return () => { x = (Math.imul(x, 1103515245) + 12345) >>> 0; return (x >>> 8) / 16777216; };
+    }
+    const barajar = (r, a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+    /* ---------- FORMA → POSICIONES ---------- */
+    function posiciones(forma) {
+        const ancho = Math.max(...forma.filas.map(f => f.length));
+        const pos = [];
+        forma.filas.forEach((fila, r) => {
+            const off = ancho - fila.length;           // centrada: media ficha por casilla de menos
+            [...fila].forEach((ch, c) => {
+                const h = ch === '.' ? 0 : Number(ch);
+                for (let z = 0; z < h; z++) pos.push({ x: off + 2 * c, y: 2 * r, z });
+            });
+        });
+        /* Impar (una fila impar con cifra impar en el centro): se quita la de
+           más arriba del centro */
+        if (pos.length % 2) {
+            let k = 0;
+            pos.forEach((p, i) => { if (p.z > pos[k].z || (p.z === pos[k].z && Math.abs(p.x - ancho + 1) < Math.abs(pos[k].x - ancho + 1))) k = i; });
+            pos.splice(k, 1);
+        }
+        return pos;
+    }
+
+    /* Forma al azar (con semilla) para los niveles de la 25 en adelante:
+       simétrica, de 5 a 8 filas, con montones más altos hacia el centro */
+    function formaAzar(r, objetivo) {
+        for (let intento = 0; intento < 50; intento++) {
+            const filas = 5 + Math.floor(r() * 4), mitad = 4;
+            const h = Array.from({ length: filas }, () => Array(mitad).fill(0));
+            for (let y = 0; y < filas; y++) for (let x = 0; x < mitad; x++) if (r() < 0.78) h[y][x] = 1;
+            /* Altura: más cuanto más lejos del borde y más al centro */
+            for (let y = 0; y < filas; y++) for (let x = 0; x < mitad; x++) {
+                if (!h[y][x]) continue;
+                const borde = Math.min(y, filas - 1 - y, x);
+                h[y][x] = Math.max(1, Math.min(4, 1 + borde + (r() < 0.3 ? 1 : 0) - (r() < 0.2 ? 1 : 0)));
+            }
+            const filasTxt = h.map(fila => {
+                const mitadTxt = fila.map(v => v ? String(v) : '.').join('');
+                return mitadTxt + [...mitadTxt].reverse().join('');
+            });
+            const forma = { nombre: 'Sorpresa', filas: filasTxt };
+            const n = posiciones(forma).length;
+            if (Math.abs(n - objetivo) <= 14 && n >= 40) return forma;
+        }
+        return FORMAS.niveles[20 + Math.floor(r() * 4)];
+    }
+
+    /* ---------- LIBRE ---------- */
+    function cubre(a, b) { return b.z === a.z + 1 && Math.abs(b.x - a.x) < 2 && Math.abs(b.y - a.y) < 2; }
+    function ladoIzq(a, b) { return b.z === a.z && b.x === a.x - 2 && Math.abs(b.y - a.y) < 2; }
+    function ladoDer(a, b) { return b.z === a.z && b.x === a.x + 2 && Math.abs(b.y - a.y) < 2; }
+    /* Por qué no está libre: null si lo está, 'encima' o 'lados' */
+    function bloqueo(fichas, a) {
+        let izq = false, der = false;
+        for (const b of fichas) {
+            if (!b.viva || b === a) continue;
+            if (cubre(a, b)) return 'encima';
+            if (ladoIzq(a, b)) izq = true; else if (ladoDer(a, b)) der = true;
+        }
+        return izq && der ? 'lados' : null;
+    }
+    const libre = (fichas, a) => a.viva && bloqueo(fichas, a) === null;
+    const libres = (fichas) => fichas.filter(f => libre(fichas, f));
+
+    /* ---------- DIBUJOS ----------
+       «clase» decide con qué casa: la de un dibujo normal es su número; las
+       flores casan entre sí y las estaciones entre sí */
+    const casan = (a, b) => a !== b && a.clase === b.clase;
+
+    /* Quita parejas de libres al azar hasta vaciar: el orden es la solución.
+       Devuelve la lista de parejas [i, j] (índices de `fichas`) o null si se
+       queda con menos de dos libres (pasa con montones muy altos: se repite) */
+    function ordenDeRetirada(fichas, r) {
+        const vivas = fichas.map(f => f.viva);
+        const copia = fichas.map((f, i) => ({ x: f.x, y: f.y, z: f.z, viva: vivas[i], i }));
+        const orden = [];
+        let quedan = copia.filter(f => f.viva).length;
+        while (quedan > 0) {
+            const ls = copia.filter(f => libre(copia, f));
+            if (ls.length < 2) return null;
+            /* De preferencia, una de las de más arriba: si no, los montones
+               altos se quedan para el final y se atasca a menudo */
+            barajar(r, ls);
+            ls.sort((a, b) => b.z - a.z);
+            const a = ls[Math.floor(r() * Math.min(ls.length, 3))];
+            const resto = ls.filter(f => f !== a);
+            const b = resto[Math.floor(r() * resto.length)];
+            a.viva = false; b.viva = false; quedan -= 2;
+            orden.push([a.i, b.i]);
+        }
+        return orden;
+    }
+
+    /* Reparte dibujos a las fichas vivas de forma que se pueda resolver.
+       `clases`: lista de clases de pareja (una por pareja) ya barajada */
+    function repartir(fichas, clasesPares, r, simbolosGrupo) {
+        for (let intento = 0; intento < 400; intento++) {
+            const orden = ordenDeRetirada(fichas, r);
+            if (!orden) continue;
+            const clases = barajar(r, clasesPares.slice());
+            const restoGrupo = {};
+            for (const g in simbolosGrupo) restoGrupo[g] = barajar(r, simbolosGrupo[g].slice());
+            orden.forEach(([i, j], k) => {
+                const cl = clases[k];
+                for (const idx of [i, j]) {
+                    fichas[idx].clase = cl;
+                    fichas[idx].s = typeof cl === 'number' ? cl : restoGrupo[cl].pop();
+                }
+            });
+            return orden;
+        }
+        throw new Error('no se pudo repartir el tablero');
+    }
+
+    /* ---------- CREAR ----------
+       op: { nivel, semilla, tema ('auto' o el id), diario (aaaammdd),
+       jugadores, forma (para pruebas), mayores } */
+    function crear(op) {
+        const o = Object.assign({ nivel: 1, tema: 'auto', jugadores: 1 }, op || {});
+        const semilla = o.semilla !== undefined ? o.semilla : (o.diario ? o.diario * 7 + 3 : o.nivel * 2654435761 + 97);
+        const r = azar(semilla);
+        let forma;
+        if (o.forma) forma = o.forma;
+        else if (o.mayores) forma = FORMAS.mayores[Math.min(FORMAS.mayores.length - 1, Math.max(0, o.nivel - 1))];
+        else if (o.diario) forma = FORMAS.niveles[FORMAS.diario[o.diario % FORMAS.diario.length]];
+        else if (o.nivel <= FORMAS.niveles.length) forma = FORMAS.niveles[o.nivel - 1];
+        else forma = formaAzar(r, 60 + Math.min(70, (o.nivel - 25) * 2));
+        const temaId = o.tema && o.tema !== 'auto' ? o.tema : ORDEN_TEMAS[((o.diario ? o.diario : o.nivel) - 1) % ORDEN_TEMAS.length];
+        const tema = TEMAS.porId(temaId);
+        const fichas = posiciones(forma).map((p, id) => ({ id, x: p.x, y: p.y, z: p.z, viva: true, clase: null, s: null, oculta: false }));
+        const pares = fichas.length / 2;
+        /* Comodines: dos parejas de flores y dos de estaciones */
+        const comodines = !o.mayores && (o.comodines !== undefined ? o.comodines : (o.nivel >= NIVEL_COMODINES || o.diario) && fichas.length >= 34);
+        const clases = [];
+        /* Con menos de 48 fichas, solo las flores: con las dos, en un tablero
+           de 34 eran comodines casi una de cada cuatro (8 de 34) */
+        if (comodines) clases.push('flor', 'flor');
+        if (comodines && fichas.length >= 48) clases.push('estacion', 'estacion');
+        /* Cada dibujo, dos parejas (cuatro fichas): así hay que elegir cuál
+           de las cuatro quitar primero, que es lo que da juego. Con más
+           parejas que dibujos×2, alguno sale tres veces */
+        const normales = pares - clases.length;
+        /* En el de mayores, cada dibujo es UNA pareja (dos fichas iguales):
+           sin tener que elegir cuál de cuatro, y solo de los de su lista */
+        const porDibujo = o.mayores ? 1 : 2;
+        const posibles = o.mayores && TEMAS.mayores[tema.id] ? TEMAS.mayores[tema.id].slice() : tema.simbolos.map((_, i) => i);
+        const elegidos = barajar(r, posibles).slice(0, Math.min(posibles.length, Math.ceil(normales / porDibujo)));
+        for (let k = 0; k < normales; k++) clases.push(elegidos[k % elegidos.length]);
+        const orden = repartir(fichas, clases, r, { flor: [0, 1, 2, 3], estacion: [0, 1, 2, 3] });
+        /* Ocultas: un 20 % de las fichas en algunos niveles (cada tres desde
+           la 12) y en el diario de los domingos */
+        const ocultas = !o.mayores && (o.ocultas !== undefined ? o.ocultas : (o.nivel >= NIVEL_OCULTAS && o.nivel % 3 === 0) || (o.diario && diaSemana(o.diario) === 0));
+        if (ocultas) for (const f of fichas) if (r() < 0.2) f.oculta = true;
+        const p = {
+            nivel: o.nivel, diario: o.diario || null, mayores: !!o.mayores, forma: forma.nombre, tema: tema.id, temaElegido: o.tema || 'auto',
+            fichas, solucion: orden, comodines, ocultas,
+            sel: null, turno: 1, nj: o.jugadores,
+            jugadores: Array.from({ length: o.jugadores }, () => ({ puntos: 0, parejas: 0, racha: 0, mejorRacha: 0 })),
+            historial: [], ayudas: { pistas: 0, mezclas: 0, deshechas: 0 }, eventos: [], terminada: false, semilla
+        };
+        return p;
+    }
+    function diaSemana(aaaammdd) {
+        const a = Math.floor(aaaammdd / 10000), m = Math.floor(aaaammdd / 100) % 100, d = aaaammdd % 100;
+        return new Date(Date.UTC(a, m - 1, d)).getUTCDay();
+    }
+
+    /* ---------- JUGAR ---------- */
+    const vivas = (p) => p.fichas.filter(f => f.viva);
+    /* Parejas que se pueden quitar AHORA (el «Coincidencias» de las
+       capturas): por cada clase, cuántas parejas salen de sus libres */
+    function parejasDisponibles(p) {
+        const cuenta = {};
+        for (const f of libres(p.fichas)) cuenta[f.clase] = (cuenta[f.clase] || 0) + 1;
+        let n = 0;
+        for (const k in cuenta) n += Math.floor(cuenta[k] / 2);
+        return n;
+    }
+    function ev(p, tipo, datos) { p.eventos.push(Object.assign({}, datos, { tipo })); }
+    const jugador = (p) => p.jugadores[p.turno - 1];
+
+    /* Tocar una ficha. Devuelve lo que pasó (y lo deja en eventos) */
+    function tocar(p, id) {
+        if (p.terminada) return { que: 'nada' };
+        const f = p.fichas[id];
+        if (!f || !f.viva) return { que: 'nada' };
+        const porque = bloqueo(p.fichas, f);
+        if (porque) {
+            /* Una bloqueada no cuenta como fallo ni pasa el turno: se explica.
+               Si está oculta, se enseña un momento (memoria) */
+            ev(p, 'bloqueada', { id, porque, oculta: f.oculta });
+            return { que: 'bloqueada', porque };
+        }
+        if (p.sel === null) { p.sel = id; ev(p, 'elige', { id }); return { que: 'elige' }; }
+        if (p.sel === id) { p.sel = null; ev(p, 'suelta', { id }); return { que: 'suelta' }; }
+        const a = p.fichas[p.sel];
+        if (!casan(a, f)) {
+            const antes = p.sel;
+            p.sel = null;
+            const j = jugador(p);
+            j.racha = 0;
+            ev(p, 'distinta', { a: antes, b: id, turno: p.turno });
+            if (p.nj === 2) { p.turno = 3 - p.turno; ev(p, 'turno', { turno: p.turno }); }
+            return { que: 'distinta' };
+        }
+        quitar(p, a, f, false);
+        return { que: 'quita' };
+    }
+
+    function quitar(p, a, b, conPista) {
+        a.viva = false; b.viva = false;
+        p.sel = null;
+        const j = jugador(p);
+        j.racha++;
+        j.mejorRacha = Math.max(j.mejorRacha, j.racha);
+        j.parejas++;
+        const pts = PUNTOS_PAREJA * (conPista ? 1 : Math.min(RACHA_MAX, j.racha));
+        j.puntos += pts;
+        p.historial.push({ tipo: 'pareja', a: a.id, b: b.id, turno: p.turno, pts, racha: j.racha - 1 });
+        ev(p, 'quita', { a: a.id, b: b.id, puntos: pts, racha: j.racha, turno: p.turno });
+        if (j.racha > 1 && j.racha % 5 === 0) ev(p, 'combo', { racha: j.racha, turno: p.turno });
+        if (!vivas(p).length) {
+            p.terminada = true;
+            const limpia = !p.ayudas.pistas && !p.ayudas.mezclas && !p.ayudas.deshechas;
+            const bonus = p.nj === 1 ? (limpia ? 2 : 1) * (50 + 5 * p.fichas.length) : 0;
+            j.puntos += bonus;
+            ev(p, 'fin', { bonus, limpia });
+        } else if (!parejasDisponibles(p)) ev(p, 'atasco', {});
+    }
+
+    /* ---------- RESOLVER ----------
+       Búsqueda en profundidad con memoria de estados y primero las jugadas
+       «seguras» (una clase con todas sus fichas libres: quitarlas no puede
+       estropear nada). Con tope de nodos: si no llega, devuelve null. */
+    function resolver(p, tope) {
+        /* Varios intentos cortos con desempates al azar en vez de uno largo:
+           una mala elección temprana deja una rama enorme sin salida, y
+           volver a empezar por otro lado sale mucho antes (medido: con un
+           solo intento de 200.000 nodos, 3 de 80 niveles no salían) */
+        const total = tope || 200000;
+        const r = azar(p.semilla ^ 0x5bd1e995 ^ p.historial.length);
+        let gastado = 0;
+        for (let k = 0; gastado < total; k++) {
+            const t = Math.min(total - gastado, k === 0 ? 4000 : 4000 * Math.min(8, k));
+            const res = resolverUna(p, t, k === 0 ? null : r);
+            if (res.camino) return res.camino;
+            gastado += res.nodos;
+            if (res.completo) return null;       // recorrió todo: no tiene solución
+        }
+        return null;
+    }
+    function resolverUna(p, tope, r) {
+        const fs = p.fichas;
+        const n = fs.length;
+        /* Vecinas precalculadas: quién cubre a quién y quién está al lado */
+        const encima = fs.map(a => fs.filter(b => cubre(a, b)).map(b => b.id));
+        const izq = fs.map(a => fs.filter(b => ladoIzq(a, b)).map(b => b.id));
+        const der = fs.map(a => fs.filter(b => ladoDer(a, b)).map(b => b.id));
+        const tapa = fs.map(a => fs.filter(b => cubre(b, a)).map(b => b.id));   // las que tiene debajo
+        const vivo = fs.map(f => f.viva);
+        const vistos = new Set();
+        let nodos = 0;
+        const max = tope || 200000;
+        const esLibre = (i) => vivo[i] && !encima[i].some(k => vivo[k]) && (!izq[i].some(k => vivo[k]) || !der[i].some(k => vivo[k]));
+        const camino = [];
+        let agotado = false;
+        function clave() { let s = ''; for (let i = 0; i < n; i += 30) { let v = 0; for (let k = i; k < Math.min(n, i + 30); k++) v = v * 2 + (vivo[k] ? 1 : 0); s += v.toString(36) + ','; } return s; }
+        function buscar() {
+            if (++nodos > max) { agotado = true; return false; }
+            let quedan = 0;
+            for (let i = 0; i < n; i++) if (vivo[i]) quedan++;
+            if (!quedan) return true;
+            const k = clave();
+            if (vistos.has(k)) return false;
+            vistos.add(k);
+            const porClase = new Map();
+            const totalClase = new Map();
+            for (let i = 0; i < n; i++) if (vivo[i]) {
+                totalClase.set(fs[i].clase, (totalClase.get(fs[i].clase) || 0) + 1);
+                if (esLibre(i)) { if (!porClase.has(fs[i].clase)) porClase.set(fs[i].clase, []); porClase.get(fs[i].clase).push(i); }
+            }
+            const jugadas = [];
+            for (const [cl, ls] of porClase) {
+                if (ls.length < 2) continue;
+                const segura = ls.length === totalClase.get(cl);
+                for (let a = 0; a < ls.length; a++) for (let b = a + 1; b < ls.length; b++) jugadas.push({ a: ls[a], b: ls[b], segura, libera: encima[ls[a]].length + encima[ls[b]].length });
+            }
+            if (!jugadas.length) return false;
+            /* Sin salida si en una clase con solo dos fichas una está encima de
+               la otra: para quitar la de abajo hay que quitar antes la de
+               arriba, que no tiene con quién */
+            for (const [cl, t] of totalClase) {
+                if (t !== 2) continue;
+                const dos = [];
+                for (let i = 0; i < n && dos.length < 2; i++) if (vivo[i] && fs[i].clase === cl) dos.push(i);
+                if (encima[dos[0]].includes(dos[1]) || encima[dos[1]].includes(dos[0])) return false;
+            }
+            /* Las seguras primero; luego las que tienen más debajo (liberan más) */
+            const debajo = (i) => tapa[i].reduce((s, k) => s + (vivo[k] ? 1 : 0), 0) + fs[i].z * 2;
+            if (r) for (const j of jugadas) j.ruido = r() * 3;
+            jugadas.sort((x, y) => (y.segura - x.segura) || (debajo(y.a) + debajo(y.b) + (y.ruido || 0) - debajo(x.a) - debajo(x.b) - (x.ruido || 0)));
+            const lista = jugadas[0].segura ? [jugadas[0]] : jugadas;
+            for (const j of lista) {
+                vivo[j.a] = false; vivo[j.b] = false; camino.push([j.a, j.b]);
+                if (buscar()) return true;
+                vivo[j.a] = true; vivo[j.b] = true; camino.pop();
+            }
+            return false;
+        }
+        const ok = buscar();
+        return { camino: ok ? camino.slice() : null, nodos, completo: !ok && !agotado };
+    }
+
+    /* ---------- AYUDAS ---------- */
+    /* Pista: la primera jugada de una solución desde aquí (así la pista no
+       te mete en un callejón). Si el resolvedor no llega a tiempo, una
+       pareja libre cualquiera. null si no hay ninguna. */
+    function pista(p, contar) {
+        if (p.terminada) return null;
+        /* Tope de 25.000 nodos: en un móvil lento son unas décimas (medido en
+           navegador/jugar.js con la CPU a 1/6) */
+        const sol = resolver(p, 25000);
+        let par = sol && sol[0];
+        if (!par) {
+            /* De las libres, una «segura» si la hay (todas las de su clase
+               libres); si no, cualquiera */
+            const ls = libres(p.fichas);
+            const total = {};
+            for (const f of vivas(p)) total[f.clase] = (total[f.clase] || 0) + 1;
+            const pares = [];
+            for (let a = 0; a < ls.length; a++) for (let b = a + 1; b < ls.length; b++) if (casan(ls[a], ls[b])) pares.push([ls[a], ls[b]]);
+            pares.sort((x, y) => (ls.filter(f => f.clase === y[0].clase).length === total[y[0].clase]) - (ls.filter(f => f.clase === x[0].clase).length === total[x[0].clase]));
+            if (pares.length) par = [pares[0][0].id, pares[0][1].id];
+        }
+        if (par && contar !== false) p.ayudas.pistas++;
+        if (par) ev(p, 'pista', { a: par[0], b: par[1], segura: !!sol });
+        return par;
+    }
+
+    /* Mezclar: los dibujos de las que quedan, repartidos otra vez de forma
+       que se pueda acabar. Ni se añaden ni se quitan fichas. */
+    function mezclar(p, r, contar) {
+        if (p.terminada) return;
+        const rnd = r || azar((p.semilla ^ (p.historial.length * 7919 + 1)) >>> 0);
+        const antes = p.fichas.map(f => [f.clase, f.s]);
+        const vivasL = vivas(p);
+        const cuenta = new Map();
+        const grupoResto = { flor: [], estacion: [] };
+        for (const f of vivasL) {
+            cuenta.set(f.clase, (cuenta.get(f.clase) || 0) + 1);
+            if (f.clase === 'flor' || f.clase === 'estacion') grupoResto[f.clase].push(f.s);
+        }
+        const clases = [];
+        for (const [cl, k] of cuenta) for (let i = 0; i < k / 2; i++) clases.push(cl);
+        /* La nueva solución se guarda: las pruebas la repasan con su propia
+           regla de ficha libre */
+        p.solucion = repartir(p.fichas, clases, rnd, grupoResto);
+        p.sel = null;
+        if (contar !== false) p.ayudas.mezclas++;
+        p.historial.push({ tipo: 'mezcla', antes });
+        ev(p, 'mezcla', {});
+    }
+
+    function deshacer(p) {
+        const h = p.historial.pop();
+        if (!h) return false;
+        if (h.tipo === 'mezcla') {
+            h.antes.forEach(([cl, s], i) => { p.fichas[i].clase = cl; p.fichas[i].s = s; });
+        } else {
+            p.fichas[h.a].viva = true; p.fichas[h.b].viva = true;
+            const j = p.jugadores[h.turno - 1];
+            j.puntos -= h.pts; j.parejas--; j.racha = h.racha;
+            p.terminada = false;
+        }
+        p.sel = null;
+        p.ayudas.deshechas++;
+        ev(p, 'deshace', {});
+        return true;
+    }
+
+    /* ---------- GUARDAR ----------
+       Lo justo para rehacer la partida: semilla y opciones (rehacen el
+       tablero igual) más qué fichas quedan y qué dibujo lleva cada una (por
+       si se mezcló) */
+    function guardar(p) {
+        if (p.terminada) return null;
+        return {
+            v: 1, nivel: p.nivel, diario: p.diario, tema: p.temaElegido, nj: p.nj, mayores: p.mayores,
+            semilla: p.semilla, comodines: p.comodines, ocultas: p.ocultas,
+            vivas: p.fichas.map(f => f.viva ? 1 : 0).join(''),
+            dibujos: p.fichas.map(f => [f.clase, f.s, f.oculta ? 1 : 0]),
+            jugadores: p.jugadores.map(j => ({ ...j })), turno: p.turno, ayudas: { ...p.ayudas }
+        };
+    }
+    function restaurar(g) {
+        if (!g || g.v !== 1 || !Number.isInteger(g.nivel) || g.nivel < 1 || g.nivel > 100000 || (g.nj !== 1 && g.nj !== 2)) return null;
+        let p;
+        try {
+            p = crear({ nivel: g.nivel, diario: g.diario || undefined, tema: g.tema, jugadores: g.nj, semilla: g.semilla, mayores: !!g.mayores, comodines: g.comodines, ocultas: g.ocultas });
+        } catch (e) { return null; }
+        if (typeof g.vivas !== 'string' || g.vivas.length !== p.fichas.length || !Array.isArray(g.dibujos) || g.dibujos.length !== p.fichas.length) return null;
+        if (!Array.isArray(g.jugadores) || g.jugadores.length !== g.nj) return null;
+        const tema = TEMAS.porId(p.tema);
+        for (let i = 0; i < p.fichas.length; i++) {
+            const [cl, s, oc] = g.dibujos[i] || [];
+            const okClase = (cl === 'flor' || cl === 'estacion') ? Number.isInteger(s) && s >= 0 && s < 4 : Number.isInteger(cl) && cl >= 0 && cl < tema.simbolos.length && s === cl;
+            if (!okClase) return null;
+            Object.assign(p.fichas[i], { viva: g.vivas[i] === '1', clase: cl, s, oculta: !!oc });
+        }
+        /* Que lo que queda case por parejas (si no, no se podría acabar) */
+        const cuenta = {};
+        for (const f of p.fichas) if (f.viva) cuenta[f.clase] = (cuenta[f.clase] || 0) + 1;
+        if (Object.values(cuenta).some(k => k % 2) || !vivas(p).length) return null;
+        p.jugadores = g.jugadores.map(j => ({ puntos: +j.puntos || 0, parejas: +j.parejas || 0, racha: +j.racha || 0, mejorRacha: +j.mejorRacha || 0 }));
+        p.turno = g.turno === 2 && g.nj === 2 ? 2 : 1;
+        if (g.ayudas) p.ayudas = { pistas: +g.ayudas.pistas || 0, mezclas: +g.ayudas.mezclas || 0, deshechas: +g.ayudas.deshechas || 0 };
+        return p;
+    }
+
+    /* Cambiar el tema de un tablero ya hecho (al seguir uno a medias con
+       otras FICHAS elegidas): es solo el dibujo. Los dibujos que se usan se
+       numeran de nuevo 0, 1, 2… en el tema nuevo (el clásico tiene 34 y los
+       demás 36: con el número de antes podía no existir) */
+    function cambiarTema(p, temaId) {
+        if (!temaId || temaId === 'auto' || temaId === p.tema) return;
+        const nuevo = TEMAS.porId(temaId);
+        const usados = [...new Set(p.fichas.filter(f => typeof f.clase === 'number').map(f => f.clase))].sort((a, b) => a - b);
+        if (usados.length > nuevo.simbolos.length) return;
+        const a = new Map(usados.map((c, i) => [c, i]));
+        for (const f of p.fichas) if (typeof f.clase === 'number') { f.clase = a.get(f.clase); f.s = f.clase; }
+        for (const h of p.historial) if (h.antes) h.antes = h.antes.map(([cl, s]) => typeof cl === 'number' ? [a.get(cl), a.get(cl)] : [cl, s]);
+        p.tema = nuevo.id; p.temaElegido = nuevo.id;
+    }
+
+    /* Nombre y dibujo de una ficha, para la pantalla */
+    function simbolo(p, f) {
+        if (f.clase === 'flor' || f.clase === 'estacion') return TEMAS.grupos[f.clase][f.s];
+        return TEMAS.porId(p.tema).simbolos[f.s];
+    }
+
+    return {
+        TEMAS, FORMAS, ORDEN_TEMAS, NIVEL_COMODINES, NIVEL_OCULTAS,
+        crear, tocar, pista, mezclar, deshacer, resolver, guardar, restaurar, simbolo, cambiarTema,
+        libre: (p, f) => libre(p.fichas, f), bloqueo: (p, f) => bloqueo(p.fichas, f), libres: (p) => libres(p.fichas),
+        parejasDisponibles, casan, vivas,
+        _interno: { posiciones, formaAzar, ordenDeRetirada, repartir, azar, diaSemana, quitar }
+    };
+})();
+if (typeof module !== 'undefined') module.exports = Mahjong;
+
+</script>
+<script>
+/* ==========================================================
+   MAHJONG (Ingenio) — pantalla, menú, ayudas, turnos y guardado
+   Reglas en motor-mahjong.js; dibujos en temas.js; formas en formas.js.
+   Las fichas son botones (no un lienzo): el emoji sale nítido a cualquier
+   tamaño, el toque cae siempre en la de arriba y se juega con teclado y
+   lector de pantalla. Se crean una vez por tablero; al jugar solo se
+   cambian clases.
+   ========================================================== */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const CLAVE_PARTIDA = 'mahjongPartida', CLAVE_PROGRESO = 'mahjongProgreso', CLAVE_OPCIONES = 'mahjongOpciones';
+const CLAVE_DIARIO = 'mahjongDiario', CLAVE_INSIGNIAS = 'mahjongInsignias';
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const ICONO_TEMA = { auto: '🔄', clasico: '⚪', animales: '🐶', frutas: '🍎', caras: '😀', deportes: '⚽', transporte: '🚗', casa: '🔑' };
+
+let p = null;                  // la partida del motor
+let modo = 'nivel';            // 'nivel' | 'diario'
+let estado = 'menu';           // menu | jugando | pausa | fin
+let pistaPar = null, temporizadorPista = null;
+const botones = new Map();     // id de ficha → botón
+
+/* ---------- PREFERENCIAS Y PROGRESO ---------- */
+const opts = Object.assign({ tema: 'auto', bloq: 'no', nj: 1 }, (() => {
+    const g = EST.leer(CLAVE_OPCIONES, {}), o = {};
+    if (g && (g.tema === 'auto' || Mahjong.TEMAS.temas.some(t => t.id === g.tema))) o.tema = g.tema;
+    if (g && (g.bloq === 'si' || g.bloq === 'no')) o.bloq = g.bloq;
+    if (g && (g.nj === 1 || g.nj === 2)) o.nj = g.nj;
+    return o;
+})());
+const guardarOpciones = () => EST.guardar(CLAVE_OPCIONES, opts);
+function progreso() {
+    const g = EST.leer(CLAVE_PROGRESO, null);
+    const base = { nivel: 1, max: 0, completados: 0, limpios: 0, mejorRacha: 0, puntos: 0 };
+    if (!g || typeof g !== 'object') return base;
+    for (const k in base) if (Number.isFinite(g[k]) && g[k] >= 0) base[k] = Math.floor(g[k]);
+    base.nivel = Math.max(1, Math.min(100000, base.nivel));
+    return base;
+}
+const guardarProgreso = (g) => EST.guardar(CLAVE_PROGRESO, g);
+function hoy() { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
+const claveMes = (k) => String(Math.floor(k / 10000)) + '-' + String(Math.floor(k / 100) % 100).padStart(2, '0');
+function diasHechos(mes) {
+    const g = EST.leer(CLAVE_DIARIO, {});
+    const l = g && Array.isArray(g[mes]) ? g[mes] : [];
+    return new Set(l.filter(d => Number.isInteger(d) && d >= 1 && d <= 31));
+}
+function insignias() { const g = EST.leer(CLAVE_INSIGNIAS, []); return Array.isArray(g) ? g.filter(x => typeof x === 'string' && /^\d{4}-\d\d$/.test(x)) : []; }
+
+/* ---------- GUARDAR LA PARTIDA ---------- */
+function guardarPartida() {
+    if (!p) return;
+    const g = Mahjong.guardar(p);
+    EST.guardar(CLAVE_PARTIDA, g ? { modo, g } : null);
+}
+function partidaGuardada() {
+    const x = EST.leer(CLAVE_PARTIDA, null);
+    if (!x || !x.g || (x.modo !== 'nivel' && x.modo !== 'diario')) return null;
+    /* Un diario de otro mes ya no se puede terminar: se olvida */
+    if (x.modo === 'diario' && (!x.g.diario || claveMes(x.g.diario) !== claveMes(hoy()))) return null;
+    return x;
+}
+const borrarPartida = () => EST.guardar(CLAVE_PARTIDA, null);
+
+/* ---------- SONIDO ---------- */
+const musica = EST.musica({
+    bpm: 84,
+    acordes: [
+        { bajo: 147, notas: [294, 370, 440] }, { bajo: 123, notas: [247, 294, 370] },
+        { bajo: 98, notas: [196, 247, 294] }, { bajo: 110, notas: [220, 277, 330] }
+    ]
+});
+const sonar = {
+    elige() { EST.efecto('elige', 40, [[660, 0.05, 'triangle', 0.06]]); },
+    quita(racha) { const f = 523 * Math.pow(2, Math.min(racha - 1, 12) / 12); EST.efecto('quita', 40, [[f, 0.12, 'triangle', 0.09], [f * 1.5, 0.16, 'sine', 0.06, 0.07]]); },
+    distinta() { EST.efecto('distinta', 120, [[196, 0.14, 'triangle', 0.08, 0, 160]]); },
+    bloqueada() { EST.efecto('bloqueada', 120, [[330, 0.05, 'square', 0.03]]); },
+    combo() { EST.efecto('combo', 300, [784, 988, 1175, 1568].map((f, i) => [f, 0.1, 'triangle', 0.07, i * 0.07])); },
+    pista() { EST.efecto('pista', 200, [[1047, 0.08, 'sine', 0.06], [1319, 0.12, 'sine', 0.06, 0.08]]); },
+    mezcla() { EST.ruido(0.35, 0.12, 3000, 600); },
+    fin() { EST.efecto('fin', 900, [523, 659, 784, 1047, 1319].map((f, i) => [f, 0.18, 'triangle', 0.08, i * 0.12])); }
+};
+
+/* ==========================================================
+   EL TABLERO
+   Posición en medias fichas: x e y de la ficha × medio ancho/alto. Cada
+   piso sube hacia arriba a la izquierda (como en las capturas) y tiene
+   su canto verde abajo: así se ve qué está encima.
+   ========================================================== */
+const ALTO_FICHA = 1.3;               // alto / ancho
+const DZ_X = 0.1, DZ_Y = 0.08;        // desplazamiento por piso, en fichas
+let medidas = null;
+function colocar() {
+    if (!p) return;
+    const mesa = $('mesa');
+    const aw = mesa.clientWidth - 12, ah = mesa.clientHeight - 12;
+    if (aw <= 0 || ah <= 0) return;
+    const fs = p.fichas;
+    const minX = Math.min(...fs.map(f => f.x)), maxX = Math.max(...fs.map(f => f.x));
+    const minY = Math.min(...fs.map(f => f.y)), maxY = Math.max(...fs.map(f => f.y));
+    const maxZ = Math.max(...fs.map(f => f.z));
+    const anchoF = (maxX - minX) / 2 + 1 + maxZ * DZ_X + 0.06;
+    const altoF = ((maxY - minY) / 2 + 1 + maxZ * DZ_Y + 0.08) * ALTO_FICHA;
+    /* Tope de 96 px de ancho: en una tableta, más grande ya no se lee mejor */
+    const W = Math.min(96, aw / anchoF, ah / altoF), H = W * ALTO_FICHA;
+    const tab = $('tablero');
+    tab.style.setProperty('--w', (W - 2).toFixed(2) + 'px');
+    tab.style.setProperty('--h', (H - 2).toFixed(2) + 'px');
+    const ox = (mesa.clientWidth - anchoF * W) / 2 + maxZ * DZ_X * W, oy = (mesa.clientHeight - altoF * W) / 2 + maxZ * DZ_Y * H;
+    for (const f of fs) {
+        const b = botones.get(f.id);
+        if (!b) continue;
+        b.style.left = (ox + (f.x - minX) / 2 * W - f.z * DZ_X * W).toFixed(1) + 'px';
+        b.style.top = (oy + (f.y - minY) / 2 * H - f.z * DZ_Y * H).toFixed(1) + 'px';
+    }
+    medidas = { W, H };
+}
+
+function pintarCara(b, f) {
+    const s = Mahjong.simbolo(p, f);
+    b.innerHTML = '';
+    if (s.svg) b.innerHTML = '<svg viewBox="0 0 60 80" aria-hidden="true">' + s.svg + '</svg>';   // dibujos propios, sin nada de fuera
+    else { const c = document.createElement('span'); c.className = 'cara'; c.textContent = s.c; b.appendChild(c); }
+    b.classList.toggle('comodin', f.clase === 'flor' || f.clase === 'estacion');
+    b.dataset.nombre = s.n;
+}
+
+function pintarTablero() {
+    const tab = $('tablero');
+    tab.innerHTML = '';
+    botones.clear();
+    tab.classList.toggle('marcar', opts.bloq === 'si');
+    for (const f of p.fichas) {
+        if (!f.viva) continue;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'ficha';
+        b.style.zIndex = String(f.z * 1000 + f.y * 20 + f.x);
+        b.dataset.id = f.id;
+        pintarCara(b, f);
+        b.addEventListener('click', () => toque(f.id));
+        tab.appendChild(b);
+        botones.set(f.id, b);
+    }
+    colocar();
+    actualizar();
+}
+
+function actualizar() {
+    for (const f of p.fichas) {
+        const b = botones.get(f.id);
+        if (!b) continue;
+        const libre = Mahjong.libre(p, f);
+        b.classList.toggle('bloqueada', !libre);
+        b.classList.toggle('elegida', p.sel === f.id);
+        b.classList.toggle('oculta', f.oculta);
+        b.classList.toggle('vista', f.oculta && (p.sel === f.id || b.dataset.ver === '1'));
+        b.classList.toggle('pista', !!pistaPar && pistaPar.includes(f.id));
+        b.setAttribute('aria-label', (f.oculta && p.sel !== f.id ? 'ficha oculta' : b.dataset.nombre) + (libre ? ', libre' : ', bloqueada') + (p.sel === f.id ? ', elegida' : ''));
+    }
+    pintarBarra();
+    $('btnDeshacer').disabled = p.nj === 2 || !p.historial.length;
+    $('btnPista').disabled = p.nj === 2;
+}
+
+function pintarBarra() {
+    const [a, b] = p.jugadores;
+    $('dP1').textContent = a.puntos.toLocaleString('es-ES');
+    $('dP1t').textContent = p.nj === 2 ? 'J1' : 'PUNTOS';
+    $('barraJ2').style.display = p.nj === 2 ? '' : 'none';
+    if (b) $('dP2').textContent = b.puntos.toLocaleString('es-ES');
+    $('datoP1').classList.toggle('turno', p.nj === 2 && p.turno === 1);
+    $('datoP2').classList.toggle('turno', p.nj === 2 && p.turno === 2);
+    const k = p.diario;
+    $('dNivel').textContent = k ? (k % 100) + '/' + (Math.floor(k / 100) % 100) : String(p.nivel);
+    $('dNivelT').textContent = k ? 'DÍA' : 'NIVEL';
+    $('dParejas').textContent = String(Mahjong.parejasDisponibles(p));
+}
+
+let lineaTimer = null;
+function linea(txt, fijo) {
+    const el = $('linea');
+    el.textContent = txt;
+    clearTimeout(lineaTimer);
+    if (!fijo) lineaTimer = setTimeout(() => { el.textContent = textoTurno(); }, 2200);
+}
+const textoTurno = () => !p ? '' : p.nj === 2 ? 'Turno de J' + p.turno + '. Mientras aciertes, sigues.' : (p.ayudas.pistas + p.ayudas.mezclas + p.ayudas.deshechas ? '' : 'Sin ayudas: el premio, doble.');
+
+/* ---------- JUGAR ---------- */
+function quitarPista() { pistaPar = null; clearTimeout(temporizadorPista); }
+function toque(id) {
+    if (estado !== 'jugando' || !p) return;
+    quitarPista();
+    Mahjong.tocar(p, id);
+    tratarEventos();
+}
+
+function verUnMomento(id) {
+    const b = botones.get(id);
+    if (!b) return;
+    b.dataset.ver = '1';
+    actualizar();
+    setTimeout(() => { b.dataset.ver = ''; if (p) actualizar(); }, 1300);
+}
+
+function tratarEventos() {
+    let fin = false, atasco = false;
+    for (const ev of p.eventos) {
+        switch (ev.tipo) {
+            case 'elige': sonar.elige(); break;
+            case 'suelta': break;
+            case 'bloqueada':
+                sonar.bloqueada();
+                linea(ev.porque === 'encima' ? 'Esa no está libre: tiene otra encima.' : 'Esa no está libre: tiene fichas a los dos lados.');
+                if (ev.oculta) verUnMomento(ev.id);
+                break;
+            case 'distinta':
+                sonar.distinta();
+                for (const i of [ev.a, ev.b]) { const b = botones.get(i); if (b) { b.classList.remove('mal'); void b.offsetWidth; b.classList.add('mal'); } }
+                if (p.nj === 2) linea('No casan. Turno de J' + p.turno + '.', false);
+                else linea('Esas dos no casan.');
+                break;
+            case 'quita':
+                sonar.quita(ev.racha);
+                for (const i of [ev.a, ev.b]) {
+                    const b = botones.get(i);
+                    if (b) { b.classList.add('sale'); botones.delete(i); setTimeout(() => b.remove(), 260); }
+                }
+                linea('+' + ev.puntos + (ev.racha > 1 ? '  · racha de ' + ev.racha : ''));
+                break;
+            case 'combo': sonar.combo(); linea('¡SÚPER RACHA DE ' + ev.racha + '!'); break;
+            case 'fin': fin = true; break;
+            case 'atasco': atasco = true; break;
+            case 'pista': sonar.pista(); break;
+            case 'mezcla': sonar.mezcla(); break;
+        }
+    }
+    p.eventos.length = 0;
+    actualizar();
+    guardarPartida();
+    if (fin) { estado = 'fin'; setTimeout(terminar, 500); }
+    else if (atasco) abrirAtasco();
+}
+
+function abrirAtasco() {
+    $('btnAtascoDeshacer').style.display = p.nj === 1 && p.historial.length ? '' : 'none';
+    $('atascoTexto').textContent = p.nj === 2
+        ? 'Ninguna pareja está libre. Se mezclan las que quedan (sigue el turno de J' + p.turno + ').'
+        : 'Ninguna pareja está libre. Mezcla las fichas que quedan: así seguro que se puede acabar.';
+    EST.abrir('capaAtasco');
+}
+
+function pista() {
+    if (estado !== 'jugando' || p.nj === 2) return;
+    const par = Mahjong.pista(p);
+    if (!par) { abrirAtasco(); return; }
+    p.sel = null;
+    pistaPar = par;
+    tratarEventos();
+    linea('Esas dos se pueden quitar.');
+    temporizadorPista = setTimeout(() => { pistaPar = null; if (p) actualizar(); }, 4000);
+}
+function mezclar() {
+    if (estado !== 'jugando') return;
+    quitarPista();
+    Mahjong.mezclar(p);
+    for (const f of p.fichas) { const b = botones.get(f.id); if (b) pintarCara(b, f); }
+    tratarEventos();
+    linea('Mezcladas: se puede acabar.');
+}
+function deshacer() {
+    if (estado !== 'jugando' || p.nj === 2) return;
+    quitarPista();
+    if (!Mahjong.deshacer(p)) return;
+    p.eventos.length = 0;
+    pintarTablero();
+    guardarPartida();
+    linea('Deshecho.');
+}
+
+/* ---------- EMPEZAR, SEGUIR, ACABAR ---------- */
+function abrirPartida(nueva, m) {
+    p = nueva; modo = m;
+    quitarPista();
+    ['capaFin', 'capaPausa', 'capaAtasco', 'capaDiario', 'capaLogros', 'capaAyuda'].forEach(EST.cerrar);
+    EST.mostrar('pJuego');
+    estado = 'jugando';
+    pintarTablero();
+    linea(p.forma === 'Sorpresa' ? (p.nj === 2 ? textoTurno() : 'Nivel ' + p.nivel) : p.forma, false);
+    guardarPartida();
+    musica.arrancar();
+}
+function empezarNivel(n) {
+    abrirPartida(Mahjong.crear({ nivel: n, tema: opts.tema, jugadores: opts.nj }), 'nivel');
+}
+function empezarDiario(k) {
+    abrirPartida(Mahjong.crear({ diario: k, tema: opts.tema, jugadores: opts.nj }), 'diario');
+}
+function continuar() {
+    const x = partidaGuardada();
+    const q = x && Mahjong.restaurar(x.g);
+    if (!q) { borrarPartida(); empezarNivel(progreso().nivel); return; }
+    Mahjong.cambiarTema(q, opts.tema);
+    abrirPartida(q, x.modo);
+}
+
+function terminar() {
+    musica.parar();
+    sonar.fin();
+    borrarPartida();
+    const [a, b] = p.jugadores;
+    const limpia = !(p.ayudas.pistas + p.ayudas.mezclas + p.ayudas.deshechas);
+    let titulo = '🎉 ¡TABLERO LIMPIO!', detalle = '';
+    if (p.nj === 2) {
+        titulo = a.parejas === b.parejas ? '🤝 ¡EMPATE!' : '🏆 ¡GANA J' + (a.parejas > b.parejas ? 1 : 2) + '!';
+        detalle = 'J1: ' + a.parejas + ' parejas, ' + a.puntos.toLocaleString('es-ES') + ' puntos · J2: ' + b.parejas + ' parejas, ' + b.puntos.toLocaleString('es-ES') + ' puntos';
+        $('finMarcador').textContent = a.parejas + ' – ' + b.parejas;
+    } else {
+        $('finMarcador').textContent = a.puntos.toLocaleString('es-ES');
+        detalle = (limpia ? 'Sin ayudas: premio doble. ' : '') + 'Mejor racha: ' + a.mejorRacha + '.';
+    }
+    /* Progreso: también cuenta el de dos jugadores (es el mismo móvil) */
+    const g = progreso();
+    g.mejorRacha = Math.max(g.mejorRacha, ...p.jugadores.map(j => j.mejorRacha));
+    g.puntos += p.jugadores.reduce((s, j) => s + j.puntos, 0);
+    if (modo === 'nivel') {
+        g.completados++;
+        if (limpia) g.limpios++;
+        g.max = Math.max(g.max, p.nivel);
+        if (p.nivel >= g.nivel) g.nivel = p.nivel + 1;
+        $('btnSiguiente').textContent = 'NIVEL ' + (p.nivel + 1) + ' →';
+    } else {
+        const mes = claveMes(p.diario), dia = p.diario % 100;
+        const todos = EST.leer(CLAVE_DIARIO, {}) || {};
+        const hechos = diasHechos(mes); hechos.add(dia);
+        todos[mes] = [...hechos].sort((x, y) => x - y);
+        EST.guardar(CLAVE_DIARIO, todos);
+        const diasMes = new Date(Math.floor(p.diario / 10000), Math.floor(p.diario / 100) % 100, 0).getDate();
+        titulo = '📅 ¡DÍA ' + dia + ' HECHO!';
+        if (hechos.size >= diasMes && !insignias().includes(mes)) {
+            EST.guardar(CLAVE_INSIGNIAS, [...insignias(), mes]);
+            detalle = '🏅 ¡Todo ' + MESES[Math.floor(p.diario / 100) % 100 - 1] + '! Insignia del mes. ' + detalle;
+        } else detalle = hechos.size + ' de ' + diasMes + ' días de ' + MESES[Math.floor(p.diario / 100) % 100 - 1] + '. ' + detalle;
+        $('btnSiguiente').textContent = '📅 EL CALENDARIO';
+    }
+    guardarProgreso(g);
+    $('finTitulo').textContent = titulo;
+    $('finDetalle').textContent = detalle;
+    EST.abrir('capaFin');
+}
+function siguiente() {
+    EST.cerrar('capaFin');
+    if (modo === 'diario') { alMenu(); abrirDiario(); return; }
+    empezarNivel(progreso().nivel);
+}
+
+/* ---------- PAUSA Y MENÚ ---------- */
+function pausar() {
+    if (estado !== 'jugando') return;
+    estado = 'pausa';
+    musica.parar();
+    guardarPartida();
+    EST.abrir('capaPausa');
+}
+function seguir() {
+    if (estado !== 'pausa') return;
+    EST.cerrar('capaPausa');
+    estado = 'jugando';
+    musica.arrancar();
+}
+function reiniciar() {
+    EST.cerrar('capaPausa');
+    if (modo === 'diario') empezarDiario(p.diario); else empezarNivel(p.nivel);
+}
+function alMenu() {
+    if (estado === 'jugando' || estado === 'pausa') guardarPartida();
+    estado = 'menu';
+    musica.parar();
+    quitarPista();
+    ['capaFin', 'capaPausa', 'capaAtasco'].forEach(EST.cerrar);
+    p = null;
+    pintarMenu();
+    EST.mostrar('pMenu');
+}
+
+function pintarMenu() {
+    const g = progreso();
+    const x = partidaGuardada();
+    const seguirNivel = x && x.modo === 'nivel' && x.g.nj === opts.nj;
+    $('btnJugar').textContent = seguirNivel ? 'CONTINUAR · NIVEL ' + x.g.nivel : 'JUGAR · NIVEL ' + g.nivel;
+    const seguirDia = x && x.modo === 'diario';
+    $('btnDiario').textContent = seguirDia ? '📅 SEGUIR EL DEL DÍA ' + (x.g.diario % 100) : '📅 TABLERO DEL DÍA';
+    const nota = $('notaGuardada');
+    if (x && x.modo === 'nivel' && !seguirNivel) {
+        nota.style.display = 'block';
+        nota.textContent = 'Hay un tablero a medias de ' + x.g.nj + (x.g.nj === 1 ? ' jugador' : ' jugadores') + ': elige ' + x.g.nj + (x.g.nj === 1 ? ' JUGADOR' : ' JUGADORES') + ' para seguirlo.';
+    } else nota.style.display = 'none';
+}
+function jugarDesdeMenu() {
+    const x = partidaGuardada();
+    if (x && x.modo === 'nivel' && x.g.nj === opts.nj) continuar();
+    else empezarNivel(progreso().nivel);
+}
+
+function abrirDiario() {
+    const k = hoy(), a = Math.floor(k / 10000), m = Math.floor(k / 100) % 100, d = k % 100;
+    const mes = claveMes(k), hechos = diasHechos(mes);
+    const diasMes = new Date(a, m, 0).getDate();
+    $('diarioMes').textContent = MESES[m - 1].toUpperCase() + ' ' + a + ' · ' + hechos.size + ' de ' + diasMes;
+    const cal = $('calendario');
+    cal.innerHTML = '';
+    for (const n of ['L', 'M', 'X', 'J', 'V', 'S', 'D']) { const s = document.createElement('span'); s.className = 'dia-sem'; s.textContent = n; cal.appendChild(s); }
+    const primero = (new Date(a, m - 1, 1).getDay() + 6) % 7;     // lunes = 0
+    for (let i = 0; i < primero; i++) cal.appendChild(document.createElement('span'));
+    for (let dia = 1; dia <= diasMes; dia++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = hechos.has(dia) ? '✓' : String(dia);
+        b.className = (hechos.has(dia) ? 'hecho' : '') + (dia === d ? ' hoy' : '');
+        b.disabled = dia > d;
+        b.setAttribute('aria-label', dia + ' de ' + MESES[m - 1] + (hechos.has(dia) ? ', hecho' : ''));
+        b.addEventListener('click', () => empezarDiario(a * 10000 + m * 100 + dia));
+        cal.appendChild(b);
+    }
+    pintarInsignias($('insignias'));
+    EST.abrir('capaDiario');
+}
+function pintarInsignias(cont) {
+    const l = insignias();
+    /* Textos propios (mes y año), nunca nada escrito por nadie: textContent igual */
+    cont.innerHTML = '';
+    if (!l.length) { const s = document.createElement('span'); s.textContent = 'Aún sin insignias del mes'; s.style.border = '0'; cont.appendChild(s); return; }
+    for (const k of l) { const s = document.createElement('span'); const [aa, mm] = k.split('-'); s.textContent = '🏅 ' + MESES[Number(mm) - 1] + ' ' + aa; cont.appendChild(s); }
+}
+function abrirLogros() {
+    const g = progreso(), mes = claveMes(hoy());
+    const filas = [
+        ['Nivel por el que vas', g.nivel], ['Nivel más alto acabado', g.max || '—'], ['Tableros acabados', g.completados],
+        ['Sin ninguna ayuda', g.limpios], ['Mejor racha', g.mejorRacha], ['Puntos en total', g.puntos.toLocaleString('es-ES')],
+        ['Días hechos este mes', diasHechos(mes).size]
+    ];
+    const cont = $('logros');
+    cont.innerHTML = '';
+    for (const [t, v] of filas) { const a = document.createElement('span'); a.textContent = t; const b = document.createElement('b'); b.textContent = String(v); cont.append(a, b); }
+    pintarInsignias($('insignias2'));
+    EST.abrir('capaLogros');
+}
+function empezarDeCero() {
+    if (!confirm('¿Empezar de cero? Vuelves al nivel 1 y se borra el tablero a medias. Los logros y el calendario se quedan.')) return;
+    const g = progreso(); g.nivel = 1;
+    guardarProgreso(g);
+    borrarPartida();
+    pintarMenu();
+    EST.avisar('Vuelves al nivel 1');
+}
+
+/* ---------- ARRANQUE ---------- */
+(function montarTemas() {
+    const cont = $('grpTema');
+    const add = (id, nombre, sub) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'opcion'; b.dataset.v = id;
+        b.setAttribute('aria-pressed', String(opts.tema === id));
+        b.textContent = ICONO_TEMA[id] + ' ' + nombre;
+        const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub; b.appendChild(s);
+        cont.appendChild(b);
+    };
+    add('auto', 'AUTOMÁTICO', 'cambia con cada nivel');
+    for (const t of Mahjong.TEMAS.temas) add(t.id, t.nombre, t.sub);
+})();
+EST.grupo('grpTema', (v) => { opts.tema = v; guardarOpciones(); });
+EST.grupo('grpBloq', (v) => { opts.bloq = v; guardarOpciones(); });
+EST.grupo('grpJugadores', (v) => { opts.nj = +v; guardarOpciones(); pintarMenu(); });
+document.querySelectorAll('#grpBloq .opcion').forEach(o => o.setAttribute('aria-pressed', String(o.dataset.v === opts.bloq)));
+document.querySelectorAll('#grpJugadores .opcion').forEach(o => o.setAttribute('aria-pressed', String(+o.dataset.v === opts.nj)));
+
+const boton = (id, fn) => $(id).addEventListener('click', fn);
+boton('btnJugar', jugarDesdeMenu);
+boton('btnDiario', () => { const x = partidaGuardada(); if (x && x.modo === 'diario') continuar(); else abrirDiario(); });
+boton('btnHoy', () => empezarDiario(hoy()));
+boton('btnCerrarDiario', () => EST.cerrar('capaDiario'));
+boton('btnLogros', abrirLogros);
+boton('btnCerrarLogros', () => EST.cerrar('capaLogros'));
+boton('btnAyuda', () => EST.abrir('capaAyuda'));
+boton('btnCerrarAyuda', () => EST.cerrar('capaAyuda'));
+boton('btnDeCero', empezarDeCero);
+boton('btnPausa', () => (estado === 'pausa' ? seguir() : pausar()));
+boton('btnSeguir', seguir);
+boton('btnReiniciar', reiniciar);
+boton('btnAbandonar', alMenu);
+boton('btnSiguiente', siguiente);
+boton('btnMenuFin', alMenu);
+boton('btnMezclar', mezclar);
+boton('btnPista', pista);
+boton('btnDeshacer', deshacer);
+boton('btnAtascoMezclar', () => { EST.cerrar('capaAtasco'); mezclar(); });
+boton('btnAtascoDeshacer', () => { EST.cerrar('capaAtasco'); deshacer(); });
+
+window.addEventListener('resize', colocar);
+/* La letra (vista) cambia el alto de la barra y de los botones */
+new MutationObserver(() => requestAnimationFrame(colocar)).observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-tema'] });
+document.addEventListener('keydown', (ev) => {
+    if (!$('pJuego').classList.contains('activa')) {
+        if (ev.key === 'Escape') ['capaLogros', 'capaAyuda', 'capaDiario'].forEach(EST.cerrar);
+        return;
+    }
+    if ((ev.key === 'Escape' || ev.key === 'p' || ev.key === 'P') && !ev.repeat) { ev.preventDefault(); estado === 'pausa' ? seguir() : pausar(); return; }
+    if (estado !== 'jugando' || EST.hayCapa()) return;
+    const k = ev.key.toLowerCase();
+    if (k === 'h') pista(); else if (k === 'm') mezclar(); else if (k === 'z') deshacer();
+});
+window.addEventListener('blur', pausar);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pausar(); });
+window.addEventListener('pagehide', guardarPartida);
+
+EST.iniciar({ claveAudio: 'mahjongAudio', alCambiarMusica: (on) => { if (on && estado === 'jugando') musica.arrancar(); else musica.parar(); } });
+pintarMenu();
+
+/* Para las pruebas */
+window.__mahjong = { partida: () => p, estado: () => estado, empezarNivel, empezarDiario, hoy, medidas: () => medidas, botones };
+
+</script>
+</body>
+</html>
