@@ -334,7 +334,11 @@ body {
             box-shadow: inset 0 0 40px var(--mj-sombra-mesa);
             touch-action: manipulation; -webkit-user-select: none; user-select: none;
         }
-        #tablero { position: absolute; left: 0; top: 0; }
+        /* isolation: el z-index de cada ficha (piso × 1000 + …) pasa de 1000
+           desde el segundo piso, y sin contexto propio competía con las capas
+           del menú estándar (1000 y 1100): las fichas altas salían encima de
+           la pausa. Así solo se ordenan entre ellas. */
+        #tablero { position: absolute; left: 0; top: 0; isolation: isolate; }
         .ficha {
             position: absolute; margin: 0; padding: 0; border: 0; cursor: pointer;
             width: var(--w); height: var(--h);
