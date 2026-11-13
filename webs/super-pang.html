@@ -310,96 +310,65 @@ body {
 
         /* ---------- PROPIO DE SÚPER PANG ---------- */
         #pJuego { max-width: 1280px; }
-        /* El jugador 2 va en la misma barra; la visibilidad la pone el código */
-        .grupo-j2 { display: contents; }
         #twoPlayersNote { color: var(--c-ff8080, #ff8080); font-size: 0.72rem; margin: 8px 2px 0; line-height: 1.5; display: none; }
         #grpDif .sub { font-size: 0.6rem; }
         #grpDif .opcion { flex: 1 1 40%; }
         @media (orientation: landscape) and (max-height: 520px) {
-            .est-barra { padding: 2px 6px; }
-            .est-barra .dato b { font-size: 0.85rem; }
-            .est-icono { height: 28px; }
             #grpDif .opcion { flex: 1 1 20%; }
         }
 
-        /* La zona de juego: el lienzo y, en pantallas táctiles, los mandos
-           FUERA de él (en el original iban encima y tapaban el juego).
-           - En vertical: lienzo arriba, mandos debajo (palanca a la izquierda,
-             ARPÓN a la derecha).
-           - En apaisado: palanca a la izquierda del lienzo y ARPÓN a la derecha.
-           El tamaño del lienzo lo da el CSS con unidades del contenedor; el
-           código solo lee cuánto mide para dibujar a esa resolución. */
+        /* ---------- PANTALLA DE JUEGO (13-11, apaisado y más grande) ----------
+           Sin barra arriba: puntos, vidas y tiempo van en la banda del propio
+           lienzo, y la pausa flota en la esquina. El lienzo va todo lo alto
+           que puede; en táctil, los mandos en los márgenes de los lados y
+           NUNCA encima del juego (en el Pang de antes tapaban las bolas).
+           --m es el ancho de cada margen: el que deje el lienzo a todo lo
+           alto, y como poco 108 px o el 14 % del ancho (lo que haga falta
+           para que quepa una palanca que se maneje con el pulgar). */
+        body.jugando {
+            padding: calc(env(safe-area-inset-top, 0px) + 4px)
+                     calc(env(safe-area-inset-right, 0px) + 4px)
+                     calc(env(safe-area-inset-bottom, 0px) + 8px)
+                     calc(env(safe-area-inset-left, 0px) + 4px);
+        }
         #zonaJuego {
-            flex: 1 1 auto; min-height: 0; width: 100%; margin-top: 6px;
-            container-type: size;
+            flex: 1 1 auto; min-height: 0; width: 100%;
+            container-type: size; position: relative;
             display: flex; align-items: center; justify-content: center;
         }
         .disposicion {
-            --mandos-alto: 0px; --mandos-ancho: 0px;
-            display: grid; gap: 10px; align-items: center; justify-items: center;
-            grid-template-areas: "lienzo";
+            --m: 0px;
+            display: grid; height: 100%;
+            grid-template-areas: "izq lienzo der";
+            grid-template-columns: var(--m) auto var(--m);
+            grid-template-rows: minmax(0, 1fr);
         }
+        body.tactil .disposicion { --m: max(clamp(108px, 14cqw, 170px), (100cqw - 100cqh * 1.6) / 2); }
         #marco {
-            grid-area: lienzo; position: relative;
-            /* 960 × 600: 1,6 de ancho por cada de alto. Solo el ancho: el alto
-               lo pone aspect-ratio (con los dos, aspect-ratio no hace nada) */
-            width: min(100cqw, 100cqh * 1.6);
+            grid-area: lienzo; align-self: center; position: relative;
+            /* Solo el ancho: el alto lo pone aspect-ratio (con los dos, aspect-ratio no hace nada) */
+            width: min(100cqh * 1.6, 100cqw - 2 * var(--m));
             aspect-ratio: 1.6;
-            border-radius: 8px; overflow: hidden;
+            border-radius: 6px; overflow: hidden;
             box-shadow: 0 0 30px rgba(var(--c-0-255-255, 0, 255, 255), 0.22);
             background: #000;
         }
         #gameCanvas { display: block; width: 100%; height: 100%; touch-action: none; }
+        #pauseTouchBtn { position: absolute; top: 0; right: 0; z-index: 5; width: 46px; height: 40px; font-size: 1.1rem; background: rgba(var(--c-15-12-45, 15, 12, 45), 0.7); }
         .mandos { display: none; touch-action: none; -webkit-user-select: none; user-select: none; }
         .mandos.izq { grid-area: izq; }
         .mandos.der { grid-area: der; }
-
-        body.tactil .mandos { display: flex; align-items: center; justify-content: center; gap: 14px; }
-        /* Vertical (o casi cuadrado): mandos en una fila debajo */
-        body.tactil .disposicion {
-            --mandos-alto: 156px;
-            grid-template-areas: "lienzo lienzo" "izq der";
-            /* minmax(0, …): con 1fr a secas, una palanca más ancha que su mitad
-               ensanchaba la rejilla y el lienzo quedaba descentrado 4 px */
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            width: 100%;
+        /* Los pulgares van abajo: los mandos se pegan al pie de cada margen */
+        body.tactil .mandos {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            gap: 10px; padding-bottom: 4px; min-height: 0;
+            --lado: clamp(92px, var(--m) - 8px, 160px);
         }
-        body.tactil #marco { width: min(100cqw, (100cqh - var(--mandos-alto) - 10px) * 1.6); }
-        /* En vertical sobra alto (el lienzo lo limita el ancho): los mandos se
-           pegan abajo, donde están los pulgares, y el juego se centra en el
-           hueco que queda encima. Centrado todo junto, los mandos quedaban a
-           media pantalla con medio móvil vacío debajo */
-        body.tactil .disposicion { align-self: stretch; grid-template-rows: 1fr auto; }
-        @container (max-aspect-ratio: 13/10) and (min-height: 520px) {
-            body.tactil .disposicion { --mandos-alto: 200px; padding-bottom: 8px; }
-            body.tactil #marco { width: min(100cqw, (100cqh - var(--mandos-alto) - 28px) * 1.6); }
-            body.tactil .palanca { --lado: 184px; }
-            body.tactil .fuego { width: 128px; height: 128px; }
-            body.tactil.dos .fuego { width: 96px; height: 96px; }
-        }
-        /* Apaisado: una columna de mandos a cada lado */
-        @container (min-aspect-ratio: 13/10) {
-            body.tactil .disposicion {
-                --mandos-ancho: 150px; --mandos-alto: 0px;
-                grid-template-areas: "izq lienzo der";
-                grid-template-columns: var(--mandos-ancho) auto var(--mandos-ancho);
-                grid-template-rows: auto;
-                width: auto;
-            }
-            body.tactil #marco { width: min(100cqw - 2 * var(--mandos-ancho) - 20px, 100cqh * 1.6); }
-            body.tactil .mandos { flex-direction: column; }
-            body.tactil .palanca { --lado: 140px; }
-            /* (Una consulta de contenedor no puede tocar al propio contenedor:
-               por eso se alinea .disposicion y no #zonaJuego) */
-            body.tactil .disposicion { align-self: center; }
-        }
-
         /* La palanca: un aro y un pomo que sigue al dedo. La dirección sale de
            dónde está el dedo respecto al centro, así que basta con deslizarlo
            para cambiarla, sin levantarlo (lo pidió el usuario: con la cruceta
            de botones, ▶ se le quedó pulsado en una partida) */
         .palanca {
-            --lado: 150px;
             width: var(--lado); height: var(--lado); flex: 0 0 auto;
             position: relative; touch-action: none; border-radius: 50%;
             -webkit-tap-highlight-color: transparent; cursor: pointer;
@@ -435,7 +404,7 @@ body {
             touch-action: none; -webkit-tap-highlight-color: transparent;
         }
         .fuego {
-            width: 104px; height: 104px; border-radius: 50%;
+            width: clamp(80px, var(--lado) - 20px, 128px); height: clamp(80px, var(--lado) - 20px, 128px); border-radius: 50%;
             border-color: rgba(var(--c-255-80-80, 255, 80, 80), 0.9);
             background: radial-gradient(circle at 35% 30%, rgba(255, 120, 120, 0.55), rgba(90, 0, 0, 0.55));
             color: #fff; font-size: 14px; letter-spacing: 1px;
@@ -447,11 +416,28 @@ body {
         body.dos .etiqueta-j { display: block; }
         /* Dos jugadores en táctil (solo si cabe): cada uno con su palanca y su
            ARPÓN, J1 a la izquierda y J2 a la derecha */
-        body.dos .fuego { width: 84px; height: 84px; }
-        @media (max-width: 380px), (max-height: 400px) {
-            .palanca { --lado: 128px; }
-            .fuego { width: 88px; height: 88px; }
+        body.dos .fuego { width: clamp(72px, var(--lado) - 40px, 100px); height: clamp(72px, var(--lado) - 40px, 100px); }
+        /* Con dos, palanca y ARPÓN uno encima del otro: si no cabe en el alto,
+           la palanca se encoge */
+        body.dos .palanca { width: min(var(--lado), 100cqh - 150px); height: min(var(--lado), 100cqh - 150px); }
+
+        /* Se juega con el móvil tumbado (como Pajaritos). Una web no puede
+           obligar a girar (en iPhone no hay bloqueo de orientación y en
+           Android solo en pantalla completa): en vertical, la partida se
+           para y se pide girar. Solo en táctil: con teclado, una ventana
+           alta del ordenador se juega igual */
+        #avisoGirar {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            padding: 24px; text-align: center; background: var(--c-0f0c2d, #0f0c2d); color: var(--c-fff, #fff);
         }
+        #avisoGirar.activo { display: flex; }
+        #avisoGirar .movil { font-size: 4rem; line-height: 1; animation: girarMovil 2.2s ease-in-out infinite; }
+        #avisoGirar p { margin: 0; max-width: 22em; line-height: 1.5; }
+        #avisoGirar small { color: var(--apagado); }
+        @keyframes girarMovil { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+        @media (prefers-reduced-motion: reduce) { #avisoGirar .movil { animation: none; transform: rotate(-90deg); } }
+        #grpModo .sub, #grpRankModo .sub { font-size: 0.6rem; }
     </style>
     <style>
 /* ==== VISTA CSS ==== */
@@ -669,6 +655,14 @@ body {
         <p class="est-lema">Revienta las bolas por medio mundo</p>
 
         <fieldset class="est-grupo">
+            <legend>MODO</legend>
+            <div class="opciones iguales" id="grpModo">
+                <button class="opcion" type="button" data-v="viaje" aria-pressed="true">VIAJE<span class="sub">9 ciudades, mañana, tarde y noche</span></button>
+                <button class="opcion" type="button" data-v="panico" aria-pressed="false">PÁNICO<span class="sub">bolas sin parar, 99 niveles</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
             <legend>DIFICULTAD</legend>
             <div class="opciones" id="grpDif">
                 <button class="opcion" type="button" data-v="principiante" aria-pressed="false">PRINCIPIANTE<span class="sub">bolas lentas, más tiempo</span></button>
@@ -706,19 +700,8 @@ body {
 
 <!-- ===================== PARTIDA ===================== -->
 <section class="pantalla" id="pJuego">
-    <div class="est-barra">
-        <div class="dato"><b id="bS1">0</b><span>J1 PUNTOS</span></div>
-        <div class="dato"><b id="bV1">3</b><span>J1 VIDAS</span></div>
-        <div class="grupo-j2" id="barraJ2" style="display:none">
-            <div class="dato"><b id="bS2">0</b><span>J2 PUNTOS</span></div>
-            <div class="dato"><b id="bV2">3</b><span>J2 VIDAS</span></div>
-        </div>
-        <div class="dato"><b id="bNivel">1</b><span>NIVEL</span></div>
-        <div class="dato" id="datoTiempo"><b id="bTiempo">0</b><span>TIEMPO</span></div>
-        <div class="hueco"></div>
-        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
-    </div>
     <div id="zonaJuego">
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
         <div class="disposicion">
             <div class="mandos izq" id="mandosIzq">
                 <div class="etiqueta-j">J1</div>
@@ -780,8 +763,12 @@ body {
 <div class="capa" id="capaRanking">
     <div class="caja">
         <h2>🏆 TOP 10</h2>
+        <div class="opciones iguales" id="grpRankModo" style="margin-bottom:8px;">
+            <button class="opcion" type="button" data-v="viaje" aria-pressed="true">VIAJE</button>
+            <button class="opcion" type="button" data-v="panico" aria-pressed="false">PÁNICO</button>
+        </div>
         <div class="est-lista" id="top10List"></div>
-        <p style="font-size:0.7rem;">nv = nivel · P principiante · A avanzado · E experto · R rambo</p>
+        <p style="font-size:0.7rem;">nv = fase (viaje) o nivel (pánico) · P principiante · A avanzado · E experto · R rambo</p>
         <div class="fila-btns">
             <button class="secundario" id="btnBorrarRanking" type="button">BORRAR</button>
             <button class="secundario" id="closeTop10" type="button">CERRAR</button>
@@ -793,10 +780,15 @@ body {
     <div class="caja">
         <h2>📖 CÓMO SE JUEGA</h2>
         <div class="est-ayuda">
-            <p>Revienta todas las bolas de cada ciudad con el arpón antes de que se acabe el tiempo. Cada bola se parte en dos más pequeñas hasta desaparecer. Que no te toque ninguna. Al acabar una ciudad, el avión te lleva a la siguiente.</p>
+            <p>Revienta todas las bolas con el arpón antes de que se acabe el tiempo. Cada bola se parte en dos más pequeñas hasta desaparecer. Que no te toque ninguna.</p>
+            <h3>MODOS</h3>
+            <ul>
+                <li><b>Viaje:</b> 27 fases, tres en cada una de las nueve ciudades (mañana, tarde y noche). El avión te lleva de una ciudad a la siguiente.</li>
+                <li><b>Pánico:</b> sin escenario ni premios, las bolas caen sin parar. Cada una que rompes llena la barra de arriba; llena, subes de nivel y todo va más deprisa. Hay 99 niveles. A veces cae una bola especial que cambia de dibujo al botar: rómpela con el ⏰ y las bolas se paran; con la ⭐, se rompen todas.</li>
+            </ul>
             <h3>CONTROLES</h3>
             <ul>
-                <li><b>Móvil:</b> la palanca para moverte (deja el dedo apoyado y deslízalo hacia donde quieras ir; arriba y abajo, en las escaleras), y <b>ARPÓN</b> para disparar. Los mandos van fuera del juego: en vertical, debajo; en horizontal, a los lados.</li>
+                <li><b>Móvil:</b> se juega con el móvil tumbado. La palanca para moverte (deja el dedo apoyado y deslízalo hacia donde quieras ir; arriba y abajo, en las escaleras), y <b>ARPÓN</b> para disparar. Con la metralleta, mantenlo pulsado.</li>
                 <li><b>Jugador 1:</b> ← → para moverte, ↑ ↓ en las escaleras. Dispara con <b>espacio</b> si juegas solo, o con <b>Intro</b> si sois dos.</li>
                 <li><b>Jugador 2:</b> <b>A / D</b> para moverte, <b>W / S</b> en las escaleras, <b>espacio</b> para disparar.</li>
                 <li><b>P</b> o <b>Esc</b> pausa.</li>
@@ -807,23 +799,39 @@ body {
                 <li>Cada bola bota siempre a la misma altura según su tamaño: aprende dónde caerá.</li>
                 <li>Revienta varias seguidas (menos de un segundo entre una y otra) y los puntos se multiplican: ×2, ×3… hasta ×5.</li>
                 <li>Los ladrillos se rompen con el arpón; las plataformas de metal no. A veces esconden premios.</li>
-                <li>Lo que te sobre de tiempo al acabar una ciudad se suma a los puntos.</li>
+                <li>Lo que te sobre de tiempo al acabar una fase se suma a los puntos.</li>
             </ul>
             <h3>PREMIOS</h3>
             <ul>
                 <li>⚡ Arpón doble: dos a la vez.</li>
                 <li>⚓ Gancho: el arpón se queda clavado arriba 3 segundos.</li>
+                <li>🔫 Metralleta: ráfagas de balas. No rompe ladrillos.</li>
                 <li>🛡️ Escudo: aguanta un golpe.</li>
                 <li>⏰ Reloj: las bolas se paran 6 segundos.</li>
+                <li>⌛ Reloj de arena: las bolas van a la mitad de velocidad 8 segundos.</li>
                 <li>💣 Dinamita: todas las bolas se rompen hasta las más pequeñas.</li>
+                <li>⭐ Estrella (muy rara): rompe todas las bolas de golpe.</li>
                 <li>❤️ Vida extra · 🍒 Fruta: puntos.</li>
                 <li>Las armas duran hasta que te toca una bola. Los premios que caen desaparecen a los 9 segundos.</li>
+            </ul>
+            <h3>CRIATURAS</h3>
+            <ul>
+                <li>🐦 Pájaros y 🐡 pez globo: si te tocan, te dejan atontado unos segundos sin poder disparar (no quitan vida).</li>
+                <li>🐊 Cocodrilo: se come las bolas que le caen en la boca. Si le disparas, revienta y parte las bolas de alrededor.</li>
+                <li>A todas se les puede disparar: dan puntos.</li>
             </ul>
             <h3>DOS JUGADORES</h3>
             <ul><li>En el móvil hacen falta dos palancas a la vez: solo cabe en tableta u ordenador.</li></ul>
         </div>
         <button class="principal" id="closeInstructions" type="button" style="margin-top:10px;">ENTENDIDO</button>
     </div>
+</div>
+
+<div id="avisoGirar" role="alertdialog" aria-labelledby="avisoGirarTexto">
+    <div class="movil" aria-hidden="true">📱</div>
+    <p id="avisoGirarTexto"><b>Gira el móvil</b> para jugar: con la pantalla tumbada el escenario se ve mucho más grande.</p>
+    <small>Si no gira, quita el bloqueo de rotación del móvil.</small>
+    <button class="secundario" id="btnGirarMenu" type="button">← MENÚ</button>
 </div>
 
 <script>
@@ -1195,6 +1203,12 @@ const Pang = (() => {
     const COMBO_S = 1.0, COMBO_MAX = 5;
     const PREMIO = 30, PREMIO_VIDA_S = 9;
     const CONGELAR_S = 6;
+    const LENTO_S = 8, LENTO_FACTOR = 0.5;           // reloj de arena
+    const ATURDIDO_S = 3.5;                          // sin poder disparar tras tocar un pájaro o el pez
+    const BALA_VEL = 900, BALA_CADENCIA = 0.1, BALAS_MAX = 6;
+    const ESTRELLA_PUNTOS = 5000;                    // ×dificultad; en el original, 100.000 con otra escala de puntos
+    const CRIATURA_PUNTOS = 100, CRIATURA_REPITE_S = 45;
+    const MOMENTOS = ['mañana', 'tarde', 'noche'];
 
     /* Dificultad: «vel» escala el TIEMPO de las bolas (mismos botes, más
        deprisa); «puntos», lo que vale todo; «tiempo», el reloj de cada nivel */
@@ -1205,7 +1219,10 @@ const Pang = (() => {
         rambo:        { vel: 1.45, puntos: 2.0, tiempo: 85 }
     };
 
-    /* ---------- LOS NUEVE NIVELES (rehechos el 11-11) ----------
+    /* ---------- LAS 27 FASES: 9 CIUDADES × MAÑANA, TARDE Y NOCHE ----------
+       (13-11, pedido del usuario tras la guía del original: 3 por sitio,
+       como la recreativa; el mapa del usuario tiene 9 destinos y no cambia).
+       Las de la mañana son los 9 niveles del 11-11.
        bloques: 'ladrillo' se rompe con el arpón; 'plataforma' (acero) y
        'muro' (piedra) no, y en los dos se puede estar de pie. Escaleras de
        un suelo (abajo: el suelo, 580, o lo alto de otra plataforma) a una
@@ -1224,7 +1241,7 @@ const Pang = (() => {
     const N = (nombre, ciudad, bloques, escaleras, premios, bolas) => ({ nombre, ciudad, bloques, escaleras, premios, bolas });
     const B = (x, y, w, h, tipo) => ({ x, y, w, h, tipo });
     const E = (x, arriba, abajo = 580) => ({ x, arriba, abajo });
-    const NIVELES = [
+    const MANANA = [
         /* 1. Dos plataformas a los lados, para aprender a subir */
         N('Nueva York', 'nuevayork', [
             B(40, 260, 150, 15, 'plataforma'), B(770, 260, 150, 15, 'plataforma'),
@@ -1310,10 +1327,125 @@ const Pang = (() => {
         [{ x: 465, y: 130, tipo: 'reloj' }, { x: 330, y: 250, tipo: 'escudo' }, { x: 150, y: 290, tipo: 'vida' }],
         { principiante: [1, 1, 1, 2], avanzado: [2, 2, 2, 4], experto: [2, 3, 4, 4], rambo: [3, 4, 4, 5] })
     ];
+    /* Tarde y noche: mismas reglas (y el mismo verificador); en cada ciudad
+       la noche pide algo más que la tarde, y la tarde que la mañana */
+    const F = (bloques, escaleras, premios, bolas) => ({ bloques, escaleras, premios, bolas });
+    const D = (p, a, e, r) => ({ principiante: p, avanzado: a, experto: e, rambo: r });
+    const TARDE = [
+        /* Nueva York: azoteas a tres alturas */
+        F([B(30, 330, 170, 15, 'plataforma'), B(760, 330, 170, 15, 'plataforma'), B(400, 280, 160, 15, 'plataforma'),
+           B(60, 200, 120, 15, 'ladrillo'), B(790, 200, 120, 15, 'ladrillo'), B(420, 160, 120, 15, 'ladrillo'), B(290, 240, 70, 15, 'ladrillo'), B(600, 240, 70, 15, 'ladrillo')],
+          [E(50, 330), E(888, 330), E(469, 280)], [{ x: 465, y: 280, tipo: 'arena' }, { x: 100, y: 330, tipo: 'doble' }],
+          D([0, 1, 1, 1], [0, 2, 2, 1], [1, 1, 3, 2], [1, 2, 3, 3])),
+        /* Azteca: la escalinata */
+        F([B(40, 420, 140, 15, 'muro'), B(780, 420, 140, 15, 'muro'), B(380, 330, 200, 15, 'muro'),
+           B(60, 300, 100, 15, 'ladrillo'), B(800, 300, 100, 15, 'ladrillo'), B(420, 220, 120, 15, 'ladrillo'), B(250, 180, 90, 15, 'ladrillo'), B(620, 180, 90, 15, 'ladrillo')],
+          [E(60, 420), E(878, 420), E(395, 330), E(543, 330)], [{ x: 466, y: 330, tipo: 'arena' }, { x: 95, y: 420, tipo: 'escudo' }],
+          D([0, 1, 2, 1], [1, 1, 2, 2], [1, 2, 3, 2], [2, 2, 3, 3])),
+        /* Selva: lianas y la copa alta */
+        F([B(40, 350, 150, 15, 'plataforma'), B(770, 350, 150, 15, 'plataforma'), B(380, 250, 200, 15, 'plataforma'),
+           B(60, 230, 110, 15, 'ladrillo'), B(790, 230, 110, 15, 'ladrillo'), B(410, 150, 140, 15, 'ladrillo'), B(230, 300, 80, 15, 'ladrillo'), B(650, 300, 80, 15, 'ladrillo')],
+          [E(60, 350), E(878, 350), E(469, 250)], [{ x: 465, y: 250, tipo: 'doble' }, { x: 90, y: 350, tipo: 'arena' }],
+          D([0, 1, 1, 2], [1, 1, 2, 2], [1, 2, 3, 2], [2, 2, 3, 3])),
+        /* Canarias: rocas en el mar y un mirador encima */
+        F([B(330, 380, 120, 15, 'muro'), B(510, 380, 120, 15, 'muro'), B(400, 250, 160, 15, 'plataforma'),
+           B(60, 200, 120, 15, 'ladrillo'), B(780, 200, 120, 15, 'ladrillo'), B(420, 150, 120, 15, 'ladrillo'), B(200, 300, 90, 15, 'ladrillo'), B(670, 300, 90, 15, 'ladrillo')],
+          [E(340, 380), E(598, 380), E(410, 250, 380)], [{ x: 465, y: 250, tipo: 'reloj' }, { x: 540, y: 380, tipo: 'doble' }],
+          D([0, 2, 1, 1], [1, 1, 3, 2], [1, 2, 3, 3], [2, 2, 4, 3])),
+        /* París: los puentes del Sena */
+        F([B(40, 320, 180, 15, 'plataforma'), B(740, 320, 180, 15, 'plataforma'), B(360, 320, 240, 15, 'plataforma'),
+           B(60, 200, 140, 15, 'ladrillo'), B(760, 200, 140, 15, 'ladrillo'), B(400, 200, 160, 15, 'ladrillo'), B(260, 140, 70, 15, 'ladrillo'), B(630, 140, 70, 15, 'ladrillo')],
+          [E(60, 320), E(878, 320), E(469, 320)], [{ x: 470, y: 320, tipo: 'arena' }, { x: 150, y: 320, tipo: 'gancho' }],
+          D([1, 0, 2, 1], [1, 1, 3, 2], [1, 2, 3, 3], [2, 2, 4, 3])),
+        /* Moscú: la Plaza Roja */
+        F([B(40, 300, 160, 15, 'muro'), B(760, 300, 160, 15, 'muro'), B(380, 380, 200, 15, 'muro'),
+           B(60, 180, 120, 15, 'ladrillo'), B(780, 180, 120, 15, 'ladrillo'), B(400, 260, 160, 15, 'ladrillo'), B(440, 150, 80, 15, 'ladrillo'), B(260, 240, 70, 15, 'ladrillo'), B(630, 240, 70, 15, 'ladrillo')],
+          [E(60, 300), E(878, 300), E(400, 380), E(538, 380)], [{ x: 465, y: 380, tipo: 'metralleta' }, { x: 100, y: 300, tipo: 'reloj' }],
+          D([0, 2, 2, 1], [1, 2, 3, 2], [1, 3, 3, 3], [2, 3, 4, 4])),
+        /* Egipto: la esfinge con su pirámide de ladrillos */
+        F([B(330, 360, 300, 15, 'muro'), B(60, 280, 150, 15, 'plataforma'), B(750, 280, 150, 15, 'plataforma'),
+           B(380, 280, 200, 15, 'ladrillo'), B(420, 240, 120, 15, 'ladrillo'), B(450, 200, 60, 15, 'ladrillo'), B(70, 160, 120, 15, 'ladrillo'), B(770, 160, 120, 15, 'ladrillo')],
+          [E(345, 360), E(593, 360), E(80, 280), E(858, 280)], [{ x: 520, y: 360, tipo: 'metralleta' }, { x: 120, y: 280, tipo: 'escudo' }],
+          D([1, 1, 1, 2], [2, 1, 3, 2], [2, 2, 3, 3], [3, 2, 4, 4])),
+        /* China: torres de vigía y el adarve */
+        F([B(30, 300, 130, 15, 'muro'), B(800, 300, 130, 15, 'muro'), B(330, 400, 300, 15, 'muro'), B(400, 260, 160, 15, 'plataforma'),
+           B(40, 180, 110, 15, 'ladrillo'), B(810, 180, 110, 15, 'ladrillo'), B(420, 140, 120, 15, 'ladrillo'), B(250, 220, 70, 15, 'ladrillo'), B(640, 220, 70, 15, 'ladrillo')],
+          [E(50, 300), E(888, 300), E(345, 400), E(593, 400), E(469, 260, 400)], [{ x: 420, y: 260, tipo: 'reloj' }, { x: 380, y: 400, tipo: 'metralleta' }],
+          D([0, 2, 2, 2], [1, 3, 2, 3], [2, 3, 3, 3], [3, 3, 4, 5])),
+        /* Fuji: los cerezos */
+        F([B(40, 330, 170, 15, 'plataforma'), B(750, 330, 170, 15, 'plataforma'), B(380, 260, 200, 15, 'plataforma'),
+           B(60, 210, 130, 15, 'ladrillo'), B(770, 210, 130, 15, 'ladrillo'), B(400, 140, 160, 15, 'ladrillo'), B(240, 180, 70, 15, 'ladrillo'), B(650, 180, 70, 15, 'ladrillo'), B(300, 430, 80, 15, 'ladrillo'), B(580, 430, 80, 15, 'ladrillo')],
+          [E(60, 330), E(878, 330), E(469, 260)], [{ x: 420, y: 260, tipo: 'metralleta' }, { x: 100, y: 330, tipo: 'arena' }],
+          D([1, 1, 2, 2], [2, 2, 3, 3], [2, 3, 4, 4], [3, 4, 4, 5]))
+    ];
+    const NOCHE = [
+        /* Nueva York: cornisas */
+        F([B(120, 380, 100, 15, 'muro'), B(740, 380, 100, 15, 'muro'), B(330, 300, 300, 15, 'plataforma'),
+           B(100, 260, 140, 15, 'ladrillo'), B(720, 260, 140, 15, 'ladrillo'), B(400, 180, 160, 15, 'ladrillo'), B(280, 140, 60, 15, 'ladrillo'), B(620, 140, 60, 15, 'ladrillo')],
+          [E(140, 380), E(778, 380), E(460, 300)], [{ x: 520, y: 300, tipo: 'metralleta' }, { x: 150, y: 380, tipo: 'reloj' }],
+          D([0, 2, 1, 1], [1, 1, 2, 2], [1, 2, 3, 2], [2, 2, 3, 3])),
+        /* Azteca: el altar doble */
+        F([B(40, 300, 160, 15, 'muro'), B(760, 300, 160, 15, 'muro'), B(330, 400, 300, 15, 'plataforma'),
+           B(60, 180, 120, 15, 'ladrillo'), B(780, 180, 120, 15, 'ladrillo'), B(380, 280, 200, 15, 'ladrillo'), B(440, 160, 80, 15, 'ladrillo'), B(240, 220, 60, 15, 'ladrillo'), B(660, 220, 60, 15, 'ladrillo')],
+          [E(60, 300), E(878, 300), E(345, 400), E(593, 400)], [{ x: 465, y: 400, tipo: 'gancho' }, { x: 100, y: 300, tipo: 'vida' }],
+          D([1, 0, 2, 1], [1, 2, 2, 2], [2, 2, 2, 3], [2, 3, 3, 4])),
+        /* Selva: las copas. (Sin los dos ladrillos bajos a 420 que tenía: con
+           el jugador simulado de medir.js pasaba del 100 % de la mañana al 3 %;
+           sin ellos, 19 %) */
+        F([B(40, 260, 140, 15, 'plataforma'), B(780, 260, 140, 15, 'plataforma'), B(390, 330, 180, 15, 'plataforma'),
+           B(60, 140, 100, 15, 'ladrillo'), B(800, 140, 100, 15, 'ladrillo'), B(410, 200, 140, 15, 'ladrillo'), B(210, 180, 90, 15, 'ladrillo'), B(660, 180, 90, 15, 'ladrillo')],
+          [E(60, 260), E(878, 260), E(400, 330), E(538, 330)], [{ x: 465, y: 330, tipo: 'metralleta' }, { x: 840, y: 260, tipo: 'escudo' }],
+          D([1, 1, 1, 1], [1, 2, 2, 2], [2, 2, 3, 2], [2, 3, 3, 4])),
+        /* Canarias: el volcán */
+        F([B(380, 300, 200, 15, 'muro'), B(60, 380, 120, 15, 'plataforma'), B(780, 380, 120, 15, 'plataforma'),
+           B(400, 180, 160, 15, 'ladrillo'), B(80, 260, 100, 15, 'ladrillo'), B(780, 260, 100, 15, 'ladrillo'), B(290, 160, 60, 15, 'ladrillo'), B(610, 160, 60, 15, 'ladrillo'), B(440, 120, 80, 15, 'ladrillo')],
+          [E(395, 300), E(543, 300), E(80, 380), E(858, 380)], [{ x: 465, y: 300, tipo: 'dinamita' }, { x: 100, y: 380, tipo: 'vida' }],
+          D([1, 1, 1, 1], [1, 2, 3, 2], [2, 2, 3, 3], [3, 2, 4, 4])),
+        /* París: la torre iluminada, con la estrella arriba del todo */
+        F([B(360, 400, 240, 15, 'plataforma'), B(410, 290, 140, 15, 'plataforma'), B(440, 180, 80, 15, 'plataforma'),
+           B(80, 220, 120, 15, 'ladrillo'), B(760, 220, 120, 15, 'ladrillo'), B(110, 360, 100, 15, 'ladrillo'), B(750, 360, 100, 15, 'ladrillo'), B(450, 110, 60, 15, 'ladrillo')],
+          [E(380, 400), E(558, 400), E(469, 290, 400), E(469, 180, 290)], [{ x: 465, y: 180, tipo: 'estrella' }, { x: 420, y: 290, tipo: 'escudo' }],
+          D([1, 1, 1, 2], [2, 1, 2, 3], [2, 2, 3, 3], [3, 3, 3, 4])),
+        /* Moscú: las cúpulas */
+        F([B(40, 360, 110, 15, 'plataforma'), B(810, 360, 110, 15, 'plataforma'), B(310, 260, 110, 15, 'plataforma'), B(540, 260, 110, 15, 'plataforma'),
+           B(50, 240, 90, 15, 'ladrillo'), B(820, 240, 90, 15, 'ladrillo'), B(320, 140, 90, 15, 'ladrillo'), B(550, 140, 90, 15, 'ladrillo'), B(440, 200, 80, 15, 'ladrillo')],
+          [E(55, 360), E(883, 360), E(330, 260), E(608, 260)], [{ x: 350, y: 260, tipo: 'arena' }, { x: 580, y: 260, tipo: 'doble' }],
+          D([1, 1, 2, 1], [1, 2, 3, 3], [2, 2, 4, 3], [3, 3, 4, 4])),
+        /* Egipto: el oasis */
+        F([B(40, 400, 200, 15, 'plataforma'), B(720, 400, 200, 15, 'plataforma'), B(330, 270, 300, 15, 'plataforma'),
+           B(60, 280, 150, 15, 'ladrillo'), B(740, 280, 150, 15, 'ladrillo'), B(360, 150, 100, 15, 'ladrillo'), B(500, 150, 100, 15, 'ladrillo'), B(240, 200, 60, 15, 'ladrillo'), B(660, 200, 60, 15, 'ladrillo')],
+          [E(60, 400), E(880, 400), E(469, 270)], [{ x: 520, y: 270, tipo: 'dinamita' }, { x: 760, y: 400, tipo: 'arena' }],
+          D([1, 1, 2, 1], [2, 2, 2, 3], [2, 3, 3, 3], [3, 3, 4, 4])),
+        /* China: farolillos */
+        F([B(40, 240, 140, 15, 'plataforma'), B(780, 240, 140, 15, 'plataforma'), B(360, 320, 240, 15, 'plataforma'),
+           B(60, 130, 100, 15, 'ladrillo'), B(800, 130, 100, 15, 'ladrillo'), B(410, 190, 140, 15, 'ladrillo'), B(200, 300, 80, 15, 'ladrillo'), B(680, 300, 80, 15, 'ladrillo'), B(430, 440, 60, 15, 'ladrillo')],
+          [E(60, 240), E(878, 240), E(380, 320), E(558, 320)], [{ x: 465, y: 320, tipo: 'gancho' }, { x: 820, y: 240, tipo: 'vida' }],
+          D([1, 1, 2, 2], [2, 2, 3, 3], [2, 3, 4, 3], [3, 4, 4, 5])),
+        /* Fuji: la cima (la última) */
+        F([B(360, 300, 240, 15, 'muro'), B(400, 190, 160, 15, 'plataforma'), B(40, 380, 120, 15, 'plataforma'), B(800, 380, 120, 15, 'plataforma'),
+           B(440, 120, 80, 15, 'ladrillo'), B(60, 240, 110, 15, 'ladrillo'), B(790, 240, 110, 15, 'ladrillo'), B(220, 170, 70, 15, 'ladrillo'), B(670, 170, 70, 15, 'ladrillo')],
+          [E(375, 300), E(563, 300), E(469, 190, 300), E(60, 380), E(878, 380)], [{ x: 465, y: 190, tipo: 'escudo' }, { x: 120, y: 380, tipo: 'doble' }, { x: 820, y: 380, tipo: 'vida' }],
+          D([2, 1, 1, 2], [3, 2, 2, 4], [3, 3, 4, 4], [4, 4, 4, 5]))
+    ];
+    /* Criaturas: van entrando poco a poco (como en el original, no en todas
+       las fases) y se repiten cada CRIATURA_REPITE_S mientras dure la fase.
+       Pájaros desde la 4.ª, el cocodrilo desde la 9.ª, el pez desde la 10.ª;
+       en el último tercio, todas en todas las fases */
+    function agenda(i) {
+        const a = [];
+        if (i >= 3 && (i % 3 === 1 || i >= 18)) a.push({ t: 18, tipo: 'pajaros' });
+        if (i >= 8 && (i % 3 === 2 || i >= 18)) a.push({ t: 30, tipo: 'cocodrilo' });
+        if (i >= 9 && (i % 3 === 0 || i >= 18)) a.push({ t: 24, tipo: 'pez' });
+        return a;
+    }
+    const NIVELES = [];
+    MANANA.forEach((m, c) => [m, TARDE[c], NOCHE[c]].forEach((L, k) => {
+        NIVELES.push(Object.assign({}, L, { nombre: m.nombre, ciudad: m.ciudad, momento: MOMENTOS[k], criaturas: agenda(NIVELES.length) }));
+    }));
 
     /* Premios que caen al romper bolas (12 %) o ladrillos (20 %), y con qué
        peso sale cada uno. La vida, poco: si no, sobran. */
-    const PESOS_PREMIO = [['doble', 24], ['gancho', 20], ['escudo', 18], ['reloj', 14], ['dinamita', 8], ['fruta', 12], ['vida', 4]];
+    const PESOS_PREMIO = [['doble', 22], ['gancho', 18], ['metralleta', 14], ['escudo', 16], ['reloj', 12], ['arena', 10], ['dinamita', 7], ['fruta', 12], ['vida', 4], ['estrella', 1]];
     const P_PREMIO_BOLA = 0.12, P_PREMIO_LADRILLO = 0.2;
     const sacarPremio = (azar) => {
         let t = azar() * PESOS_PREMIO.reduce((a, p) => a + p[1], 0);
@@ -1325,16 +1457,18 @@ const Pang = (() => {
 
     /* ---------- CREAR ---------- */
     function crear(op) {
-        const o = Object.assign({ dificultad: 'avanzado', jugadores: 1, nivel: 0, azar: Math.random }, op);
+        const o = Object.assign({ dificultad: 'avanzado', jugadores: 1, nivel: 0, azar: Math.random, modo: 'viaje' }, op);
         const e = {
             dificultad: o.dificultad, dif: DIFICULTADES[o.dificultad] || DIFICULTADES.avanzado, azar: o.azar,
+            modo: o.modo === 'panico' ? 'panico' : 'viaje',
             nivel: 0, jugadores: [], eventos: [], acum: 0, reloj: 0
         };
         for (let n = 1; n <= o.jugadores; n++) {
             e.jugadores.push({ n, vidas: 3, puntos: 0, x: SALIDAS[n - 1], y: SUELO - JUG.alto, vy: 0, mira: 1, andando: false, paso: 0,
-                escalera: null, subiendo: 0, enSuelo: true, arma: 'normal', escudo: false, invul: 0, muerto: false, disparo: 0, combo: 0, comboT: 0 });
+                escalera: null, subiendo: 0, enSuelo: true, arma: 'normal', escudo: false, invul: 0, muerto: false, disparo: 0, combo: 0, comboT: 0,
+                aturdido: 0, cadencia: 0 });
         }
-        empezarNivel(e, o.nivel);
+        if (e.modo === 'panico') empezarPanico(e); else empezarNivel(e, o.nivel);
         return e;
     }
 
@@ -1344,7 +1478,9 @@ const Pang = (() => {
         e.estado = 'intro';
         e.introT = INTRO_S;
         e.t = e.dif.tiempo;
-        e.congelado = 0;
+        e.congelado = 0; e.lento = 0; e.tNivel = 0;
+        e.balas = []; e.criaturas = [];
+        e.agenda = (L.criaturas || []).map(c => ({ tipo: c.tipo, prox: c.t }));
         e.bloques = L.bloques.map(b => Object.assign({ vivo: true }, b));
         e.escaleras = L.escaleras.map(s => Object.assign({ ancho: 22 }, s));
         e.premios = L.premios.map(p => ({ tipo: p.tipo, x: p.x, y: p.y - PREMIO, vy: 0, cae: false, vida: Infinity }));
@@ -1381,7 +1517,10 @@ const Pang = (() => {
         return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
     }
     const velBote = (tam) => Math.sqrt(2 * G * BOLAS[tam].salto);
-    const escalaBolas = (e) => e.dif.vel * (1 + 0.03 * e.nivel);
+    /* Viaje: +1 % por fase (con +3 % y 27 fases, la última iba a 1,78×).
+       Pánico: de 0,8× en el nivel 1 a 1,65× en el 99, y la mitad con el
+       reloj de arena */
+    const escalaBolas = (e) => e.dif.vel * (e.modo === 'panico' ? 0.8 + 0.0087 * (e.panico.nivel - 1) : 1 + 0.01 * e.nivel) * (e.lento > 0 ? LENTO_FACTOR : 1);
 
     /* ---------- AVANZAR ----------
        entradas: { 1: {izq, der, arr, aba}, 2: {...} }. Disparar va aparte
@@ -1397,7 +1536,8 @@ const Pang = (() => {
         if (e.estado === 'intro') { e.introT -= h; if (e.introT <= 0) e.estado = 'jugando'; return; }
         if (e.estado !== 'jugando') return;
         e.reloj += h;
-        e.t -= h;
+        e.tNivel = (e.tNivel || 0) + h;
+        if (e.modo !== 'panico') e.t -= h;
         if (e.t <= 0) {
             e.t = 30;
             e.eventos.push({ tipo: 'tiempo' });
@@ -1405,12 +1545,17 @@ const Pang = (() => {
             if (e.estado !== 'jugando') return;
         }
         if (e.congelado > 0) e.congelado = Math.max(0, e.congelado - h);
+        if (e.lento > 0) { e.lento = Math.max(0, e.lento - h); if (!e.lento) e.eventos.push({ tipo: 'finLento' }); }
+        if (e.modo === 'panico') pasoPanico(e, h);
+        else for (const a of e.agenda) if (e.tNivel >= a.prox) { soltarCriatura(e, a.tipo); a.prox += CRIATURA_REPITE_S; }
         for (const j of e.jugadores) moverJugador(e, j, entradas[j.n] || {}, h);
         if (!e.congelado) moverBolas(e, h * escalaBolas(e));
         moverArpones(e, h);
+        moverBalas(e, h);
+        moverCriaturas(e, h);
         moverPremios(e, h);
         golpes(e);
-        if (!e.bolas.length && e.estado === 'jugando') superado(e);
+        if (!e.bolas.length && e.estado === 'jugando' && (e.modo !== 'panico' || e.panico.final)) superado(e);
     }
 
     /* ---------- JUGADOR ---------- */
@@ -1423,6 +1568,10 @@ const Pang = (() => {
         if (j.invul > 0) j.invul = Math.max(0, j.invul - h);
         if (j.disparo > 0) j.disparo = Math.max(0, j.disparo - h);
         if (j.comboT > 0) { j.comboT -= h; if (j.comboT <= 0) j.combo = 0; }
+        if (j.aturdido > 0) { j.aturdido = Math.max(0, j.aturdido - h); if (!j.aturdido) e.eventos.push({ tipo: 'despierta', j: j.n }); }
+        if (j.cadencia > 0) j.cadencia = Math.max(0, j.cadencia - h);
+        /* La metralleta dispara mientras se mantiene el botón */
+        if (ent.fuego && j.arma === 'metralleta') dispararBala(e, j);
         const s = escaleraDe(e, j);
         const pies = j.y + JUG.alto;
         /* Subir y bajar: en una escalera, se agarra y deja de caer. En lo alto
@@ -1476,6 +1625,9 @@ const Pang = (() => {
     function disparar(e, n) {
         const j = e.jugadores[n - 1];
         if (!j || j.muerto || e.estado !== 'jugando') return false;
+        /* Tocado por un pájaro o el pez: no puede disparar un rato */
+        if (j.aturdido > 0) { e.eventos.push({ tipo: 'noPuede', j: n }); return false; }
+        if (j.arma === 'metralleta') return dispararBala(e, j);
         const max = j.arma === 'doble' ? 2 : 1;
         if (e.arpones.filter(a => a.j === n).length >= max) return false;
         const x = j.x + JUG.ancho / 2;
@@ -1485,6 +1637,89 @@ const Pang = (() => {
         j.disparo = 0.18;
         e.eventos.push({ tipo: 'disparo', j: n });
         return true;
+    }
+
+    /* Metralleta: ráfaga de balas cortas en abanico estrecho. No rompe
+       ladrillos (en el original tampoco) ni deja cuerda: pierde lo que
+       hacía único al arpón a cambio de cadencia */
+    function dispararBala(e, j) {
+        if (j.muerto || j.aturdido > 0 || e.estado !== 'jugando' || j.cadencia > 0) return false;
+        if (e.balas.filter(b => b.j === j.n).length >= BALAS_MAX) return false;
+        const x = j.x + JUG.ancho / 2;
+        j.racha = ((j.racha || 0) + 1) % 3;
+        const vx = [-60, 0, 60][j.racha];
+        e.balas.push({ j: j.n, x, y: j.y + 4, vx });
+        j.cadencia = BALA_CADENCIA;
+        j.disparo = 0.12;
+        e.eventos.push({ tipo: 'bala', j: j.n });
+        return true;
+    }
+    function moverBalas(e, h) {
+        for (let i = e.balas.length - 1; i >= 0; i--) {
+            const b = e.balas[i];
+            b.y -= BALA_VEL * h; b.x += b.vx * h;
+            let fuera = b.y <= TECHO || b.x < 0 || b.x > ANCHO;
+            for (const k of e.bloques) if (k.vivo && b.x >= k.x && b.x <= k.x + k.w && b.y >= k.y && b.y <= k.y + k.h) { fuera = true; break; }
+            if (fuera) e.balas.splice(i, 1);
+        }
+    }
+
+    /* ---------- CRIATURAS ----------
+       pájaros (bandada de 5) y pez globo: si tocan al jugador, no puede
+       disparar ATURDIDO_S; cocodrilo: anda por el suelo y se come las bolas
+       que le caen en la boca; si se le dispara, revienta y parte las bolas
+       de alrededor. Todos se pueden derribar (puntos). Coordenadas: centro */
+    function soltarCriatura(e, tipo) {
+        const lado = e.azar() < 0.5 ? -1 : 1;      // -1 = entra por la izquierda
+        const x0 = lado < 0 ? -40 : ANCHO + 40;
+        if (tipo === 'pajaros') {
+            const y0 = 150 + e.azar() * 110;
+            for (let k = 0; k < 5; k++) e.criaturas.push({ tipo: 'pajaro', x: x0 + lado * k * 52, y: y0, y0, vx: -lado * 170, fase: k * 0.7, w: 34, h: 22, t: 0 });
+        } else if (tipo === 'pez') {
+            const y0 = 250 + e.azar() * 90;
+            e.criaturas.push({ tipo: 'pez', x: x0, y: y0, y0, vx: -lado * 80, fase: 0, w: 44, h: 40, t: 0 });
+        } else {
+            e.criaturas.push({ tipo: 'cocodrilo', x: x0 + lado * 30, y: SUELO - 17, vx: -lado * 70, w: 96, h: 34, t: 0 });
+        }
+        e.eventos.push({ tipo: 'criaturaEntra', criatura: tipo });
+    }
+    function moverCriaturas(e, h) {
+        for (let i = e.criaturas.length - 1; i >= 0; i--) {
+            const c = e.criaturas[i];
+            c.t += h;
+            if (!e.congelado) c.x += c.vx * h;
+            if (c.tipo === 'pajaro') c.y = c.y0 + Math.sin(c.t * 4 + c.fase) * 28;
+            else if (c.tipo === 'pez') c.y = c.y0 + Math.sin(c.t * 1.4) * 70;
+            if ((c.vx > 0 && c.x > ANCHO + 300) || (c.vx < 0 && c.x < -300)) { e.criaturas.splice(i, 1); continue; }
+            if (c.tipo === 'cocodrilo') {
+                /* La boca, en la mitad de delante */
+                const boca = { x: c.vx > 0 ? c.x : c.x - c.w / 2, y: c.y - c.h / 2 - 10, w: c.w / 2, h: c.h + 10 };
+                for (let k = e.bolas.length - 1; k >= 0; k--) {
+                    const b = e.bolas[k];
+                    if (circuloCaja(b.x, b.y, BOLAS[b.tam].r, boca)) {
+                        e.bolas.splice(k, 1);
+                        e.eventos.push({ tipo: 'come', x: b.x, y: b.y, tam: b.tam });
+                    }
+                }
+            }
+        }
+    }
+    const cajaCriatura = (c) => ({ x: c.x - c.w / 2, y: c.y - c.h / 2, w: c.w, h: c.h });
+    function derribar(e, idx, n) {
+        const c = e.criaturas[idx];
+        e.criaturas.splice(idx, 1);
+        const j = n ? e.jugadores[n - 1] : null;
+        const pts = Math.round(CRIATURA_PUNTOS * e.dif.puntos);
+        if (j) j.puntos += pts;
+        e.eventos.push({ tipo: 'derribo', criatura: c.tipo, x: c.x, y: c.y, puntos: pts });
+        if (c.tipo === 'cocodrilo') {
+            /* Revienta: parte las bolas de alrededor, y cuentan para quien disparó */
+            e.eventos.push({ tipo: 'explosion', x: c.x, y: c.y });
+            for (let k = e.bolas.length - 1; k >= 0; k--) {
+                const b = e.bolas[k];
+                if (Math.hypot(b.x - c.x, b.y - c.y) < 170 + BOLAS[b.tam].r) partir(e, k, n, 'explosion');
+            }
+        }
     }
 
     /* ---------- BOLAS ---------- */
@@ -1499,7 +1734,10 @@ const Pang = (() => {
             if (b.x - r < 0) { b.x = r; b.vx = Math.abs(b.vx); }
             if (b.x + r > ANCHO) { b.x = ANCHO - r; b.vx = -Math.abs(b.vx); }
             if (b.y - r < TECHO) { b.y = TECHO + r; b.vy = Math.abs(b.vy); }
-            if (b.y + r >= SUELO) { b.y = SUELO - r; b.vy = -velBote(b.tam); b.bote = 1; e.eventos.push({ tipo: 'bote', tam: b.tam }); }
+            if (b.y + r >= SUELO) {
+                b.y = SUELO - r; b.vy = -velBote(b.tam); b.bote = 1; e.eventos.push({ tipo: 'bote', tam: b.tam });
+                if (b.especial) b.especial = b.especial === 'reloj' ? 'estrella' : 'reloj';
+            }
             for (const k of e.bloques) {
                 if (!k.vivo || !circuloCaja(b.x, b.y, r, k)) continue;
                 const cx = Math.max(k.x, Math.min(b.x, k.x + k.w)), cy = Math.max(k.y, Math.min(b.y, k.y + k.h));
@@ -1534,13 +1772,37 @@ const Pang = (() => {
         }
         const pts = Math.round(d.puntos * e.dif.puntos * mult);
         if (j) j.puntos += pts;
-        e.eventos.push({ tipo: 'pop', tam: b.tam, x: b.x, y: b.y, puntos: pts, combo: mult, j: n });
+        e.eventos.push({ tipo: 'pop', tam: b.tam, x: b.x, y: b.y, puntos: pts, combo: mult, j: n, especial: b.especial || null });
+        if (e.modo === 'panico') sumarPanico(e);
+        if (b.especial) {
+            /* La especial del pánico no se parte: según lo que enseñe al
+               romperla, para las bolas o las rompe todas */
+            if (b.especial === 'reloj') { e.congelado = 5; e.eventos.push({ tipo: 'especial', efecto: 'reloj' }); }
+            else limpiarTodo(e, n, 'especial');
+            return;
+        }
         if (d.hijo) {
             const vy = -Math.max(300, velBote(d.hijo) * 0.55);
             e.bolas.push({ tam: d.hijo, x: b.x, y: b.y, vx: -VX_BOLA, vy });
             e.bolas.push({ tam: d.hijo, x: b.x, y: b.y, vx: VX_BOLA, vy });
         }
-        if (motivo !== 'dinamita' && e.azar() < P_PREMIO_BOLA) soltarPremio(e, b.x, b.y);
+        if (motivo !== 'dinamita' && motivo !== 'estrella' && e.modo !== 'panico' && e.azar() < P_PREMIO_BOLA) soltarPremio(e, b.x, b.y);
+    }
+    /* Estrella (premio del viaje) y especial del pánico: todas las bolas
+       fuera, cada una con sus puntos y sin hijas */
+    function limpiarTodo(e, n, motivo) {
+        const j = n ? e.jugadores[n - 1] : null;
+        let total = 0;
+        for (const b of e.bolas) {
+            const pts = Math.round(BOLAS[b.tam].puntos * e.dif.puntos);
+            total += pts;
+            e.eventos.push({ tipo: 'pop', tam: b.tam, x: b.x, y: b.y, puntos: 0, combo: 1, j: n, especial: null, limpia: true });
+            if (e.modo === 'panico') sumarPanico(e);
+        }
+        e.bolas = [];
+        const bono = motivo === 'estrella' ? Math.round(ESTRELLA_PUNTOS * e.dif.puntos) : Math.round(1000 * e.dif.puntos);
+        if (j) j.puntos += total + bono;
+        e.eventos.push({ tipo: 'estrella', motivo, puntos: total + bono });
     }
 
     /* ---------- ARPONES ---------- */
@@ -1602,9 +1864,11 @@ const Pang = (() => {
     }
     function tomarPremio(e, j, tipo) {
         let puntos = 0;
-        if (tipo === 'doble' || tipo === 'gancho') j.arma = tipo;
+        if (tipo === 'doble' || tipo === 'gancho' || tipo === 'metralleta') j.arma = tipo;
         else if (tipo === 'escudo') j.escudo = true;
         else if (tipo === 'reloj') e.congelado = CONGELAR_S;
+        else if (tipo === 'arena') e.lento = LENTO_S;
+        else if (tipo === 'estrella') { e.eventos.push({ tipo: 'premio', premio: tipo, j: j.n, x: j.x + JUG.ancho / 2, y: j.y, puntos: 0 }); limpiarTodo(e, j.n, 'estrella'); return; }
         else if (tipo === 'vida') j.vidas = Math.min(9, j.vidas + 1);
         else if (tipo === 'fruta') { puntos = Math.round(100 * e.dif.puntos); j.puntos += puntos; }
         else if (tipo === 'dinamita') {
@@ -1617,6 +1881,28 @@ const Pang = (() => {
 
     /* ---------- GOLPES ---------- */
     function golpes(e) {
+        /* Arpón contra criatura: la cuerda entera */
+        for (let i = e.arpones.length - 1; i >= 0; i--) {
+            const a = e.arpones[i];
+            for (let k = e.criaturas.length - 1; k >= 0; k--) {
+                const c = cajaCriatura(e.criaturas[k]);
+                if (a.x >= c.x && a.x <= c.x + c.w && a.punta <= c.y + c.h && a.base >= c.y) { derribar(e, k, a.j); e.arpones.splice(i, 1); break; }
+            }
+        }
+        /* Balas de la metralleta contra bolas y criaturas */
+        for (let i = e.balas.length - 1; i >= 0; i--) {
+            const a = e.balas[i];
+            let usada = false;
+            for (let k = e.bolas.length - 1; k >= 0 && !usada; k--) {
+                const b = e.bolas[k], r = BOLAS[b.tam].r;
+                if ((b.x - a.x) ** 2 + (b.y - a.y) ** 2 < (r + 4) ** 2) { partir(e, k, a.j, 'bala'); usada = true; }
+            }
+            for (let k = e.criaturas.length - 1; k >= 0 && !usada; k--) {
+                const c = cajaCriatura(e.criaturas[k]);
+                if (a.x >= c.x && a.x <= c.x + c.w && a.y >= c.y && a.y <= c.y + c.h) { derribar(e, k, a.j); usada = true; }
+            }
+            if (usada) e.balas.splice(i, 1);
+        }
         /* Arpón contra bola: la cuerda entera, de la punta al ancla */
         for (let i = e.arpones.length - 1; i >= 0; i--) {
             const a = e.arpones[i];
@@ -1643,6 +1929,17 @@ const Pang = (() => {
                     break;
                 }
             }
+            /* Pájaros y pez: no hieren, aturden */
+            if (j.muerto || j.aturdido > 0 || j.invul > 0) continue;
+            for (const c of e.criaturas) {
+                if (c.tipo === 'cocodrilo') continue;
+                const k = cajaCriatura(c);
+                if (k.x < caja.x + caja.w && k.x + k.w > caja.x && k.y < caja.y + caja.h && k.y + k.h > caja.y) {
+                    j.aturdido = ATURDIDO_S;
+                    e.eventos.push({ tipo: 'aturdido', j: j.n, x: j.x + JUG.ancho / 2, y: j.y });
+                    break;
+                }
+            }
         }
     }
     function herir(e, j, porTiempo) {
@@ -1652,9 +1949,10 @@ const Pang = (() => {
             return;
         }
         j.vidas--;
-        j.arma = 'normal';
-        j.combo = 0;
+        j.arma = e.modo === 'panico' ? 'doble' : 'normal';
+        j.combo = 0; j.aturdido = 0;
         e.arpones = e.arpones.filter(a => a.j !== j.n);
+        e.balas = e.balas.filter(a => a.j !== j.n);
         e.eventos.push({ tipo: 'muerte', j: j.n, x: j.x + JUG.ancho / 2, y: j.y + JUG.alto / 2, porTiempo });
         if (j.vidas <= 0) { j.muerto = true; j.vidas = 0; }
         else { colocarJugador(j); j.invul = INVULNERABLE_S; }
@@ -1663,6 +1961,12 @@ const Pang = (() => {
 
     function superado(e) {
         e.estado = 'superado';
+        if (e.modo === 'panico') {
+            const vivos = e.jugadores.filter(j => !j.muerto);
+            for (const j of vivos) j.puntos += Math.round(20000 * e.dif.puntos / vivos.length);
+            e.eventos.push({ tipo: 'superado', nivel: 0, tiempo: 0, final: 20000 });
+            return;
+        }
         const vivos = e.jugadores.filter(j => !j.muerto);
         const nivel = Math.round(500 * e.dif.puntos), tiempo = Math.round(Math.max(0, e.t) * 10 * e.dif.puntos);
         for (const j of vivos) j.puntos += Math.round((nivel + tiempo) / vivos.length);
@@ -1672,13 +1976,62 @@ const Pang = (() => {
     }
     function siguiente(e) {
         if (e.nivel >= NIVELES.length - 1) return false;
-        for (const j of e.jugadores) if (!j.muerto) { j.arma = 'normal'; j.escudo = false; j.combo = 0; }
+        for (const j of e.jugadores) if (!j.muerto) { j.arma = 'normal'; j.escudo = false; j.combo = 0; j.aturdido = 0; }
         empezarNivel(e, e.nivel + 1);
         return true;
     }
 
-    return { ANCHO, ALTO, TECHO, SUELO, PASO, G, BOLAS, VX_BOLA, JUG, ARPON_VEL, DIFICULTADES, NIVELES, PREMIO, PESOS_PREMIO,
-             crear, empezarNivel, avanzar, paso, disparar, partir, tomarPremio, herir, siguiente, escaleraDe, velBote, escalaBolas, circuloCaja };
+    /* ---------- MODO PÁNICO ----------
+       Sin escenario ni premios: las bolas caen desde arriba sin parar y cada
+       una que se rompe llena la barra; llena, sube el nivel (hasta el 99) y
+       todo va más deprisa. Arma fija: arpón doble. De vez en cuando, una bola
+       especial que al botar cambia de reloj a estrella: rota con el reloj,
+       para las bolas; con la estrella, las rompe todas. Al pasar el 99 ya no
+       caen más: limpiar la pantalla gana. */
+    const PANICO_MAX = 99;
+    const metaPanico = (nivel) => 10 + Math.floor(nivel / 4);
+    function empezarPanico(e) {
+        e.nivel = 0; e.estado = 'intro'; e.introT = INTRO_S;
+        e.t = Infinity; e.congelado = 0; e.lento = 0; e.tNivel = 0;
+        e.bloques = []; e.escaleras = []; e.premios = []; e.arpones = []; e.balas = []; e.criaturas = []; e.agenda = [];
+        e.bolas = [];
+        e.panico = { nivel: 1, barra: 0, prox: 0.3, especialT: 30, final: false };
+        for (const j of e.jugadores) { j.arma = 'doble'; colocarJugador(j); }
+    }
+    function pesoBolas(e) { return e.bolas.reduce((n, b) => n + { xl: 8, l: 4, m: 2, s: 1 }[b.tam], 0); }
+    function pasoPanico(e, h) {
+        const P = e.panico;
+        if (P.final || e.congelado) return;
+        P.prox -= h; P.especialT -= h;
+        if ((P.prox <= 0 || !e.bolas.length) && pesoBolas(e) < 40) {
+            const pxl = Math.min(0.4, P.nivel * 0.006), pl = 0.45;
+            const u = e.azar();
+            const tam = u < pxl ? 'xl' : u < pxl + pl ? 'l' : 'm';
+            caerBola(e, tam, null);
+            P.prox = Math.max(1.4, 5.5 - 0.045 * P.nivel);
+        }
+        if (P.especialT <= 0 && P.nivel >= 2) { caerBola(e, 'l', 'reloj'); P.especialT = 30 + e.azar() * 20; }
+    }
+    function caerBola(e, tam, especial) {
+        const r = BOLAS[tam].r;
+        const x = r + e.azar() * (ANCHO - 2 * r);
+        e.bolas.push({ tam, x, y: TECHO + r + 1, vx: (e.azar() < 0.5 ? -1 : 1) * VX_BOLA, vy: 0, especial });
+    }
+    function sumarPanico(e) {
+        const P = e.panico;
+        if (P.final) return;
+        P.barra++;
+        if (P.barra >= metaPanico(P.nivel)) {
+            P.barra = 0;
+            if (P.nivel >= PANICO_MAX) { P.final = true; e.eventos.push({ tipo: 'panicoFinal' }); }
+            else { P.nivel++; e.eventos.push({ tipo: 'nivelPanico', nivel: P.nivel }); }
+        }
+    }
+
+    return { ANCHO, ALTO, TECHO, SUELO, PASO, G, BOLAS, VX_BOLA, JUG, ARPON_VEL, DIFICULTADES, NIVELES, PREMIO, PESOS_PREMIO, MOMENTOS,
+             LENTO_S, LENTO_FACTOR, ATURDIDO_S, BALA_CADENCIA, BALAS_MAX, ESTRELLA_PUNTOS, CRIATURA_REPITE_S, PANICO_MAX, metaPanico,
+             crear, empezarNivel, avanzar, paso, disparar, dispararBala, partir, tomarPremio, herir, siguiente, escaleraDe, velBote, escalaBolas, circuloCaja,
+             soltarCriatura, derribar, limpiarTodo, caerBola, sumarPanico, pesoBolas };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Pang;
@@ -1719,11 +2072,21 @@ let viaje = null;             // { t, desde, hasta } el vuelo entre ciudades
 let victoria = null;          // { t } la fiesta final
 let finEn = null;             // segundos hasta enseñar el fin (para ver caer al último)
 let pausadoDesde = null;
+let modoMenu = 'viaje';       // lo elegido en el menú
+let girado = false;           // táctil en vertical: la partida espera a que se gire
+let esperaGiro = false;       // partida empezada en vertical, sin arrancar todavía
+let destello = 0;             // fogonazo blanco de la estrella
+let tempoMusica = 0;
 const teclas = {};
 const mandos = { 1: {}, 2: {} };   // lo que pulsan las crucetas táctiles
+const fuegoPulsado = { 1: 0, 2: 0 };   // dedos sobre cada ARPÓN
 
 /* ---------- RÉCORDS (clave y campos de siempre) ---------- */
-const ranking = EST.ranking({ clave: 'superPangTop10', nombre: 'nombre', puntos: 'puntuacion' });
+const RANKINGS = {
+    viaje: EST.ranking({ clave: 'superPangTop10', nombre: 'nombre', puntos: 'puntuacion' }),
+    panico: EST.ranking({ clave: 'superPangPanico', nombre: 'nombre', puntos: 'puntuacion' })
+};
+let rankModo = 'viaje';
 const INICIAL_DIF = { principiante: 'P', avanzado: 'A', experto: 'E', rambo: 'R' };
 const ETIQUETA_DIF = { principiante: 'Principiante', avanzado: 'Avanzado', experto: 'Experto', rambo: 'Rambo' };
 
@@ -1748,7 +2111,19 @@ const sonar = {
     muerte() { EST.ruido(0.4, 0.3, 900, 120); EST.efecto('muerte', 300, [[440, 0.12, 'sawtooth', 0.06, 0, 300], [300, 0.3, 'sawtooth', 0.06, 0.12, 110]]); },
     tic() { EST.efecto('tic', 300, [[1760, 0.04, 'square', 0.04]]); },
     superado() { EST.efecto('superado', 600, [[523, 0.12, 'square', 0.06], [659, 0.12, 'square', 0.06, 0.12], [784, 0.12, 'square', 0.06, 0.24], [1047, 0.4, 'square', 0.06, 0.36]]); },
-    avion() { EST.ruido(1.2, 0.05, 500, 300); }
+    avion() { EST.ruido(1.2, 0.05, 500, 300); },
+    bala() { EST.efecto('bala', 70, [[900, 0.04, 'square', 0.035, 0, 600]]); },
+    pajaros() { EST.efecto('pio', 400, [[2200, 0.06, 'sine', 0.06, 0, 2900], [2500, 0.06, 'sine', 0.06, 0.1, 3200], [2100, 0.07, 'sine', 0.05, 0.22, 2800]]); },
+    pez() { EST.efecto('pez', 400, [[300, 0.25, 'sine', 0.08, 0, 520], [520, 0.2, 'sine', 0.06, 0.25, 260]]); },
+    cocodrilo() { EST.efecto('coco', 400, [[90, 0.35, 'sawtooth', 0.07, 0, 60]]); },
+    come() { EST.efecto('come', 150, [[160, 0.07, 'square', 0.08, 0, 90], [140, 0.07, 'square', 0.08, 0.1, 80]]); },
+    derribo() { EST.efecto('derribo', 80, [[700, 0.15, 'triangle', 0.1, 0, 200]]); },
+    explosion() { EST.ruido(0.6, 0.35, 700, 80); },
+    aturdido() { EST.efecto('aturdido', 300, [[600, 0.12, 'sine', 0.08, 0, 300], [500, 0.12, 'sine', 0.08, 0.14, 250], [420, 0.2, 'sine', 0.08, 0.28, 200]]); },
+    noPuede() { EST.efecto('nopuede', 250, [[130, 0.12, 'square', 0.05]]); },
+    estrella() { EST.efecto('estrella', 400, [[1047, 0.1, 'square', 0.05], [1319, 0.1, 'square', 0.05, 0.08], [1568, 0.1, 'square', 0.05, 0.16], [2093, 0.35, 'triangle', 0.08, 0.24]]); },
+    arena() { EST.efecto('arena', 300, [[880, 0.4, 'triangle', 0.07, 0, 330]]); },
+    nivelPanico() { EST.efecto('nivelp', 200, [[659, 0.08, 'square', 0.05], [880, 0.12, 'square', 0.05, 0.08]]); }
 };
 
 /* ---------- MAPA (el de siempre, para viajar de ciudad en ciudad) ----------
@@ -1944,19 +2319,53 @@ const PINTORES = {
 };
 const SUELOS = { nuevayork: '#3c3f4a', azteca: '#6b4423', selva: '#4a3420', canarias: '#c9a86a', paris: '#8d8577', moscu: '#e8edf2', egipto: '#d9a55b', china: '#6b5a3e', fuji: '#5f6b4e' };
 
-function hacerFondo() {
+/* Ciudad y momento de lo que se juega. En pánico no hay fases: el fondo
+   cambia de ciudad cada 11 niveles (99 / 9) y de momento con ella */
+const ORDEN_CIUDADES = Pang.NIVELES.filter((L, i) => i % 3 === 0).map(L => L.ciudad);
+function escena() {
+    if (e.modo === 'panico') {
+        const k = Math.floor((e.panico.nivel - 1) / 11);
+        return { ciudad: ORDEN_CIUDADES[k % 9], momento: Pang.MOMENTOS[k % 3], clave: k };
+    }
     const L = Pang.NIVELES[e.nivel];
+    return { ciudad: L.ciudad, momento: L.momento, clave: e.nivel };
+}
+let claveFondo = null;
+function hacerFondo() {
+    const L = escena();
+    claveFondo = L.clave;
     const f = document.createElement('canvas');
     f.width = canvas.width; f.height = canvas.height;
     const c = f.getContext('2d');
     c.setTransform(escala, 0, 0, escala, 0, 0);
-    PINTORES[L.ciudad](c, azarFijo(e.nivel * 7919 + 1));
+    const az = azarFijo(ORDEN_CIUDADES.indexOf(L.ciudad) * 7919 + 1);
+    PINTORES[L.ciudad](c, az);
+    /* La misma ciudad por la tarde y por la noche: se tiñe por encima
+       (multiplicar oscurece sin perder el dibujo) */
+    if (L.momento !== 'mañana') {
+        c.globalCompositeOperation = 'multiply';
+        const g = c.createLinearGradient(0, 40, 0, 580);
+        if (L.momento === 'tarde') { g.addColorStop(0, '#ffb07a'); g.addColorStop(1, '#ff9a6a'); }
+        /* No más oscuro: en la selva de noche las bolas verdes se perdían */
+        else { g.addColorStop(0, '#3a4486'); g.addColorStop(1, '#6a70a8'); }
+        c.fillStyle = g; c.fillRect(0, 40, W, 540);
+        c.globalCompositeOperation = 'source-over';
+        if (L.momento === 'tarde') {
+            const h = c.createLinearGradient(0, 300, 0, 580);
+            h.addColorStop(0, 'rgba(255,170,90,0)'); h.addColorStop(1, 'rgba(255,140,60,0.25)');
+            c.fillStyle = h; c.fillRect(0, 300, W, 280);
+        } else {
+            for (let i = 0; i < 90; i++) { c.fillStyle = `rgba(255,255,255,${0.35 + az() * 0.6})`; c.fillRect(az() * W, 44 + az() * 220, 1.6, 1.6); }
+            c.fillStyle = '#f4f1d8'; c.beginPath(); c.arc(840, 100, 26, 0, 7); c.fill();
+            c.fillStyle = 'rgba(30,34,80,0.9)'; c.beginPath(); c.arc(852, 92, 22, 0, 7); c.fill();
+        }
+    }
     /* Velo oscuro por abajo, para que lo que se juega destaque */
     const v = c.createLinearGradient(0, 40, 0, 580);
     v.addColorStop(0, 'rgba(10,8,30,0.05)'); v.addColorStop(1, 'rgba(10,8,30,0.35)');
     c.fillStyle = v; c.fillRect(0, 40, W, 540);
     /* El suelo */
-    c.fillStyle = SUELOS[L.ciudad]; c.fillRect(0, 580, W, 20);
+    c.fillStyle = L.momento === 'noche' ? aclarar(SUELOS[L.ciudad], -0.45) : SUELOS[L.ciudad]; c.fillRect(0, 580, W, 20);
     c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(0, 580, W, 2);
     c.fillStyle = 'rgba(0,0,0,0.18)'; for (let x = 0; x < W; x += 32) c.fillRect(x, 584, 16, 3);
     fondo = f;
@@ -1965,8 +2374,12 @@ function hacerFondo() {
 /* ==========================================================
    DIBUJO DE LA PARTIDA
    ========================================================== */
-const COLOR_BOLA = { xl: '#3f6fe0', l: '#e53935', m: '#fb8c00', s: '#fdd835' };
-const ICONO_PREMIO = { doble: '⚡', gancho: '⚓', escudo: '🛡️', reloj: '⏰', dinamita: '💣', vida: '❤️', fruta: '🍒' };
+/* Como en la recreativa, todas las bolas de una fase del mismo color, y el
+   color dice el momento: rojas por la mañana, azules por la tarde, verdes
+   por la noche. El tamaño ya se distingue a la vista */
+const COLOR_MOMENTO = { 'mañana': '#e53935', tarde: '#2f6fe0', noche: '#33c95a' };
+const colorBolas = () => COLOR_MOMENTO[escena().momento];
+const ICONO_PREMIO = { doble: '⚡', gancho: '⚓', metralleta: '🔫', escudo: '🛡️', reloj: '⏰', arena: '⌛', dinamita: '💣', vida: '❤️', fruta: '🍒', estrella: '⭐' };
 const COLOR_JUG = { 1: { ropa: '#1e88e5', oscuro: '#0d47a1' }, 2: { ropa: '#fb8c00', oscuro: '#b35b00' } };
 
 function aclarar(hex, k) {
@@ -2007,7 +2420,7 @@ function pintarEscalera(c, s) {
 }
 
 function pintarBola(c, b, t) {
-    const r = Pang.BOLAS[b.tam].r, col = COLOR_BOLA[b.tam];
+    const r = Pang.BOLAS[b.tam].r, col = b.especial ? '#b45cff' : colorBolas();
     /* Sombra en el suelo, más pequeña y tenue cuanto más alta va */
     const alt = Math.max(0, Pang.SUELO - (b.y + r));
     const k = Math.max(0.25, 1 - alt / 500);
@@ -2027,6 +2440,15 @@ function pintarBola(c, b, t) {
     c.beginPath(); c.ellipse(-r * 0.38, -r * 0.42, r * 0.26, r * 0.15, -0.6, 0, 7); c.fill();
     c.fillStyle = 'rgba(255,255,255,0.25)';
     c.beginPath(); c.ellipse(r * 0.35, r * 0.45, r * 0.25, r * 0.1, -0.6, 0, 7); c.fill();
+    /* La especial del pánico: aro de colores y lo que hará si se rompe ahora */
+    if (b.especial) {
+        c.lineWidth = 4; c.strokeStyle = `hsl(${(t * 240) % 360},90%,65%)`;
+        c.beginPath(); c.arc(0, 0, r + 4, 0, 7); c.stroke();
+        /* Opaco: un emoji en color se pinta con la transparencia del fillStyle
+           que haya (el del brillo era 0,25 y la estrella salía desvaída) */
+        c.fillStyle = '#fff'; c.font = Math.round(r * 1.1) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(b.especial === 'reloj' ? '⏰' : '⭐', 0, 2); c.textBaseline = 'alphabetic';
+    }
     if (e.congelado > 0) {
         c.fillStyle = 'rgba(170,230,255,0.45)'; c.beginPath(); c.arc(0, 0, r + 2, 0, 7); c.fill();
         c.strokeStyle = 'rgba(220,250,255,0.9)'; c.lineWidth = 2;
@@ -2086,7 +2508,7 @@ function pintarJugador(c, j, t) {
     const dispara = desde >= 0 && desde < POSE_DISPARO;
     const sube = j.escalera !== null || j.subiendo !== 0;
     /* Cargado si le queda arpón por tirar (con el doble, dos a la vez) */
-    const cargado = e.arpones.filter(a => a.j === j.n).length < (j.arma === 'doble' ? 2 : 1);
+    const cargado = j.arma === 'metralleta' || e.arpones.filter(a => a.j === j.n).length < (j.arma === 'doble' ? 2 : 1);
     /* Sombra */
     c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(cx, y + P.alto, 14, 3, 0, 0, 7); c.fill();
     /* Piernas y botas */
@@ -2148,6 +2570,12 @@ function pintarJugador(c, j, t) {
         c.fillRect(gx + Math.cos(ang) * 12 - 2, gy + Math.sin(ang) * 12 - 2, 4, 4);
     }
     c.globalAlpha = 1;
+    /* Atontado: parpadea en naranja y le dan vueltas estrellitas */
+    if (j.aturdido > 0) {
+        if (Math.floor(t * 8) % 2) { c.fillStyle = 'rgba(255,150,40,0.45)'; c.fillRect(x - 2, y - 2, P.ancho + 4, P.alto + 4); }
+        c.font = '12px sans-serif'; c.textAlign = 'center';
+        for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; c.fillText('⭐', cx + Math.cos(a) * 14, y - 4 + Math.sin(a) * 4); }
+    }
     /* Escudo: burbuja */
     if (j.escudo) {
         const g = c.createRadialGradient(cx, y + 24, 10, cx, y + 24, 34);
@@ -2168,10 +2596,65 @@ function pintarPremio(c, p, t) {
     c.textBaseline = 'alphabetic';
 }
 
+/* ---------- CRIATURAS Y BALAS (dibujos propios) ---------- */
+function pintarCriatura(c, k, t) {
+    const dir = k.vx >= 0 ? 1 : -1;
+    c.save(); c.translate(k.x, k.y); c.scale(dir, 1);
+    if (k.tipo === 'pajaro') {
+        /* Gaviota: cuerpo blanco, alas que baten y pico naranja */
+        const ala = Math.sin(t * 16 + k.fase * 3) * 9;
+        c.fillStyle = '#eceff1'; c.strokeStyle = '#37474f'; c.lineWidth = 1.5;
+        c.beginPath(); c.ellipse(0, 0, 13, 7, 0, 0, 7); c.fill(); c.stroke();
+        c.beginPath(); c.moveTo(-4, -2); c.quadraticCurveTo(-10, -8 - ala, -18, -4 - ala * 1.4); c.lineTo(2, -2); c.closePath();
+        c.fillStyle = '#cfd8dc'; c.fill(); c.stroke();
+        c.fillStyle = '#ffffff'; c.beginPath(); c.arc(11, -4, 5.5, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = '#212121'; c.beginPath(); c.arc(13, -5, 1.4, 0, 7); c.fill();
+        c.fillStyle = '#ff9800'; c.beginPath(); c.moveTo(16, -4); c.lineTo(22, -2.5); c.lineTo(16, -1); c.fill();
+    } else if (k.tipo === 'pez') {
+        /* Pez globo: se hincha y se deshincha */
+        const r = 17 * (1 + Math.sin(t * 3) * 0.08);
+        c.fillStyle = '#f9a825';
+        for (let a = 0; a < 12; a++) { const an = a * Math.PI / 6; c.beginPath(); c.moveTo(Math.cos(an - 0.15) * r, Math.sin(an - 0.15) * r); c.lineTo(Math.cos(an) * (r + 7), Math.sin(an) * (r + 7)); c.lineTo(Math.cos(an + 0.15) * r, Math.sin(an + 0.15) * r); c.fill(); }
+        const g = c.createRadialGradient(-5, -6, 2, 0, 0, r);
+        g.addColorStop(0, '#fff59d'); g.addColorStop(1, '#fbc02d');
+        c.fillStyle = g; c.beginPath(); c.arc(0, 0, r, 0, 7); c.fill();
+        c.strokeStyle = '#e65100'; c.lineWidth = 1.5; c.stroke();
+        c.fillStyle = '#fb8c00'; c.beginPath(); c.moveTo(-r + 2, 0); c.lineTo(-r - 10, -8); c.lineTo(-r - 10, 8); c.fill();
+        c.fillStyle = '#fff'; c.beginPath(); c.arc(7, -5, 5, 0, 7); c.fill();
+        c.fillStyle = '#212121'; c.beginPath(); c.arc(8.5, -5, 2.4, 0, 7); c.fill();
+        c.strokeStyle = '#bf360c'; c.beginPath(); c.arc(13, 4, 3, -0.6, 1.2); c.stroke();
+    } else {
+        /* Cocodrilo: anda con las patas y abre y cierra la boca */
+        const boca = (Math.sin(t * 5) + 1) * 0.16, paso = Math.sin(t * 9) * 3;
+        c.fillStyle = '#2e7d32';
+        for (const px of [-28, -8, 14]) { c.fillRect(px + paso, 8, 7, 9); c.fillRect(px - paso + 4, 8, 7, 9); }
+        c.fillStyle = '#388e3c'; c.beginPath(); c.moveTo(-48, 4); c.lineTo(-26, -6); c.lineTo(-26, 10); c.fill();
+        c.beginPath(); c.roundRect ? c.roundRect(-30, -12, 50, 22, 9) : c.rect(-30, -12, 50, 22); c.fill();
+        c.fillStyle = '#1b5e20'; for (let x = -24; x < 16; x += 9) { c.beginPath(); c.moveTo(x, -12); c.lineTo(x + 4, -17); c.lineTo(x + 8, -12); c.fill(); }
+        /* Mandíbulas, girando desde la bisagra */
+        c.save(); c.translate(18, 0); c.rotate(-boca);
+        c.fillStyle = '#43a047'; c.fillRect(0, -10, 30, 9);
+        c.fillStyle = '#fff'; for (let x = 4; x < 30; x += 6) { c.beginPath(); c.moveTo(x, -1); c.lineTo(x + 2, 3); c.lineTo(x + 4, -1); c.fill(); }
+        c.fillStyle = '#ffeb3b'; c.beginPath(); c.arc(4, -12, 4, 0, 7); c.fill();
+        c.fillStyle = '#212121'; c.fillRect(4, -14, 1.6, 4);
+        c.restore();
+        c.save(); c.translate(18, 2); c.rotate(boca);
+        c.fillStyle = '#66bb6a'; c.fillRect(0, 0, 28, 7);
+        c.fillStyle = '#fff'; for (let x = 4; x < 28; x += 6) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 2, -4); c.lineTo(x + 4, 0); c.fill(); }
+        c.restore();
+    }
+    c.restore();
+}
+function pintarBala(c, b) {
+    c.fillStyle = 'rgba(255,230,120,0.35)'; c.fillRect(b.x - 3, b.y - 2, 6, 16);
+    c.fillStyle = '#ffe082'; c.fillRect(b.x - 1.5, b.y, 3, 10);
+    c.fillStyle = '#fff'; c.fillRect(b.x - 1.5, b.y, 3, 3);
+}
+
 /* Partículas, anillos y textos que flotan */
 function efecto(tipo, datos) { efectos.push(Object.assign({ tipo, t: 0 }, datos)); }
-function estallido(x, y, tam) {
-    const r = Pang.BOLAS[tam].r, col = COLOR_BOLA[tam];
+function estallido(x, y, tam, especial) {
+    const r = Pang.BOLAS[tam].r, col = especial ? '#b45cff' : colorBolas();
     efecto('anillo', { x, y, r, col, dur: 0.35 });
     const n = 8 + Math.round(r / 5);
     for (let i = 0; i < n; i++) {
@@ -2204,42 +2687,78 @@ function pintarEfectos(c, dt) {
     }
 }
 
-/* Banda de arriba: ciudad, reloj y lo que lleva cada jugador */
+/* Banda de arriba (13-11: la barra de fuera se quitó para que el juego
+   sea más grande): cada jugador en su esquina con puntos, vidas y arma; en
+   medio, el reloj (viaje) o la barra de bolas (pánico). Letra grande a
+   propósito: en un móvil tumbado el lienzo mide unos 550 px y todo se ve
+   a 0,57 de su tamaño. Sin teclado táctil, la pausa flota encima de la
+   esquina derecha: se le deja sitio */
+function nombreEscena() {
+    const L = escena();
+    if (e.modo === 'panico') return 'Pánico';
+    return Pang.NIVELES[e.nivel].nombre + ' · ' + L.momento;
+}
+function pintarJugadorHUD(c, j, derecha, xBorde) {
+    const col = COLOR_JUG[j.n].ropa;
+    c.textAlign = derecha ? 'right' : 'left';
+    let x = xBorde;
+    const sig = (txt, fuente, color, sep) => {
+        c.font = fuente; c.fillStyle = color; c.fillText(txt, x, 30);
+        x += (derecha ? -1 : 1) * (c.measureText(txt).width + (sep || 8));
+    };
+    if (numPlayers === 2) sig('J' + j.n, 'bold 18px sans-serif', col, 6);
+    sig(j.puntos.toLocaleString('es-ES'), 'bold 26px sans-serif', j.muerto ? '#777' : '#fff', 10);
+    sig(j.vidas > 4 ? '♥×' + j.vidas : '♥'.repeat(j.vidas), 'bold 22px sans-serif', '#ff5252', 10);
+    let s = '';
+    if (j.arma !== 'normal' && !(e.modo === 'panico' && j.arma === 'doble')) s += ICONO_PREMIO[j.arma];
+    if (j.escudo) s += '🛡️';
+    if (j.aturdido > 0) s += '💫';
+    if (s) sig(s, '20px sans-serif', '#fff', 6);
+}
 function pintarHUD(c, t) {
     c.fillStyle = 'rgba(8,6,24,0.82)'; c.fillRect(0, 0, W, 40);
     c.fillStyle = 'rgba(0,255,200,0.6)'; c.fillRect(0, 39, W, 1);
-    const L = Pang.NIVELES[e.nivel];
-    /* Letra grande a propósito: en un móvil en vertical el lienzo mide unos
-       400 px de ancho y todo se ve a 0,4 de su tamaño */
-    c.font = 'bold 24px sans-serif'; c.textAlign = 'left'; c.fillStyle = '#fff';
-    c.fillText(L.nombre, 12, 29);
-    const anchoNombre = c.measureText(L.nombre).width;
-    c.font = 'bold 17px sans-serif'; c.fillStyle = '#a9a7c0';
-    c.fillText((e.nivel + 1) + '/9', 12 + anchoNombre + 12, 29);
-    /* El reloj: barra que se vacía, roja y latiendo los últimos 15 s */
-    const tope = e.dif.tiempo, frac = Math.max(0, Math.min(1, e.t / tope));
-    const bx = 400, bw = 220;
-    c.fillStyle = 'rgba(255,255,255,0.15)'; c.fillRect(bx, 12, bw, 16);
-    const poco = e.t < 15 && e.estado === 'jugando';
-    c.fillStyle = poco ? (Math.floor(t * 4) % 2 ? '#ff5252' : '#ff8a80') : '#00e5b0';
-    c.fillRect(bx, 12, bw * frac, 16);
-    c.font = 'bold 22px sans-serif'; c.textAlign = 'left'; c.fillStyle = poco ? '#ff8a80' : '#fff';
-    c.fillText(String(Math.ceil(Math.max(0, e.t))), bx + bw + 10, 29);
-    /* Armas, escudo y combo de cada jugador */
-    c.textAlign = 'right'; c.font = '22px sans-serif';
-    let xr = W - 10;
-    for (let i = e.jugadores.length - 1; i >= 0; i--) {
-        const j = e.jugadores[i];
-        let s = '';
-        if (j.arma !== 'normal') s += ICONO_PREMIO[j.arma];
-        if (j.escudo) s += '🛡️';
-        /* Se pinta de derecha a izquierda: primero lo que lleva y luego, a su
-           izquierda, de quién es («J1 🛡️  J2 ⚓») */
-        if (s) { c.font = '22px sans-serif'; c.fillStyle = '#fff'; c.fillText(s, xr, 29); xr -= c.measureText(s).width + 4; }
-        if (numPlayers === 2 && s) { c.font = 'bold 16px sans-serif'; c.fillStyle = COLOR_JUG[j.n].ropa; c.fillText('J' + j.n, xr, 28); xr -= c.measureText('J' + j.n).width; }
-        if (s) xr -= 16;
+    const reserva = document.body.classList.contains('tactil') ? 0 : 52;
+    const [j1, j2] = e.jugadores;
+    pintarJugadorHUD(c, j1, false, 12);
+    if (j2) pintarJugadorHUD(c, j2, true, W - 12 - reserva);
+    /* En medio: la barra */
+    const bx = 350, bw = 260, by = 8, bh = 24;
+    c.fillStyle = 'rgba(255,255,255,0.14)'; c.fillRect(bx, by, bw, bh);
+    let frac, colBarra, txt;
+    if (e.modo === 'panico') {
+        const P = e.panico;
+        frac = P.final ? 1 : P.barra / Pang.metaPanico(P.nivel);
+        colBarra = P.final ? '#69f0ae' : '#ffb300';
+        txt = P.final ? '¡ÚLTIMAS!' : 'NIVEL ' + P.nivel;
+    } else {
+        frac = Math.max(0, Math.min(1, e.t / e.dif.tiempo));
+        const poco = e.t < 15 && e.estado === 'jugando';
+        colBarra = poco ? (Math.floor(t * 4) % 2 ? '#ff5252' : '#ff8a80') : '#00b894';
+        txt = (e.nivel + 1) + '/' + Pang.NIVELES.length + '  ·  ' + Math.ceil(Math.max(0, e.t));
     }
-    if (e.congelado > 0) { c.fillStyle = '#9be7ff'; c.font = 'bold 20px sans-serif'; c.fillText('❄ ' + Math.ceil(e.congelado), xr, 29); }
+    c.fillStyle = colBarra; c.fillRect(bx, by, bw * frac, bh);
+    c.font = 'bold 20px sans-serif'; c.textAlign = 'center';
+    c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.8)'; c.strokeText(txt, bx + bw / 2, by + 19);
+    c.fillStyle = '#fff'; c.fillText(txt, bx + bw / 2, by + 19);
+    /* Con uno, a la derecha dónde se está (que en dos ocupa el J2) */
+    if (!j2) {
+        c.textAlign = 'right'; let tam = 20;
+        const nom = nombreEscena();
+        do { c.font = 'bold ' + tam + 'px sans-serif'; } while (c.measureText(nom).width > W - reserva - 12 - (bx + bw + 14) && --tam > 12);
+        c.fillStyle = '#c9c6e6'; c.fillText(nom, W - 12 - reserva, 28);
+    }
+    /* Lo que afecta a todas las bolas, debajo de la banda */
+    const ef = [];
+    if (e.congelado > 0) ef.push(['❄ ' + Math.ceil(e.congelado), '#9be7ff']);
+    if (e.lento > 0) ef.push(['⌛ ' + Math.ceil(e.lento), '#ffe0a3']);
+    if (ef.length) {
+        c.font = 'bold 22px sans-serif'; c.textAlign = 'center';
+        ef.forEach(([s, col], k) => {
+            const x = W / 2 + (k - (ef.length - 1) / 2) * 90;
+            c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.7)'; c.strokeText(s, x, 66); c.fillStyle = col; c.fillText(s, x, 66);
+        });
+    }
 }
 
 function cartel(c, linea1, linea2, color, k) {
@@ -2255,7 +2774,7 @@ function cartel(c, linea1, linea2, color, k) {
 
 function pintarPartida(dt) {
     const c = ctx, t = performance.now() / 1000;
-    if (!fondo) hacerFondo();
+    if (!fondo || claveFondo !== escena().clave) hacerFondo();
     c.setTransform(1, 0, 0, 1, 0, 0);
     let sx = 0, sy = 0;
     if (temblor > 0) { sx = (Math.random() - 0.5) * 10 * temblor * escala; sy = (Math.random() - 0.5) * 10 * temblor * escala; }
@@ -2268,14 +2787,25 @@ function pintarPartida(dt) {
     for (const b of e.bloques) if (b.vivo) pintarBloque(c, b);
     for (const p of e.premios) pintarPremio(c, p, t);
     for (const a of e.arpones) pintarArpon(c, a, t);
+    for (const b of e.balas) pintarBala(c, b);
+    for (const k of e.criaturas) if (k.tipo === 'cocodrilo') pintarCriatura(c, k, t);
     for (const j of e.jugadores) pintarJugador(c, j, t);
     for (const b of e.bolas) pintarBola(c, b, t);
+    for (const k of e.criaturas) if (k.tipo !== 'cocodrilo') pintarCriatura(c, k, t);
     pintarEfectos(c, dt);
+    if (destello > 0) { c.fillStyle = `rgba(255,255,240,${Math.min(0.8, destello)})`; c.fillRect(0, 40, W, 560); destello = Math.max(0, destello - dt * 2); }
     pintarHUD(c, t);
-    if (e.estado === 'intro') cartel(c, Pang.NIVELES[e.nivel].nombre.toUpperCase(), e.introT > 0.5 ? '¡PREPARADOS!' : '¡YA!', '#ffd54f', e.introT * 2);
+    if (e.estado === 'intro') {
+        const ya = e.introT > 0.5 ? '¡PREPARADOS!' : '¡YA!';
+        if (e.modo === 'panico') cartel(c, '¡PÁNICO!', 'Rompe las que caigan · ' + ya, '#ffb300', e.introT * 2);
+        else {
+            const L = Pang.NIVELES[e.nivel];
+            cartel(c, L.nombre.toUpperCase(), { 'mañana': 'Por la mañana', tarde: 'Por la tarde', noche: 'Por la noche' }[L.momento] + ' · ' + ya, '#ffd54f', e.introT * 2);
+        }
+    }
     else if (mensajeFin) {
         const m = mensajeFin;
-        cartel(c, '¡NIVEL SUPERADO!', '+' + m.nivel + ' por acabar  ·  +' + Math.round(m.tiempo * Math.min(1, m.t / 1)) + ' por el tiempo', '#69f0ae', m.t * 3);
+        cartel(c, '¡FASE SUPERADA!', '+' + m.nivel + ' por acabar  ·  +' + Math.round(m.tiempo * Math.min(1, m.t / 1)) + ' por el tiempo', '#69f0ae', m.t * 3);
     } else if (e.estado === 'jugando' && e.t < 15 && e.t > 0) {
         c.font = 'bold 26px sans-serif'; c.textAlign = 'center'; c.fillStyle = Math.floor(t * 3) % 2 ? '#ff5252' : '#ffffff';
         c.fillText('¡SE ACABA EL TIEMPO!', W / 2, 72);
@@ -2329,7 +2859,7 @@ function pintarViaje(dt) {
     c.textAlign = 'center'; c.font = 'bold 22px sans-serif'; c.fillStyle = '#ffffff';
     c.fillText('De ' + Pang.NIVELES[v.desde].nombre + ' a', W / 2, H - 56);
     c.font = 'bold 30px sans-serif'; c.fillStyle = '#69f0ae';
-    c.fillText(Pang.NIVELES[v.hasta].nombre + '  ·  nivel ' + (v.hasta + 1), W / 2, H - 20);
+    c.fillText(Pang.NIVELES[v.hasta].nombre + '  ·  fase ' + (v.hasta + 1), W / 2, H - 20);
     c.font = '13px sans-serif'; c.fillStyle = '#a9a7c0'; c.textAlign = 'right';
     c.fillText('toca para seguir', W - 12, H - 72);
     if (v.t >= v.dur + 0.6) acabarViaje();
@@ -2345,7 +2875,7 @@ function pintarVictoria(c, dt) {
     victoria.t += dt;
     if (!victoria.confeti) victoria.confeti = Array.from({ length: 120 }, () => ({ x: Math.random() * W, y: -Math.random() * 400, v: 80 + Math.random() * 160, a: Math.random() * 6, col: `hsl(${Math.random() * 360},85%,60%)` }));
     for (const f of victoria.confeti) { f.y += f.v * dt; f.a += dt * 4; c.save(); c.translate(f.x + Math.sin(f.a) * 10, f.y); c.rotate(f.a); c.fillStyle = f.col; c.fillRect(-5, -3, 10, 6); c.restore(); }
-    cartel(c, '¡ERES UN SÚPER PANG!', 'Te has pasado las nueve ciudades', '#00e5ff', victoria.t * 2);
+    cartel(c, '¡ERES UN SÚPER PANG!', e.modo === 'panico' ? 'Has aguantado los 99 niveles del pánico' : 'Te has pasado las 27 fases', '#00e5ff', victoria.t * 2);
 }
 
 /* ---------- PANTALLA SEGÚN EL ESTADO ---------- */
@@ -2370,6 +2900,9 @@ function entradas() {
     const k = (a, b) => !!(teclas[a] || teclas[b]);
     const r = { 1: { izq: k('ArrowLeft') || !!mandos[1].izq, der: k('ArrowRight') || !!mandos[1].der, arr: k('ArrowUp') || !!mandos[1].arr, aba: k('ArrowDown') || !!mandos[1].aba } };
     if (numPlayers === 2) r[2] = { izq: k('a', 'A') || !!mandos[2].izq, der: k('d', 'D') || !!mandos[2].der, arr: k('w', 'W') || !!mandos[2].arr, aba: k('s', 'S') || !!mandos[2].aba };
+    /* Fuego MANTENIDO, para la metralleta (el arpón dispara al pulsar) */
+    r[1].fuego = !!fuegoPulsado[1] || (numPlayers === 2 ? k('Enter') : k(' ', 'Enter'));
+    if (r[2]) r[2].fuego = !!fuegoPulsado[2] || k(' ');
     /* Con un jugador, también WASD mueve al 1 (hay quien está acostumbrado) */
     if (numPlayers === 1) { r[1].izq ||= k('a', 'A'); r[1].der ||= k('d', 'D'); r[1].arr ||= k('w', 'W'); r[1].aba ||= k('s', 'S'); }
     return r;
@@ -2380,20 +2913,30 @@ function fotograma(ahora) {
     const dt = Math.min(0.25, (ahora - ultimo) / 1000);
     ultimo = ahora;
     if (gameState === 'transition') { pintar(dt); bucleId = requestAnimationFrame(fotograma); return; }
-    if (gameState !== 'playing') return;
+    if (gameState !== 'playing' || girado) return;
     if (!mensajeFin && !victoria) Pang.avanzar(e, dt, entradas());
     if (temblor > 0) temblor = Math.max(0, temblor - dt * 2.5);
     tratarEventos();
     if (mensajeFin) {
         mensajeFin.t += dt;
-        if (mensajeFin.t > 2.6) { mensajeFin = null; empezarViaje(); }
+        /* Avión solo al cambiar de ciudad; de la mañana a la tarde se sigue allí */
+        if (mensajeFin.t > 2.6) {
+            mensajeFin = null;
+            /* (Sin P_siguiente: arrancaría un segundo bucle desde dentro de este) */
+            if (Pang.NIVELES[e.nivel + 1].ciudad !== Pang.NIVELES[e.nivel].ciudad) empezarViaje();
+            else { Pang.siguiente(e); efectos = []; musicaFondo.arrancar(); }
+        }
+    }
+    /* Pánico: la música se acelera cuando la pantalla se llena */
+    if (e.modo === 'panico') {
+        const bpm = 132 + Math.min(48, Math.round(Pang.pesoBolas(e) / 8) * 8);
+        if (bpm !== tempoMusica) { tempoMusica = bpm; musicaFondo.tempo(bpm); }
     }
     if (victoria && victoria.t > 3.6) { victoria = null; mostrarFin(true); return; }
     if (finEn !== null && (finEn -= dt) <= 0) { finEn = null; gameOver(); return; }
     /* El tic-tac de los últimos 10 s */
     if (e.estado === 'jugando' && e.t < 10 && Math.ceil(e.t) !== ultimoSegundo) { ultimoSegundo = Math.ceil(e.t); sonar.tic(); }
     pintar(dt);
-    pintarBarra();
     if (gameState === 'playing') bucleId = requestAnimationFrame(fotograma);
 }
 
@@ -2402,7 +2945,7 @@ function tratarEventos() {
         switch (ev.tipo) {
             case 'disparo': sonar.disparo(); ultimoDisparo[ev.j] = performance.now() / 1000; break;
             case 'pop':
-                estallido(ev.x, ev.y, ev.tam); sonar.pop(ev.tam);
+                estallido(ev.x, ev.y, ev.tam, ev.especial); sonar.pop(ev.tam);
                 if (ev.puntos) texto(ev.x, ev.y - 10, '+' + ev.puntos + (ev.combo > 1 ? '  ×' + ev.combo : ''), ev.combo > 1 ? '#ffd54f' : '#ffffff', ev.combo > 2);
                 break;
             case 'bote': if (ev.tam === 'xl' || ev.tam === 'l') sonar.bote(); break;
@@ -2412,9 +2955,34 @@ function tratarEventos() {
                 break;
             case 'premio':
                 sonar.premio();
-                texto(ev.x, ev.y - 6, { doble: '¡ARPÓN DOBLE!', gancho: '¡GANCHO!', escudo: '¡ESCUDO!', reloj: '¡QUIETAS!', dinamita: '¡DINAMITA!', vida: '¡VIDA EXTRA!', fruta: '+' + ev.puntos }[ev.premio], '#69f0ae', true);
+                texto(ev.x, ev.y - 6, { doble: '¡ARPÓN DOBLE!', gancho: '¡GANCHO!', metralleta: '¡METRALLETA!', escudo: '¡ESCUDO!', reloj: '¡QUIETAS!', arena: '¡DESPACIO!', dinamita: '¡DINAMITA!', vida: '¡VIDA EXTRA!', fruta: '+' + ev.puntos, estrella: '¡ESTRELLA!' }[ev.premio], '#69f0ae', true);
                 if (ev.premio === 'dinamita') temblor = 0.6;
+                if (ev.premio === 'arena') sonar.arena();
                 break;
+            case 'bala': sonar.bala(); ultimoDisparo[ev.j] = performance.now() / 1000; break;
+            case 'estrella':
+                sonar.estrella(); destello = 0.9;
+                texto(W / 2, 300, (ev.motivo === 'estrella' ? '⭐ ' : '') + '+' + ev.puntos.toLocaleString('es-ES'), '#fff59d', true);
+                break;
+            case 'especial': sonar.premio(); texto(W / 2, 300, '¡QUIETAS!', '#9be7ff', true); break;
+            case 'criaturaEntra': sonar[ev.criatura](); break;
+            case 'derribo':
+                sonar.derribo(); texto(ev.x, ev.y - 10, '+' + ev.puntos, '#ffe0a3');
+                for (let i = 0; i < 10; i++) efecto('polvo', { x: ev.x, y: ev.y, vx: (Math.random() - 0.5) * 260, vy: -Math.random() * 220, col: ev.criatura === 'cocodrilo' ? '#43a047' : ev.criatura === 'pez' ? '#fbc02d' : '#eceff1', dur: 0.7 });
+                break;
+            case 'explosion':
+                sonar.explosion(); temblor = 0.8;
+                efecto('anillo', { x: ev.x, y: ev.y, r: 120, col: '#ff9800', dur: 0.5 });
+                for (let i = 0; i < 24; i++) { const a = Math.random() * 7, v = 150 + Math.random() * 250; efecto('chispa', { x: ev.x, y: ev.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, col: i % 2 ? '#ff9800' : '#ffeb3b', dur: 0.6, tam: 4 }); }
+                break;
+            case 'come': sonar.come(); texto(ev.x, ev.y, '¡ÑAM!', '#a5d6a7'); break;
+            case 'aturdido': sonar.aturdido(); texto(ev.x, ev.y - 20, '¡ATONTADO!', '#ffb74d', true); break;
+            case 'noPuede': sonar.noPuede(); break;
+            case 'nivelPanico':
+                sonar.nivelPanico();
+                texto(W / 2, 110, 'NIVEL ' + ev.nivel, '#ffd54f', true);
+                break;
+            case 'panicoFinal': texto(W / 2, 110, '¡ROMPE LAS ÚLTIMAS!', '#69f0ae', true); break;
             case 'escudo': sonar.escudo(); efecto('anillo', { x: ev.x, y: ev.y, r: 34, col: '#9be7ff', dur: 0.5 }); break;
             case 'muerte':
                 sonar.muerte(); temblor = 1;
@@ -2456,14 +3024,20 @@ function empezarPartida(n) {
     numPlayers = n;
     ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
     mostrarMandos(n);
+    document.body.classList.add('jugando');
     EST.mostrar('pJuego');
-    e = Pang.crear({ dificultad: selectedDifficulty, jugadores: n });
-    fondo = null; efectos = []; mensajeFin = null; viaje = null; victoria = null; finEn = null; temblor = 0;
+    e = Pang.crear({ dificultad: selectedDifficulty, jugadores: n, modo: modoMenu });
+    fondo = null; efectos = []; mensajeFin = null; viaje = null; victoria = null; finEn = null; temblor = 0; destello = 0;
+    tempoMusica = 132; musicaFondo.tempo(132);
     for (const k in teclas) teclas[k] = false;
     soltarMandos();
-    barraCache = {};
     gameState = 'playing';
     medir();
+    /* Empezada en vertical: no arranca hasta que se gire (la cuenta de
+       «¡PREPARADOS!» la verá entera) */
+    esperaGiro = vertical();
+    comprobarGiro();
+    if (esperaGiro) return;
     musicaFondo.arrancar();
     arrancar();
 }
@@ -2481,7 +3055,9 @@ function mostrarFin(gano) {
     const total = puntosFinales();
     $('finTitulo').textContent = gano ? '🏆 ¡ERES UN SÚPER PANG!' : '🎈 FIN DE LA PARTIDA';
     $('finalScore').textContent = total.toLocaleString('es-ES');
-    let det = Pang.NIVELES[e.nivel].nombre + ' (nivel ' + (e.nivel + 1) + ') · ' + ETIQUETA_DIF[selectedDifficulty];
+    let det = e.modo === 'panico'
+        ? 'Pánico · nivel ' + e.panico.nivel + ' · ' + ETIQUETA_DIF[selectedDifficulty]
+        : Pang.NIVELES[e.nivel].nombre + ', ' + Pang.NIVELES[e.nivel].momento + ' (fase ' + (e.nivel + 1) + ') · ' + ETIQUETA_DIF[selectedDifficulty];
     if (numPlayers === 2) {
         const [a, b] = e.jugadores.map(j => j.puntos);
         det = 'J1: ' + a.toLocaleString('es-ES') + ' · J2: ' + b.toLocaleString('es-ES') + (a > b ? ' · gana J1' : b > a ? ' · gana J2' : ' · empate') + ' · ' + det;
@@ -2489,7 +3065,7 @@ function mostrarFin(gano) {
     $('finDetalle').textContent = det;
     $('playerName').value = '';
     /* Sin foco automático: en el móvil abriría el teclado tapándolo todo */
-    $('nameInputContainer').style.display = ranking.entra(total) ? '' : 'none';
+    $('nameInputContainer').style.display = RANKINGS[e.modo].entra(total) ? '' : 'none';
     EST.abrir('capaFin');
 }
 function guardarNombre() {
@@ -2499,26 +3075,12 @@ function guardarNombre() {
     if ($('nameInputContainer').style.display === 'none') return;
     const d = new Date();
     const fecha = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
-    ranking.anadir({ nombre, puntuacion: puntosFinales(), nivel: e.nivel + 1, dificultad: selectedDifficulty, fecha });
+    RANKINGS[e.modo].anadir({ nombre, puntuacion: puntosFinales(), nivel: e.modo === 'panico' ? e.panico.nivel : e.nivel + 1, dificultad: selectedDifficulty, fecha });
     $('nameInputContainer').style.display = 'none';
     EST.avisar('¡Guardado!');
 }
 function displayTop10() {
-    ranking.pintar($('top10List'), (x) => ' · nv ' + (x.nivel || '?') + ' · ' + (INICIAL_DIF[x.dificultad] || '?'));
-}
-
-let barraCache = {};
-function pintarBarra() {
-    if (!e) return;
-    const [j1, j2] = e.jugadores;
-    const v = { bS1: j1.puntos.toLocaleString('es-ES'), bV1: j1.vidas, bS2: j2 ? j2.puntos.toLocaleString('es-ES') : 0, bV2: j2 ? j2.vidas : 0, bNivel: e.nivel + 1, bTiempo: Math.ceil(Math.max(0, e.t)) };
-    for (const k in v) {
-        if (barraCache[k] === v[k]) continue;
-        barraCache[k] = v[k];
-        $(k).textContent = v[k];
-    }
-    const j2v = numPlayers === 2 ? '' : 'none';
-    if (barraCache.j2 !== j2v) { barraCache.j2 = j2v; $('barraJ2').style.display = j2v; }
+    RANKINGS[rankModo].pintar($('top10List'), (x) => ' · nv ' + (x.nivel || '?') + ' · ' + (INICIAL_DIF[x.dificultad] || '?'));
 }
 
 /* ---------- PAUSA ---------- */
@@ -2533,7 +3095,7 @@ function pauseGame() {
     EST.abrir('capaPausa');
 }
 function reanudar() {
-    if (gameState !== 'paused') return;
+    if (gameState !== 'paused' || girado) return;
     EST.cerrar('capaPausa');
     gameState = pausadoDesde || 'playing';
     if (gameState === 'playing' && !mensajeFin && !victoria) musicaFondo.arrancar();
@@ -2541,6 +3103,8 @@ function reanudar() {
 }
 function volverAlMenu() {
     gameState = 'menu';
+    document.body.classList.remove('jugando');
+    esperaGiro = false;
     parar();
     musicaFondo.parar();
     for (const k in teclas) teclas[k] = false;
@@ -2549,7 +3113,31 @@ function volverAlMenu() {
     ['capaFin', 'capaPausa'].forEach(EST.cerrar);
     updateTwoPlayersAvailability();
     EST.mostrar('pMenu');
+    comprobarGiro();
 }
+
+/* ---------- GIRAR EL MÓVIL ----------
+   Táctil y en vertical: aviso a pantalla completa y la partida quieta. Si
+   se gira en mitad de una partida, se pausa (al volver a tumbarlo se ve la
+   pausa y se sigue cuando uno quiera, no de golpe con las bolas encima) */
+const consultaVertical = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+function vertical() {
+    if (!document.body.classList.contains('tactil')) return false;
+    return consultaVertical ? consultaVertical.matches : innerHeight > innerWidth;
+}
+function comprobarGiro() {
+    const enPartida = e && ['playing', 'transition', 'paused'].includes(gameState);
+    const antes = girado;
+    girado = !!enPartida && vertical();
+    $('avisoGirar').classList.toggle('activo', girado);
+    if (girado && !antes && !esperaGiro && (gameState === 'playing' || gameState === 'transition')) pauseGame();
+    if (!girado && esperaGiro) {
+        esperaGiro = false;
+        medir();
+        if (gameState === 'playing') { musicaFondo.arrancar(); arrancar(); }
+    }
+}
+if (consultaVertical && consultaVertical.addEventListener) consultaVertical.addEventListener('change', comprobarGiro);
 function alCambiarMusica(on) {
     if (on && gameState === 'playing' && !mensajeFin && !victoria) musicaFondo.arrancar();
     else musicaFondo.parar();
@@ -2634,16 +3222,25 @@ document.addEventListener('touchend', revisarToques, { passive: true });
 document.addEventListener('touchcancel', revisarToques, { passive: true });
 function soltarMandos() {
     palancas.forEach(p => p.soltar());
-    for (const n of [1, 2]) mandos[n] = {};
-    document.querySelectorAll('.fuego').forEach(b => b.classList.remove('pulsado'));
+    for (const n of [1, 2]) { mandos[n] = {}; fuegoPulsado[n] = 0; }
+    document.querySelectorAll('.fuego').forEach(b => { b.classList.remove('pulsado'); b._dedos && b._dedos.clear(); });
 }
+/* ARPÓN: dispara al apoyar el dedo; mientras siga apoyado, cuenta como
+   mantenido (la metralleta). Se cuentan los dedos de cada botón y se
+   olvidan con up, cancel y lostpointercapture, como en la palanca */
 document.querySelectorAll('.fuego').forEach(b => {
+    const n = Number(b.dataset.fuego);
+    b._dedos = new Set();
+    const cuenta = () => { fuegoPulsado[n] = [...document.querySelectorAll('.fuego[data-fuego="' + n + '"]')].reduce((a, x) => a + x._dedos.size, 0); b.classList.toggle('pulsado', b._dedos.size > 0); };
     b.addEventListener('pointerdown', (ev) => {
         ev.preventDefault();
-        b.classList.add('pulsado');
-        if (gameState === 'playing' && e) Pang.disparar(e, Number(b.dataset.fuego));
+        b._dedos.add(ev.pointerId);
+        try { b.setPointerCapture(ev.pointerId); } catch (x) {}
+        cuenta();
+        if (gameState === 'playing' && e && !girado) Pang.disparar(e, n);
     });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => b.addEventListener(t, () => b.classList.remove('pulsado')));
+    const fin = (ev) => { b._dedos.delete(ev.pointerId); cuenta(); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => b.addEventListener(t, fin));
     b.addEventListener('contextmenu', (ev) => ev.preventDefault());
 });
 /* Tocar el mapa durante el viaje lo salta */
@@ -2682,13 +3279,15 @@ function updateTwoPlayersAvailability() {
    ========================================================== */
 const MULT_DIF = { principiante: 0.5, avanzado: 1.0, experto: 1.5, rambo: 2.0 };
 EST.grupo('grpDif', (v) => { selectedDifficulty = v; });
+EST.grupo('grpModo', (v) => { modoMenu = v; });
+EST.grupo('grpRankModo', (v) => { rankModo = v; displayTop10(); });
 let jugadoresMenu = 1;
 EST.grupo('grpJugadores', (v) => { jugadoresMenu = +v; });
 const btn = (id, fn) => $(id).addEventListener('click', fn);
 btn('btnJugar', () => empezarPartida(jugadoresMenu));
-btn('btnTop10', () => { displayTop10(); EST.abrir('capaRanking'); });
+btn('btnTop10', () => { EST.elegir('grpRankModo', modoMenu); displayTop10(); EST.abrir('capaRanking'); });
 btn('closeTop10', () => EST.cerrar('capaRanking'));
-btn('btnBorrarRanking', () => { if (!confirm('¿Borrar todos los récords?')) return; ranking.borrar(); displayTop10(); });
+btn('btnBorrarRanking', () => { if (!confirm('¿Borrar los récords de ' + (rankModo === 'panico' ? 'pánico' : 'viaje') + '?')) return; RANKINGS[rankModo].borrar(); displayTop10(); });
 btn('btnInstructions', () => EST.abrir('capaAyuda'));
 btn('closeInstructions', () => EST.cerrar('capaAyuda'));
 btn('btnRestart', () => empezarPartida(numPlayers));
@@ -2696,11 +3295,12 @@ btn('btnMenu', volverAlMenu);
 btn('btnResume', reanudar);
 btn('btnPauseToMenu', volverAlMenu);
 btn('btnSaveName', guardarNombre);
+btn('btnGirarMenu', volverAlMenu);
 $('pauseTouchBtn').addEventListener('click', () => { if (gameState === 'paused') reanudar(); else pauseGame(); });
 
 if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) document.body.classList.add('tactil');
 updateTwoPlayersAvailability();
-window.addEventListener('resize', () => { updateTwoPlayersAvailability(); medir(); });
+window.addEventListener('resize', () => { updateTwoPlayersAvailability(); comprobarGiro(); medir(); });
 
 document.addEventListener('keydown', (ev) => {
     if (ev.target instanceof HTMLInputElement) {
@@ -2732,7 +3332,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 EST.iniciar({ claveAudio: 'superPangAudio', alCambiarMusica });
 
 /* Para las pruebas */
-window.__pang = { partida: () => e, estado: () => gameState, bucle: () => bucleId !== null, escala: () => escala, saltarViaje: acabarViaje };
+window.__pang = { partida: () => e, estado: () => gameState, bucle: () => bucleId !== null, escala: () => escala, saltarViaje: acabarViaje, girado: () => girado, fuego: () => Object.assign({}, fuegoPulsado) };
 
 </script>
 </body>
