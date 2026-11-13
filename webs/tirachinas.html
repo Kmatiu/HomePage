@@ -321,6 +321,20 @@ body {
         /* El lienzo ocupa todo el hueco que deja la barra. El tamaño lo da el
            CSS; el código solo lee cuánto mide para dibujar a esa resolución */
         #zonaJuego { flex: 1 1 auto; min-height: 0; width: 100%; margin-top: 6px; position: relative; }
+        /* Opción B del usuario: en vertical no se juega, se pide girar. Una
+           web no puede obligar a girar (en iPhone no hay bloqueo de
+           orientación y en Android solo en pantalla completa) */
+        #avisoGirar {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            padding: 24px; text-align: center; background: var(--c-0f0c2d, #0f0c2d); color: var(--c-fff, #fff);
+        }
+        #avisoGirar.activo { display: flex; }
+        #avisoGirar .movil { font-size: 4rem; line-height: 1; animation: girarMovil 2.2s ease-in-out infinite; }
+        #avisoGirar p { margin: 0; max-width: 22em; line-height: 1.5; }
+        #avisoGirar small { color: var(--apagado); }
+        @keyframes girarMovil { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+        @media (prefers-reduced-motion: reduce) { #avisoGirar .movil { animation: none; transform: rotate(-90deg); } }
         #gameCanvas {
             position: absolute; inset: 0; width: 100%; height: 100%; display: block;
             border-radius: 8px; touch-action: none; background: var(--c-87ceeb, #87ceeb);
@@ -643,7 +657,6 @@ body {
         </div>
         <div class="dato" id="datoRecord"><b id="bRecord">—</b><span>RÉCORD</span></div>
         <div class="hueco"></div>
-        <button id="btnVer" class="est-icono" type="button" aria-label="Ver la construcción" aria-pressed="false">👁</button>
         <button id="btnRepetir" class="est-icono" type="button" aria-label="Repetir el nivel">↻</button>
         <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
     </div>
@@ -713,11 +726,13 @@ body {
             <p>Los zorros se han escondido en sus casetas con los huevos. Lanza a los pajaritos con el tirachinas y tira las casetas hasta que no quede ningún zorro. Cada nivel te da unos pajaritos en un orden fijo; si se acaban y queda algún zorro, a repetir.</p>
             <h3>LANZAR</h3>
             <ul>
-                <li><b>Arrastra hacia atrás</b> desde cualquier sitio del dibujo y <b>suelta</b>: el pajarito sale hacia el lado contrario. Cuanto más estiras, más fuerte. Los puntitos te enseñan el principio del vuelo, y los blancos, por dónde fue el tiro anterior.</li>
+                <li>Se juega con el móvil <b>tumbado</b>.</li>
+                <li><b>Pon el dedo sobre el pajarito</b> del tirachinas, <b>arrastra hacia atrás</b> y <b>suelta</b>: sale hacia el lado contrario. Cuanto más estiras, más fuerte. Los puntos amarillos te enseñan el principio del vuelo, y los blancos, por dónde fue el tiro anterior.</li>
                 <li>Si te arrepientes, vuelve con el dedo cerca del punto donde empezaste y suelta: no lanza.</li>
+                <li><b>Arrastra en cualquier otro sitio</b> para mover la vista y mirar la construcción. Arriba tienes el <b>mapa</b> del nivel entero: tócalo para ir a esa zona. Cuando el tiro acaba, la vista vuelve sola al tirachinas.</li>
                 <li><b>Toca la pantalla</b> mientras vuela para usar su poder.</li>
-                <li><b>👁</b> enseña la construcción de cerca (o todo el nivel). <b>↻</b> repite el nivel. <b>⏸</b> pausa.</li>
-                <li><b>Teclado:</b> ← → apuntan, ↑ ↓ fuerza, espacio o Intro lanza y, en vuelo, usa el poder. R repite, V ver, P o Esc pausa.</li>
+                <li><b>↻</b> repite el nivel. <b>⏸</b> pausa.</li>
+                <li><b>Teclado:</b> ← → apuntan, ↑ ↓ fuerza, espacio o Intro lanza y, en vuelo, usa el poder. A y D mueven la vista. R repite, P o Esc pausa.</li>
             </ul>
             <h3>LOS PAJARITOS</h3>
             <ul>
@@ -745,6 +760,13 @@ body {
         </div>
         <button class="principal" id="closeInstructions" type="button" style="margin-top:10px;">ENTENDIDO</button>
     </div>
+</div>
+
+<div id="avisoGirar" role="alertdialog" aria-labelledby="avisoGirarTexto">
+    <div class="movil" aria-hidden="true">📱</div>
+    <p id="avisoGirarTexto"><b>Gira el móvil</b> para jugar: con la pantalla tumbada se ve el tirachinas y la construcción mucho mejor.</p>
+    <small>Si no gira, quita el bloqueo de rotación del móvil.</small>
+    <button class="secundario" id="btnGirarMenu" type="button">← MENÚ</button>
 </div>
 
 <script>
@@ -2350,27 +2372,36 @@ function ajustarLienzo() {
     calcularCamara(true);
 }
 function caja(d) {
-    let alto = 6.5;
-    for (const q of d.piezas) alto = Math.max(alto, q[2] + (q[4] && typeof q[4] === 'number' ? q[4] / 2 : 0.6));
-    for (const z of d.zorros) alto = Math.max(alto, z[2] + 0.8);
-    for (const k of d.colinas || []) alto = Math.max(alto, k[3] + 1);
+    /* techo: lo más alto de la construcción; alto: con aire por encima para el mapa */
+    let techo = 1;
+    for (const q of d.piezas) techo = Math.max(techo, q[2] + (typeof q[4] === 'number' ? q[4] / 2 : q[3]));
+    for (const z of d.zorros) techo = Math.max(techo, z[2] + 0.8);
+    for (const k of d.colinas || []) techo = Math.max(techo, k[3]);
+    const alto = Math.max(6.5, techo);
     /* El encuadre empieza donde acaba la cola de pajaritos en espera: con
        4 o más, los últimos se salían por la izquierda (en el 3-15 hay 6) */
     let cola = 0;
     for (const t of d.pajaros.slice(1)) cola += T.PAJAROS[t].r * 2 + HUECO_COLA;
-    return { x0: Math.min(0.6, T.HONDA.x - 0.9 - cola - 0.25), x1: d.ancho, alto: alto + 1.2 };
+    return { x0: Math.min(0.6, T.HONDA.x - 0.9 - cola - 0.25), x1: d.ancho, alto: alto + 1.2, techo };
 }
+/* Cámara acercada: la construcción más alta, con 2,4 m de aire, llena el
+   alto, y se ve al menos 11 m de ancho. Con el nivel entero en pantalla
+   (como antes en apaisado) se veía demasiado cielo y nada que mover. Se
+   desplaza arrastrando el dedo o tocando el mapa de arriba */
 function calcularCamara(saltar) {
     if (!partida) return;
     const b = caja(partida.def);
     const sTodo = Math.min(cw / (b.x1 - b.x0), ch / (b.alto + 0.6));
+    const sCerca = Math.min(ch / (Math.max(5.5, b.techo + 2.4) + 0.6), cw / 11);
+    cam.s = Math.max(sTodo, sCerca);
     cam.vistaS = sTodo;
-    if (sTodo >= S_MIN * 0.85) { cam.modo = 'todo'; cam.s = sTodo; }
-    else { cam.modo = 'seguir'; cam.s = Math.max(S_MIN, Math.min(ch / (b.alto + 0.6), cw / 12)); }
-    $('btnVer').style.display = cam.modo === 'todo' ? 'none' : '';
+    cam.modo = maxCamX(b) > b.x0 + 0.3 ? 'seguir' : 'todo';
     if (cam.modo === 'todo') { const sobra = cw / cam.s - (b.x1 - b.x0); cam.objetivoX = b.x0 - sobra / 2; }
+    else cam.objetivoX = Math.max(b.x0, Math.min(maxCamX(b), cam.objetivoX));
     if (saltar) { cam.x = cam.objetivoX; cam.y = cam.objetivoY; }
 }
+function maxCamX(b) { return Math.max(b.x0, b.x1 - cw / cam.s); }
+const ajustarX = (x) => { const b = caja(partida.def); return Math.max(b.x0, Math.min(maxCamX(b), x)); };
 const sx = (x) => (x - cam.x) * cam.s;
 const sy = (y) => ch - (y - cam.y) * cam.s;
 const vistaAncho = () => cw / cam.s;
@@ -2382,6 +2413,8 @@ let raf = 0, ultimoT = 0, acumulado = 0, pausado = false, finPendiente = 0;
 let apunte = null;           // { x0, y0, ang, fuerza } mientras se arrastra
 let apunteTeclado = { ang: 0.6, fuerza: 0.85, activo: false };
 let rastro = [], rastroViejo = [], particulas = [], textos = [], introT = 0, ultimoGolpeX = null, tiempo = 0;
+let risa = 0;                // instante en que los zorros empezaron a reírse (0 = no)
+let girado = false;          // en vertical: la partida espera a que se gire el móvil
 
 /* ---------- PARTIDA ---------- */
 function abrirNivel(id, conservarTurno) {
@@ -2392,16 +2425,17 @@ function abrirNivel(id, conservarTurno) {
     if (!conservarTurno) { turnoJ = 1; resultadoJ1 = null; }
     partida = T.crear(d, { sinHuevo: !!g.huevos[d.mundo] || d.n === 'P' });
     rastro = []; rastroViejo = []; particulas = []; textos = []; apunte = null; ultimoGolpeX = null;
-    acumulado = 0; finPendiente = 0; pausado = false; introT = 0;
+    acumulado = 0; finPendiente = 0; pausado = false; introT = 0; risa = 0;
+    cam.manual = false; cam.arrastre = null; cam.objetivoX = -Infinity;
     apunteTeclado = { ang: 0.6, fuerza: 0.85, activo: false };
     EST.mostrar('pJuego');
     ['capaFin', 'capaPausa', 'capaTurno', 'capaLogros', 'capaAyuda'].forEach(EST.cerrar);
     estado = 'jugando';
     ajustarLienzo();
-    /* En modo «seguir» la cámara empieza en la construcción y vuelve al
-       tirachinas: así se ve qué hay antes de apuntar */
-    if (cam.modo === 'seguir') { const b = caja(d); cam.x = Math.max(b.x0, b.x1 - vistaAncho()); introT = 1.4; }
-    cam.ver = false; $('btnVer').setAttribute('aria-pressed', 'false');
+    /* La cámara empieza en la construcción y vuelve al tirachinas: así se
+       ve qué hay antes de apuntar */
+    if (cam.modo === 'seguir') { cam.x = maxCamX(caja(d)); introT = 1.4; }
+    comprobarGiro();
     pintarBarra();
     arrancarBucle();
     musicaFondo(true);
@@ -2435,6 +2469,7 @@ function lanzarAhora(ang, fuerza) {
     if (!T.lanzar(partida, ang, fuerza)) return false;
     rastroViejo = rastro; rastro = [];
     apunteTeclado.activo = false;
+    cam.manual = false;
     return true;
 }
 function usarPoder() {
@@ -2562,7 +2597,7 @@ function fotograma(t) {
     if (estado !== 'jugando') return;
     const dt = Math.min(0.05, Math.max(0, (t - ultimoT) / 1000));
     ultimoT = t;
-    if (!pausado) actualizar(dt);
+    if (!pausado && !girado) actualizar(dt);
     dibujar();
     raf = requestAnimationFrame(fotograma);
 }
@@ -2584,7 +2619,8 @@ function actualizar(dt) {
         }
         if (n === PASOS_MAX) acumulado = 0;
         tratarEventos();
-        if (p.fase === 'gana' || p.fase === 'pierde') finPendiente = 1.1;
+        /* Si ganan los zorros, 2,2 s para verlos reírse antes de la capa */
+        if (p.fase === 'gana' || p.fase === 'pierde') finPendiente = p.fase === 'pierde' ? 2.2 : 1.1;
     } else tratarEventos();
     if (finPendiente > 0) { finPendiente -= dt; if (finPendiente <= 0) { finPendiente = 0; alTerminar(); } }
     /* Partículas y textos */
@@ -2599,14 +2635,16 @@ function moverCamara(dt) {
     if (cam.modo === 'todo') {
         const sobra = cw / cam.s - (b.x1 - b.x0);
         cam.objetivoX = b.x0 - sobra / 2;
-    } else {
-        const ancho = vistaAncho();
-        const maxX = Math.max(b.x0, b.x1 - ancho);
+    } else if (!cam.arrastre) {
+        /* Orden: lo que haya movido el jugador manda; si no, en vuelo se
+           sigue al pajarito y, en reposo, se vuelve al tirachinas */
+        const ancho = vistaAncho(), maxX = maxCamX(b);
         let obj;
         if (introT > 0) { introT -= dt; obj = introT > 0.5 ? maxX : b.x0; }
-        else if (cam.ver) obj = maxX;
+        else if (cam.manual) obj = cam.objetivoX;
         else if (p.fase === 'vuelo' && p.vuelo && p.vuelo.cuerpos.length) { const c = p.vuelo.cuerpos[0]; obj = c.x - ancho * 0.35; ultimoGolpeX = obj; }
         else if (p.fase === 'vuelo' && ultimoGolpeX !== null) obj = ultimoGolpeX;
+        else if (p.fase !== 'apuntar' && ultimoGolpeX !== null) obj = ultimoGolpeX;
         else obj = b.x0;
         cam.objetivoX = Math.max(b.x0, Math.min(maxX, obj));
     }
@@ -2618,7 +2656,7 @@ function moverCamara(dt) {
     }
     cam.objetivoY = objY;
     const k = 1 - Math.exp(-dt * 4.5);
-    cam.x += (cam.objetivoX - cam.x) * k;
+    if (!cam.arrastre) cam.x += (cam.objetivoX - cam.x) * k;
     cam.y += (cam.objetivoY - cam.y) * k;
 }
 
@@ -2641,7 +2679,7 @@ function tratarEventos() {
     const p = partida;
     for (const e of p.eventos) {
         switch (e.tipo) {
-            case 'lanza': sonar('lanza'); break;
+            case 'lanza': sonar('lanza', e); break;
             case 'habilidad':
                 if (e.clase === 'pum') { sonar('bum'); humo(e.x, e.y, 14, 1.2); chispas(e.x, e.y, ['#ffcf3f', '#ff7a1a', '#5b2aa6'], 16, 7, 0.16); particulas.push({ x: e.x, y: e.y, vx: 0, vy: 0, a: 0, w: 0, g: 0, vida: 0.35, color: '#fff6c0', tam: T.BOMBA.radio, forma: 'destello' }); }
                 else if (e.clase === 'trio') { sonar('trio'); humo(e.x, e.y, 4, 0.4); }
@@ -2678,9 +2716,11 @@ function tratarEventos() {
                     if (t.piezas >= 12) conseguir('derribo');
                 }
                 ultimoGolpeX = null;
+                cam.manual = false;
                 break;
             }
             case 'gana': case 'pierde': {
+                if (e.tipo === 'pierde') { risa = tiempo || 0.001; sonar('risa'); }
                 const t = p.tiros[p.tiros.length - 1];
                 if (t) { if (t.zorros >= 2) conseguir('doble'); if (t.zorros >= 3) conseguir('triple'); if (t.piezas >= 12) conseguir('derribo'); }
                 break;
@@ -2695,7 +2735,18 @@ function tratarEventos() {
 function sonar(que, e) {
     switch (que) {
         case 'estirar': EST.efecto('estirar', 70, [[180 + (e || 0) * 420, 0.05, 'triangle', 0.025]]); break;
-        case 'lanza': EST.ruido(0.22, 0.12, 3500, 400); EST.efecto('lanza', 0, [[420, 0.16, 'triangle', 0.07, 0, 980]]); break;
+        case 'lanza':
+            /* Cada pajarito con su grito al salir, encima del zumbido de la goma */
+            EST.ruido(0.22, 0.1, 3500, 400);
+            EST.efecto('grito-' + ((e && e.clase) || 'pio'), 0, GRITOS[(e && e.clase) || 'pio'] || GRITOS.pio);
+            break;
+        case 'risa':
+            /* «Jo, jo, jo» de los zorros: tres golpes graves que bajan, con una
+               segunda voz encima para que suene a risa y no a pitido */
+            EST.efecto('risa', 0, [[200, 0.13, 'square', 0.055, 0, 170], [300, 0.1, 'triangle', 0.04, 0.01, 260],
+                [185, 0.13, 'square', 0.055, 0.2, 155], [280, 0.1, 'triangle', 0.04, 0.21, 240],
+                [170, 0.2, 'square', 0.055, 0.4, 120], [260, 0.16, 'triangle', 0.04, 0.41, 200]]);
+            break;
         case 'trio': EST.efecto('poder', 0, [[1150, 0.07, 'square', 0.04], [1450, 0.07, 'square', 0.04, 0.05], [1750, 0.08, 'square', 0.04, 0.1]]); break;
         case 'zas': EST.efecto('poder', 0, [[260, 0.28, 'sawtooth', 0.06, 0, 1500]]); break;
         case 'bum': EST.ruido(0.7, 0.5, 1800, 50); EST.efecto('bum', 120, [[70, 0.35, 'sine', 0.2, 0, 35]]); break;
@@ -2719,6 +2770,14 @@ function sonar(que, e) {
         case 'estrella': EST.efecto('estrella' + e, 0, [[880 * Math.pow(1.26, e), 0.18, 'triangle', 0.07]]); break;
     }
 }
+/* [frecuencia, duración, onda, volumen, retraso, frecuencia final] */
+const GRITOS = {
+    pio:  [[1700, 0.06, 'square', 0.035, 0, 2500], [2300, 0.08, 'square', 0.035, 0.07, 1600]],
+    trio: [[2100, 0.045, 'triangle', 0.05], [2500, 0.045, 'triangle', 0.05, 0.055], [2950, 0.07, 'triangle', 0.05, 0.11]],
+    zas:  [[800, 0.28, 'sine', 0.07, 0, 2900], [1600, 0.2, 'sine', 0.03, 0.05, 3600]],
+    pum:  [[170, 0.16, 'sawtooth', 0.06, 0, 120], [130, 0.14, 'sawtooth', 0.055, 0.14, 95]],
+    bolo: [[240, 0.12, 'triangle', 0.09, 0, 320], [320, 0.26, 'triangle', 0.09, 0.1, 170]]
+};
 let musica = null;
 function musicaFondo(on) {
     if (!musica) musica = EST.musica({ bpm: 104, acordes: [{ bajo: 98, notas: [196, 247, 294] }, { bajo: 131, notas: [262, 330, 392] }, { bajo: 110, notas: [220, 262, 330] }, { bajo: 147, notas: [220, 294, 370] }] });
@@ -2748,8 +2807,8 @@ function dibujar() {
     ctx.fillStyle = M.cesped; ctx.fillRect(0, yS - 0.12 * cam.s, cw, 0.22 * cam.s);
     for (const b of p.m.cuerpos) if (b.tipo === 'colina') colina(b, M);
     /* Rastros */
-    puntos(rastroViejo, 'rgba(255,255,255,0.55)', 0.05);
-    puntos(rastro, 'rgba(255,255,255,0.9)', 0.06);
+    puntos(rastroViejo, 'rgba(255,255,255,0.7)', 'rgba(25,35,70,0.55)', 0.055);
+    puntos(rastro, '#ffffff', 'rgba(25,35,70,0.85)', 0.065);
     honda(false);
     for (const b of p.m.cuerpos) {
         if (b.tipo === 'pieza') pieza(b);
@@ -2761,6 +2820,7 @@ function dibujar() {
     colaPajaros();
     honda(true);
     particulasDibujar();
+    mapa();
     for (const q of textos) {
         ctx.globalAlpha = Math.min(1, q.vida * 2);
         ctx.font = 'bold ' + Math.round((q.grande ? 0.55 : 0.4) * cam.s) + 'px system-ui, sans-serif';
@@ -2773,14 +2833,58 @@ function dibujar() {
         ctx.font = 'bold ' + Math.round(Math.max(13, ch * 0.035)) + 'px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
         const t = '¡Toca para usar su poder!';
-        ctx.strokeText(t, cw / 2, Math.max(22, ch * 0.08)); ctx.fillText(t, cw / 2, Math.max(22, ch * 0.08));
+        ctx.strokeText(t, cw / 2, yAviso()); ctx.fillText(t, cw / 2, yAviso());
     }
     if (p.fase === 'apuntar' && !apunte && p.usados === 0 && !apunteTeclado.activo) {
         ctx.font = 'bold ' + Math.round(Math.max(13, ch * 0.035)) + 'px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 3;
-        const t = 'Arrastra hacia atrás y suelta';
-        ctx.strokeText(t, cw / 2, Math.max(22, ch * 0.08)); ctx.fillText(t, cw / 2, Math.max(22, ch * 0.08));
+        const t = 'Pon el dedo en el pajarito, tira hacia atrás y suelta';
+        ctx.strokeText(t, cw / 2, yAviso()); ctx.fillText(t, cw / 2, yAviso());
     }
+}
+const yAviso = () => (cam.modo === 'todo' ? 0 : mapaRect().y + mapaRect().h) + Math.max(22, ch * 0.08);
+/* Mapa en miniatura del nivel entero, arriba en el centro: tirachinas,
+   piezas, zorros, el pajarito en vuelo y un recuadro con lo que se ve.
+   Sin huevo: que siga siendo secreto */
+function mapaRect() {
+    const b = caja(partida.def), W0 = b.x1 - b.x0, H0 = b.alto;
+    let w = Math.min(cw * 0.42, 340), h = w * H0 / W0;
+    if (h > ch * 0.2) { h = ch * 0.2; w = h * W0 / H0; }
+    return { x: (cw - w) / 2, y: 6, w, h, b, k: w / W0 };
+}
+function mapa() {
+    if (cam.modo === 'todo') return;
+    const R = mapaRect(), b = R.b, k = R.k;
+    const mx = (x) => R.x + (x - b.x0) * k, my = (y) => R.y + R.h - 2 - y * k;
+    ctx.save();
+    /* Casi opaco: al 50 %, las nubes y los puntos de la trayectoria se veían a través */
+    ctx.fillStyle = 'rgba(16,20,44,0.86)'; ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = 1;
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(R.x, R.y, R.w, R.h, 6); else ctx.rect(R.x, R.y, R.w, R.h); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(R.x, R.y, R.w, R.h); ctx.clip();
+    ctx.fillStyle = 'rgba(120,200,110,0.9)'; ctx.fillRect(R.x, my(0), R.w, 2);
+    for (const c of partida.m.cuerpos) {
+        if (c.tipo === 'colina' || c.tipo === 'pieza') {
+            const a = F.aabb(c);
+            ctx.fillStyle = c.tipo === 'colina' ? 'rgba(150,110,70,0.9)' : (COLOR_MAT[c.mat] || ['#c98a3d'])[0];
+            ctx.fillRect(mx(a[0]), my(a[3]), Math.max(1, (a[2] - a[0]) * k), Math.max(1, (a[3] - a[1]) * k));
+        } else if (c.tipo === 'zorro') {
+            ctx.fillStyle = '#ff8a2a'; ctx.beginPath(); ctx.arc(mx(c.x), my(c.y), Math.max(2.2, c.r * k), 0, 7); ctx.fill();
+        }
+    }
+    ctx.strokeStyle = '#c07a3a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mx(T.HONDA.x), my(0)); ctx.lineTo(mx(T.HONDA.x), my(T.HONDA.y)); ctx.stroke();
+    if (partida.vuelo) { ctx.fillStyle = '#fff'; for (const c of partida.vuelo.cuerpos) { ctx.beginPath(); ctx.arc(mx(c.x), my(c.y), 2.5, 0, 7); ctx.fill(); } }
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.6;
+    const vx0 = mx(cam.x), vw = (cw / cam.s) * k;
+    ctx.strokeRect(vx0 + 0.8, R.y + 0.8, vw - 1.6, R.h - 1.6);
+    ctx.restore();
+}
+function enMapa(x, y) { if (cam.modo === 'todo') return false; const R = mapaRect(); return x >= R.x && x <= R.x + R.w && y >= R.y && y <= R.y + R.h + 8; }
+function irAMapa(x) {
+    const R = mapaRect();
+    const wx = R.b.x0 + (x - R.x) / R.k;
+    introT = 0; cam.manual = true;
+    cam.objetivoX = ajustarX(wx - vistaAncho() / 2);
 }
 function paisaje(color, paralaje, alto, frec, fase) {
     const base = sy(0) + 1;
@@ -2809,9 +2913,12 @@ function colina(b, M) {
     ctx.fillStyle = M.cesped; ctx.fillRect(-w / 2, -h / 2, w, Math.min(h, 0.2 * cam.s));
     ctx.restore();
 }
-function puntos(lista, color, r) {
-    ctx.fillStyle = color;
-    for (const [x, y] of lista) { ctx.beginPath(); ctx.arc(sx(x), sy(y), Math.max(1.5, r * cam.s), 0, 7); ctx.fill(); }
+/* Puntos con borde oscuro: blancos o amarillo pálido sin borde apenas se
+   veían sobre el cielo claro de la pradera y la nieve */
+function puntos(lista, relleno, borde, r) {
+    ctx.fillStyle = relleno; ctx.strokeStyle = borde; ctx.lineWidth = Math.max(1.2, cam.s * 0.02);
+    const R = Math.max(2.5, r * cam.s);
+    for (const [x, y] of lista) { ctx.beginPath(); ctx.arc(sx(x), sy(y), R, 0, 7); ctx.fill(); ctx.stroke(); }
 }
 /* El tirachinas: horquilla de madera; la goma de atrás se pinta antes del
    pajarito y la de delante después (delante = true) */
@@ -2837,7 +2944,7 @@ function honda(delante) {
     if (cargado) {
         const tipo = p.cola[0];
         /* Vista previa del principio del vuelo */
-        if (a && a.fuerza > 0.12) puntos(T.trayectoria(p, a.ang, a.fuerza, 0.6), 'rgba(255,240,150,0.95)', 0.05);
+        if (a && a.fuerza > 0.12) puntos(T.trayectoria(p, a.ang, a.fuerza, 0.6), '#ffd23a', 'rgba(70,40,0,0.9)', 0.065);
         pajaro(bx, by, T.PAJAROS[tipo].r, tipo, 0, false);
         ctx.strokeStyle = '#3b1f0b'; ctx.lineWidth = 0.06 * s; ctx.lineCap = 'round';
         ctx.beginPath(); ctx.moveTo(sx(izq[0]), sy(izq[1])); ctx.lineTo(sx(bx), sy(by)); ctx.stroke();
@@ -2914,7 +3021,9 @@ function pieza(b) {
    tirachinas. Casco, tamaño grande o corona según la clase */
 function zorro(b) {
     const s = cam.s, r = b.r * s, clase = b.datos.clase;
-    ctx.save(); ctx.translate(sx(b.x), sy(b.y)); ctx.rotate(-b.a);
+    /* Riéndose, botan un poco */
+    const bote = risa ? Math.abs(Math.sin((tiempo - risa) * 9 + b.id)) * 0.08 * s : 0;
+    ctx.save(); ctx.translate(sx(b.x), sy(b.y) - bote); ctx.rotate(-b.a);
     const dano = 1 - Math.max(0, b.vida) / b.vidaMax;
     ctx.fillStyle = '#e8732a';
     /* orejas */
@@ -2926,7 +3035,15 @@ function zorro(b) {
     /* hocico hacia el tirachinas (izquierda) */
     ctx.fillStyle = '#2a1408'; ctx.beginPath(); ctx.arc(-r * 0.55, r * 0.22, r * 0.12, 0, 7); ctx.fill();
     const parpadea = ((tiempo + b.id * 0.7) % 4) < 0.12;
-    for (const k of [-1, 1]) {
+    if (risa) {
+        /* Han ganado: ojos de risa (^ ^) y boca abierta con lengua */
+        ctx.strokeStyle = '#2a1408'; ctx.lineWidth = Math.max(1.2, r * 0.09); ctx.lineCap = 'round';
+        for (const k of [-1, 1]) { const ex = -r * 0.18 + k * r * 0.32, ey = -r * 0.1; ctx.beginPath(); ctx.arc(ex, ey + r * 0.06, r * 0.13, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke(); }
+        const abre = 0.6 + 0.4 * Math.abs(Math.sin((tiempo - risa) * 9));
+        ctx.fillStyle = '#5a1010'; ctx.beginPath(); ctx.ellipse(-r * 0.2, r * 0.42, r * 0.3, r * 0.2 * abre, 0, 0, Math.PI); ctx.fill();
+        ctx.fillStyle = '#e8505a'; ctx.beginPath(); ctx.ellipse(-r * 0.2, r * 0.42 + r * 0.12 * abre, r * 0.14, r * 0.07 * abre, 0, 0, 7); ctx.fill();
+    }
+    for (const k of (risa ? [] : [-1, 1])) {
         const ex = -r * 0.18 + k * r * 0.32, ey = -r * 0.12;
         if (parpadea) { ctx.strokeStyle = '#2a1408'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.beginPath(); ctx.moveTo(ex - r * 0.12, ey); ctx.lineTo(ex + r * 0.12, ey); ctx.stroke(); continue; }
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(ex, ey, r * 0.17, 0, 7); ctx.fill();
@@ -3017,26 +3134,51 @@ function apunteDesde(x, y) {
     ang = Math.max(-0.6, Math.min(1.5, ang));
     apunte.ang = ang;
 }
+/* Dónde está el pajarito cargado en pantalla, y el radio que se acepta
+   para cogerlo: mide unos 16 px, así que se da un margen generoso */
+function pajaroEnPantalla() {
+    const p = partida;
+    if (!p || p.fase !== 'apuntar' || !p.cola.length) return null;
+    return { x: sx(T.HONDA.x), y: sy(T.HONDA.y), radio: Math.max(55, T.PAJAROS[p.cola[0]].r * cam.s * 2.5) };
+}
 lienzo.addEventListener('pointerdown', (e) => {
-    if (estado !== 'jugando' || pausado || EST.hayCapa() || !partida) return;
+    if (estado !== 'jugando' || pausado || girado || EST.hayCapa() || !partida) return;
     e.preventDefault();
     const p = partida;
-    if (p.fase === 'apuntar' && introT <= 0.5) {
+    const r = lienzo.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const captura = () => { try { lienzo.setPointerCapture(e.pointerId); } catch (er) {} };
+    if (enMapa(x, y)) { cam.arrastre = { id: e.pointerId, mapa: true }; irAMapa(x); cam.x = cam.objetivoX; captura(); return; }
+    const pj = pajaroEnPantalla();
+    /* La goma solo se estira si el dedo empieza encima del pajarito; en
+       cualquier otro sitio, el arrastre mueve la vista */
+    if (pj && Math.hypot(x - pj.x, y - pj.y) <= pj.radio) {
         introT = 0;
-        const r = lienzo.getBoundingClientRect();
-        apunte = { x0: e.clientX - r.left, y0: e.clientY - r.top, ang: 0, fuerza: 0, id: e.pointerId };
-        try { lienzo.setPointerCapture(e.pointerId); } catch (er) {}
-        if (cam.ver) { cam.ver = false; $('btnVer').setAttribute('aria-pressed', 'false'); }
-    } else if (p.fase === 'vuelo') usarPoder();
+        apunte = { x0: x, y0: y, ang: 0, fuerza: 0, id: e.pointerId };
+        captura();
+        return;
+    }
+    if (p.fase === 'vuelo' && T.puedeHabilidad(p)) { usarPoder(); return; }
+    if (cam.modo !== 'todo') { introT = 0; cam.arrastre = { id: e.pointerId, x0: x, camX0: cam.x }; captura(); }
 });
 lienzo.addEventListener('pointermove', (e) => {
-    if (!apunte || e.pointerId !== apunte.id) return;
     const r = lienzo.getBoundingClientRect();
-    const antes = apunte.fuerza;
-    apunteDesde(e.clientX - r.left, e.clientY - r.top);
-    if (Math.abs(apunte.fuerza - antes) > 0.04) sonar('estirar', apunte.fuerza);
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    if (apunte && e.pointerId === apunte.id) {
+        const antes = apunte.fuerza;
+        apunteDesde(x, y);
+        if (Math.abs(apunte.fuerza - antes) > 0.04) sonar('estirar', apunte.fuerza);
+        return;
+    }
+    const a = cam.arrastre;
+    if (!a || e.pointerId !== a.id) return;
+    if (a.mapa) { irAMapa(x); cam.x = cam.objetivoX; return; }
+    cam.x = ajustarX(a.camX0 - (x - a.x0) / cam.s);
+    cam.objetivoX = cam.x;
+    cam.manual = true;
 });
 function soltar(e) {
+    if (cam.arrastre && (!e || e.pointerId === cam.arrastre.id)) { cam.arrastre = null; return; }
     if (!apunte || (e && e.pointerId !== apunte.id)) return;
     const a = apunte; apunte = null;
     if (e && e.type === 'pointercancel') return;
@@ -3053,7 +3195,11 @@ document.addEventListener('keydown', (e) => {
     if (EST.hayCapa() || pausado || !partida) return;
     const p = partida;
     if (k === 'r' || k === 'R') { repetirNivel(); return; }
-    if (k === 'v' || k === 'V') { alternarVer(); return; }
+    if ((k === 'a' || k === 'A' || k === 'd' || k === 'D') && cam.modo !== 'todo') {
+        introT = 0; cam.manual = true;
+        cam.objetivoX = ajustarX(cam.objetivoX + (k === 'a' || k === 'A' ? -1.5 : 1.5));
+        return;
+    }
     if (p.fase === 'apuntar') {
         const A = apunteTeclado;
         if (k === 'ArrowLeft') { A.ang = Math.min(1.5, A.ang + 0.0175); A.activo = true; e.preventDefault(); }
@@ -3064,11 +3210,17 @@ document.addEventListener('keydown', (e) => {
     } else if (p.fase === 'vuelo' && (k === ' ' || k === 'Enter')) { e.preventDefault(); usarPoder(); }
 });
 
-function alternarVer() {
-    if (cam.modo === 'todo') return;
-    cam.ver = !cam.ver;
-    $('btnVer').setAttribute('aria-pressed', String(cam.ver));
+/* Opción B: en vertical, la partida se para y se pide girar el móvil */
+const consultaVertical = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+function comprobarGiro() {
+    const vertical = consultaVertical ? consultaVertical.matches : innerHeight > innerWidth;
+    const antes = girado;
+    girado = estado === 'jugando' && vertical;
+    $('avisoGirar').classList.toggle('activo', girado);
+    if (girado) apunte = null;
+    if (antes && !girado) ultimoT = performance.now();
 }
+if (consultaVertical && consultaVertical.addEventListener) consultaVertical.addEventListener('change', comprobarGiro);
 function pausar() {
     if (estado !== 'jugando' || pausado) return;
     pausado = true; apunte = null;
@@ -3080,7 +3232,7 @@ function seguir() {
     ultimoT = performance.now();
 }
 function irMenu() {
-    estado = 'menu'; pararBucle(); pausado = false;
+    estado = 'menu'; pararBucle(); pausado = false; comprobarGiro();
     ['capaFin', 'capaPausa', 'capaTurno'].forEach(EST.cerrar);
     musicaFondo(false);
     pintarMenu();
@@ -3102,7 +3254,7 @@ function pintarMenu() {
     } else nota.style.display = 'none';
 }
 function irMapa(mundo) {
-    estado = 'mapa'; pararBucle(); pausado = false;
+    estado = 'mapa'; pararBucle(); pausado = false; comprobarGiro();
     ['capaFin', 'capaPausa', 'capaTurno'].forEach(EST.cerrar);
     musicaFondo(false);
     const g = progreso();
@@ -3203,7 +3355,7 @@ $('btnPausaRepetir').addEventListener('click', () => { EST.cerrar('capaPausa'); 
 $('btnPausaMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
 $('btnPauseToMenu').addEventListener('click', irMenu);
 $('btnRepetir').addEventListener('click', repetirNivel);
-$('btnVer').addEventListener('click', alternarVer);
+$('btnGirarMenu').addEventListener('click', irMenu);
 $('btnSiguiente').addEventListener('click', () => { const s = siguienteDe(partida.def); if (s) abrirNivel(s.id); else irMapa(); });
 $('btnFinRepetir').addEventListener('click', () => { EST.cerrar('capaFin'); repetirNivel(); });
 $('btnFinMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
@@ -3217,7 +3369,7 @@ $('btnTurno').addEventListener('click', () => {
 });
 $('btnTurnoMapa').addEventListener('click', () => irMapa(partida ? partida.def.mundo : undefined));
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => { if (estado === 'jugando') ajustarLienzo(); }).observe($('zonaJuego'));
-window.addEventListener('resize', () => { if (estado === 'jugando') ajustarLienzo(); });
+window.addEventListener('resize', () => { comprobarGiro(); if (estado === 'jugando') ajustarLienzo(); });
 /* Al irse a otra app, pausa: al volver, el pajarito no puede haber volado solo */
 document.addEventListener('visibilitychange', () => { if (document.hidden && estado === 'jugando' && !EST.hayCapa()) pausar(); });
 pintarMenu();
@@ -3225,7 +3377,8 @@ pintarMenu();
 /* Para las pruebas en el navegador */
 window.__tira = {
     partida: () => partida, estado: () => estado, camara: () => cam, abrir: abrirNivel, lanzar: lanzarAhora, poder: usarPoder,
-    progreso, logros, niveles: NIVELES, medidas: () => ({ cw, ch, dpr, s: cam.s, modo: cam.modo }), raf: () => raf
+    progreso, logros, niveles: NIVELES, medidas: () => ({ cw, ch, dpr, s: cam.s, modo: cam.modo }), raf: () => raf,
+    pajaro: pajaroEnPantalla, mapa: () => (cam.modo === 'todo' ? null : mapaRect()), girado: () => girado, risa: () => risa
 };
 
 </script>
