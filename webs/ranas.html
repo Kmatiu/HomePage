@@ -791,6 +791,19 @@ body {
     </div>
 </div>
 
+<div class="capa" id="capaContinuar">
+    <div class="caja">
+        <h2>¿CONTINUAR?</h2>
+        <div class="marcador" id="cuentaContinuar" aria-live="polite">5</div>
+        <p>Sigues en esta ronda, con las vidas llenas y tus puntos.</p>
+        <button class="principal" id="btnContinuar" type="button">▶ CONTINUAR</button>
+        <p class="destacado" id="quedanContinuar"></p>
+        <div class="fila-btns">
+            <button class="secundario" id="btnNoContinuar" type="button">TERMINAR</button>
+        </div>
+    </div>
+</div>
+
 <div class="capa" id="capaFin">
     <div class="caja">
         <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
@@ -830,6 +843,7 @@ body {
                 <li>Empiezas con 3 vidas (5 en fácil). Ganas una más a los 50.000 puntos y luego cada 100.000, y otra cada vez que reúnes las letras C·H·A·R·C·A.</li>
                 <li>La partida se guarda sola al empezar cada ronda, al pausar y al salir. En el menú, <b>CONTINUAR</b> sigue en esa ronda, con tus puntos, vidas y letras. La habitación vuelve a empezar y las mejoras (zapatillas, caramelo, pajita) se pierden.</li>
                 <li><b>↺ EMPEZAR DE CERO</b> borra la partida guardada. Los récords no se borran.</li>
+                <li>Si pierdes todas las vidas puedes <b>CONTINUAR</b> en la misma ronda, con las vidas llenas y tus puntos: tienes 5 segundos para decidir y hasta 3 por partida. Gastados los 3, la partida se acaba y toca empezar de cero.</li>
                 <li>Si llegas a una ronda acabada en 0 (la 10, la 20…) sin perder ninguna vida desde la anterior acabada en 0, sale una puerta a una sala secreta con gemas y una pista.</li>
             </ul>
             <h3>CONTROLES</h3>
@@ -3274,6 +3288,9 @@ const Ranas = (() => {
     const VIDA_POMPA = 9, VIDA_ESPECIAL = 15, VIDA_LETRA = 13;
     const CADENA_HUECO = 6;          // px entre dos pompas que aún se contagian
     const INVULNERABLE = 2.5, MUERTE_S = 1.6, INTRO_S = 1.1, TRANSICION_S = 1.6;
+    /* CONTINUAR al perder todas las vidas (pedido de un jugador, 16-11): 3
+       por partida, en la misma ronda y con los puntos */
+    const CONTINUES = 3;
     const LIMPIO_S = 3.6, LIMPIO_PUERTA_S = 9, SECRETA_S = 12;
     const COMIDA_S = 10, OBJETO_S = 12, OBJETO_ESPERA = 4;
     const LETRAS = ['C', 'H', 'A', 'R', 'C', 'A'];
@@ -3512,7 +3529,8 @@ const Ranas = (() => {
             aguas: [], fuegos: [], rayos: [], objetos: [], garzas: [], jefe: null, puerta: null,
             eventos: [], sig: 1, sinMuertes: true, congelado: 0, deprisa: false, saltoRondas: 0,
             contadores: { saltos: 0, lanzadas: 0, reventadas: 0, cadenas3: 0, vueltas: 0 },
-            objetoPendiente: null, tEspecial: 0, tLetra: 0, mapa: null, mapaPrevio: null, rondaPrevia: -1
+            objetoPendiente: null, tEspecial: 0, tLetra: 0, mapa: null, mapaPrevio: null, rondaPrevia: -1,
+            continues: CONTINUES
         };
         for (let n = 1; n <= o.jugadores; n++) {
             e.jugadores.push({
@@ -3541,7 +3559,7 @@ const Ranas = (() => {
         let ronda = pasada ? e.ronda + 1 + (e.saltoRondas || 0) : e.ronda;
         ronda = Math.min(ronda, RONDAS.length - 1);
         return {
-            v: 1, dificultad: e.dificultad, nj: e.nj, ronda,
+            v: 1, dificultad: e.dificultad, nj: e.nj, ronda, continues: e.continues,
             sinMuertes: pasada && (ronda % 10 === 0) ? true : e.sinMuertes,
             contadores: Object.assign({}, e.contadores),
             jugadores: e.jugadores.map(j => ({
@@ -3554,6 +3572,8 @@ const Ranas = (() => {
     function valida(g) {
         if (!g || g.v !== 1 || !DIFICULTADES[g.dificultad] || (g.nj !== 1 && g.nj !== 2)) return false;
         if (!Number.isInteger(g.ronda) || g.ronda < 0 || g.ronda >= RONDAS.length) return false;
+        /* Las guardadas antes del 16-11 no lo llevan: valen y tienen los 3 */
+        if (g.continues !== undefined && !(Number.isInteger(g.continues) && g.continues >= 0 && g.continues <= CONTINUES)) return false;
         if (!Array.isArray(g.jugadores) || g.jugadores.length !== g.nj) return false;
         if (!g.jugadores.every(j => j && Number.isFinite(j.puntos) && j.puntos >= 0 && Number.isInteger(j.vidas) && j.vidas >= 0 && j.vidas < 100 &&
             Array.isArray(j.letras) && j.letras.length === 6 && Number.isFinite(j.sigVida))) return false;
@@ -3562,6 +3582,7 @@ const Ranas = (() => {
     function restaurar(e, g) {
         e.rondaInicial = g.ronda;
         e.sinMuertes = !!g.sinMuertes;
+        e.continues = g.continues === undefined ? CONTINUES : g.continues;
         for (const k in e.contadores) if (Number.isFinite(g.contadores && g.contadores[k])) e.contadores[k] = g.contadores[k];
         g.jugadores.forEach((d, i) => {
             const j = e.jugadores[i];
@@ -4226,6 +4247,23 @@ const Ranas = (() => {
         }
     }
 
+    /* Seguir tras perder todas las vidas: las ranas vuelven con las vidas
+       del principio, en la misma habitación tal como estaba (los bichos
+       siguen donde iban), con los puntos y las letras. En dos jugadores
+       vuelven las dos. Sin CONTINUAR, no hace nada */
+    function continuar(e) {
+        if (e.fase !== 'fin' || !(e.continues > 0)) return false;
+        e.continues--;
+        for (const j of e.jugadores) {
+            j.vidas = e.D.vidas; j.estado = 'vivo'; j.inv = INVULNERABLE; j.tMuerte = 0;
+            j.mej = { zap: false, car: false, paj: false };
+            colocarJugador(j);
+        }
+        e.fase = 'jugando'; e.tFase = 0; e.t = 0; e.garzas = []; e.deprisa = false; e.acum = 0;
+        ev(e, 'continua', { quedan: e.continues });
+        return true;
+    }
+
     /* ---------- CONTACTOS ---------- */
     function morir(e, j, motivo) {
         if (j.estado !== 'vivo' || j.inv > 0 || e.fase !== 'jugando') return;
@@ -4425,8 +4463,8 @@ const Ranas = (() => {
 
     return {
         T, COLS, FILAS, ANCHO, ALTO, PASO, RANA, POMPA, SALTO_MAX, DIFICULTADES, BICHOS, JEFE, RONDAS, LETRAS, COMIDAS,
-        PISTAS, VIDA_PRIMERA, VIDA_CADA,
-        crear, avanzar, saltar, pompa, guardar, valida,
+        PISTAS, VIDA_PRIMERA, VIDA_CADA, CONTINUES,
+        crear, avanzar, saltar, pompa, guardar, valida, continuar,
         _interno: { rampa, escapeDe, leerMapa, solidoEn, paredEn, superficieEn, moverCuerpo, reventar, cargarRonda, paso, siguienteRonda, morir, nacePompa, sitioLibre, elegirObjeto, recoger, azar }
     };
 })();
@@ -4485,6 +4523,7 @@ const musicaFondo = EST.musica({
     ]
 });
 const sonar = {
+    tic() { EST.efecto('tic', 300, [[1500, 0.05, 'square', 0.05]]); },
     lanza() { EST.efecto('lanza', 50, [[260, 0.09, 'sine', 0.12, 0, 640], [520, 0.05, 'triangle', 0.03, 0.03, 900]]); },
     revienta(k) { const f = 700 + Math.min(k, 6) * 120; EST.efecto('revienta', 25, [[f, 0.05, 'triangle', 0.1, 0, f * 2], [f * 1.5, 0.04, 'sine', 0.05, 0.02]]); },
     atrapa() { EST.efecto('atrapa', 60, [[520, 0.14, 'triangle', 0.08, 0, 260], [780, 0.08, 'sine', 0.04, 0.05, 390]]); },
@@ -5125,7 +5164,7 @@ function fotograma(ahora) {
     pintar(dt);
     pintarBarra();
     if (victoriaEn !== null && (victoriaEn -= dt) <= 0) { victoriaEn = null; mostrarFin(true); return; }
-    if (finEn !== null && (finEn -= dt) <= 0) { finEn = null; gameOver(); return; }
+    if (finEn !== null && (finEn -= dt) <= 0) { finEn = null; if (e.continues > 0) abrirContinuar(); else gameOver(); return; }
     if (gameState === 'playing') bucleId = requestAnimationFrame(fotograma);
 }
 
@@ -5179,6 +5218,7 @@ function tratarEventos() {
                 victoriaEn = 4.2;
                 break;
             case 'fin': finEn = 1.2; break;
+            case 'continua': cartel('¡SEGUIMOS!', ev.quedan ? 'Te quedan ' + ev.quedan + ' CONTINUAR' : 'Era el último CONTINUAR', '#69f0ae', 1.6); break;
         }
     }
     e.eventos.length = 0;
@@ -5250,7 +5290,8 @@ function empezarPartida(n, desde, g) {
     if (g) selectedDifficulty = g.dificultad;
     parar();
     numPlayers = n;
-    ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda'].forEach(EST.cerrar);
+    clearInterval(relojContinuar); relojContinuar = null;
+    ['capaFin', 'capaPausa', 'capaRanking', 'capaAyuda', 'capaContinuar'].forEach(EST.cerrar);
     mostrarMandos(n);
     EST.mostrar('pJuego');
     e = Ranas.crear({ dificultad: selectedDifficulty, jugadores: n, ronda: desde || 0, guardada: g || null, semilla: (Date.now() & 0x7fffffff) || 1 });
@@ -5264,6 +5305,55 @@ function empezarPartida(n, desde, g) {
     musicaFondo.arrancar();
     arrancar();
 }
+/* ---------- CONTINUAR ----------
+   5 s para decidir. La cuenta se para si la aplicación pasa a segundo
+   plano (volver y encontrarla agotada sería injusto). Mientras se decide
+   no hay partida guardada: irse en ese momento es dar la partida por
+   acabada, como en la recreativa */
+const CUENTA_CONTINUAR = 5;
+let cuentaContinuar = null, relojContinuar = null;
+function abrirContinuar() {
+    gameState = 'continuar';
+    parar();
+    musicaFondo.parar();
+    soltarMandos();
+    for (const k in teclas) teclas[k] = false;
+    borrarPartida();
+    cuentaContinuar = CUENTA_CONTINUAR;
+    const q = e.continues;
+    $('quedanContinuar').textContent = q === 1 ? 'Es el último CONTINUAR' : 'Te quedan ' + q + ' CONTINUAR';
+    pintarCuenta();
+    EST.abrir('capaContinuar');
+    clearInterval(relojContinuar);
+    relojContinuar = setInterval(() => {
+        if (document.hidden || gameState !== 'continuar') return;
+        cuentaContinuar = Math.max(0, cuentaContinuar - 0.1);
+        pintarCuenta();
+        if (cuentaContinuar <= 0) noContinuar();
+    }, 100);
+}
+function pintarCuenta() {
+    const n = String(Math.ceil(cuentaContinuar - 1e-9));
+    if ($('cuentaContinuar').textContent !== n) { $('cuentaContinuar').textContent = n; if (cuentaContinuar > 0) sonar.tic(); }
+}
+function seguirJugando() {
+    if (gameState !== 'continuar' || !e) return;
+    clearInterval(relojContinuar); relojContinuar = null;
+    if (!Ranas.continuar(e)) { noContinuar(); return; }
+    EST.cerrar('capaContinuar');
+    efectos = []; carteles = [];
+    gameState = 'playing';
+    guardarPartida();
+    musicaFondo.arrancar();
+    arrancar();
+}
+function noContinuar() {
+    if (gameState !== 'continuar') return;
+    clearInterval(relojContinuar); relojContinuar = null;
+    EST.cerrar('capaContinuar');
+    mostrarFin(false);
+}
+
 function puntosFinales() { return e ? Math.max(...e.jugadores.map(j => j.puntos)) : 0; }
 function gameOver() {
     gameState = 'gameover';
@@ -5280,6 +5370,8 @@ function mostrarFin(gano) {
     $('finTitulo').textContent = gano ? '🏆 ¡HAS VENCIDO AL LAGARTÓN!' : '🐸 FIN DE LA PARTIDA';
     $('finalScore').textContent = total.toLocaleString('es-ES');
     let det = 'Ronda ' + (e.ronda + 1) + ' · ' + ETIQUETA_DIF[selectedDifficulty];
+    const usados = Ranas.CONTINUES - e.continues;
+    if (usados > 0) det += ' · ' + usados + ' CONTINUAR';
     if (numPlayers === 2) {
         const [a, b] = e.jugadores.map(j => j.puntos);
         det = 'J1: ' + a.toLocaleString('es-ES') + ' · J2: ' + b.toLocaleString('es-ES') + ' · ' + det;
@@ -5350,8 +5442,9 @@ function volverAlMenu() {
     musicaFondo.parar();
     for (const k in teclas) teclas[k] = false;
     soltarMandos();
+    clearInterval(relojContinuar); relojContinuar = null;
     e = null; finEn = null; victoriaEn = null; efectos = []; carteles = [];
-    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    ['capaFin', 'capaPausa', 'capaContinuar'].forEach(EST.cerrar);
     updateTwoPlayersAvailability();
     pintarMenu();
     EST.mostrar('pMenu');
@@ -5524,6 +5617,11 @@ document.addEventListener('keydown', (ev) => {
         return;
     }
     if (TECLAS_JUEGO.includes(ev.key)) ev.preventDefault();
+    if (gameState === 'continuar') {
+        if ((ev.key === 'Enter' || ev.key === ' ') && !ev.repeat) seguirJugando();
+        else if (ev.key === 'Escape') noContinuar();
+        return;
+    }
     if ((ev.key === 'p' || ev.key === 'P' || ev.key === 'Escape') && !ev.repeat) {
         ev.preventDefault();
         if (gameState === 'paused') reanudar(); else pauseGame();
@@ -5554,7 +5652,9 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pause
 EST.iniciar({ claveAudio: 'ranasAudio', alCambiarMusica });
 
 /* Para las pruebas */
-window.__ranas = { partida: () => e, estado: () => gameState, bucle: () => bucleId !== null, escala: () => escala, empezar: empezarPartida, guardada, pintarMenu };
+$('btnContinuar').addEventListener('click', seguirJugando);
+$('btnNoContinuar').addEventListener('click', noContinuar);
+window.__ranas = { partida: () => e, estado: () => gameState, cuenta: () => cuentaContinuar, bucle: () => bucleId !== null, escala: () => escala, empezar: empezarPartida, guardada, pintarMenu };
 
 </script>
 </body>
