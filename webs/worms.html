@@ -1,0 +1,3189 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="menus">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Worms</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/worms (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE WORMS ---------- */
+        #pJuego { max-width: none; }
+        #grpDif .sub, #grpEquipos .sub { font-size: 0.6rem; }
+        #grpDif .opcion { flex: 1 1 40%; }
+        @media (orientation: landscape) and (max-height: 520px) { #grpDif .opcion { flex: 1 1 20%; } }
+
+        /* Equipos: una fila por equipo con su color, su nombre (se puede
+           cambiar) y quién lo lleva */
+        .equipo-fila { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+        .equipo-fila .color { width: 18px; height: 18px; border-radius: 50%; flex: none; border: 2px solid rgba(var(--c-255-255-255, 255, 255, 255), 0.7); }
+        .equipo-fila input { flex: 1 1 auto; min-width: 0; }
+        .equipo-fila .quien { flex: none; min-width: 112px; }
+
+        /* ---------- PANTALLA DE JUEGO ----------
+           Worms es por turnos y sin prisa en los dedos: el lienzo ocupa TODO
+           y los mandos flotan semitransparentes en las esquinas de abajo (la
+           cámara pone al gusano activo en el centro, lejos de ellos) */
+        body.jugando { padding: 0; }
+        #pJuego.activa { padding: 0; }
+        #zonaJuego { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; overflow: hidden; background: #000; }
+        #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+        .flota {
+            position: absolute; z-index: 5; display: flex; gap: 8px; align-items: flex-end;
+            -webkit-user-select: none; user-select: none; touch-action: none;
+        }
+        .flota.abajo-izq { left: calc(env(safe-area-inset-left, 0px) + 10px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+        .flota.abajo-der { right: calc(env(safe-area-inset-right, 0px) + 10px); bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+        .flota.arriba-der { right: calc(env(safe-area-inset-right, 0px) + 8px); top: calc(env(safe-area-inset-top, 0px) + 6px); gap: 6px; }
+        .bm {
+            width: 54px; height: 54px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.55);
+            background: rgba(15, 12, 45, 0.55); color: #fff; font: 700 1.25rem/1 system-ui, sans-serif;
+            display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+            touch-action: none; -webkit-tap-highlight-color: transparent;
+        }
+        .bm.peque { width: 42px; height: 42px; font-size: 1rem; border-radius: 12px; }
+        .bm.ancho { width: auto; min-width: 54px; padding: 0 14px; border-radius: 27px; font-size: 0.95rem; }
+        .bm.fuego { background: rgba(198, 40, 40, 0.75); border-color: #ffab91; }
+        .bm.pulsado { background: rgba(0, 229, 255, 0.45); }
+        .bm[hidden] { display: none; }
+        .columna { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+        /* Sin pantalla táctil, el andar y saltar van por teclado */
+        body:not(.tactil) .solo-tactil { display: none; }
+        #mandos.ia .flota.abajo-izq, #mandos.ia .flota.abajo-der { display: none; }
+
+        /* Panel de armas: rejilla de iconos con la munición */
+        #panelArmas {
+            position: absolute; z-index: 8; right: calc(env(safe-area-inset-right, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+            background: rgba(15, 12, 45, 0.94); border: 2px solid rgba(0, 229, 255, 0.5); border-radius: 14px;
+            padding: 8px; display: none; max-height: calc(100% - 90px); overflow: auto;
+        }
+        #panelArmas.abierto { display: block; }
+        #rejillaArmas { display: grid; grid-template-columns: repeat(4, 66px); gap: 6px; }
+        .arma {
+            height: 58px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.07);
+            color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; cursor: pointer;
+        }
+        .arma .ic { font-size: 1.4rem; line-height: 1; }
+        .arma .nom { font-size: 0.52rem; line-height: 1.1; text-align: center; }
+        .arma .mun { font-size: 0.6rem; color: #ffd54f; }
+        .arma[aria-pressed="true"] { border-color: #00e5ff; background: rgba(0, 229, 255, 0.18); }
+        .arma:disabled { opacity: 0.3; cursor: default; }
+        #panelArmas .pie { display: flex; gap: 6px; margin-top: 6px; }
+        #panelArmas .pie button { flex: 1; }
+
+        #avisoGirar {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            padding: 24px; text-align: center; background: var(--c-0f0c2d, #0f0c2d); color: var(--c-fff, #fff);
+        }
+        #avisoGirar.activo { display: flex; }
+        #avisoGirar .movil { font-size: 4rem; line-height: 1; animation: girarMovil 2.2s ease-in-out infinite; }
+        #avisoGirar p { margin: 0; max-width: 22em; line-height: 1.5; }
+        #avisoGirar small { color: var(--apagado); }
+        @keyframes girarMovil { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+        @media (prefers-reduced-motion: reduce) { #avisoGirar .movil { animation: none; transform: rotate(-90deg); } }
+        #finEquipos { list-style: none; padding: 0; margin: 8px 0; text-align: left; }
+        #finEquipos li { display: flex; gap: 8px; align-items: center; padding: 3px 0; }
+        #finEquipos .color { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">WOR<span>MS</span></div>
+        <p class="est-lema">Gusanos por turnos en una isla que salta por los aires</p>
+
+        <fieldset class="est-grupo">
+            <legend>EQUIPOS</legend>
+            <div class="opciones iguales" id="grpEquipos">
+                <button class="opcion" type="button" data-v="2" aria-pressed="true">2</button>
+                <button class="opcion" type="button" data-v="3" aria-pressed="false">3</button>
+                <button class="opcion" type="button" data-v="4" aria-pressed="false">4</button>
+            </div>
+            <div id="listaEquipos"></div>
+        </fieldset>
+
+        <fieldset class="est-grupo" id="grupoDif">
+            <legend>MÁQUINA</legend>
+            <div class="opciones" id="grpDif">
+                <button class="opcion" type="button" data-v="principiante" aria-pressed="false">PRINCIPIANTE<span class="sub">apunta a ojo</span></button>
+                <button class="opcion" type="button" data-v="avanzado" aria-pressed="true">AVANZADO<span class="sub">acierta a veces</span></button>
+                <button class="opcion" type="button" data-v="experto" aria-pressed="false">EXPERTO<span class="sub">cuenta con el viento</span></button>
+                <button class="opcion" type="button" data-v="rambo" aria-pressed="false">RAMBO<span class="sub">no falla</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>GUSANOS POR EQUIPO</legend>
+            <div class="opciones iguales" id="grpGusanos">
+                <button class="opcion" type="button" data-v="2" aria-pressed="false">2</button>
+                <button class="opcion" type="button" data-v="3" aria-pressed="false">3</button>
+                <button class="opcion" type="button" data-v="4" aria-pressed="true">4</button>
+                <button class="opcion" type="button" data-v="5" aria-pressed="false">5</button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>TIEMPO POR TURNO</legend>
+            <div class="opciones iguales" id="grpTiempo">
+                <button class="opcion" type="button" data-v="30" aria-pressed="false">30 s</button>
+                <button class="opcion" type="button" data-v="45" aria-pressed="true">45 s</button>
+                <button class="opcion" type="button" data-v="60" aria-pressed="false">60 s</button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>ESCENARIO</legend>
+            <div class="opciones iguales" id="grpTema">
+                <button class="opcion" type="button" data-v="azar" aria-pressed="true">🎲</button>
+                <button class="opcion" type="button" data-v="bosque" aria-pressed="false">🌳</button>
+                <button class="opcion" type="button" data-v="desierto" aria-pressed="false">🏜️</button>
+                <button class="opcion" type="button" data-v="nieve" aria-pressed="false">❄️</button>
+                <button class="opcion" type="button" data-v="ciudad" aria-pressed="false">🏙️</button>
+                <button class="opcion" type="button" data-v="luna" aria-pressed="false">🌙</button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnInstructions" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div id="zonaJuego">
+        <canvas id="gameCanvas" aria-label="Worms"></canvas>
+        <div id="mandos">
+            <div class="flota arriba-der">
+                <button class="bm peque" id="btnCambiar" type="button" aria-label="Cambiar de gusano" hidden>⇄</button>
+                <button class="bm peque" id="btnZoom" type="button" aria-label="Acercar o alejar">🔍</button>
+                <button class="bm peque" id="pauseTouchBtn" type="button" aria-label="Pausar">❚❚</button>
+            </div>
+            <div class="flota abajo-izq solo-tactil">
+                <div class="columna">
+                    <div style="display:flex;gap:8px">
+                        <button class="bm peque" id="btnSaltoAlto" type="button" aria-label="Salto alto hacia atrás">⤒</button>
+                        <button class="bm peque" id="btnSalto" type="button" aria-label="Saltar adelante">⤴</button>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="bm" id="btnIzq" type="button" aria-label="Andar a la izquierda">◀</button>
+                        <button class="bm" id="btnDer" type="button" aria-label="Andar a la derecha">▶</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flota abajo-der">
+                <div class="columna">
+                    <button class="bm peque" id="btnMecha" type="button" aria-label="Segundos de la mecha" hidden>3 s</button>
+                    <button class="bm peque" id="btnGirarViga" type="button" aria-label="Girar la viga" hidden>↻</button>
+                </div>
+                <button class="bm ancho fuego" id="btnFuego" type="button" hidden>¡FUEGO!</button>
+                <button class="bm" id="btnArmas" type="button" aria-label="Elegir arma">🚀</button>
+            </div>
+            <div id="panelArmas" role="dialog" aria-label="Armas">
+                <div id="rejillaArmas"></div>
+                <div class="pie">
+                    <button class="secundario" id="btnPasar" type="button">⏭ PASAR TURNO</button>
+                    <button class="secundario" id="btnCerrarArmas" type="button">CERRAR</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p>Los gusanos esperan.</p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnResume" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnPauseToMenu" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
+        <p id="finDetalle"></p>
+        <ul id="finEquipos"></ul>
+        <button class="principal" id="btnRestart" type="button">🔄 REVANCHA</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnMenu" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Cada equipo de gusanos juega por turnos. En tu turno mueves a un gusano y disparas una vez. Gana el último equipo con algún gusano vivo. El agua mata: tirar a un rival al mar vale tanto como acertarle.</p>
+            <h3>EN EL MÓVIL</h3>
+            <ul>
+                <li>Se juega con el móvil tumbado.</li>
+                <li><b>Apuntar:</b> pon el dedo sobre tu gusano y arrastra hacia atrás, como un tirachinas: la dirección y la fuerza salen de cuánto y hacia dónde estiras. Suelta para disparar; vuelve al gusano para cancelar.</li>
+                <li><b>◀ ▶</b> andar · <b>⤴</b> saltar adelante · <b>⤒</b> salto alto hacia atrás.</li>
+                <li>Arrastra el dedo por el escenario para mirar otra zona; 🔍 aleja o acerca.</li>
+                <li><b>🚀</b> abre las armas. ⇄ cambia de gusano (solo antes de moverte).</li>
+                <li>Ataque aéreo, teletransporte y viga: toca el sitio y luego <b>¡FUEGO!</b></li>
+            </ul>
+            <h3>CON TECLADO</h3>
+            <ul>
+                <li>← → andar · ↑ ↓ ángulo · <b>espacio</b>: mantén para cargar la fuerza y suelta para disparar.</li>
+                <li><b>Intro</b> salto · <b>Retroceso</b> salto alto · <b>1-5</b> mecha de las granadas · <b>Tab</b> cambiar de gusano · <b>Q</b> armas · <b>P</b> o <b>Esc</b> pausa.</li>
+                <li>Con el ratón se apunta igual que con el dedo.</li>
+            </ul>
+            <h3>EL VIENTO</h3>
+            <ul><li>Arriba a la derecha: hacia dónde sopla y cuánto. Empuja la bazuca y los misiles; a las granadas, no.</li></ul>
+            <h3>ARMAS</h3>
+            <ul>
+                <li>🚀 Bazuca: estalla al tocar. La lleva el viento.</li>
+                <li>💥 Mortero: sin viento; al estallar suelta 5 metrallas.</li>
+                <li>🍍 Granada: rebota y estalla cuando acaba su mecha (1 a 5 s).</li>
+                <li>🍇 Racimo: granada que suelta 5 bombitas.</li>
+                <li>🔫 Escopeta: dos tiros rectos por turno.</li>
+                <li>🏏 Bate: de cerca, manda al rival por los aires (¡al agua!).</li>
+                <li>🧨 Dinamita: se deja en el suelo y estalla a los 5 s. Corre.</li>
+                <li>💣 Mina: se deja en el suelo; estalla si alguien se acerca.</li>
+                <li>🐔 Gallina loca: sale andando sola; vuelve a pulsar ¡FUEGO! para que estalle.</li>
+                <li>✈️ Ataque aéreo: 5 misiles caen donde digas.</li>
+                <li>🌀 Teletransporte: aparece donde toques.</li>
+                <li>🏗️ Viga: una plataforma de metal para subir o taparte.</li>
+            </ul>
+            <h3>MÁS</h3>
+            <ul>
+                <li>Tras disparar quedan 3 segundos para apartarse (5 con la dinamita).</li>
+                <li>Caer desde muy alto quita vida y acaba tu turno.</li>
+                <li>Los barriles estallan si les dan; las minas, si alguien se acerca.</li>
+                <li>A veces cae una caja: ➕ da vida, las otras dan armas. Recógela pasando por encima.</li>
+                <li>A partir de la ronda 10, muerte súbita: el agua sube en cada ronda.</li>
+            </ul>
+        </div>
+        <button class="principal" id="closeInstructions" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="avisoGirar" role="alertdialog" aria-labelledby="avisoGirarTexto">
+    <div class="movil" aria-hidden="true">📱</div>
+    <p id="avisoGirarTexto"><b>Gira el móvil</b> para jugar: con la pantalla tumbada la isla se ve mucho mejor.</p>
+    <small>Si no gira, quita el bloqueo de rotación del móvil.</small>
+    <button class="secundario" id="btnGirarMenu" type="button">← MENÚ</button>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ============================================================
+   TERRENO DE WORMS: generación, máscara y destrucción.
+   Sin pantalla: corre igual en Node (pruebas, simulaciones) que en el
+   navegador. El dibujo del terreno lo hace juego.js a partir de la máscara.
+
+   La máscara es un Uint8Array de ANCHO × ALTO: 0 aire, 1 tierra, 2 viga.
+   Fuera de la máscara: por los lados y por arriba, aire (se puede salir
+   volando y caer al agua); por abajo, sólido (el fondo del mar).
+   ============================================================ */
+const Terreno = (() => {
+    const ANCHO = 1800, ALTO = 900;
+    const AGUA = 820;                 // nivel del agua al empezar (sube en muerte súbita)
+
+    /* Azar con semilla: el mismo número da la misma isla (pruebas y
+       simulaciones repetibles) */
+    function azar(semilla) {
+        let s = semilla >>> 0;
+        return () => {
+            s = (s + 0x6D2B79F5) >>> 0;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+    /* Ruido de valores suavizado (1D y 2D): da colinas y cuevas orgánicas */
+    function ruido1(az, n) {
+        const v = Array.from({ length: n + 2 }, az);
+        return (x) => { const i = Math.floor(x), f = x - i, s = f * f * (3 - 2 * f); return v[i % (n + 2)] * (1 - s) + v[(i + 1) % (n + 2)] * s; };
+    }
+    function ruido2(az, n) {
+        const v = Array.from({ length: (n + 2) * (n + 2) }, az);
+        const g = (i, j) => v[(j % (n + 2)) * (n + 2) + (i % (n + 2))];
+        return (x, y) => {
+            const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j;
+            const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+            const a = g(i, j) * (1 - sx) + g(i + 1, j) * sx, b = g(i, j + 1) * (1 - sx) + g(i + 1, j + 1) * sx;
+            return a * (1 - sy) + b * sy;
+        };
+    }
+
+    const TEMAS = ['bosque', 'desierto', 'nieve', 'ciudad', 'luna'];
+    const FORMAS = ['isla', 'islas', 'cuevas'];
+
+    /* Genera el terreno. op: { semilla, tema, forma } */
+    function generar(op) {
+        const o = Object.assign({ semilla: 1 }, op);
+        const az = azar(o.semilla);
+        const tema = o.tema || TEMAS[Math.floor(az() * TEMAS.length)];
+        const forma = o.forma || FORMAS[Math.floor(az() * FORMAS.length)];
+        const m = new Uint8Array(ANCHO * ALTO);
+        const alto1 = ruido1(az, 24), det1 = ruido1(az, 90), cueva = ruido2(az, 40), cueva2 = ruido2(az, 80);
+
+        /* Bordes de la tierra: dónde empieza y acaba cada isla en x */
+        let tramos;
+        if (forma === 'islas') {
+            const n = az() < 0.5 ? 2 : 3, hueco = 70 + az() * 50;
+            const util = ANCHO - 200 - hueco * (n - 1), w = util / n;
+            tramos = Array.from({ length: n }, (_, k) => [100 + k * (w + hueco), 100 + k * (w + hueco) + w]);
+        } else tramos = [[90 + az() * 40, ANCHO - 90 - az() * 40]];
+
+        for (const [x0, x1] of tramos) {
+            for (let x = Math.floor(x0); x < x1; x++) {
+                const u = x / ANCHO;
+                /* Superficie: colinas grandes + detalle, y caída a los lados
+                   (la isla baja hacia el agua en los extremos) */
+                const b0 = Math.min(1, (x - x0) / 170, (x1 - x) / 170), borde = b0 * b0 * (3 - 2 * b0);
+                let sup = 330 + alto1(u * 6) * 330 + (det1(u * 40) - 0.5) * 50;
+                if (forma === 'cuevas') sup -= 90;
+                sup = AGUA + 25 - (AGUA + 25 - sup) * Math.pow(borde, 0.6);
+                for (let y = Math.max(0, Math.floor(sup)); y < ALTO; y++) m[y * ANCHO + x] = 1;
+            }
+        }
+        /* Cuevas y arcos: se vacía donde el ruido 2D supera un umbral, solo
+           por debajo de la superficie y por encima del agua */
+        const umbral = forma === 'cuevas' ? 0.6 : 0.68;
+        for (let y = 120; y < AGUA - 20; y++) {
+            for (let x = 0; x < ANCHO; x++) {
+                const i = y * ANCHO + x;
+                if (!m[i]) continue;
+                const v = cueva(x / 130, y / 110) * 0.75 + cueva2(x / 45, y / 45) * 0.25;
+                if (v > umbral) m[i] = 0;
+            }
+        }
+        quitarSueltos(m, 400);
+        return { ANCHO, ALTO, mascara: m, tema, forma, semilla: o.semilla, agua: AGUA, vigas: [] };
+    }
+
+    /* Borra los trozos sueltos pequeños (en el aire o bajo el agua quedan
+       feos y engañan: parecen suelo y no lo son) */
+    function quitarSueltos(m, minimo) {
+        const visto = new Uint8Array(m.length), pila = new Int32Array(m.length);
+        for (let i = 0; i < m.length; i++) {
+            if (!m[i] || visto[i]) continue;
+            let n = 0, p = 0, toca = false;
+            pila[p++] = i; visto[i] = 1;
+            const lista = [];
+            while (p) {
+                const k = pila[--p]; lista.push(k); n++;
+                const x = k % ANCHO, y = (k - x) / ANCHO;
+                if (y === ALTO - 1) toca = true;
+                const vec = [x > 0 ? k - 1 : -1, x < ANCHO - 1 ? k + 1 : -1, y > 0 ? k - ANCHO : -1, y < ALTO - 1 ? k + ANCHO : -1];
+                for (const v of vec) if (v >= 0 && m[v] && !visto[v]) { visto[v] = 1; pila[p++] = v; }
+            }
+            if (!toca && n < minimo) for (const k of lista) m[k] = 0;
+        }
+    }
+
+    const solido = (t, x, y) => {
+        x = Math.floor(x); y = Math.floor(y);
+        if (y >= ALTO) return true;
+        if (x < 0 || x >= ANCHO || y < 0) return false;
+        return t.mascara[y * ANCHO + x] !== 0;
+    };
+    /* Cráter: devuelve cuántos píxeles se han quitado (para medir y probar) */
+    function agujero(t, cx, cy, r) {
+        let n = 0;
+        const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(ALTO - 1, Math.ceil(cy + r));
+        for (let y = y0; y <= y1; y++) {
+            const dy = y + 0.5 - cy, ancho = Math.sqrt(Math.max(0, r * r - dy * dy));
+            const x0 = Math.max(0, Math.floor(cx - ancho)), x1 = Math.min(ANCHO - 1, Math.ceil(cx + ancho));
+            for (let x = x0; x <= x1; x++) {
+                const dx = x + 0.5 - cx;
+                if (dx * dx + dy * dy <= r * r) { const i = y * ANCHO + x; if (t.mascara[i]) { t.mascara[i] = 0; n++; } }
+            }
+        }
+        return n;
+    }
+    /* Viga: rectángulo girado de VIGA_L × VIGA_G centrado en (cx, cy) */
+    const VIGA_L = 80, VIGA_G = 9;
+    function puntosViga(cx, cy, ang) {
+        const c = Math.cos(ang), s = Math.sin(ang), pts = [];
+        for (let u = -VIGA_L / 2; u <= VIGA_L / 2; u += 0.5)
+            for (let v = -VIGA_G / 2; v <= VIGA_G / 2; v += 0.5) pts.push([Math.floor(cx + u * c - v * s), Math.floor(cy + u * s + v * c)]);
+        return pts;
+    }
+    function ponerViga(t, cx, cy, ang) {
+        for (const [x, y] of puntosViga(cx, cy, ang)) if (x >= 0 && x < ANCHO && y >= 0 && y < ALTO) t.mascara[y * ANCHO + x] = 2;
+        t.vigas.push({ x: cx, y: cy, ang });
+    }
+    /* Altura de la superficie: el primer sólido bajando desde y0 en x */
+    function suelo(t, x, y0) {
+        for (let y = Math.max(0, Math.floor(y0)); y < ALTO; y++) if (solido(t, x, y)) return y;
+        return ALTO;
+    }
+    /* Huecos donde cabe un gusano de pie: aire encima (alto libre) y
+       suelo debajo, por encima del agua. Para colocar gusanos, barriles,
+       minas y cajas */
+    function huecos(t, alto, margenAgua) {
+        const r = [];
+        for (let x = 20; x < ANCHO - 20; x += 4) {
+            for (let y = 30; y < t.agua - (margenAgua || 30); y++) {
+                if (solido(t, x, y) && !solido(t, x, y - 1)) {
+                    /* Aire encima; a los lados se deja que el suelo suba hasta 7 px
+                       (con «a los lados libre desde el suelo» solo valían los
+                       sitios llanos: 42 de 439 en una isla) */
+                    let libre = true;
+                    for (let k = 1; k <= alto && libre; k++) if (solido(t, x, y - k) || (k > 7 && (solido(t, x - 6, y - k) || solido(t, x + 6, y - k)))) libre = false;
+                    /* Que no sea una aguja: suelo también a los lados */
+                    if (libre && solido(t, x - 5, y + 8) && solido(t, x + 5, y + 8)) r.push({ x, y });
+                }
+            }
+        }
+        return r;
+    }
+
+    return { ANCHO, ALTO, AGUA, TEMAS, FORMAS, VIGA_L, VIGA_G, azar, generar, solido, agujero, ponerViga, puntosViga, suelo, huecos };
+})();
+if (typeof module !== 'undefined') module.exports = Terreno;
+
+</script>
+<script>
+/* ============================================================
+   MOTOR DE WORMS: gusanos, armas, explosiones, objetos y turnos.
+   Sin pantalla ni sonido: avanza el estado y deja «eventos» que juego.js
+   dibuja y hace sonar. Corre igual en Node (pruebas y partidas simuladas).
+
+   Coordenadas en píxeles del mundo (1800 × 900, y hacia abajo). Paso fijo
+   de 1/120 s: el resultado no depende de los fotogramas por segundo.
+   ============================================================ */
+const Worms = (() => {
+    const T = typeof Terreno !== 'undefined' ? Terreno : require('./terreno.js');
+    const PASO = 1 / 120;
+    const G = 420;                        // gravedad, px/s²
+    const R = 7;                          // radio del gusano
+    const VIENTO = 170;                   // aceleración con viento máximo, px/s²
+    const ANDAR = 62;                     // px/s
+    const SUBIR = 7;                      // escalón que se sube andando
+    const RETIRADA = 3;                   // s para alejarse tras disparar
+    const CAIDA_SEGURA = 310;             // px/s: más rápido al aterrizar, daño
+    const ESPERA_MAX = 14;                // s: si nada se para, se fuerza el cambio de turno
+
+    /* Armas. tipo decide cómo se disparan; mun = munición por equipo
+       (Infinity = sin límite). r y d: radio y daño máximo de la explosión */
+    const ARMAS = {
+        bazuca:   { nombre: 'Bazuca', icono: '🚀', tipo: 'bala', viento: true, r: 50, d: 50, vmax: 900, mun: Infinity },
+        mortero:  { nombre: 'Mortero', icono: '💥', tipo: 'bala', viento: false, r: 32, d: 32, vmax: 820, mun: 3, trozos: 5 },
+        granada:  { nombre: 'Granada', icono: '🍍', tipo: 'granada', r: 50, d: 50, vmax: 700, mun: Infinity, rebote: 0.45 },
+        racimo:   { nombre: 'Racimo', icono: '🍇', tipo: 'granada', r: 30, d: 30, vmax: 700, mun: 3, rebote: 0.45, trozos: 5 },
+        escopeta: { nombre: 'Escopeta', icono: '🔫', tipo: 'escopeta', r: 14, d: 25, alcance: 720, tiros: 2, mun: Infinity },
+        bate:     { nombre: 'Bate', icono: '🏏', tipo: 'bate', d: 30, empujon: 640, mun: 2 },
+        dinamita: { nombre: 'Dinamita', icono: '🧨', tipo: 'colocar', r: 75, d: 75, mecha: 5, mun: 1, retirada: 5 },
+        mina:     { nombre: 'Mina', icono: '💣', tipo: 'colocar', mun: 2 },
+        gallina:  { nombre: 'Gallina loca', icono: '🐔', tipo: 'gallina', r: 70, d: 70, mecha: 8, mun: 1 },
+        aereo:    { nombre: 'Ataque aéreo', icono: '✈️', tipo: 'aereo', r: 30, d: 30, misiles: 5, mun: 1 },
+        teleporte:{ nombre: 'Teletransporte', icono: '🌀', tipo: 'teleporte', mun: 2 },
+        viga:     { nombre: 'Viga', icono: '🏗️', tipo: 'viga', mun: 3 }
+    };
+    const ORDEN_ARMAS = Object.keys(ARMAS);
+    const MINA = { r: 45, d: 45, radar: 32, cuenta: 1.5, armar: 2 };
+    const BARRIL = { r: 50, d: 50, vida: 30 };
+    const NOMBRES = ['Fideo', 'Churro', 'Tallarín', 'Lombardo', 'Gusanín', 'Ñoqui', 'Macarrón', 'Garbanzo', 'Espagueti', 'Cordelia',
+        'Lumbi', 'Pocholo', 'Ricitos', 'Tornillo', 'Chispa', 'Bigotes', 'Pepino', 'Croqueta', 'Rodolfo', 'Petardo', 'Canica', 'Bombón', 'Trufa', 'Mortadelo'];
+
+    /* ---------- CUERPOS: colisión de un círculo con la máscara ---------- */
+    const DIRS = Array.from({ length: 16 }, (_, k) => [Math.cos(k * Math.PI / 8), Math.sin(k * Math.PI / 8)]);
+    /* Normal de contacto: hacia fuera de lo sólido, sumando los puntos del
+       borde del círculo que caen dentro. null si no toca nada */
+    function normal(t, x, y, r) {
+        let sx = 0, sy = 0, n = 0;
+        for (const [dx, dy] of DIRS) if (T.solido(t, x + dx * r, y + dy * r)) { sx -= dx; sy -= dy; n++; }
+        if (T.solido(t, x, y)) n++;
+        if (!n) return null;
+        const l = Math.hypot(sx, sy);
+        return l < 1e-6 ? { x: 0, y: -1 } : { x: sx / l, y: sy / l };
+    }
+    const libre = (t, x, y, r) => !normal(t, x, y, r);
+    const apoyado = (t, x, y, r) => { const n = normal(t, x, y + 1.5, r); return !!n && n.y < -0.45; };
+
+    /* Un paso de un cuerpo que rebota (gusanos lanzados, granadas, barriles,
+       cajas, minas, dinamita). Devuelve la velocidad normal del choque más
+       fuerte (0 si no chocó): sirve para el daño por caída y los sonidos */
+    function pasoCuerpo(e, c, h) {
+        c.vy += G * h;
+        if (c.viento) c.vx += e.viento * VIENTO * h;
+        if (c.paracaidas && c.vy > 70) c.vy = 70;
+        const n = Math.max(1, Math.ceil(Math.hypot(c.vx, c.vy) * h / 1.5)), hh = h / n;
+        let impacto = 0;
+        for (let k = 0; k < n; k++) {
+            const nx = c.x + c.vx * hh, ny = c.y + c.vy * hh;
+            const nr = normal(e.t, nx, ny, c.r);
+            if (!nr) { c.x = nx; c.y = ny; continue; }
+            const vn = c.vx * nr.x + c.vy * nr.y;
+            if (vn < 0) {
+                impacto = Math.max(impacto, -vn);
+                c.vx -= (1 + c.rebote) * vn * nr.x; c.vy -= (1 + c.rebote) * vn * nr.y;
+                const tx = -nr.y, ty = nr.x, vt = c.vx * tx + c.vy * ty;
+                c.vx -= vt * c.friccion * tx; c.vy -= vt * c.friccion * ty;
+            }
+            /* Metido dentro (le han puesto tierra o una viga encima): sale
+               hacia fuera poco a poco */
+            const aqui = normal(e.t, c.x, c.y, c.r);
+            if (aqui) { c.x += aqui.x * 0.8; c.y += aqui.y * 0.8; }
+            break;
+        }
+        if (Math.hypot(c.vx, c.vy) < 14 && apoyado(e.t, c.x, c.y, c.r)) { c.vx = 0; c.vy = 0; c.quieto = true; }
+        return impacto;
+    }
+
+    /* Un paso de un proyectil que estalla al tocar (bazuca, mortero,
+       trozos, misiles). Devuelve con qué ha chocado, o null */
+    function pasoBala(e, p, h, ignorar) {
+        p.vy += G * h;
+        if (p.viento) p.vx += e.viento * VIENTO * h;
+        p.t = (p.t || 0) + h;
+        const n = Math.max(1, Math.ceil(Math.hypot(p.vx, p.vy) * h / 1.5)), hh = h / n;
+        for (let k = 0; k < n; k++) {
+            p.x += p.vx * hh; p.y += p.vy * hh;
+            if (p.y > e.agua) return { tipo: 'agua' };
+            if (p.x < -400 || p.x > T.ANCHO + 400) return { tipo: 'fuera' };
+            if (T.solido(e.t, p.x, p.y)) return { tipo: 'tierra' };
+            for (const g of e.gusanos) {
+                if (g.muerto || (g.id === p.dueno && p.t < 0.25) || (ignorar && ignorar.has(g.id))) continue;
+                if ((g.x - p.x) ** 2 + (g.y - p.y) ** 2 < (R + 2) ** 2) return { tipo: 'gusano', gusano: g };
+            }
+            for (const c of e.cosas) {
+                if (c.clase === 'proyectil' || c.clase === 'gallina' || c === p) continue;
+                if ((c.x - p.x) ** 2 + (c.y - p.y) ** 2 < (c.r + 2) ** 2) return { tipo: 'cosa', cosa: c };
+            }
+        }
+        return null;
+    }
+
+    /* ---------- PARTIDA ---------- */
+    const COLORES = ['#e53935', '#1e88e5', '#43a047', '#fdd835'];
+    const NOMBRES_EQUIPO = ['Rojos', 'Azules', 'Verdes', 'Amarillos'];
+    function crear(cfg) {
+        const c = Object.assign({ semilla: 1, gusanos: 4, vida: 100, tiempoTurno: 45, minas: 4, barriles: 3, cajas: 0.35, rondasMS: 10, equipos: 2 }, cfg);
+        const az = T.azar((c.semilla * 2654435761) >>> 0);
+        /* cfg.terreno: uno hecho a mano (pruebas: suelo plano, paredes) */
+        const t = c.terreno || T.generar({ semilla: c.semilla, tema: c.tema, forma: c.forma });
+        const defEq = typeof c.equipos === 'number' ? Array.from({ length: c.equipos }, () => ({})) : c.equipos;
+        const e = {
+            cfg: c, t, azar: az, agua: t.agua, viento: 0, reloj: 0, acum: 0, ronda: 1, muerteSubita: false,
+            equipos: [], gusanos: [], cosas: [], eventos: [], pendientes: [], estado: 'inicio', ganador: null, siguienteId: 1
+        };
+        /* Nombres de gusano sin repetir en la partida */
+        const bolsa = NOMBRES.slice();
+        for (let i = bolsa.length - 1; i > 0; i--) { const j = Math.floor(az() * (i + 1)); [bolsa[i], bolsa[j]] = [bolsa[j], bolsa[i]]; }
+        defEq.forEach((d, k) => {
+            const municion = {};
+            for (const a of ORDEN_ARMAS) municion[a] = ARMAS[a].mun;
+            e.equipos.push({ n: k, nombre: d.nombre || NOMBRES_EQUIPO[k], color: d.color || COLORES[k], ia: d.ia || null, municion, gusanos: [], turno: 0 });
+        });
+        /* Sitios: repartidos por la isla, alternando equipos, sin dos gusanos
+           a menos de 60 px. Si no caben, se baja la distancia */
+        const huecos = T.huecos(t, 20, 40);
+        const tomados = [];
+        /* La distancia mínima baja poco a poco si no hay sitio (4 equipos de
+           6 en una isla con cuevas no caben a 70 px) */
+        const tomar = (dmin, lejosDe) => {
+            for (let intento = 0; intento < 1500; intento++) {
+                const h = huecos[Math.floor(az() * huecos.length)];
+                if (!h) return null;
+                const d = dmin * (1 - 0.7 * intento / 1500);
+                if (tomados.some(q => Math.hypot(q.x - h.x, q.y - h.y) < d)) continue;
+                if (lejosDe && lejosDe.some(q => Math.hypot(q.x - h.x, q.y - h.y) < 45)) continue;
+                tomados.push(h); return h;
+            }
+            return null;
+        };
+        for (let i = 0; i < c.gusanos; i++) {
+            for (const eq of e.equipos) {
+                const h = tomar(70);
+                if (!h) continue;
+                const g = { id: e.siguienteId++, eq: eq.n, nombre: d0(eq, bolsa, i), x: h.x, y: h.y - R - 1, vx: 0, vy: 0, r: R, rebote: 0.3, friccion: 0.35,
+                    vida: c.vida, muerto: false, quieto: true, mira: az() < 0.5 ? -1 : 1, angulo: -0.5, ahogado: false, dano: 0 };
+                e.gusanos.push(g); eq.gusanos.push(g.id);
+            }
+        }
+        const posG = e.gusanos.map(g => ({ x: g.x, y: g.y }));
+        for (let i = 0; i < c.barriles; i++) { const h = tomar(50); if (h) e.cosas.push(cosa(e, 'barril', h.x, h.y - 9, { r: 9, vida: BARRIL.vida })); }
+        for (let i = 0; i < c.minas; i++) { const h = tomar(40, posG); if (h) e.cosas.push(cosa(e, 'mina', h.x, h.y - 4, { r: 4, armada: 0 })); }
+        return e;
+    }
+    function d0(eq, bolsa, i) { return bolsa.pop() || ('Gusano ' + (i + 1)); }
+    function cosa(e, clase, x, y, extra) {
+        return Object.assign({ id: e.siguienteId++, clase, x, y, vx: 0, vy: 0, r: 5, rebote: 0.25, friccion: 0.5, quieto: false }, extra);
+    }
+
+    /* ---------- TURNOS ---------- */
+    const vivos = (e, eq) => e.gusanos.filter(g => g.eq === eq && !g.muerto);
+    const equiposVivos = (e) => e.equipos.filter(q => vivos(e, q.n).length);
+    function empezar(e) { e.turnoEq = -1; siguienteTurno(e, true); }
+    function siguienteTurno(e, primero) {
+        const n = e.equipos.length;
+        let eq = e.turnoEq;
+        for (let k = 0; k < n; k++) {
+            eq = (eq + 1) % n;
+            if (!primero && eq === 0) nuevaRonda(e);
+            primero = false;
+            if (vivos(e, eq).length) break;
+        }
+        e.turnoEq = eq;
+        const equipo = e.equipos[eq], vs = vivos(e, eq);
+        /* Gusano: el siguiente de su equipo, en orden */
+        const lista = equipo.gusanos.map(id => e.gusanos.find(g => g.id === id)).filter(g => !g.muerto);
+        const g = lista[equipo.turno % lista.length];
+        equipo.turno++;
+        e.activo = g.id;
+        e.turno = { t: e.cfg.tiempoTurno, arma: e.turno && e.turno.armaEq && e.turno.armaEq[eq] || 'bazuca', armaEq: (e.turno && e.turno.armaEq) || {},
+            movido: false, disparado: false, tiros: 0, fusible: 3, retirada: 0, espera: 0, gallina: null, angViga: 0 };
+        if (equipo.municion[e.turno.arma] <= 0) e.turno.arma = 'bazuca';
+        /* Viento: nuevo cada turno */
+        e.viento = Math.round((e.azar() * 2 - 1) * 20) / 20;
+        e.estado = 'turno';
+        e.eventos.push({ tipo: 'turno', eq, gusano: g.id, viento: e.viento, ronda: e.ronda });
+        /* Caja del cielo */
+        if (e.cfg.cajas && e.azar() < e.cfg.cajas) soltarCaja(e);
+        void vs;
+    }
+    function nuevaRonda(e) {
+        e.ronda++;
+        if (e.ronda > e.cfg.rondasMS && !e.muerteSubita) { e.muerteSubita = true; e.eventos.push({ tipo: 'muerteSubita' }); }
+        if (e.muerteSubita) {
+            /* El agua sube 18 px en cada ronda: se come el terreno de abajo */
+            e.agua -= 18;
+            e.eventos.push({ tipo: 'sube', agua: e.agua });
+            for (const c of [...e.gusanos, ...e.cosas]) c.quieto = false;
+        }
+    }
+    function soltarCaja(e) {
+        const huecos = T.huecos(e.t, 14, 40);
+        if (!huecos.length) return;
+        const h = huecos[Math.floor(e.azar() * huecos.length)];
+        const salud = e.azar() < 0.4;
+        const limitadas = ORDEN_ARMAS.filter(a => ARMAS[a].mun !== Infinity);
+        const c = cosa(e, 'caja', h.x, -20, { r: 8, paracaidas: true, contenido: salud ? 'salud' : limitadas[Math.floor(e.azar() * limitadas.length)] });
+        e.cosas.push(c);
+        e.eventos.push({ tipo: 'caja', x: h.x, contenido: c.contenido });
+    }
+    const activo = (e) => e.gusanos.find(g => g.id === e.activo);
+    const equipoActivo = (e) => e.equipos[e.turnoEq];
+    const puedeMover = (e) => (e.estado === 'turno' && !e.turno.bloqueado) || e.estado === 'retirada';
+    const puedeDisparar = (e) => e.estado === 'turno' && !e.turno.disparado;
+
+    /* Cambiar de gusano: solo antes de hacer nada en el turno */
+    function cambiarGusano(e) {
+        if (e.estado !== 'turno' || e.turno.movido || e.turno.disparado || e.turno.tiros) return false;
+        const eq = equipoActivo(e), lista = eq.gusanos.map(id => e.gusanos.find(g => g.id === id)).filter(g => !g.muerto);
+        if (lista.length < 2) return false;
+        const i = lista.findIndex(g => g.id === e.activo);
+        e.activo = lista[(i + 1) % lista.length].id;
+        e.eventos.push({ tipo: 'cambio', gusano: e.activo });
+        return true;
+    }
+    function elegirArma(e, id) {
+        if (e.estado !== 'turno' || e.turno.disparado || e.turno.tiros || !ARMAS[id]) return false;
+        if (equipoActivo(e).municion[id] <= 0) return false;
+        e.turno.arma = id; e.turno.armaEq[e.turnoEq] = id;
+        return true;
+    }
+    function pasarTurno(e) {
+        if (e.estado !== 'turno' && e.estado !== 'retirada') return false;
+        e.estado = 'resolviendo'; e.turno.espera = 0;
+        e.eventos.push({ tipo: 'pasa' });
+        return true;
+    }
+
+    /* ---------- MOVIMIENTO DEL GUSANO ACTIVO ---------- */
+    function andar(e, g, dir, h) {
+        g.mira = dir;
+        if (!g.quieto) return;
+        const nx = g.x + dir * ANDAR * h;
+        let ny = null;
+        for (let up = 0; up <= SUBIR; up += 0.5) if (libre(e.t, nx, g.y - up, R)) { ny = g.y - up; break; }
+        if (ny === null) return;          // pared
+        /* Pegarse a la bajada; si no hay suelo cerca, cae */
+        let baja = 0;
+        while (baja < SUBIR && libre(e.t, nx, ny + 0.5, R) && !apoyado(e.t, nx, ny, R)) { ny += 0.5; baja += 0.5; }
+        g.x = nx; g.y = ny;
+        if (!apoyado(e.t, g.x, g.y, R)) { g.quieto = false; g.vx = dir * ANDAR * 0.6; g.vy = 0; }
+        e.turno.movido = true;
+    }
+    function saltar(e, tipo) {
+        const g = activo(e);
+        if (!g || !puedeMover(e) || !g.quieto) return false;
+        if (tipo === 'atras') { g.vx = -g.mira * 55; g.vy = -330; } else { g.vx = g.mira * 80; g.vy = -200; }
+        g.quieto = false;
+        e.turno.movido = true;
+        e.eventos.push({ tipo: 'salto', gusano: g.id });
+        return true;
+    }
+
+    /* ---------- DISPARAR ----------
+       op: { angulo (rad, 0 = horizontal hacia donde mira, negativo = arriba),
+             fuerza 0..1, fusible (s, granadas), x, y (aéreo, teletransporte,
+             viga), angViga } */
+    function direccion(g, ang) { return { x: Math.cos(ang) * g.mira, y: Math.sin(ang) }; }
+    function disparar(e, op) {
+        if (!puedeDisparar(e)) return false;
+        const g = activo(e), id = e.turno.arma, A = ARMAS[id], eq = equipoActivo(e);
+        if (!g || g.muerto || eq.municion[id] <= 0) return false;
+        op = op || {};
+        const ang = op.angulo !== undefined ? op.angulo : g.angulo;
+        if (op.angulo !== undefined) g.angulo = ang;
+        if (op.mira) g.mira = op.mira;
+        const d = direccion(g, ang), f = Math.max(0.05, Math.min(1, op.fuerza !== undefined ? op.fuerza : 1));
+        const sx = g.x + d.x * (R + 4), sy = g.y + d.y * (R + 4);
+        let retirada = A.retirada || RETIRADA, gasta = true;
+        switch (A.tipo) {
+            case 'bala':
+                e.cosas.push(cosa(e, 'proyectil', sx, sy, { arma: id, vx: d.x * A.vmax * f, vy: d.y * A.vmax * f, viento: A.viento, dueno: g.id, t: 0 }));
+                break;
+            case 'granada': {
+                const fus = Math.max(1, Math.min(5, Math.round(op.fusible || e.turno.fusible)));
+                e.cosas.push(cosa(e, 'granada', sx, sy, { arma: id, r: 4, rebote: A.rebote, friccion: 0.25, vx: d.x * A.vmax * f, vy: d.y * A.vmax * f, mecha: fus, dueno: g.id }));
+                break;
+            }
+            case 'escopeta': {
+                tiroEscopeta(e, g, d);
+                e.turno.tiros++;
+                /* Dos tiros: tras el primero no se puede andar, solo apuntar */
+                if (e.turno.tiros < A.tiros) { e.turno.bloqueado = true; e.eventos.push({ tipo: 'disparo', arma: id, gusano: g.id }); return true; }
+                gasta = true;
+                break;
+            }
+            case 'bate': batazo(e, g, ang); break;
+            case 'colocar':
+                if (id === 'dinamita') e.cosas.push(cosa(e, 'dinamita', g.x + g.mira * 6, g.y, { r: 4, mecha: A.mecha, dueno: g.id }));
+                else e.cosas.push(cosa(e, 'mina', g.x + g.mira * 8, g.y, { r: 4, armada: MINA.armar, dueno: g.id }));
+                break;
+            case 'gallina': {
+                const c = cosa(e, 'gallina', g.x + g.mira * 10, g.y - 2, { r: 6, rebote: 0.1, friccion: 0.6, dir: g.mira, mecha: A.mecha, dueno: g.id, salto: 0 });
+                e.cosas.push(c); e.turno.gallina = c.id;
+                retirada = 0;
+                break;
+            }
+            case 'aereo': {
+                if (op.x === undefined) return false;
+                const lado = op.x < T.ANCHO / 2 ? 1 : -1;
+                for (let k = 0; k < A.misiles; k++)
+                    e.cosas.push(cosa(e, 'proyectil', op.x + (k - 2) * 26 - lado * 140, -30 - k * 6, { arma: 'misil', vx: lado * 140, vy: 160, viento: true, dueno: g.id, t: 0 }));
+                break;
+            }
+            case 'teleporte': {
+                if (!puedeTeleporte(e, op.x, op.y)) return false;
+                e.eventos.push({ tipo: 'teleporte', gusano: g.id, de: { x: g.x, y: g.y }, a: { x: op.x, y: op.y } });
+                g.x = op.x; g.y = op.y; g.quieto = false; g.vx = 0; g.vy = 0;
+                retirada = 0;
+                break;
+            }
+            case 'viga': {
+                const av = op.angViga !== undefined ? op.angViga : e.turno.angViga;
+                if (!puedeViga(e, op.x, op.y, av)) return false;
+                T.ponerViga(e.t, op.x, op.y, av);
+                e.eventos.push({ tipo: 'viga', x: op.x, y: op.y, ang: av });
+                for (const c of [...e.gusanos, ...e.cosas]) c.quieto = false;
+                retirada = 0;
+                break;
+            }
+        }
+        if (gasta && eq.municion[id] !== Infinity) eq.municion[id]--;
+        e.turno.disparado = true;
+        e.eventos.push({ tipo: 'disparo', arma: id, gusano: g.id, fuerza: f });
+        if (A.tipo === 'gallina') { e.estado = 'gallina'; return true; }
+        if (retirada > 0) { e.estado = 'retirada'; e.turno.retirada = retirada; }
+        else { e.estado = 'resolviendo'; e.turno.espera = 0; }
+        return true;
+    }
+    function puedeTeleporte(e, x, y) {
+        return x !== undefined && x > 10 && x < T.ANCHO - 10 && y > 10 && y < e.agua - 15 && libre(e.t, x, y, R + 1);
+    }
+    function puedeViga(e, x, y, ang) {
+        if (x === undefined || y < 10 || y > e.agua - 5 || x < 0 || x > T.ANCHO) return false;
+        const c = Math.cos(ang), s = Math.sin(ang);
+        for (const g of e.gusanos) {
+            if (g.muerto) continue;
+            const u = (g.x - x) * c + (g.y - y) * s, v = -(g.x - x) * s + (g.y - y) * c;
+            if (Math.abs(u) < T.VIGA_L / 2 + R && Math.abs(v) < T.VIGA_G / 2 + R) return false;
+        }
+        return true;
+    }
+    /* La gallina explota cuando el jugador vuelve a pulsar */
+    function detonar(e) {
+        if (e.estado !== 'gallina') return false;
+        const c = e.cosas.find(k => k.id === e.turno.gallina);
+        if (!c) return false;
+        c.mecha = 0;
+        return true;
+    }
+    function tiroEscopeta(e, g, d) {
+        const A = ARMAS.escopeta;
+        let x = g.x + d.x * (R + 2), y = g.y + d.y * (R + 2);
+        for (let s = 0; s < A.alcance; s += 2) {
+            x += d.x * 2; y += d.y * 2;
+            if (y > e.agua || x < 0 || x > T.ANCHO) { e.eventos.push({ tipo: 'perdigon', x0: g.x, y0: g.y, x, y }); return; }
+            const blanco = e.gusanos.find(o => !o.muerto && o.id !== g.id && (o.x - x) ** 2 + (o.y - y) ** 2 < (R + 1) ** 2);
+            if (blanco) {
+                e.eventos.push({ tipo: 'perdigon', x0: g.x, y0: g.y, x, y });
+                herir(e, blanco, A.d, g.id);
+                empujar(blanco, d.x * 260, d.y * 260 - 80);
+                explotar(e, x, y, A.r, 0, g.id);
+                return;
+            }
+            const c = e.cosas.find(k => k.clase !== 'proyectil' && (k.x - x) ** 2 + (k.y - y) ** 2 < (k.r + 1) ** 2);
+            if (T.solido(e.t, x, y) || c) {
+                e.eventos.push({ tipo: 'perdigon', x0: g.x, y0: g.y, x, y });
+                explotar(e, x, y, A.r, 12, g.id);
+                return;
+            }
+        }
+        e.eventos.push({ tipo: 'perdigon', x0: g.x, y0: g.y, x, y });
+    }
+    function batazo(e, g, ang) {
+        const A = ARMAS.bate, d = direccion(g, ang);
+        let alguno = false;
+        for (const o of e.gusanos) {
+            if (o.muerto || o.id === g.id) continue;
+            const dx = o.x - g.x, dy = o.y - g.y;
+            if (dx * g.mira > -2 && Math.abs(dx) < 26 && Math.abs(dy) < 20) {
+                herir(e, o, A.d, g.id);
+                empujar(o, d.x * A.empujon, d.y * A.empujon);
+                alguno = true;
+            }
+        }
+        e.eventos.push({ tipo: 'batazo', gusano: g.id, acierto: alguno });
+    }
+    const empujar = (c, vx, vy) => { c.vx = vx; c.vy = vy; c.quieto = false; };
+    function herir(e, g, n, autor) {
+        if (g.muerto || n <= 0) return;
+        n = Math.round(n);
+        g.vida -= n; g.dano += n;
+        e.eventos.push({ tipo: 'dano', gusano: g.id, n, x: g.x, y: g.y, autor });
+    }
+
+    /* ---------- EXPLOSIONES ----------
+       Daño que baja en línea con la distancia al borde del gusano, empujón
+       en la misma proporción, cráter, y en cadena: barriles, minas y cajas
+       de armas que pille estallan un momento después (no en el acto: así
+       se ven una tras otra y no hay recursión) */
+    function explotar(e, x, y, r, d, autor) {
+        T.agujero(e.t, x, y, r);
+        e.eventos.push({ tipo: 'explosion', x, y, r, d });
+        for (const g of e.gusanos) {
+            if (g.muerto) continue;
+            const dist = Math.max(0, Math.hypot(g.x - x, g.y - y) - R);
+            if (dist >= r) { if (Math.hypot(g.x - x, g.y - y) < r + 40) g.quieto = false; continue; }
+            const f = 1 - dist / r;
+            if (d > 0) {
+                herir(e, g, Math.max(1, d * f), autor);
+                const l = Math.hypot(g.x - x, g.y - y) || 1, v = 520 * f * Math.min(1.6, d / 45);
+                empujar(g, (g.x - x) / l * v, (g.y - y) / l * v - 120 * f);
+            }
+        }
+        for (const c of e.cosas) {
+            const dist = Math.max(0, Math.hypot(c.x - x, c.y - y) - c.r);
+            c.quieto = false;
+            if (dist >= r) continue;
+            const f = 1 - dist / r, l = Math.hypot(c.x - x, c.y - y) || 1, v = 420 * f;
+            if (c.clase !== 'proyectil') { c.vx += (c.x - x) / l * v; c.vy += (c.y - y) / l * v - 100 * f; }
+            if (c.clase === 'barril') { c.vida -= d * f; if (c.vida <= 0 && !c.estalla) { c.estalla = true; e.pendientes.push({ t: 0.18, x: c.x, y: c.y, r: BARRIL.r, d: BARRIL.d, quitar: c.id, autor }); } }
+            else if (c.clase === 'mina' && !c.estalla) { c.estalla = true; e.pendientes.push({ t: 0.12, x: c.x, y: c.y, r: MINA.r, d: MINA.d, quitar: c.id, autor }); }
+            else if (c.clase === 'caja' && !c.estalla) {
+                c.estalla = true;
+                e.pendientes.push(c.contenido === 'salud' ? { t: 0.1, x: c.x, y: c.y, r: 0, d: 0, quitar: c.id } : { t: 0.15, x: c.x, y: c.y, r: 25, d: 20, quitar: c.id, autor });
+            }
+        }
+    }
+
+    /* ---------- AVANCE ---------- */
+    /* Con tolerancia: sumando 1/144 en coma flotante salía un paso de
+       diferencia entre 60 y 144 Hz (trampa ya pagada en Súper Pang; aquí
+       redondear a milésimas de paso también perdía uno) */
+    function avanzar(e, dt, mando) {
+        e.acum = Math.min(e.acum + dt, 0.25);
+        let pasos = 0;
+        while (e.acum >= PASO - 1e-7) { paso(e, PASO, mando || {}); e.acum -= PASO; pasos++; }
+        return pasos;
+    }
+    function paso(e, h, mando) {
+        e.reloj += h;
+        if (e.estado === 'fin') return;
+        const g = activo(e);
+        /* Reloj del turno (y de la retirada) */
+        if (e.estado === 'turno') {
+            e.turno.t -= h;
+            if (e.turno.t <= 0) { e.turno.t = 0; e.estado = 'resolviendo'; e.turno.espera = 0; e.eventos.push({ tipo: 'tiempo' }); }
+        } else if (e.estado === 'retirada') {
+            e.turno.retirada -= h;
+            if (e.turno.retirada <= 0) { e.estado = 'resolviendo'; e.turno.espera = 0; }
+        }
+        /* Andar */
+        if (g && !g.muerto && puedeMover(e) && (mando.izq || mando.der) && !(mando.izq && mando.der)) andar(e, g, mando.izq ? -1 : 1, h);
+
+        /* Gusanos que caen o salen volando */
+        for (const o of e.gusanos) {
+            if (o.muerto) continue;
+            if (o.quieto) { if (!apoyado(e.t, o.x, o.y, R)) o.quieto = false; else continue; }
+            const imp = pasoCuerpo(e, o, h);
+            if (imp > CAIDA_SEGURA && o.quieto !== undefined) {
+                herir(e, o, Math.min(40, (imp - CAIDA_SEGURA) / 6), null);
+                e.eventos.push({ tipo: 'golpeCaida', gusano: o.id });
+                /* Caer con daño acaba el turno (como en el original) */
+                if (o.id === e.activo && (e.estado === 'turno' || e.estado === 'retirada')) { e.estado = 'resolviendo'; e.turno.espera = 0; }
+            }
+            if (o.y - R > e.agua) ahogar(e, o);
+        }
+        /* Cosas */
+        for (let i = e.cosas.length - 1; i >= 0; i--) {
+            const c = e.cosas[i];
+            if (c.clase === 'proyectil') {
+                const choque = pasoBala(e, c, h);
+                if (choque) {
+                    e.cosas.splice(i, 1);
+                    if (choque.tipo === 'agua') e.eventos.push({ tipo: 'chapuzon', x: c.x, y: e.agua });
+                    else if (choque.tipo !== 'fuera') estallarProyectil(e, c);
+                }
+                continue;
+            }
+            if (c.mecha !== undefined) {
+                c.mecha -= h;
+                if (c.mecha <= 0) {
+                    e.cosas.splice(i, 1);
+                    if (c.clase === 'granada') estallarGranada(e, c);
+                    else if (c.clase === 'dinamita') explotar(e, c.x, c.y, ARMAS.dinamita.r, ARMAS.dinamita.d, c.dueno);
+                    else if (c.clase === 'gallina') { explotar(e, c.x, c.y, ARMAS.gallina.r, ARMAS.gallina.d, c.dueno); finGallina(e); }
+                    continue;
+                }
+            }
+            if (c.clase === 'gallina') moverGallina(e, c, h);
+            else if (!c.quieto) {
+                const imp = pasoCuerpo(e, c, h);
+                if (imp > 60 && c.clase === 'granada') e.eventos.push({ tipo: 'rebote', x: c.x, y: c.y });
+                if (c.clase === 'caja' && c.quieto) c.paracaidas = false;
+            } else if (!apoyado(e.t, c.x, c.y, c.r)) c.quieto = false;
+            if (c.y - c.r > e.agua) {
+                e.cosas.splice(i, 1);
+                e.eventos.push({ tipo: 'chapuzon', x: c.x, y: e.agua });
+                if (c.clase === 'gallina') finGallina(e);
+                continue;
+            }
+            if (c.clase === 'mina') vigilarMina(e, c, h);
+            if (c.clase === 'caja') recoger(e, c, i);
+        }
+        /* Explosiones en cadena que esperan su momento */
+        for (let i = e.pendientes.length - 1; i >= 0; i--) {
+            const p = e.pendientes[i];
+            p.t -= h;
+            if (p.t > 0) continue;
+            e.pendientes.splice(i, 1);
+            const c = e.cosas.findIndex(k => k.id === p.quitar);
+            let x = p.x, y = p.y;
+            if (c >= 0) { x = e.cosas[c].x; y = e.cosas[c].y; e.cosas.splice(c, 1); }
+            if (p.r > 0) explotar(e, x, y, p.r, p.d, p.autor);
+            else e.eventos.push({ tipo: 'rota', x, y });
+        }
+        if (e.estado === 'resolviendo') resolver(e, h);
+    }
+    function ahogar(e, o) {
+        o.muerto = true; o.ahogado = true; o.vida = 0;
+        e.eventos.push({ tipo: 'ahogado', gusano: o.id, x: o.x, y: e.agua });
+        if (o.id === e.activo && (e.estado === 'turno' || e.estado === 'retirada')) { e.estado = 'resolviendo'; e.turno.espera = 0; }
+    }
+    function estallarProyectil(e, c) {
+        if (c.arma === 'misil') { explotar(e, c.x, c.y, ARMAS.aereo.r, ARMAS.aereo.d, c.dueno); return; }
+        if (c.arma === 'trozo') { explotar(e, c.x, c.y, 20, 18, c.dueno); return; }
+        const A = ARMAS[c.arma];
+        explotar(e, c.x, c.y, A.r, A.d, c.dueno);
+        if (A.trozos) soltarTrozos(e, c.x, c.y - 4, A.trozos, c.dueno, 'trozo');
+    }
+    function estallarGranada(e, c) {
+        const A = ARMAS[c.arma];
+        explotar(e, c.x, c.y, A.r, A.d, c.dueno);
+        if (A.trozos) soltarTrozos(e, c.x, c.y - 4, A.trozos, c.dueno, 'trozo');
+    }
+    function soltarTrozos(e, x, y, n, dueno, arma) {
+        for (let k = 0; k < n; k++) {
+            const a = -Math.PI / 2 + (k - (n - 1) / 2) * 0.38 + (e.azar() - 0.5) * 0.2, v = 230 + e.azar() * 120;
+            e.cosas.push(cosa(e, 'proyectil', x, y, { arma, vx: Math.cos(a) * v, vy: Math.sin(a) * v, viento: false, dueno, t: 1 }));
+        }
+    }
+    /* Gallina: anda en su dirección, salta si choca o cada poco, y no
+       hace caso de nadie (como debe ser) */
+    function moverGallina(e, c, h) {
+        c.salto -= h;
+        if (c.quieto && apoyado(e.t, c.x, c.y, c.r)) {
+            const nx = c.x + c.dir * 75 * h;
+            let ny = null;
+            for (let up = 0; up <= 6; up += 0.5) if (libre(e.t, nx, c.y - up, c.r)) { ny = c.y - up; break; }
+            if (ny === null || c.salto <= 0) { c.vx = c.dir * 95; c.vy = -270; c.quieto = false; c.salto = 1.3; e.eventos.push({ tipo: 'cacarea', x: c.x, y: c.y }); return; }
+            let baja = 0;
+            while (baja < 6 && libre(e.t, nx, ny + 0.5, c.r) && !apoyado(e.t, nx, ny, c.r)) { ny += 0.5; baja += 0.5; }
+            c.x = nx; c.y = ny;
+            if (!apoyado(e.t, c.x, c.y, c.r)) { c.quieto = false; c.vx = c.dir * 60; c.vy = 0; }
+            if (c.x < 5 || c.x > T.ANCHO - 5) c.dir = -c.dir;
+        } else {
+            pasoCuerpo(e, c, h);
+        }
+    }
+    function finGallina(e) {
+        if (e.estado === 'gallina') { e.estado = 'retirada'; e.turno.retirada = RETIRADA; e.turno.gallina = null; }
+    }
+    function vigilarMina(e, c, h) {
+        if (c.armada > 0) { c.armada -= h; return; }
+        if (c.cuenta !== undefined) {
+            c.cuenta -= h;
+            if (c.cuenta <= 0 && !c.estalla) { c.estalla = true; e.pendientes.push({ t: 0, x: c.x, y: c.y, r: MINA.r, d: MINA.d, quitar: c.id, autor: null }); }
+            return;
+        }
+        if (e.gusanos.some(g => !g.muerto && (g.x - c.x) ** 2 + (g.y - c.y) ** 2 < MINA.radar ** 2)) {
+            c.cuenta = MINA.cuenta;
+            e.eventos.push({ tipo: 'minaActiva', x: c.x, y: c.y });
+        }
+    }
+    function recoger(e, c, i) {
+        if (c.estalla) return;
+        const g = e.gusanos.find(o => !o.muerto && (o.x - c.x) ** 2 + (o.y - c.y) ** 2 < 16 * 16);
+        if (!g) return;
+        e.cosas.splice(i, 1);
+        if (c.contenido === 'salud') { g.vida += 25; e.eventos.push({ tipo: 'recoge', gusano: g.id, contenido: 'salud', x: c.x, y: c.y }); }
+        else { e.equipos[g.eq].municion[c.contenido]++; e.eventos.push({ tipo: 'recoge', gusano: g.id, contenido: c.contenido, x: c.x, y: c.y }); }
+    }
+
+    /* Todo quieto: sin proyectiles, mechas, minas contando, explosiones
+       pendientes ni cuerpos moviéndose */
+    function todoQuieto(e) {
+        if (e.pendientes.length) return false;
+        if (e.gusanos.some(g => !g.muerto && !g.quieto)) return false;
+        /* Las cajas que bajan en paracaídas no se esperan: tardan hasta 10 s
+           y dejaban el cambio de turno colgado (medido en el navegador) */
+        return !e.cosas.some(c => c.clase === 'proyectil' || c.mecha !== undefined || c.cuenta !== undefined || (!c.quieto && !c.paracaidas));
+    }
+    /* Fin del turno: se espera a que todo pare; los que se han quedado sin
+       vida estallan (un poco: puede encadenar), y luego se ve si alguien ha
+       ganado. Si algo no para (una granada en un hueco que rebota sin fin),
+       a los ESPERA_MAX s se sigue igual */
+    function resolver(e, h) {
+        e.turno.espera += h;
+        if (!todoQuieto(e) && e.turno.espera < ESPERA_MAX) return;
+        const sinVida = e.gusanos.find(g => !g.muerto && g.vida <= 0);
+        if (sinVida) {
+            sinVida.muerto = true; sinVida.vida = 0;
+            e.eventos.push({ tipo: 'muere', gusano: sinVida.id, x: sinVida.x, y: sinVida.y });
+            explotar(e, sinVida.x, sinVida.y, 20, 8, null);
+            e.turno.espera = 0;
+            return;
+        }
+        const quedan = equiposVivos(e);
+        if (quedan.length <= 1) {
+            e.estado = 'fin';
+            e.ganador = quedan.length ? quedan[0].n : null;
+            e.eventos.push({ tipo: 'fin', ganador: e.ganador });
+            return;
+        }
+        for (const g of e.gusanos) g.dano = 0;
+        siguienteTurno(e);
+    }
+
+    return { PASO, G, R, VIENTO, ARMAS, ORDEN_ARMAS, MINA, BARRIL, COLORES, NOMBRES_EQUIPO, ANDAR,
+             crear, empezar, avanzar, paso, andar, saltar, disparar, detonar, elegirArma, cambiarGusano, pasarTurno,
+             activo, equipoActivo, vivos, equiposVivos, puedeMover, puedeDisparar, puedeTeleporte, puedeViga,
+             explotar, herir, pasoCuerpo, pasoBala, normal, libre, apoyado, direccion, todoQuieto, soltarCaja };
+})();
+if (typeof module !== 'undefined') module.exports = Worms;
+
+</script>
+<script>
+/* ============================================================
+   IA DE WORMS: elige arma, ángulo y fuerza probando tiros con el MISMO
+   integrador del motor (pasoBala / pasoCuerpo), sin tocar la partida.
+   Los niveles se diferencian en el pulso (ruido al apuntar), en cuánto
+   tiene en cuenta el viento y en lo exigente que es al escoger.
+   ============================================================ */
+const IA = (() => {
+    const W = typeof Worms !== 'undefined' ? Worms : require('./motor-worms.js');
+    const T = typeof Terreno !== 'undefined' ? Terreno : require('./terreno.js');
+    /* sa: desviación del ángulo (rad); sf: de la fuerza (fracción);
+       k: parte del viento que tiene en cuenta; top: entre cuántos de los
+       mejores tiros elige al azar. Medido con simular.js */
+    const NIVELES = {
+        principiante: { sa: 0.12, sf: 0.13, k: 0, top: 6 },
+        avanzado:     { sa: 0.06, sf: 0.07, k: 0.5, top: 3 },
+        experto:      { sa: 0.03, sf: 0.035, k: 0.85, top: 2 },
+        rambo:        { sa: 0.012, sf: 0.015, k: 1, top: 1 }
+    };
+    const normal = (az) => { let u = 0; for (let i = 0; i < 6; i++) u += az(); return (u - 3) / Math.sqrt(0.5); };
+
+    /* ¿Cae al agua si se le empuja hacia «lado»? Se mira si a esa mano, a
+       30-70 px, no hay suelo hasta el agua */
+    function cerca_del_agua(e, g, lado) {
+        for (let k = 25; k <= 70; k += 15) {
+            const x = g.x + lado * k;
+            if (x < 0 || x > T.ANCHO || T.suelo(e.t, x, g.y - 10) >= e.agua) return true;
+        }
+        return false;
+    }
+    /* Valor de una explosión: daño a rivales (más si mata o tira al agua)
+       menos daño propio, que pesa más */
+    function valorar(e, yo, x, y, r, d) {
+        let v = 0;
+        for (const g of e.gusanos) {
+            if (g.muerto) continue;
+            const dist = Math.max(0, Math.hypot(g.x - x, g.y - y) - W.R);
+            if (dist >= r) continue;
+            const f = 1 - dist / r, dano = d * f;
+            const lado = Math.sign(g.x - x) || 1;
+            let w = Math.min(dano, g.vida) + (dano >= g.vida ? 30 : 0);
+            if (d >= 30 && f > 0.4 && cerca_del_agua(e, g, lado)) w += 60 * f;
+            if (g.eq === yo.eq) v -= (g.id === yo.id ? 1.8 : 1.3) * w;
+            else v += w;
+        }
+        return v;
+    }
+    function simBala(e, yo, arma, ang, mira, f, viento) {
+        const A = W.ARMAS[arma], d = { x: Math.cos(ang) * mira, y: Math.sin(ang) };
+        const p = { x: yo.x + d.x * (W.R + 4), y: yo.y + d.y * (W.R + 4), vx: d.x * A.vmax * f, vy: d.y * A.vmax * f, viento: A.viento, dueno: yo.id, t: 0 };
+        const mundo = { t: e.t, agua: e.agua, viento, gusanos: e.gusanos, cosas: e.cosas };
+        for (let k = 0; k < 720; k++) {
+            const c = W.pasoBala(mundo, p, W.PASO);
+            if (c) return c.tipo === 'agua' || c.tipo === 'fuera' ? null : { x: p.x, y: p.y };
+        }
+        return null;
+    }
+    function simGranada(e, yo, arma, ang, mira, f, fus) {
+        const A = W.ARMAS[arma], d = { x: Math.cos(ang) * mira, y: Math.sin(ang) };
+        const c = { x: yo.x + d.x * (W.R + 4), y: yo.y + d.y * (W.R + 4), vx: d.x * A.vmax * f, vy: d.y * A.vmax * f, r: 4, rebote: A.rebote, friccion: 0.25 };
+        const mundo = { t: e.t, agua: e.agua, viento: 0 };
+        for (let k = 0; k < fus * 120; k++) {
+            if (!c.quieto) W.pasoCuerpo(mundo, c, W.PASO);
+            if (c.y > e.agua) return null;
+        }
+        return { x: c.x, y: c.y };
+    }
+    /* Línea de tiro libre de tierra entre dos puntos */
+    function aLaVista(e, a, b) {
+        const l = Math.hypot(b.x - a.x, b.y - a.y);
+        for (let s = W.R + 3; s < l - W.R; s += 2) if (T.solido(e.t, a.x + (b.x - a.x) * s / l, a.y + (b.y - a.y) * s / l)) return false;
+        return true;
+    }
+
+    /* Plan del turno. az: azar (el de la partida, para que sea repetible) */
+    function planear(e, nivel, az) {
+        const N = NIVELES[nivel] || NIVELES.avanzado;
+        const yo = W.activo(e), eq = W.equipoActivo(e), mun = eq.municion;
+        const rivales = e.gusanos.filter(g => !g.muerto && g.eq !== yo.eq);
+        const viento = e.viento * N.k;
+        const cand = [];
+        const rejilla = (fn, paso, pasoF) => {
+            for (const mira of [-1, 1]) for (let ang = -1.5; ang <= 0.7; ang += paso) for (let f = 0.25; f <= 1.001; f += pasoF) fn(ang, mira, f);
+        };
+        rejilla((ang, mira, f) => {
+            const p = simBala(e, yo, 'bazuca', ang, mira, f, viento);
+            if (p) cand.push({ arma: 'bazuca', angulo: ang, mira, fuerza: f, v: valorar(e, yo, p.x, p.y, 50, 50) });
+            if (mun.mortero > 0) {
+                const q = simBala(e, yo, 'mortero', ang, mira, f, 0);
+                if (q) cand.push({ arma: 'mortero', angulo: ang, mira, fuerza: f, v: valorar(e, yo, q.x, q.y, 32, 32) + 0.4 * valorar(e, yo, q.x, q.y, 60, 30) });
+            }
+        }, 0.05, 0.07);
+        rejilla((ang, mira, f) => {
+            const p = simGranada(e, yo, 'granada', ang, mira, f, 3);
+            if (p) cand.push({ arma: 'granada', angulo: ang, mira, fuerza: f, fusible: 3, v: valorar(e, yo, p.x, p.y, 50, 50) });
+        }, 0.1, 0.1);
+        /* Escopeta: a quien se vea en línea recta y esté a tiro */
+        for (const g of rivales) {
+            const dx = g.x - yo.x, dy = g.y - yo.y, dist = Math.hypot(dx, dy);
+            if (dist > W.ARMAS.escopeta.alcance - 20 || !aLaVista(e, yo, g)) continue;
+            const mira = dx >= 0 ? 1 : -1, ang = Math.atan2(dy, Math.abs(dx));
+            if (ang < -1.55 || ang > 1.55) continue;
+            const dano = Math.min(50, g.vida);
+            cand.push({ arma: 'escopeta', angulo: ang, mira, fuerza: 1, v: dano + (dano >= g.vida ? 30 : 0) + (cerca_del_agua(e, g, mira) ? 25 : 0) });
+        }
+        /* Bate: alguien pegado delante, mejor si hay agua detrás */
+        if (mun.bate > 0) for (const g of rivales) {
+            const dx = g.x - yo.x;
+            if (Math.abs(dx) < 22 && Math.abs(g.y - yo.y) < 16) {
+                const mira = dx >= 0 ? 1 : -1;
+                cand.push({ arma: 'bate', angulo: -0.6, mira, fuerza: 1, v: Math.min(30, g.vida) + (cerca_del_agua(e, g, mira) ? 70 : 0) });
+            }
+        }
+        /* Ataque aéreo: sobre el rival con más compañeros cerca y cielo libre */
+        if (mun.aereo > 0) for (const g of rivales) {
+            if (T.suelo(e.t, g.x, 0) < g.y - W.R - 2) continue;
+            cand.push({ arma: 'aereo', x: g.x, y: g.y, v: valorar(e, yo, g.x, g.y, 60, 45) * 1.1 });
+        }
+        cand.sort((a, b) => b.v - a.v);
+        const mejor = cand[0];
+        if (!mejor || mejor.v <= 3) {
+            /* Nada bueno desde aquí: andar hacia el rival más cercano */
+            const obj = rivales.slice().sort((a, b) => Math.abs(a.x - yo.x) - Math.abs(b.x - yo.x))[0];
+            return { andar: obj ? Math.sign(obj.x - yo.x) || 1 : 1, valor: mejor ? mejor.v : 0, fallback: mejor || null };
+        }
+        const buenos = cand.filter(c => c.v >= mejor.v * 0.6).slice(0, N.top);
+        const p = Object.assign({}, buenos[Math.floor(az() * buenos.length)]);
+        /* El pulso: se apunta con ruido (las armas de línea recta, menos) */
+        const recto = p.arma === 'escopeta' || p.arma === 'bate';
+        if (p.angulo !== undefined) p.angulo += normal(az) * N.sa * (recto ? 0.35 : 1);
+        if (p.fuerza !== undefined && !recto) p.fuerza = Math.max(0.1, Math.min(1, p.fuerza * (1 + normal(az) * N.sf)));
+        if (p.x !== undefined) p.x += normal(az) * N.sa * 150;
+        p.valor = mejor.v;
+        return p;
+    }
+    return { NIVELES, planear, valorar, simBala, simGranada };
+})();
+if (typeof module !== 'undefined') module.exports = IA;
+
+</script>
+<script>
+/* ============================================================
+   WORMS — pantalla, cámara, mandos, sonido, máquina y flujo de la partida.
+   La lógica está en motor-worms.js (y terreno.js, ia.js); aquí solo se
+   dibuja, se escucha al jugador y se reacciona a los eventos del motor.
+   ============================================================ */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const canvas = $('gameCanvas');
+const ctx = canvas.getContext('2d');
+const MUNDO_W = Terreno.ANCHO, MUNDO_H = Terreno.ALTO;
+
+let e = null;                 // la partida (estado del motor)
+let gameState = 'menu';       // menu | playing | paused
+let bucleId = null, ultimo = 0;
+let girado = false, esperaGiro = false;
+let cw = 0, ch = 0, dpr = 1;  // tamaño del lienzo en px CSS
+const cam = { x: 900, y: 450, s: 1, cerca: true, manual: false };
+let efectos = [], textos = [], cartel = null, temblor = 0;
+let apuntando = null;         // arrastre desde el gusano
+let arrastre = null;          // arrastre del escenario (mirar)
+let marcador = null;          // sitio elegido para aéreo, teletransporte o viga
+let carga = null;             // fuerza cargando con la barra espaciadora
+let ia = null;                // lo que está haciendo la máquina en su turno
+let finEn = null;
+const teclas = {};
+const mando = { izq: false, der: false };
+
+/* ---------- AJUSTES DEL MENÚ (se recuerdan) ---------- */
+const AJUSTES_DEF = { equipos: 2, quien: ['persona', 'maquina', 'maquina', 'maquina'], nombres: Worms.NOMBRES_EQUIPO.slice(), dif: 'avanzado', gusanos: 4, tiempo: 45, tema: 'azar' };
+const memoria = {};
+function leerAjustes() {
+    let a = null;
+    try { a = JSON.parse(localStorage.getItem('worms.ajustes')); } catch (x) { a = memoria.ajustes || null; }
+    a = Object.assign({}, AJUSTES_DEF, a || {});
+    if (!Array.isArray(a.quien) || a.quien.length !== 4) a.quien = AJUSTES_DEF.quien.slice();
+    if (!Array.isArray(a.nombres) || a.nombres.length !== 4) a.nombres = AJUSTES_DEF.nombres.slice();
+    return a;
+}
+function guardarAjustes() {
+    memoria.ajustes = ajustes;
+    try { localStorage.setItem('worms.ajustes', JSON.stringify(ajustes)); } catch (x) { /* navegación privada: queda en memoria */ }
+}
+let ajustes = leerAjustes();
+const escapar = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ETIQUETA_DIF = { principiante: 'Principiante', avanzado: 'Avanzado', experto: 'Experto', rambo: 'Rambo' };
+
+/* ---------- SONIDO ---------- */
+const musicaFondo = EST.musica({
+    bpm: 104,
+    acordes: [
+        { bajo: 73.42, notas: [293.66, 349.23, 440.00] },
+        { bajo: 58.27, notas: [233.08, 293.66, 349.23] },
+        { bajo: 65.41, notas: [261.63, 329.63, 392.00] },
+        { bajo: 55.00, notas: [220.00, 277.18, 329.63] }
+    ]
+});
+const sonar = {
+    bazuca() { EST.ruido(0.35, 0.12, 1800, 600); EST.efecto('bazuca', 60, [[220, 0.25, 'sawtooth', 0.05, 0, 90]]); },
+    lanzar() { EST.efecto('lanzar', 60, [[500, 0.12, 'triangle', 0.08, 0, 260]]); },
+    escopeta() { EST.ruido(0.25, 0.35, 2600, 300); },
+    bate() { EST.efecto('bate', 100, [[160, 0.08, 'square', 0.12, 0, 90]]); EST.ruido(0.08, 0.3, 3000, 800); },
+    explosion(r) { EST.ruido(0.25 + r / 120, Math.min(0.5, 0.18 + r / 200), 900, 70); EST.efecto('boom', 40, [[70, 0.35, 'sine', 0.25, 0, 35]]); },
+    rebote() { EST.efecto('rebote', 90, [[900, 0.04, 'square', 0.04, 0, 600]]); },
+    chapuzon() { EST.ruido(0.5, 0.18, 1200, 200); EST.efecto('glu', 200, [[300, 0.12, 'sine', 0.08, 0, 600], [250, 0.12, 'sine', 0.08, 0.14, 500]]); },
+    ay() { const f = 600 + Math.random() * 300; EST.efecto('ay', 120, [[f, 0.16, 'triangle', 0.09, 0, f * 0.6]]); },
+    yupi() { EST.efecto('yupi', 200, [[660, 0.08, 'triangle', 0.08], [990, 0.14, 'triangle', 0.08, 0.09, 1200]]); },
+    salto() { EST.efecto('salto', 120, [[380, 0.1, 'triangle', 0.07, 0, 640]]); },
+    pasos() { EST.efecto('paso', 180, [[180, 0.03, 'square', 0.025]]); },
+    turno() { EST.efecto('turno', 300, [[523, 0.08, 'square', 0.05], [784, 0.12, 'square', 0.05, 0.09]]); },
+    tic() { EST.efecto('tic', 300, [[1500, 0.04, 'square', 0.04]]); },
+    mina() { EST.efecto('mina', 140, [[1800, 0.06, 'square', 0.05]]); },
+    caja() { EST.efecto('caja', 300, [[880, 0.08, 'sine', 0.06], [660, 0.12, 'sine', 0.06, 0.1]]); },
+    recoge() { EST.efecto('recoge', 200, [[784, 0.06, 'square', 0.05], [1047, 0.06, 'square', 0.05, 0.06], [1319, 0.12, 'square', 0.05, 0.12]]); },
+    cacarea() { EST.efecto('coco', 300, [[700, 0.06, 'square', 0.05, 0, 1100], [650, 0.06, 'square', 0.05, 0.09, 1000], [900, 0.12, 'square', 0.05, 0.18, 500]]); },
+    teleporte() { EST.efecto('tele', 200, [[400, 0.35, 'sine', 0.08, 0, 1600]]); },
+    viga() { EST.efecto('viga', 200, [[120, 0.15, 'square', 0.08], [180, 0.1, 'square', 0.06, 0.12]]); },
+    muere() { EST.efecto('muere', 200, [[500, 0.3, 'sawtooth', 0.05, 0, 120]]); },
+    agua() { EST.efecto('sube', 400, [[110, 0.6, 'sine', 0.08, 0, 80]]); },
+    victoria() { EST.efecto('victoria', 800, [[523, 0.12, 'square', 0.06], [659, 0.12, 'square', 0.06, 0.13], [784, 0.12, 'square', 0.06, 0.26], [1047, 0.45, 'square', 0.06, 0.39]]); }
+};
+function alCambiarMusica(on) { if (on && gameState === 'playing') musicaFondo.arrancar(); else if (!on) musicaFondo.parar(); }
+
+/* ==========================================================
+   TERRENO EN PANTALLA
+   Un lienzo del tamaño del mundo (1800 × 900) con la textura del tema.
+   La textura se calcula una vez por píxel (aunque no haya tierra) y luego
+   cada píxel se pinta según la máscara: así un cráter se repinta solo en
+   su recuadro y queda igual que el resto.
+   ========================================================== */
+const lienzoT = document.createElement('canvas');
+lienzoT.width = MUNDO_W; lienzoT.height = MUNDO_H;
+const ctxT = lienzoT.getContext('2d');
+let imgT = null, pxT = null, tex = null, original = null;
+const rgba = (r, g, b) => (255 << 24) | (b << 16) | (g << 8) | r;     // píxel en memoria (little endian)
+const hash = (x, y) => { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+function suave(x, y, esc) {
+    const fx = x / esc, fy = y / esc, i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j;
+    const su = u * u * (3 - 2 * u), sv = v * v * (3 - 2 * v);
+    const a = hash(i, j) * (1 - su) + hash(i + 1, j) * su, b = hash(i, j + 1) * (1 - su) + hash(i + 1, j + 1) * su;
+    return a * (1 - sv) + b * sv;
+}
+/* Colores de cada tema: base de la tierra, borde de arriba (hierba,
+   arena…), y el del cielo y el agua */
+const TEMAS = {
+    bosque:   { cielo: ['#141a3a', '#3b4f8f'], lejos: '#22305c', agua: ['#4b5bb8', '#232a66'], borde: [96, 190, 60] },
+    desierto: { cielo: ['#2a1640', '#c06a3a'], lejos: '#5a2e3f', agua: ['#3f73b8', '#1d3366'], borde: [244, 214, 140] },
+    nieve:    { cielo: ['#0f1e3c', '#5b86b8'], lejos: '#2c4a74', agua: ['#5d8fcf', '#203a70'], borde: [250, 252, 255] },
+    ciudad:   { cielo: ['#0d0d22', '#3a2a5c'], lejos: '#1f1a38', agua: ['#4d4f9e', '#1d1f52'], borde: [205, 210, 218] },
+    luna:     { cielo: ['#000000', '#141428'], lejos: '#1a1a2e', agua: ['#5a3f9c', '#241750'], borde: [210, 210, 222] }
+};
+function colorTextura(tema, x, y) {
+    const n = suave(x, y, 14), g = hash(x, y);
+    switch (tema) {
+        case 'bosque': {
+            /* Tierra con guijarros sueltos (con manchas grandes parecía
+               camuflaje y no se distinguían bien los gusanos) */
+            const cx = Math.floor(x / 12), cy = Math.floor(y / 12), hc = hash(cx, cy);
+            const dx = x - cx * 12 - 6, dy = y - cy * 12 - 6;
+            const guijarro = hc > 0.72 && dx * dx + dy * dy < 4 + hc * 6;
+            const k = 0.8 + n * 0.28 + (g - 0.5) * 0.07;
+            return guijarro ? rgba(170 * k | 0, 150 * k | 0, 120 * k | 0) : rgba(120 * k | 0, 78 * k | 0, 44 * k | 0);
+        }
+        case 'desierto': {
+            const capa = Math.sin(y / 6 + suave(x, y, 40) * 6) * 0.5 + 0.5;
+            const k = 0.8 + capa * 0.2 + (g - 0.5) * 0.06;
+            return rgba(214 * k | 0, 152 * k | 0, 84 * k | 0);
+        }
+        case 'nieve': {
+            /* Grietas finas y claras: más marcadas, la isla parecía un mapa */
+            const grieta = Math.abs(suave(x, y, 22) - 0.5) < 0.01;
+            const k = 0.82 + n * 0.25 + (g - 0.5) * 0.05;
+            return grieta ? rgba(105 * k | 0, 140 * k | 0, 190 * k | 0) : rgba(140 * k | 0, 182 * k | 0, 222 * k | 0);
+        }
+        case 'ciudad': {
+            /* Ladrillos de 22 × 10 con llagas */
+            const fila = Math.floor(y / 10), off = (fila % 2) * 11;
+            const junta = y % 10 === 0 || (x + off) % 22 === 0;
+            const k = 0.85 + hash(Math.floor((x + off) / 22), fila) * 0.25 + (g - 0.5) * 0.06;
+            return junta ? rgba(70, 72, 80) : rgba(138 * k | 0, 112 * k | 0, 104 * k | 0);
+        }
+        default: {
+            /* Luna: gris con cráteres */
+            const cx = Math.floor(x / 40), cy = Math.floor(y / 40), hx = hash(cx, cy);
+            const dx = x - (cx * 40 + 20 + (hx - 0.5) * 20), dy = y - (cy * 40 + 20 + (hash(cy, cx) - 0.5) * 20);
+            const rr = 6 + hx * 10, d = Math.sqrt(dx * dx + dy * dy);
+            const k = (d < rr ? (d > rr - 2 ? 1.12 : 0.78) : 0.95) * (0.88 + n * 0.2);
+            return rgba(150 * k | 0, 150 * k | 0, 160 * k | 0);
+        }
+    }
+}
+function prepararTerreno() {
+    const t = e.t, tema = t.tema;
+    tex = new Uint32Array(MUNDO_W * MUNDO_H);
+    original = t.mascara.slice();
+    for (let y = 0, i = 0; y < MUNDO_H; y++) for (let x = 0; x < MUNDO_W; x++, i++) if (t.mascara[i] || y > 100) tex[i] = colorTextura(tema, x, y);
+    imgT = ctxT.createImageData(MUNDO_W, MUNDO_H);
+    pxT = new Uint32Array(imgT.data.buffer);
+    repintarTerreno(0, 0, MUNDO_W, MUNDO_H);
+}
+/* Repinta un recuadro: borde de arriba (hierba, nieve…) donde la isla
+   era superficie al empezar; borde oscuro en lo que han abierto las
+   explosiones; metal en las vigas */
+function repintarTerreno(x0, y0, w, h) {
+    const m = e.t.mascara, borde = TEMAS[e.t.tema].borde;
+    x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0));
+    const x1 = Math.min(MUNDO_W, Math.ceil(x0 + w)), y1 = Math.min(MUNDO_H, Math.ceil(y0 + h));
+    const aire = (x, y) => x < 0 || x >= MUNDO_W || y < 0 || (y < MUNDO_H && !m[y * MUNDO_W + x]);
+    for (let y = y0; y < y1; y++) {
+        for (let x = x0, i = y * MUNDO_W + x0; x < x1; x++, i++) {
+            const v = m[i];
+            if (!v) { pxT[i] = 0; continue; }
+            if (v === 2) {
+                /* Viga: metal con celosía */
+                const k = ((x + y) % 9 < 2 || (x - y + 900) % 9 < 2) ? 0.7 : 1;
+                pxT[i] = rgba(160 * k | 0, 170 * k | 0, 182 * k | 0);
+                continue;
+            }
+            let arriba = 0;
+            for (let k = 1; k <= 4; k++) if (aire(x, y - k)) { arriba = k; break; }
+            if (arriba && !original[(y - arriba) * MUNDO_W + x] && original[i] && y - arriba >= 0 && wasSurface(x, y - arriba)) {
+                const k = arriba <= 1 ? 1.12 : 1;
+                pxT[i] = rgba(Math.min(255, borde[0] * k) | 0, Math.min(255, borde[1] * k) | 0, Math.min(255, borde[2] * k) | 0);
+                continue;
+            }
+            const filo = aire(x - 1, y) || aire(x + 1, y) || aire(x, y - 1) || aire(x, y + 1) || aire(x - 2, y) || aire(x + 2, y) || aire(x, y + 2) || aire(x, y - 2);
+            const c = tex[i] || colorTextura(e.t.tema, x, y);
+            pxT[i] = filo ? ((c & 0xff000000) | (((c >> 16) & 255) * 0.45 << 16) | (((c >> 8) & 255) * 0.45 << 8) | ((c & 255) * 0.45)) : c;
+        }
+    }
+    ctxT.putImageData(imgT, 0, 0, x0, y0, x1 - x0, y1 - y0);
+}
+/* ¿Ese aire de encima era cielo al empezar (superficie original) y no una
+   cueva? Se mira que por encima, hasta 30 px, siga habiendo aire original */
+function wasSurface(x, y) {
+    for (let k = 0; k < 30 && y - k >= 0; k++) if (original[(y - k) * MUNDO_W + x]) return false;
+    return true;
+}
+
+/* ---------- LIENZO Y CÁMARA ---------- */
+function medir() {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width) return;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    cw = r.width; ch = r.height;
+    const a = Math.round(cw * dpr), b = Math.round(ch * dpr);
+    if (canvas.width !== a || canvas.height !== b) { canvas.width = a; canvas.height = b; }
+    ajustarZoom();
+    if (gameState !== 'playing' && e) pintar(0);
+}
+/* Cerca: unos 400 px de mundo de alto (un gusano mide 14 px de mundo: en
+   un móvil tumbado, unos 13 en pantalla; con 480 se quedaba en 10 y la
+   etiqueta tapaba más que el gusano). Lejos: la isla entera */
+function zoomCerca() { return Math.max(0.6, Math.min(2.2, ch / 400)); }
+function zoomLejos() { return Math.min(cw / MUNDO_W, ch / (MUNDO_H - 120)); }
+function ajustarZoom() { cam.s = cam.cerca ? zoomCerca() : zoomLejos(); limitarCamara(); }
+function limitarCamara() {
+    const mw = cw / cam.s / 2, mh = ch / cam.s / 2;
+    cam.x = mw * 2 >= MUNDO_W ? MUNDO_W / 2 : Math.max(mw, Math.min(MUNDO_W - mw, cam.x));
+    const bajo = MUNDO_H - 40;
+    cam.y = mh * 2 >= bajo + 200 ? (bajo - 200) / 2 : Math.max(-200 + mh, Math.min(bajo - mh, cam.y));
+}
+const aPantalla = (x, y) => ({ x: (x - cam.x) * cam.s + cw / 2, y: (y - cam.y) * cam.s + ch / 2 });
+const aMundo = (x, y) => ({ x: (x - cw / 2) / cam.s + cam.x, y: (y - ch / 2) / cam.s + cam.y });
+/* Qué sigue la cámara: lo que vuele, si no lo que se mueva, si no el
+   gusano activo. Si el jugador ha arrastrado para mirar, se queda donde
+   la dejó hasta que pase algo */
+function seguir(dt) {
+    if (!e) return;
+    const vuela = e.cosas.filter(c => c.clase === 'proyectil' || c.clase === 'granada' || c.clase === 'gallina' || (c.clase === 'dinamita' && !c.quieto));
+    let obj = null;
+    if (vuela.length) { obj = vuela[vuela.length - 1]; cam.manual = false; }
+    else if (cam.manual) return;
+    else {
+        const mov = e.gusanos.filter(g => !g.muerto && !g.quieto).sort((a, b) => Math.hypot(b.vx, b.vy) - Math.hypot(a.vx, a.vy))[0];
+        obj = mov || Worms.activo(e);
+    }
+    if (!obj) return;
+    const k = 1 - Math.exp(-dt * 4);
+    cam.x += (obj.x - cam.x) * k;
+    cam.y += (obj.y - 40 - cam.y) * k;
+    limitarCamara();
+}
+
+/* ==========================================================
+   DIBUJO
+   ========================================================== */
+function mundoTransform() {
+    const sx = temblor > 0 ? (Math.random() - 0.5) * temblor * 10 : 0, sy = temblor > 0 ? (Math.random() - 0.5) * temblor * 10 : 0;
+    ctx.setTransform(dpr * cam.s, 0, 0, dpr * cam.s, dpr * (cw / 2 - cam.x * cam.s + sx), dpr * (ch / 2 - cam.y * cam.s + sy));
+}
+function pintarFondo(t) {
+    const tm = TEMAS[e.t.tema];
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const g = ctx.createLinearGradient(0, 0, 0, ch);
+    g.addColorStop(0, tm.cielo[0]); g.addColorStop(1, tm.cielo[1]);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+    /* Estrellas (luna y ciudad) y montes lejanos con paralaje */
+    const az = (k) => hash(k, 77);
+    if (e.t.tema === 'luna' || e.t.tema === 'ciudad') {
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        for (let k = 0; k < 80; k++) ctx.fillRect((az(k) * 2400 - cam.x * 0.1) % (cw + 50), az(k + 999) * ch * 0.7, 1.5, 1.5);
+    }
+    ctx.fillStyle = tm.lejos;
+    ctx.beginPath();
+    const base = (MUNDO_H - cam.y) * cam.s + ch / 2 - 80 * cam.s;
+    ctx.moveTo(0, ch);
+    for (let x = 0; x <= cw + 20; x += 20) {
+        const wx = x + cam.x * cam.s * 0.25;
+        ctx.lineTo(x, Math.min(ch, base - 120 - suave(wx, 3, 140) * 160));
+    }
+    ctx.lineTo(cw, ch); ctx.fill();
+    /* Nubes que lleva el viento */
+    ctx.fillStyle = 'rgba(230,225,255,0.18)';
+    for (let k = 0; k < 6; k++) {
+        const x = ((az(k) * 2000 + t * (8 + e.viento * 40) * (1 + k * 0.2)) % (cw + 300)) - 150, y = 30 + az(k + 50) * ch * 0.3;
+        ctx.beginPath(); ctx.ellipse(x, y, 60, 16, 0, 0, 7); ctx.ellipse(x + 30, y - 8, 36, 14, 0, 0, 7); ctx.fill();
+    }
+}
+function pintarAgua(t, delante) {
+    const tm = TEMAS[e.t.tema];
+    const y0 = e.agua;
+    if (!delante) {
+        const g = ctx.createLinearGradient(0, y0, 0, MUNDO_H + 200);
+        g.addColorStop(0, tm.agua[0]); g.addColorStop(1, tm.agua[1]);
+        ctx.fillStyle = g;
+        ctx.fillRect(-2000, y0 + 4, MUNDO_W + 4000, MUNDO_H + 600);
+    }
+    /* Olas: tres bandas que se mueven, la última por delante de todo */
+    const capas = delante ? [[0.55, 10, 1.4]] : [[0.35, 0, 0.8], [0.45, 5, 1.1]];
+    for (const [a, dy, v] of capas) {
+        ctx.fillStyle = `rgba(190,200,255,${a})`;
+        ctx.beginPath();
+        ctx.moveTo(-2000, y0 + 30);
+        for (let x = -200; x <= MUNDO_W + 200; x += 12) ctx.lineTo(x, y0 + dy + Math.sin(x / 38 + t * v * 2) * 3.5);
+        ctx.lineTo(MUNDO_W + 2000, y0 + 30);
+        ctx.fill();
+    }
+}
+
+/* ---------- Gusano (diseño propio: verde, por segmentos y con casco) ---------- */
+function pintarGusano(g, t) {
+    const eq = e.equipos[g.eq], col = eq.color;
+    if (g.muerto) {
+        if (g.ahogado) return;
+        /* Lápida */
+        ctx.fillStyle = '#9e9e9e'; ctx.strokeStyle = '#424242'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(g.x - 5, g.y + 7); ctx.lineTo(g.x - 5, g.y - 3); ctx.arc(g.x, g.y - 3, 5, Math.PI, 0); ctx.lineTo(g.x + 5, g.y + 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = col; ctx.fillRect(g.x - 0.75, g.y - 5, 1.5, 7); ctx.fillRect(g.x - 2.5, g.y - 3, 5, 1.5);
+        return;
+    }
+    const m = g.mira, activo = g.id === e.activo && e.estado !== 'fin';
+    const anda = activo && (mando.izq || mando.der) && Worms.puedeMover(e) && g.quieto;
+    const ond = anda ? t * 16 : t * 3 + g.id;
+    const segs = [[-7, 3, 4.2], [-3, 2.5, 5.2], [2.5, 0, 6]];
+    ctx.lineWidth = 1.2; ctx.strokeStyle = '#2e5e1a';
+    segs.forEach(([dx, dy, r], k) => {
+        const yy = g.y + dy + (anda || k < 2 ? Math.sin(ond + k * 1.3) * (anda ? 1.4 : 0.4) : 0);
+        const gr = ctx.createRadialGradient(g.x + dx * m - 1, yy - 2, 0.5, g.x + dx * m, yy, r);
+        gr.addColorStop(0, '#d4f08c'); gr.addColorStop(1, '#7cb342');
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(g.x + dx * m, yy, r, 0, 7); ctx.fill(); ctx.stroke();
+    });
+    const hx = g.x + 2.5 * m, hy = g.y;
+    /* Ojos: miran a donde apunta */
+    const a = g.angulo, ox = Math.cos(a) * m * 0.8, oy = Math.sin(a) * 0.8;
+    for (const k of [-1, 1]) {
+        const ex = hx + m * 2 + k * 1.9, ey = hy - 1.5;
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(ex, ey, 1.7, 2.2, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(ex + ox, ey + oy, 0.9, 0, 7); ctx.fill();
+    }
+    /* Sonrisa (o boca de susto si está volando) */
+    ctx.strokeStyle = '#2e5e1a'; ctx.lineWidth = 0.9; ctx.beginPath();
+    if (g.quieto) ctx.arc(hx + m * 2.2, hy + 1.8, 1.8, 0.2, Math.PI - 0.2); else ctx.arc(hx + m * 2.2, hy + 2.6, 1, 0, 7);
+    ctx.stroke();
+    /* Casco del equipo */
+    ctx.fillStyle = col; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(hx, hy - 2.5, 5.6, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillRect(hx - 6.5 * m - (m < 0 ? -1 : 0), hy - 3, 2.5 * m > 0 ? 2.5 : 2.5, 1.4);
+    /* El arma, mientras apunta */
+    if (activo && Worms.puedeDisparar(e) && apunta(e.turno.arma)) {
+        const d = Worms.direccion(g, g.angulo);
+        ctx.strokeStyle = '#424242'; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(hx, hy + 1); ctx.lineTo(hx + d.x * 10, hy + 1 + d.y * 10); ctx.stroke();
+        ctx.lineCap = 'butt';
+    }
+}
+const apunta = (arma) => ['bala', 'granada', 'escopeta', 'bate'].includes(Worms.ARMAS[arma].tipo);
+function pintarEtiquetas() {
+    const s = 1 / cam.s;
+    ctx.textAlign = 'center';
+    for (const g of e.gusanos) {
+        if (g.muerto) continue;
+        const col = e.equipos[g.eq].color;
+        const y = g.y - 13 - 12 * s;
+        ctx.font = `bold ${11 * s}px system-ui, sans-serif`;
+        const w = Math.max(ctx.measureText(g.nombre).width, ctx.measureText(String(Math.max(0, g.vida))).width) + 6 * s;
+        ctx.fillStyle = 'rgba(10,10,25,0.72)';
+        ctx.fillRect(g.x - w / 2, y - 11 * s, w, 25 * s);
+        ctx.fillStyle = col; ctx.fillText(g.nombre, g.x, y);
+        ctx.fillStyle = '#fff'; ctx.fillText(String(Math.max(0, g.vida)), g.x, y + 12 * s);
+    }
+    /* Flecha sobre el gusano que juega, al empezar el turno */
+    const g = Worms.activo(e);
+    if (g && !g.muerto && e.estado === 'turno' && !e.turno.movido && !e.turno.disparado) {
+        const y = g.y - 13 - 12 * s - 20 * s + Math.sin(performance.now() / 150) * 3 * s;
+        ctx.fillStyle = e.equipos[g.eq].color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * s;
+        ctx.beginPath(); ctx.moveTo(g.x - 7 * s, y - 8 * s); ctx.lineTo(g.x + 7 * s, y - 8 * s); ctx.lineTo(g.x, y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+}
+function pintarCosa(c, t) {
+    switch (c.clase) {
+        case 'barril':
+            ctx.fillStyle = '#2e7d32'; ctx.strokeStyle = '#1b3d1d'; ctx.lineWidth = 1;
+            ctx.fillRect(c.x - 6.5, c.y - 9, 13, 18); ctx.strokeRect(c.x - 6.5, c.y - 9, 13, 18);
+            ctx.fillStyle = '#1b5e20'; ctx.fillRect(c.x - 6.5, c.y - 4, 13, 2); ctx.fillRect(c.x - 6.5, c.y + 3, 13, 2);
+            ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.moveTo(c.x, c.y - 3); ctx.quadraticCurveTo(c.x + 3, c.y + 1, c.x, c.y + 2); ctx.quadraticCurveTo(c.x - 3, c.y + 1, c.x, c.y - 3); ctx.fill();
+            break;
+        case 'mina': {
+            ctx.fillStyle = '#37474f'; ctx.beginPath(); ctx.ellipse(c.x, c.y + 1, 5, 3.2, 0, 0, 7); ctx.fill();
+            const parpadeo = c.cuenta !== undefined ? Math.floor(t * 12) % 2 : Math.floor(t * 1.5) % 2;
+            ctx.fillStyle = parpadeo ? '#ff1744' : '#5d1010'; ctx.beginPath(); ctx.arc(c.x, c.y - 1.2, 1.4, 0, 7); ctx.fill();
+            break;
+        }
+        case 'caja': {
+            if (c.paracaidas) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 0.7;
+                ctx.beginPath(); ctx.moveTo(c.x - 7, c.y - 7); ctx.lineTo(c.x - 12, c.y - 24); ctx.moveTo(c.x + 7, c.y - 7); ctx.lineTo(c.x + 12, c.y - 24); ctx.stroke();
+                ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.arc(c.x, c.y - 22, 14, Math.PI, 0); ctx.fill();
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c.x, c.y - 22, 14, Math.PI * 1.33, Math.PI * 1.66); ctx.lineTo(c.x, c.y - 22); ctx.fill();
+            }
+            const salud = c.contenido === 'salud';
+            ctx.fillStyle = salud ? '#f5f5f5' : '#a1662f'; ctx.strokeStyle = salud ? '#9e9e9e' : '#5d3a17'; ctx.lineWidth = 1;
+            ctx.fillRect(c.x - 7, c.y - 7, 14, 14); ctx.strokeRect(c.x - 7, c.y - 7, 14, 14);
+            if (salud) { ctx.fillStyle = '#e53935'; ctx.fillRect(c.x - 1.5, c.y - 5, 3, 10); ctx.fillRect(c.x - 5, c.y - 1.5, 10, 3); }
+            else { ctx.strokeStyle = '#5d3a17'; ctx.beginPath(); ctx.moveTo(c.x - 7, c.y - 7); ctx.lineTo(c.x + 7, c.y + 7); ctx.moveTo(c.x + 7, c.y - 7); ctx.lineTo(c.x - 7, c.y + 7); ctx.stroke(); }
+            break;
+        }
+        case 'proyectil': {
+            const a = Math.atan2(c.vy, c.vx);
+            ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(a);
+            if (c.arma === 'trozo') { ctx.fillStyle = '#212121'; ctx.beginPath(); ctx.arc(0, 0, 2, 0, 7); ctx.fill(); }
+            else {
+                ctx.fillStyle = c.arma === 'misil' ? '#90a4ae' : c.arma === 'mortero' ? '#5d4037' : '#9e9e9e';
+                ctx.fillRect(-6, -2, 10, 4);
+                ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.moveTo(4, -2); ctx.lineTo(7, 0); ctx.lineTo(4, 2); ctx.fill();
+                ctx.fillStyle = `rgba(255,${150 + Math.random() * 100 | 0},0,0.9)`; ctx.beginPath(); ctx.moveTo(-6, -1.5); ctx.lineTo(-10 - Math.random() * 4, 0); ctx.lineTo(-6, 1.5); ctx.fill();
+            }
+            ctx.restore();
+            if (c.arma !== 'trozo' && Math.random() < 0.6) efecto('humo', { x: c.x, y: c.y, r: 3, dur: 0.6 });
+            break;
+        }
+        case 'granada': {
+            ctx.fillStyle = c.arma === 'racimo' ? '#7b1fa2' : '#388e3c'; ctx.strokeStyle = '#1b2e1b'; ctx.lineWidth = 0.8;
+            ctx.beginPath(); ctx.arc(c.x, c.y, 4, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#9e9e9e'; ctx.fillRect(c.x - 1, c.y - 6, 2, 2);
+            rotuloMecha(c);
+            break;
+        }
+        case 'dinamita':
+            ctx.fillStyle = '#d32f2f'; ctx.fillRect(c.x - 2.5, c.y - 5, 5, 10);
+            ctx.fillStyle = '#ffeb3b'; ctx.beginPath(); ctx.arc(c.x + 1, c.y - 7 + Math.random(), 1.4 + Math.random(), 0, 7); ctx.fill();
+            rotuloMecha(c);
+            break;
+        case 'gallina': {
+            const p = Math.sin(t * 18) * 1.5;
+            ctx.save(); ctx.translate(c.x, c.y); ctx.scale(c.dir, 1);
+            ctx.strokeStyle = '#ff9800'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-1, 4); ctx.lineTo(-1 + p, 7); ctx.moveTo(1.5, 4); ctx.lineTo(1.5 - p, 7); ctx.stroke();
+            ctx.fillStyle = '#fafafa'; ctx.strokeStyle = '#9e9e9e'; ctx.lineWidth = 0.7;
+            ctx.beginPath(); ctx.ellipse(0, 0, 6, 4.8, 0, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.arc(4.5, -4, 3, 0, 7); ctx.fill(); ctx.stroke();
+            ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.arc(4.2, -7.2, 1.4, 0, 7); ctx.arc(5.6, -6.8, 1.2, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ff9800'; ctx.beginPath(); ctx.moveTo(7, -4.5); ctx.lineTo(9.5, -3.6); ctx.lineTo(7, -2.8); ctx.fill();
+            ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(5.3, -4.6, 0.7, 0, 7); ctx.fill();
+            ctx.restore();
+            rotuloMecha(c);
+            break;
+        }
+    }
+}
+function rotuloMecha(c) {
+    const s = 1 / cam.s;
+    ctx.font = `bold ${10 * s}px system-ui, sans-serif`; ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff'; ctx.fillText(String(Math.ceil(c.mecha)), c.x, c.y - 9 - 4 * s);
+}
+
+/* ---------- Efectos ---------- */
+function efecto(tipo, o) { efectos.push(Object.assign({ tipo, t: 0 }, o)); }
+function texto(x, y, txt, color) { textos.push({ x, y, txt, color, t: 0 }); }
+function pintarEfectos(dt) {
+    for (let i = efectos.length - 1; i >= 0; i--) {
+        const f = efectos[i];
+        f.t += dt;
+        const k = f.t / f.dur;
+        if (k >= 1) { efectos.splice(i, 1); continue; }
+        if (f.tipo === 'boom') {
+            ctx.fillStyle = `rgba(255,${(240 - k * 160) | 0},${(180 - k * 180) | 0},${1 - k})`;
+            ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.4 + k * 0.9), 0, 7); ctx.fill();
+            ctx.strokeStyle = `rgba(255,255,255,${(1 - k) * 0.8})`; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (0.6 + k * 0.8), 0, 7); ctx.stroke();
+        } else if (f.tipo === 'humo') {
+            ctx.fillStyle = `rgba(200,200,210,${0.45 * (1 - k)})`;
+            ctx.beginPath(); ctx.arc(f.x, f.y - k * 18, f.r * (1 + k * 2), 0, 7); ctx.fill();
+        } else if (f.tipo === 'trozo') {
+            f.vy += 500 * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+            ctx.fillStyle = f.col; ctx.fillRect(f.x - 1.5, f.y - 1.5, 3, 3);
+        } else if (f.tipo === 'gota') {
+            f.vy += 500 * dt; f.x += f.vx * dt; f.y += f.vy * dt;
+            ctx.fillStyle = `rgba(200,215,255,${1 - k})`; ctx.beginPath(); ctx.arc(f.x, f.y, 1.8, 0, 7); ctx.fill();
+        } else if (f.tipo === 'raya') {
+            ctx.strokeStyle = `rgba(255,240,180,${1 - k})`; ctx.lineWidth = 1.2;
+            ctx.beginPath(); ctx.moveTo(f.x0, f.y0); ctx.lineTo(f.x, f.y); ctx.stroke();
+        } else if (f.tipo === 'aro') {
+            ctx.strokeStyle = `rgba(150,230,255,${1 - k})`; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(f.x, f.y, 4 + k * 22, 0, 7); ctx.stroke();
+        }
+    }
+    const s = 1 / cam.s;
+    ctx.textAlign = 'center';
+    for (let i = textos.length - 1; i >= 0; i--) {
+        const q = textos[i];
+        q.t += dt;
+        if (q.t > 1.6) { textos.splice(i, 1); continue; }
+        ctx.font = `900 ${15 * s}px system-ui, sans-serif`;
+        ctx.globalAlpha = Math.min(1, 2 * (1.6 - q.t));
+        ctx.lineWidth = 3 * s; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+        ctx.strokeText(q.txt, q.x, q.y - q.t * 30);
+        ctx.fillStyle = q.color; ctx.fillText(q.txt, q.x, q.y - q.t * 30);
+        ctx.globalAlpha = 1;
+    }
+}
+/* Mira y fuerza mientras se apunta. En principiante, además, el principio
+   de la trayectoria sin viento: es la ayuda para aprender */
+function pintarMira() {
+    if (!e || e.estado !== 'turno' || !esHumano()) return;
+    const g = Worms.activo(e);
+    if (!g || !apunta(e.turno.arma) || !Worms.puedeDisparar(e)) return;
+    const d = Worms.direccion(g, g.angulo);
+    const col = e.equipos[g.eq].color;
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(g.x + d.x * 40, g.y + d.y * 40, 4, 0, 7); ctx.moveTo(g.x + d.x * 34, g.y + d.y * 40); ctx.lineTo(g.x + d.x * 46, g.y + d.y * 40); ctx.stroke();
+    const f = apuntando ? apuntando.fuerza : carga ? carga.f : 0;
+    if (f > 0 && Worms.ARMAS[e.turno.arma].tipo !== 'escopeta' && Worms.ARMAS[e.turno.arma].tipo !== 'bate') {
+        /* Cuña de fuerza: de verde a rojo */
+        for (let k = 0; k < 12; k++) {
+            if (k / 12 > f) break;
+            const r0 = 10 + k * 3;
+            ctx.fillStyle = `hsl(${120 - k * 10},90%,55%)`;
+            ctx.beginPath(); ctx.arc(g.x + d.x * r0, g.y + d.y * r0, 1 + k * 0.25, 0, 7); ctx.fill();
+        }
+        if (ajustes.dif === 'principiante' || (apuntando && apuntando.ayuda)) {
+            const A = Worms.ARMAS[e.turno.arma];
+            let x = g.x + d.x * 11, y = g.y + d.y * 11, vx = d.x * A.vmax * f, vy = d.y * A.vmax * f;
+            ctx.fillStyle = 'rgba(255,255,255,0.55)';
+            for (let k = 0; k < 16; k++) { for (let j = 0; j < 4; j++) { vy += Worms.G / 120; x += vx / 120; y += vy / 120; } ctx.beginPath(); ctx.arc(x, y, 1.3, 0, 7); ctx.fill(); }
+        }
+    }
+}
+function pintarMarcador() {
+    if (!marcador || !e) return;
+    const A = Worms.ARMAS[e.turno.arma];
+    ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+    if (A.tipo === 'viga') {
+        ctx.save(); ctx.translate(marcador.x, marcador.y); ctx.rotate(e.turno.angViga);
+        const ok = Worms.puedeViga(e, marcador.x, marcador.y, e.turno.angViga);
+        ctx.strokeStyle = ok ? '#00e5ff' : '#ff5252';
+        ctx.strokeRect(-Terreno.VIGA_L / 2, -Terreno.VIGA_G / 2, Terreno.VIGA_L, Terreno.VIGA_G); ctx.restore();
+    } else if (A.tipo === 'teleporte') {
+        ctx.strokeStyle = Worms.puedeTeleporte(e, marcador.x, marcador.y) ? '#00e5ff' : '#ff5252';
+        ctx.beginPath(); ctx.arc(marcador.x, marcador.y, 9, 0, 7); ctx.stroke();
+    } else {
+        ctx.beginPath(); ctx.moveTo(marcador.x, marcador.y - 300); ctx.lineTo(marcador.x, marcador.y); ctx.stroke();
+        ctx.beginPath(); ctx.arc(marcador.x, marcador.y, 10, 0, 7); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+}
+
+/* ---------- Marcador de arriba (en px de pantalla) ---------- */
+function pintarHUD(t) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const eq = Worms.equipoActivo(e), g = Worms.activo(e);
+    /* Arriba a la izquierda: de quién es el turno y cómo van los equipos */
+    ctx.font = 'bold 13px system-ui, sans-serif'; ctx.textAlign = 'left';
+    const rot = eq.nombre + ' · ' + (g ? g.nombre : '');
+    const w = ctx.measureText(rot).width + 26;
+    ctx.fillStyle = 'rgba(10,10,30,0.75)'; caja(10, 8, w, 24, 12);
+    ctx.fillStyle = eq.color; ctx.beginPath(); ctx.arc(22, 20, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.fillText(rot, 32, 25);
+    const maxVida = e.cfg.vida * e.cfg.gusanos;
+    e.equipos.forEach((q, k) => {
+        const vida = e.gusanos.filter(o => o.eq === q.n && !o.muerto).reduce((s, o) => s + Math.max(0, o.vida), 0);
+        ctx.fillStyle = 'rgba(10,10,30,0.6)'; ctx.fillRect(10, 38 + k * 9, 104, 7);
+        ctx.fillStyle = q.color; ctx.fillRect(12, 39 + k * 9, Math.min(100, 100 * vida / maxVida), 5);
+    });
+    /* En medio: el reloj y el viento */
+    const cx = cw / 2;
+    let reloj, colR = '#fff';
+    if (e.estado === 'turno') { reloj = Math.ceil(e.turno.t); if (e.turno.t < 6) colR = Math.floor(t * 4) % 2 ? '#ff5252' : '#fff'; }
+    else if (e.estado === 'retirada') { reloj = Math.ceil(e.turno.retirada); colR = '#ffd54f'; }
+    else if (e.estado === 'gallina') reloj = '🐔';
+    else reloj = '·';
+    ctx.fillStyle = 'rgba(10,10,30,0.75)'; caja(cx - 26, 6, 52, 30, 10);
+    ctx.font = 'bold 22px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = colR; ctx.fillText(String(reloj), cx, 29);
+    /* Viento: barra que se llena hacia donde sopla */
+    const vw = 120, vy = 42;
+    ctx.fillStyle = 'rgba(10,10,30,0.75)'; ctx.fillRect(cx - vw / 2 - 2, vy - 2, vw + 4, 11);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(cx - 0.5, vy - 1, 1, 9);
+    const vl = e.viento * vw / 2;
+    ctx.fillStyle = e.viento >= 0 ? '#4fc3f7' : '#ff8a65';
+    ctx.fillRect(vl >= 0 ? cx : cx + vl, vy, Math.abs(vl), 7);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px system-ui, sans-serif';
+    if (Math.abs(e.viento) > 0.04) {
+        const n = Math.ceil(Math.abs(e.viento) * 3), sgn = Math.sign(e.viento);
+        for (let k = 0; k < n; k++) { const x = cx + sgn * (8 + k * 9 + ((t * 20) % 9)); ctx.fillText(sgn > 0 ? '›' : '‹', x, vy + 7); }
+    }
+    ctx.font = '10px system-ui, sans-serif'; ctx.fillStyle = e.muerteSubita ? '#ff8a80' : 'rgba(255,255,255,0.7)';
+    ctx.fillText(e.muerteSubita ? '¡MUERTE SÚBITA! · ronda ' + e.ronda : 'ronda ' + e.ronda + ' de ' + e.cfg.rondasMS, cx, vy + 22);
+    /* Arma elegida (abajo, junto a su botón) */
+    if (esHumano() && (e.estado === 'turno' || e.estado === 'retirada')) {
+        const A = Worms.ARMAS[e.turno.arma], mun = eq.municion[e.turno.arma];
+        const txt = A.nombre + (mun === Infinity ? '' : ' ×' + mun) + (Worms.ARMAS[e.turno.arma].tipo === 'granada' ? ' · mecha ' + e.turno.fusible + ' s' : '');
+        ctx.font = 'bold 12px system-ui, sans-serif'; ctx.textAlign = 'right';
+        const tw = ctx.measureText(txt).width;
+        ctx.fillStyle = 'rgba(10,10,30,0.7)'; caja(cw - tw - 92, ch - 34, tw + 16, 22, 11);
+        ctx.fillStyle = '#fff'; ctx.fillText(txt, cw - 84, ch - 19);
+    }
+    if (ia && e.estado === 'turno') {
+        ctx.font = 'bold 13px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillText(ia.fase === 'pensar' || ia.fase === 'espera' ? 'La máquina está pensando…' : 'Turno de la máquina', cx, ch - 16);
+    }
+    if (cartel) {
+        cartel.t += 1 / 60;
+        const a = Math.min(1, cartel.t * 4, (cartel.dur - cartel.t) * 3);
+        if (a <= 0 && cartel.t > 0.5) cartel = null;
+        else {
+            ctx.globalAlpha = Math.max(0, a);
+            ctx.font = '900 22px system-ui, sans-serif'; ctx.textAlign = 'center';
+            const tw = ctx.measureText(cartel.txt).width + 30;
+            ctx.fillStyle = 'rgba(10,10,30,0.82)'; caja(cx - tw / 2, ch * 0.3 - 26, tw, 40, 14);
+            ctx.fillStyle = cartel.color || '#fff'; ctx.fillText(cartel.txt, cx, ch * 0.3);
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+function caja(x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); ctx.fill(); }
+function anuncio(txt, color, dur) { cartel = { txt, color, t: 0, dur: dur || 1.6 }; }
+
+function pintar(dt) {
+    if (!e) return;
+    const t = performance.now() / 1000;
+    pintarFondo(t);
+    mundoTransform();
+    ctx.imageSmoothingEnabled = cam.s < 1;
+    ctx.drawImage(lienzoT, 0, 0);
+    /* El agua va por DELANTE de la isla: la tierra sigue por debajo del
+       nivel del mar (y sube el mar en la muerte súbita) */
+    pintarAgua(t, false);
+    for (const c of e.cosas) if (c.clase === 'barril' || c.clase === 'mina' || c.clase === 'caja') pintarCosa(c, t);
+    for (const g of e.gusanos) pintarGusano(g, t);
+    for (const c of e.cosas) if (!(c.clase === 'barril' || c.clase === 'mina' || c.clase === 'caja')) pintarCosa(c, t);
+    pintarEtiquetas();
+    pintarMira();
+    pintarMarcador();
+    pintarEfectos(dt);
+    pintarAgua(t, true);
+    pintarHUD(t);
+}
+
+/* ==========================================================
+   EVENTOS DEL MOTOR → efectos, sonidos y terreno
+   ========================================================== */
+const gusano = (id) => e.gusanos.find(g => g.id === id);
+function tratarEventos() {
+    for (const ev of e.eventos) {
+        switch (ev.tipo) {
+            case 'explosion':
+                if (ev.r > 0) {
+                    repintarTerreno(ev.x - ev.r - 4, ev.y - ev.r - 4, ev.r * 2 + 8, ev.r * 2 + 8);
+                    efecto('boom', { x: ev.x, y: ev.y, r: ev.r, dur: 0.35 });
+                    for (let k = 0; k < 6; k++) efecto('humo', { x: ev.x + (Math.random() - 0.5) * ev.r, y: ev.y + (Math.random() - 0.5) * ev.r, r: ev.r * 0.25, dur: 1 + Math.random() });
+                    const col = '#' + ((TEMAS[e.t.tema].borde[0] << 16) | (TEMAS[e.t.tema].borde[1] << 8) | TEMAS[e.t.tema].borde[2]).toString(16).padStart(6, '0');
+                    for (let k = 0; k < 10; k++) { const a = Math.random() * 6.3, v = 80 + Math.random() * 200; efecto('trozo', { x: ev.x, y: ev.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, col: k % 2 ? col : '#5d4037', dur: 1 }); }
+                    temblor = Math.max(temblor, Math.min(1, ev.r / 60));
+                    sonar.explosion(ev.r);
+                }
+                break;
+            case 'dano': {
+                const g = gusano(ev.gusano);
+                if (g) texto(g.x, g.y - 30, '-' + ev.n, e.equipos[g.eq].color);
+                sonar.ay();
+                break;
+            }
+            case 'disparo': {
+                const A = Worms.ARMAS[ev.arma];
+                if (A.tipo === 'bala' || A.tipo === 'aereo') sonar.bazuca();
+                else if (A.tipo === 'granada' || A.tipo === 'colocar') sonar.lanzar();
+                else if (A.tipo === 'escopeta') sonar.escopeta();
+                else if (A.tipo === 'gallina') sonar.cacarea();
+                cam.manual = false;
+                marcador = null;
+                break;
+            }
+            case 'perdigon': efecto('raya', { x0: ev.x0, y0: ev.y0, x: ev.x, y: ev.y, dur: 0.15 }); break;
+            case 'batazo': sonar.bate(); break;
+            case 'rebote': sonar.rebote(); break;
+            case 'chapuzon': case 'ahogado': {
+                for (let k = 0; k < 14; k++) efecto('gota', { x: ev.x, y: ev.y, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 200, dur: 0.9 });
+                sonar.chapuzon();
+                if (ev.tipo === 'ahogado') { const g = gusano(ev.gusano); if (g) anuncio(g.nombre + ' se ha ido al agua', '#90caf9'); }
+                break;
+            }
+            case 'muere': { const g = gusano(ev.gusano); sonar.muere(); if (g) anuncio(g.nombre + ' ha caído', '#ef9a9a'); break; }
+            case 'salto': sonar.salto(); break;
+            case 'golpeCaida': sonar.ay(); break;
+            case 'minaActiva': sonar.mina(); break;
+            case 'caja': sonar.caja(); anuncio('¡Cae una caja!', '#ffe082', 1.2); break;
+            case 'recoge': {
+                sonar.recoge();
+                texto(ev.x, ev.y - 14, ev.contenido === 'salud' ? '+25' : Worms.ARMAS[ev.contenido].icono + ' +1', '#a5d6a7');
+                break;
+            }
+            case 'cacarea': sonar.cacarea(); break;
+            case 'teleporte': sonar.teleporte(); efecto('aro', { x: ev.de.x, y: ev.de.y, dur: 0.5 }); efecto('aro', { x: ev.a.x, y: ev.a.y, dur: 0.6 }); break;
+            case 'viga': sonar.viga(); repintarTerreno(ev.x - 50, ev.y - 50, 100, 100); break;
+            case 'muerteSubita': anuncio('¡MUERTE SÚBITA! El agua sube', '#ff8a80', 2.2); break;
+            case 'sube': sonar.agua(); break;
+            case 'tiempo': anuncio('¡Se acabó el tiempo!', '#ffd54f', 1.2); break;
+            case 'turno': nuevoTurno(ev); break;
+            case 'fin': finEn = 2.2; if (ev.ganador !== null) sonar.victoria(); break;
+        }
+    }
+    e.eventos.length = 0;
+}
+function nuevoTurno(ev) {
+    const eq = e.equipos[ev.eq], g = gusano(ev.gusano);
+    marcador = null; apuntando = null; carga = null; ia = null;
+    cam.manual = false;
+    cerrarPanel();
+    anuncio('Turno de ' + eq.nombre + ' · ' + (g ? g.nombre : ''), eq.color, 1.5);
+    sonar.turno();
+    if (eq.ia) ia = { fase: 'espera', t: 0.9, plan: null, nivel: eq.ia, intentos: 0 };
+    actualizarMandos();
+}
+const esHumano = () => e && e.equipos[e.turnoEq] && !e.equipos[e.turnoEq].ia;
+
+/* ==========================================================
+   LA MÁQUINA: espera, piensa, (anda), apunta despacio y dispara
+   ========================================================== */
+function turnoMaquina(dt) {
+    if (!ia || e.estado !== 'turno') { if (ia && e.estado !== 'turno' && e.estado !== 'gallina') ia = null; return; }
+    const g = Worms.activo(e);
+    ia.t -= dt;
+    if (ia.fase === 'espera') { if (ia.t <= 0) ia.fase = 'pensar'; return; }
+    if (ia.fase === 'pensar') {
+        /* Pensar cuesta unos cientos de ms: un fotograma después de pintar
+           «pensando…», no antes */
+        const p = IA.planear(e, ia.nivel, e.azar);
+        if (p.andar && ia.intentos === 0) { ia.intentos = 1; ia.fase = 'andar'; ia.dir = p.andar; ia.t = 2.5; ia.fallback = p.fallback; return; }
+        if (p.andar) {
+            if (p.fallback && p.fallback.v > -5) ia.plan = p.fallback;
+            else { Worms.pasarTurno(e); ia = null; return; }
+        } else ia.plan = p;
+        if (ia.plan.arma !== e.turno.arma) Worms.elegirArma(e, ia.plan.arma);
+        ia.fase = 'apuntar'; ia.t = 0.9; ia.ang0 = g.angulo;
+        if (ia.plan.mira) g.mira = ia.plan.mira;
+        if (ia.plan.x !== undefined) marcador = { x: ia.plan.x, y: ia.plan.y };
+        return;
+    }
+    if (ia.fase === 'andar') {
+        mando.izq = ia.dir < 0; mando.der = ia.dir > 0;
+        if (ia.t <= 0 || !g.quieto) { mando.izq = mando.der = false; ia.fase = 'pensar'; }
+        return;
+    }
+    if (ia.fase === 'apuntar') {
+        const p = ia.plan;
+        if (p.angulo !== undefined) { const k = 1 - Math.max(0, ia.t) / 0.9; g.angulo = ia.ang0 + (p.angulo - ia.ang0) * Math.min(1, k * 1.4); }
+        if (ia.t > 0) return;
+        Worms.disparar(e, p);
+        if (p.arma === 'escopeta' && e.estado === 'turno') { ia.fase = 'segundo'; ia.t = 0.7; return; }
+        ia = null;
+        return;
+    }
+    if (ia.fase === 'segundo') {
+        if (ia.t > 0) return;
+        const q = IA.planear(e, ia.nivel, e.azar);
+        Worms.disparar(e, q.arma === 'escopeta' ? q : ia.plan);
+        ia = null;
+    }
+}
+
+/* ==========================================================
+   BUCLE
+   ========================================================== */
+function fotograma(ahora) {
+    bucleId = null;
+    const dt = Math.min(0.05, (ahora - ultimo) / 1000 || 0);
+    ultimo = ahora;
+    if (gameState !== 'playing' || girado) return;
+    if (temblor > 0) temblor = Math.max(0, temblor - dt * 2.5);
+    if (esHumano() && carga) { carga.f = Math.min(1, carga.f + dt / 1.2); if (carga.f >= 1) soltarCarga(); }
+    if (esHumano() && (teclas.ArrowUp || teclas.ArrowDown) && Worms.puedeDisparar(e)) {
+        const g = Worms.activo(e);
+        g.angulo = Math.max(-1.55, Math.min(1.55, g.angulo + (teclas.ArrowUp ? -1 : 1) * dt * 1.4));
+    }
+    const m = esHumano() ? { izq: mando.izq || !!teclas.ArrowLeft, der: mando.der || !!teclas.ArrowRight } : { izq: mando.izq, der: mando.der };
+    if ((m.izq || m.der) && Worms.puedeMover(e)) { cam.manual = false; if (Math.floor(ahora / 180) !== Math.floor((ahora - dt * 1000) / 180)) sonar.pasos(); }
+    const tAntes = e.turno ? Math.ceil(e.turno.t) : 0;
+    Worms.avanzar(e, dt, m);
+    if (e.estado === 'turno' && e.turno.t < 5 && Math.ceil(e.turno.t) !== tAntes) sonar.tic();
+    if (!esHumano()) turnoMaquina(dt);
+    tratarEventos();
+    seguir(dt);
+    actualizarMandos();
+    pintar(dt);
+    if (finEn !== null) { finEn -= dt; if (finEn <= 0) { finEn = null; mostrarFin(); return; } }
+    if (gameState === 'playing') bucleId = requestAnimationFrame(fotograma);
+}
+function arrancar() { if (bucleId === null) { ultimo = performance.now(); bucleId = requestAnimationFrame(fotograma); } }
+function parar() { if (bucleId !== null) { cancelAnimationFrame(bucleId); bucleId = null; } }
+
+/* ==========================================================
+   PARTIDA
+   ========================================================== */
+function empezarPartida() {
+    parar();
+    ['capaFin', 'capaPausa', 'capaAyuda'].forEach(EST.cerrar);
+    const equipos = [];
+    for (let k = 0; k < ajustes.equipos; k++) {
+        const nombre = (ajustes.nombres[k] || '').trim().slice(0, 16) || Worms.NOMBRES_EQUIPO[k];
+        equipos.push({ nombre, ia: ajustes.quien[k] === 'maquina' ? ajustes.dif : null });
+    }
+    const semilla = ((Date.now() ^ (Math.random() * 1e9)) >>> 0) || 1;
+    e = Worms.crear({ semilla, equipos, gusanos: ajustes.gusanos, tiempoTurno: ajustes.tiempo, tema: ajustes.tema === 'azar' ? undefined : ajustes.tema });
+    prepararTerreno();
+    efectos = []; textos = []; cartel = null; temblor = 0; finEn = null;
+    apuntando = null; arrastre = null; marcador = null; carga = null; ia = null;
+    mando.izq = mando.der = false;
+    for (const k in teclas) teclas[k] = false;
+    document.body.classList.add('jugando');
+    EST.mostrar('pJuego');
+    gameState = 'playing';
+    cam.cerca = true;
+    medir();
+    Worms.empezar(e);
+    const g = Worms.activo(e); cam.x = g.x; cam.y = g.y; limitarCamara();
+    construirPanel();
+    esperaGiro = vertical();
+    comprobarGiro();
+    if (esperaGiro) { pintar(0); return; }
+    musicaFondo.arrancar();
+    arrancar();
+}
+function mostrarFin() {
+    parar();
+    gameState = 'menu';
+    musicaFondo.parar();
+    const gan = e.ganador !== null ? e.equipos[e.ganador] : null;
+    $('finTitulo').textContent = gan ? '🏆 ¡Ganan los ' + gan.nombre + '!' : '🤝 No queda nadie: empate';
+    const humanos = e.equipos.filter(q => !q.ia).length;
+    $('finDetalle').textContent = 'Ronda ' + e.ronda + (e.muerteSubita ? ' (con muerte súbita)' : '') +
+        (e.equipos.some(q => q.ia) ? ' · máquina: ' + ETIQUETA_DIF[ajustes.dif] : '') + (humanos ? '' : ' · solo máquinas');
+    $('finEquipos').innerHTML = e.equipos.map(q => {
+        const vs = e.gusanos.filter(g => g.eq === q.n && !g.muerto);
+        return '<li><span class="color" style="background:' + q.color + '"></span><b>' + escapar(q.nombre) + '</b> — ' +
+            (vs.length ? vs.length + (vs.length === 1 ? ' gusano' : ' gusanos') + ', ' + vs.reduce((s, g) => s + g.vida, 0) + ' de vida' : 'sin gusanos') + '</li>';
+    }).join('');
+    EST.abrir('capaFin');
+}
+
+/* ---------- PAUSA ---------- */
+function pauseGame() {
+    if (gameState !== 'playing') return;
+    gameState = 'paused';
+    parar();
+    mando.izq = mando.der = false; apuntando = null; carga = null;
+    musicaFondo.parar();
+    EST.abrir('capaPausa');
+}
+function reanudar() {
+    if (gameState !== 'paused' || girado) return;
+    EST.cerrar('capaPausa');
+    gameState = 'playing';
+    musicaFondo.arrancar();
+    arrancar();
+}
+function volverAlMenu() {
+    parar();
+    gameState = 'menu';
+    esperaGiro = false;
+    document.body.classList.remove('jugando');
+    musicaFondo.parar();
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    EST.mostrar('pMenu');
+    comprobarGiro();
+}
+
+/* ---------- GIRAR EL MÓVIL (como Súper Pang y Angry Birds) ---------- */
+const consultaVertical = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+function vertical() {
+    if (!document.body.classList.contains('tactil')) return false;
+    return consultaVertical ? consultaVertical.matches : innerHeight > innerWidth;
+}
+function comprobarGiro() {
+    const enPartida = e && (gameState === 'playing' || gameState === 'paused') && $('pJuego').classList.contains('activa');
+    const antes = girado;
+    girado = !!enPartida && vertical();
+    $('avisoGirar').classList.toggle('activo', girado);
+    if (girado && !antes && !esperaGiro && gameState === 'playing') pauseGame();
+    if (!girado && esperaGiro) {
+        esperaGiro = false;
+        medir();
+        if (gameState === 'playing') { musicaFondo.arrancar(); arrancar(); }
+    }
+}
+if (consultaVertical && consultaVertical.addEventListener) consultaVertical.addEventListener('change', comprobarGiro);
+
+/* ==========================================================
+   MANDOS
+   ========================================================== */
+function actualizarMandos() {
+    if (!e) return;
+    const humano = esHumano(), A = Worms.ARMAS[e.turno ? e.turno.arma : 'bazuca'];
+    $('mandos').classList.toggle('ia', !humano || e.estado === 'fin');
+    const enTurno = humano && e.estado === 'turno' && Worms.puedeDisparar(e);
+    let fuego = null;
+    if (humano && e.estado === 'gallina') fuego = '💥 ¡BUM!';
+    else if (enTurno && (A.tipo === 'colocar' || A.tipo === 'gallina')) fuego = A.tipo === 'gallina' ? '🐔 ¡SUELTA!' : (e.turno.arma === 'dinamita' ? '🧨 DEJAR' : '💣 DEJAR');
+    else if (enTurno && (A.tipo === 'aereo' || A.tipo === 'teleporte' || A.tipo === 'viga')) fuego = marcador ? '¡FUEGO!' : 'Toca el sitio';
+    const bf = $('btnFuego');
+    bf.hidden = !fuego;
+    if (fuego && bf.textContent !== fuego) bf.textContent = fuego;
+    bf.disabled = fuego === 'Toca el sitio';
+    $('btnMecha').hidden = !(enTurno && A.tipo === 'granada');
+    if (!$('btnMecha').hidden) { const tx = e.turno.fusible + ' s'; if ($('btnMecha').textContent !== tx) $('btnMecha').textContent = tx; }
+    $('btnGirarViga').hidden = !(enTurno && A.tipo === 'viga');
+    const eq = Worms.equipoActivo(e);
+    $('btnCambiar').hidden = !(humano && e.estado === 'turno' && !e.turno.movido && !e.turno.disparado && Worms.vivos(e, eq.n).length > 1);
+    const ic = A.icono;
+    if ($('btnArmas').textContent !== ic) $('btnArmas').textContent = ic;
+    $('btnArmas').disabled = !enTurno || !!e.turno.tiros;
+}
+function construirPanel() {
+    $('rejillaArmas').innerHTML = Worms.ORDEN_ARMAS.map(id => {
+        const A = Worms.ARMAS[id];
+        return '<button class="arma" type="button" data-arma="' + id + '" aria-pressed="false"><span class="ic">' + A.icono + '</span><span class="nom">' + escapar(A.nombre) + '</span><span class="mun"></span></button>';
+    }).join('');
+}
+function abrirPanel() {
+    if (!e || !esHumano() || !Worms.puedeDisparar(e)) return;
+    const eq = Worms.equipoActivo(e);
+    document.querySelectorAll('#rejillaArmas .arma').forEach(b => {
+        const id = b.dataset.arma, mun = eq.municion[id];
+        b.querySelector('.mun').textContent = mun === Infinity ? '∞' : '×' + mun;
+        b.disabled = mun <= 0;
+        b.setAttribute('aria-pressed', String(id === e.turno.arma));
+    });
+    $('panelArmas').classList.add('abierto');
+}
+function cerrarPanel() { $('panelArmas').classList.remove('abierto'); }
+$('rejillaArmas').addEventListener('click', (ev) => {
+    const b = ev.target.closest('.arma');
+    if (!b || b.disabled || !e) return;
+    if (Worms.elegirArma(e, b.dataset.arma)) { marcador = null; cerrarPanel(); actualizarMandos(); }
+});
+const btn = (id, fn) => $(id).addEventListener('click', fn);
+btn('btnArmas', () => { if ($('panelArmas').classList.contains('abierto')) cerrarPanel(); else abrirPanel(); });
+btn('btnCerrarArmas', cerrarPanel);
+btn('btnPasar', () => { if (e && esHumano()) { Worms.pasarTurno(e); cerrarPanel(); } });
+btn('btnCambiar', () => { if (e && esHumano()) Worms.cambiarGusano(e); });
+btn('btnZoom', () => { cam.cerca = !cam.cerca; cam.manual = !cam.cerca; ajustarZoom(); });
+btn('btnSalto', () => { if (e && esHumano()) Worms.saltar(e, 'adelante'); });
+btn('btnSaltoAlto', () => { if (e && esHumano()) Worms.saltar(e, 'atras'); });
+btn('btnMecha', () => { if (e) e.turno.fusible = e.turno.fusible % 5 + 1; });
+const ANGULOS_VIGA = [0, -0.4, -0.8, 0.8, 0.4];
+btn('btnGirarViga', () => { if (!e) return; const i = ANGULOS_VIGA.indexOf(e.turno.angViga); e.turno.angViga = ANGULOS_VIGA[(i + 1) % ANGULOS_VIGA.length]; });
+btn('btnFuego', accionFuego);
+function accionFuego() {
+    if (!e || !esHumano()) return;
+    if (e.estado === 'gallina') { Worms.detonar(e); return; }
+    if (!Worms.puedeDisparar(e)) return;
+    const A = Worms.ARMAS[e.turno.arma];
+    if (A.tipo === 'colocar' || A.tipo === 'gallina') Worms.disparar(e, {});
+    else if (marcador) { if (!Worms.disparar(e, { x: marcador.x, y: marcador.y, angViga: e.turno.angViga })) anuncio('Ahí no se puede', '#ff8a80', 1); }
+}
+/* Andar: botones mantenidos. Se sueltan también con cancel y con la
+   pérdida de captura (si no, un dedo interrumpido deja al gusano andando) */
+for (const [id, lado] of [['btnIzq', 'izq'], ['btnDer', 'der']]) {
+    const b = $(id);
+    b.addEventListener('pointerdown', (ev) => { ev.preventDefault(); try { b.setPointerCapture(ev.pointerId); } catch (x) {} mando[lado] = true; b.classList.add('pulsado'); });
+    const fin = () => { mando[lado] = false; b.classList.remove('pulsado'); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => b.addEventListener(t, fin));
+    b.addEventListener('contextmenu', (ev) => ev.preventDefault());
+}
+
+/* ---------- Apuntar y mirar con el dedo (o el ratón) ----------
+   Se empieza a apuntar tocando cerca del gusano y se tira hacia atrás,
+   como un tirachinas: dispara hacia el lado contrario. Volver cerca del
+   gusano cancela. Tocar en otro sitio y arrastrar mueve la cámara; un
+   toque corto con aéreo, teletransporte o viga elige el sitio */
+const TIRON_MAX = () => Math.max(90, Math.min(160, ch * 0.38));
+canvas.addEventListener('pointerdown', (ev) => {
+    if (!e || gameState !== 'playing') return;
+    cerrarPanel();
+    const r = canvas.getBoundingClientRect(), px = ev.clientX - r.left, py = ev.clientY - r.top;
+    try { canvas.setPointerCapture(ev.pointerId); } catch (x) {}
+    const g = Worms.activo(e);
+    if (esHumano() && g && Worms.puedeDisparar(e) && apunta(e.turno.arma)) {
+        const p = aPantalla(g.x, g.y);
+        if (Math.hypot(px - p.x, py - p.y) < Math.max(42, 22 * cam.s)) { apuntando = { id: ev.pointerId, fuerza: 0, valido: false }; return; }
+    }
+    arrastre = { id: ev.pointerId, x: px, y: py, cx: cam.x, cy: cam.y, movido: false };
+});
+canvas.addEventListener('pointermove', (ev) => {
+    const r = canvas.getBoundingClientRect(), px = ev.clientX - r.left, py = ev.clientY - r.top;
+    if (apuntando && ev.pointerId === apuntando.id && e) {
+        const g = Worms.activo(e), p = aPantalla(g.x, g.y);
+        const dx = p.x - px, dy = p.y - py, l = Math.hypot(dx, dy);
+        apuntando.valido = l >= 18;
+        if (!apuntando.valido) { apuntando.fuerza = 0; return; }
+        g.mira = dx >= 0 ? 1 : -1;
+        g.angulo = Math.max(-1.55, Math.min(1.55, Math.atan2(dy, Math.abs(dx))));
+        apuntando.fuerza = Math.min(1, (l - 18) / (TIRON_MAX() - 18) + 0.05);
+        return;
+    }
+    if (arrastre && ev.pointerId === arrastre.id) {
+        if (Math.hypot(px - arrastre.x, py - arrastre.y) > 8) arrastre.movido = true;
+        if (arrastre.movido) { cam.manual = true; cam.x = arrastre.cx - (px - arrastre.x) / cam.s; cam.y = arrastre.cy - (py - arrastre.y) / cam.s; limitarCamara(); }
+    }
+});
+function finPuntero(ev) {
+    if (apuntando && ev.pointerId === apuntando.id) {
+        const a = apuntando; apuntando = null;
+        if (ev.type === 'pointerup' && a.valido && e && esHumano() && Worms.puedeDisparar(e)) {
+            const g = Worms.activo(e);
+            Worms.disparar(e, { angulo: g.angulo, fuerza: a.fuerza, fusible: e.turno.fusible, mira: g.mira });
+        }
+        return;
+    }
+    if (arrastre && ev.pointerId === arrastre.id) {
+        const a = arrastre; arrastre = null;
+        if (ev.type === 'pointerup' && !a.movido && e && esHumano() && Worms.puedeDisparar(e)) {
+            const tipo = Worms.ARMAS[e.turno.arma].tipo;
+            if (tipo === 'aereo' || tipo === 'teleporte' || tipo === 'viga') {
+                const r = canvas.getBoundingClientRect(), w = aMundo(ev.clientX - r.left, ev.clientY - r.top);
+                marcador = { x: Math.round(w.x), y: Math.round(w.y) };
+            }
+        }
+    }
+}
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => canvas.addEventListener(t, finPuntero));
+canvas.addEventListener('wheel', (ev) => { ev.preventDefault(); cam.cerca = ev.deltaY < 0; ajustarZoom(); }, { passive: false });
+canvas.addEventListener('contextmenu', (ev) => ev.preventDefault());
+
+/* ---------- Teclado ---------- */
+function soltarCarga() {
+    if (!carga) return;
+    const f = carga.f; carga = null;
+    if (!e || !esHumano() || !Worms.puedeDisparar(e)) return;
+    const g = Worms.activo(e);
+    Worms.disparar(e, { angulo: g.angulo, fuerza: Math.max(0.08, f), fusible: e.turno.fusible });
+}
+document.addEventListener('keydown', (ev) => {
+    if (ev.target instanceof HTMLInputElement) return;
+    if (!$('pJuego').classList.contains('activa')) { if (ev.key === 'Escape') EST.cerrar('capaAyuda'); return; }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab', 'Backspace', 'Enter'].includes(ev.key)) ev.preventDefault();
+    if ((ev.key === 'p' || ev.key === 'P' || ev.key === 'Escape') && !ev.repeat) { if (gameState === 'paused') reanudar(); else pauseGame(); return; }
+    if (gameState !== 'playing' || !e) return;
+    teclas[ev.key] = true;
+    if (ev.repeat || !esHumano()) return;
+    if (ev.key === ' ') {
+        const A = Worms.ARMAS[e.turno.arma];
+        if (e.estado === 'gallina' || A.tipo === 'colocar' || A.tipo === 'gallina' || A.tipo === 'aereo' || A.tipo === 'teleporte' || A.tipo === 'viga') accionFuego();
+        else if (A.tipo === 'escopeta' || A.tipo === 'bate') { const g = Worms.activo(e); Worms.disparar(e, { angulo: g.angulo, fuerza: 1 }); }
+        else if (Worms.puedeDisparar(e)) carga = { f: 0 };
+    } else if (ev.key === 'Enter') Worms.saltar(e, 'adelante');
+    else if (ev.key === 'Backspace') Worms.saltar(e, 'atras');
+    else if (ev.key === 'Tab') Worms.cambiarGusano(e);
+    else if (ev.key === 'q' || ev.key === 'Q') { if ($('panelArmas').classList.contains('abierto')) cerrarPanel(); else abrirPanel(); }
+    else if (/^[1-5]$/.test(ev.key)) e.turno.fusible = +ev.key;
+});
+document.addEventListener('keyup', (ev) => { teclas[ev.key] = false; if (ev.key === ' ') soltarCarga(); });
+
+/* ==========================================================
+   MENÚ
+   ========================================================== */
+function pintarEquipos() {
+    $('listaEquipos').innerHTML = Array.from({ length: ajustes.equipos }, (_, k) =>
+        '<div class="equipo-fila"><span class="color" style="background:' + Worms.COLORES[k] + '"></span>' +
+        '<input class="est-campo" type="text" maxlength="16" data-k="' + k + '" value="' + escapar(ajustes.nombres[k]) + '" aria-label="Nombre del equipo ' + (k + 1) + '">' +
+        '<button class="secundario quien" type="button" data-k="' + k + '">' + (ajustes.quien[k] === 'maquina' ? '🤖 MÁQUINA' : '🙂 PERSONA') + '</button></div>').join('');
+    $('grupoDif').style.display = ajustes.quien.slice(0, ajustes.equipos).includes('maquina') ? '' : 'none';
+}
+$('listaEquipos').addEventListener('click', (ev) => {
+    const b = ev.target.closest('.quien');
+    if (!b) return;
+    const k = +b.dataset.k;
+    ajustes.quien[k] = ajustes.quien[k] === 'maquina' ? 'persona' : 'maquina';
+    guardarAjustes(); pintarEquipos();
+});
+$('listaEquipos').addEventListener('input', (ev) => {
+    const i = ev.target.closest('input');
+    if (!i) return;
+    ajustes.nombres[+i.dataset.k] = i.value;
+    guardarAjustes();
+});
+EST.grupo('grpEquipos', (v) => { ajustes.equipos = +v; guardarAjustes(); pintarEquipos(); });
+EST.grupo('grpDif', (v) => { ajustes.dif = v; guardarAjustes(); });
+EST.grupo('grpGusanos', (v) => { ajustes.gusanos = +v; guardarAjustes(); });
+EST.grupo('grpTiempo', (v) => { ajustes.tiempo = +v; guardarAjustes(); });
+EST.grupo('grpTema', (v) => { ajustes.tema = v; guardarAjustes(); });
+EST.elegir('grpEquipos', String(ajustes.equipos));
+EST.elegir('grpDif', ajustes.dif);
+EST.elegir('grpGusanos', String(ajustes.gusanos));
+EST.elegir('grpTiempo', String(ajustes.tiempo));
+EST.elegir('grpTema', ajustes.tema);
+pintarEquipos();
+
+btn('btnJugar', empezarPartida);
+btn('btnInstructions', () => EST.abrir('capaAyuda'));
+btn('closeInstructions', () => EST.cerrar('capaAyuda'));
+btn('btnRestart', empezarPartida);
+btn('btnMenu', volverAlMenu);
+btn('btnResume', reanudar);
+btn('btnPauseToMenu', volverAlMenu);
+btn('btnGirarMenu', volverAlMenu);
+$('pauseTouchBtn').addEventListener('click', () => { if (gameState === 'paused') reanudar(); else pauseGame(); });
+
+if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) document.body.classList.add('tactil');
+window.addEventListener('resize', () => { comprobarGiro(); medir(); });
+window.addEventListener('blur', pauseGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+
+EST.iniciar({ claveAudio: 'wormsAudio', alCambiarMusica });
+
+/* Para las pruebas */
+window.__worms = { partida: () => e, estado: () => gameState, bucle: () => bucleId !== null, camara: () => Object.assign({}, cam), girado: () => girado,
+    ia: () => ia, apuntando: () => apuntando, marcador: () => marcador, aPantalla: (x, y) => aPantalla(x, y),
+    alfaTerreno: (x, y) => ctxT.getImageData(x, y, 1, 1).data[3] };
+
+</script>
+</body>
+</html>
