@@ -278,6 +278,27 @@
 
     .marca.vista { opacity: 0.55; }
 
+    /* Huella de la última jugada (16-11): la ficha de quien acaba de jugar
+       se queda pintada encima de su columna, para ver dónde ha echado la
+       máquina. Va en la MISMA celda que el cursor (fila y columna
+       explícitas en los dos: en CSS Grid, uno sin posición se recolocaría
+       esquivando al otro). Más pequeña y opaca, con aro blanco: encima del
+       cursor translúcido se lee como otra cosa */
+    .marca, .huella { grid-row: 1; pointer-events: none; }
+    .huella {
+        justify-self: center;
+        align-self: center;
+        width: 40%;
+        aspect-ratio: 1;
+        border-radius: 50%;
+        opacity: 0;
+        transform: scale(0.5);
+        box-shadow: 0 0 0 2px rgba(var(--c-255-255-255, 255, 255, 255), 0.9), 0 2px 6px rgba(var(--c-0-0-0, 0, 0, 0), 0.5);
+        transition: opacity 0.15s linear, transform 0.15s ease-out;
+    }
+    .huella.vista { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .huella { transition: none; } }
+
     #tablero {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
@@ -1276,6 +1297,7 @@ function avisar(texto, malo) {
    ========================================================== */
 let casillas = [];      // 42 divs, indexados igual que el tablero lógico
 let marcas = [];        // 7 marcas de la fila de aviso
+let huellas = [];       // 7 huellas de la última jugada, en la misma fila
 
 function construirTablero() {
     const cont = document.getElementById('tablero');
@@ -1285,11 +1307,18 @@ function construirTablero() {
     casillas = [];
     marcas = [];
 
+    huellas = [];
     for (let c = 0; c < COLS; c++) {
         const m = document.createElement('div');
         m.className = 'marca';
+        m.style.gridColumn = String(c + 1);
         aviso.appendChild(m);
         marcas.push(m);
+        const h = document.createElement('div');
+        h.className = 'huella';
+        h.style.gridColumn = String(c + 1);
+        aviso.appendChild(h);
+        huellas.push(h);
     }
 
     /* El HTML se escribe de arriba abajo y las filas se cuentan desde abajo,
@@ -1314,6 +1343,16 @@ function pintarMarcas() {
         m.style.setProperty('--color', COLORES[partida.turno]);
         m.style.background = COLORES[partida.turno];
         m.classList.toggle('vista', visible && c === partida.columna && partida.alturas[c] < FILAS);
+    });
+}
+
+/* La huella de la última ficha echada, del color de quien la echó */
+function pintarHuella() {
+    const u = partida.ultima;
+    huellas.forEach((h, c) => {
+        const vista = !!u && u.c === c;
+        h.classList.toggle('vista', vista);
+        if (vista) h.style.background = COLORES[u.jugador];
     });
 }
 
@@ -1388,6 +1427,7 @@ function nuevaPartida(alternarSalida) {
     partida.jugando = true;
     partida.bloqueado = false;
     partida.columna = 3;
+    partida.ultima = null;
 
     construirTablero();
     ajustarTablero();
@@ -1422,6 +1462,8 @@ function soltar(c) {
     partida.fichas++;
 
     ponerFicha(c, f, jugador, true);
+    partida.ultima = { c, jugador };
+    pintarHuella();
     sonCaer();
 
     const linea = lineaGanadora(partida.tablero, c, f, jugador);

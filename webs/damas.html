@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="menus">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Damas</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/damas (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DE DAMAS ---------- */
+        #grpDif .opcion { flex: 1 1 40%; }
+        @media (orientation: landscape) and (max-height: 520px) { #grpDif .opcion { flex: 1 1 20%; } }
+        #grpDif .sub, #grpModo .sub, #grpColor .sub { font-size: 0.6rem; }
+
+        /* El tablero es cuadrado: mide lo que deje la zona, el menor de su
+           ancho y su alto (contenedor de tamaño). Debajo (o al lado, en
+           apaisado) va el panel con el aviso del turno y los botones */
+        #zonaJuego {
+            flex: 1 1 auto; min-height: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+        }
+        /* Base = el ancho de la pantalla: en vertical el tablero no se queda
+           flotando en un hueco enorme con el aviso al fondo; el sobrante se
+           reparte arriba y abajo. Si falta alto, encoge */
+        #zonaTablero { flex: 0 1 calc(100vw - 24px); min-height: 0; width: 100%; container-type: size; display: flex; align-items: center; justify-content: center; }
+        #tablero { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); display: block; touch-action: none; border-radius: 10px; }
+        #tablero:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+        #panel { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; }
+        #estado { min-height: 1.4em; font-weight: 700; letter-spacing: 1px; }
+        #estado.aviso { color: #ffb74d; }
+        #enunciado { font-size: 0.85rem; color: var(--apagado); line-height: 1.45; margin: 0; }
+        #botonesProblema { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+        #botonesProblema[hidden] { display: none; }
+        @media (orientation: landscape) {
+            #zonaJuego { flex-direction: row; align-items: stretch; }
+            #zonaTablero { flex: 0 1 calc(100svh - 70px); }
+            #panel { width: 34%; max-width: 300px; justify-content: center; }
+        }
+        /* Fuera de la barra también (botones del menú) */
+        .ficha-ic { display: inline-block; width: 0.9em; height: 0.9em; border-radius: 50%; vertical-align: -0.1em; margin-right: 3px; }
+        .ficha-ic.n { background: radial-gradient(circle at 35% 35%, #6b4a33, #1e140e); border: 1px solid #000; }
+        .ficha-ic.b { background: radial-gradient(circle at 35% 35%, #fffaf0, #d9c49c); border: 1px solid #8d7a5a; }
+
+        /* Problemas: rejilla de botones numerados */
+        #listaProblemas { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; margin: 10px 0; }
+        #listaProblemas button { min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+        #listaProblemas .num { font-size: 1.1rem; font-weight: 700; }
+        #listaProblemas .que { font-size: 0.55rem; line-height: 1.1; }
+        #listaProblemas .hecho { color: #69f0ae; }
+
+        /* Estadísticas */
+        .tabla-est { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 6px 0 12px; }
+        .tabla-est th, .tabla-est td { padding: 5px 4px; border-bottom: 1px solid var(--borde); text-align: center; }
+        .tabla-est th:first-child, .tabla-est td:first-child { text-align: left; }
+
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">DA<span>MAS</span></div>
+        <p class="est-lema">Las de toda la vida, en tablero de madera</p>
+
+        <fieldset class="est-grupo">
+            <legend>MODO</legend>
+            <div class="opciones iguales" id="grpModo">
+                <button class="opcion" type="button" data-v="maquina" aria-pressed="true">CONTRA LA MÁQUINA<span class="sub">tú contra el ordenador</span></button>
+                <button class="opcion" type="button" data-v="dos" aria-pressed="false">2 JUGADORES<span class="sub">por turnos en este aparato</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo" id="grupoMaquina">
+            <legend>MÁQUINA</legend>
+            <div class="opciones" id="grpDif">
+                <button class="opcion" type="button" data-v="principiante" aria-pressed="false">PRINCIPIANTE<span class="sub">para aprender</span></button>
+                <button class="opcion" type="button" data-v="avanzado" aria-pressed="true">AVANZADO<span class="sub">piensa 2 jugadas</span></button>
+                <button class="opcion" type="button" data-v="experto" aria-pressed="false">EXPERTO<span class="sub">piensa 3 o 4</span></button>
+                <button class="opcion" type="button" data-v="rambo" aria-pressed="false">RAMBO<span class="sub">todo lo que puede</span></button>
+            </div>
+            <div class="opciones iguales" id="grpColor" style="margin-top:8px">
+                <button class="opcion" type="button" data-v="N" aria-pressed="true"><span class="rotulo"><span class="ficha-ic n"></span> NEGRAS</span><span class="sub">sales tú</span></button>
+                <button class="opcion" type="button" data-v="B" aria-pressed="false"><span class="rotulo"><span class="ficha-ic b"></span> BLANCAS</span><span class="sub">sale la máquina</span></button>
+            </div>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnJugar" type="button">JUGAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnProblemas" type="button">🧩 PROBLEMAS</button>
+            <button class="secundario" id="btnEstadisticas" type="button">📊 ESTADÍSTICAS</button>
+            <button class="secundario" id="btnInstructions" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="bN"><span class="ficha-ic n"></span>12</b><span id="rN">NEGRAS</span></div>
+        <div class="dato"><b id="bB"><span class="ficha-ic b"></span>12</b><span id="rB">BLANCAS</span></div>
+        <div class="dato"><b id="bTurno">—</b><span>TURNO</span></div>
+        <div class="hueco"></div>
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="zonaJuego">
+        <div id="zonaTablero"><canvas id="tablero" tabindex="0" aria-label="Tablero de damas" role="application"></canvas></div>
+        <div id="panel">
+            <div id="estado" aria-live="polite"></div>
+            <p id="enunciado"></p>
+            <div id="botonesProblema" hidden>
+                <button class="secundario" id="btnReintentar" type="button">↺ OTRA VEZ</button>
+                <button class="secundario" id="btnSolucion" type="button">💡 PISTA</button>
+                <button class="principal" id="btnSiguiente" type="button" hidden>SIGUIENTE ▶</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnResume" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnTablas" type="button">🤝 TABLAS DE ACUERDO</button>
+            <button class="secundario" id="btnPauseToMenu" type="button">ABANDONAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">FIN DE LA PARTIDA</h2>
+        <p id="finDetalle"></p>
+        <div class="fila-btns">
+            <button class="principal" id="btnRestart" type="button">🔄 REVANCHA</button>
+            <button class="secundario" id="btnMenu" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaProblemas">
+    <div class="caja">
+        <h2>🧩 PROBLEMAS</h2>
+        <p style="font-size:0.85rem">Retos cortos: juegas tú y la máquina se defiende lo mejor que sabe. <span id="resueltos"></span></p>
+        <div id="listaProblemas"></div>
+        <button class="principal" id="btnCerrarProblemas" type="button">← VOLVER</button>
+    </div>
+</div>
+
+<div class="capa" id="capaEstadisticas">
+    <div class="caja">
+        <h2>📊 ESTADÍSTICAS</h2>
+        <div id="tablaEstadisticas"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarEst" type="button">🗑 BORRAR</button>
+            <button class="principal" id="btnCerrarEst" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>Reglas inglesas (las del reglamento internacional de «checkers»). Se juega en las casillas oscuras; cada uno tiene 12 fichas y salen las negras.</p>
+            <h3>MOVER</h3>
+            <ul>
+                <li>Las fichas avanzan una casilla en diagonal, siempre hacia delante.</li>
+                <li>Toca tu ficha y luego la casilla a la que va (se marcan con un punto). Con teclado: flechas, Intro para elegir y Esc para soltar.</li>
+            </ul>
+            <h3>COMER</h3>
+            <ul>
+                <li>Se come saltando por encima de una pieza rival a la casilla vacía de detrás. Las fichas solo comen hacia delante.</li>
+                <li><b>Comer es obligatorio.</b> Si puedes comer, las fichas que pueden se marcan en naranja y no puedes mover otra cosa.</li>
+                <li>Si después de comer puedes seguir comiendo con la misma ficha, hay que seguir: ve tocando cada salto.</li>
+                <li>Si hay varias capturas, eliges la que quieras (no hace falta la que coma más).</li>
+            </ul>
+            <h3>DAMAS</h3>
+            <ul>
+                <li>La ficha que llega al otro lado corona: se le pone otra encima y una corona. Si corona comiendo, ahí se acaba la jugada.</li>
+                <li>La dama se mueve y come una casilla en diagonal, hacia delante <b>y hacia atrás</b>.</li>
+            </ul>
+            <h3>FINAL</h3>
+            <ul>
+                <li>Gana quien deja al rival sin fichas o sin ninguna jugada posible.</li>
+                <li>Tablas si la misma posición se repite tres veces, si pasan 40 jugadas de cada uno sin comer ni mover una ficha (solo damas), o de acuerdo entre los dos (en la pausa).</li>
+            </ul>
+            <h3>PROBLEMAS</h3>
+            <ul><li>Retos sacados de partidas: comer muchas de una vez, coronar, ganar fichas o la partida en pocas jugadas. Solo hay una primera jugada buena; la máquina se defiende. 💡 PISTA marca la ficha que hay que mover.</li></ul>
+        </div>
+        <button class="principal" id="closeInstructions" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ============================================================
+   MOTOR DE DAMAS — reglas inglesas (English draughts / checkers), 8×8.
+   Sin pantalla: corre igual en Node (pruebas, IA, problemas).
+
+   Tablero: 64 casillas, índice f*8+c, fila 0 arriba. Solo valen las
+   oscuras: (f + c) impar, así cada jugador tiene una oscura en su esquina
+   de abajo a la izquierda (como pide el reglamento).
+   Negras abajo (filas 5-7), suben y empiezan. Blancas arriba (0-2), bajan.
+   Piezas: 0 vacía, 1 ficha negra, 2 dama negra, 3 ficha blanca, 4 dama blanca.
+
+   Reglas (WCDF):
+   - Ficha: un paso en diagonal hacia delante; come hacia delante.
+   - Dama: un paso en diagonal a cualquier lado; come a cualquier lado.
+   - Comer es obligatorio; si hay varias capturas, se elige cualquiera
+     (no hace falta la más larga), pero la elegida se sigue hasta el final.
+   - La ficha que llega al fondo corona y la jugada termina ahí, aunque
+     como dama pudiera seguir comiendo.
+   - Gana quien deja al rival sin fichas o sin jugadas.
+   - Tablas (versión casera del reglamento): la misma posición tres veces
+     con el mismo turno, o 40 jugadas de cada uno sin comer ni mover una
+     ficha (solo damas de un lado a otro).
+   ============================================================ */
+const Damas = (() => {
+    const N = 'N', B = 'B';
+    const VACIA = 0, FN = 1, DN = 2, FB = 3, DB = 4;
+    const oscura = (i) => ((i >> 3) + (i & 7)) % 2 === 1;
+    const colorDe = (p) => p === FN || p === DN ? N : p === FB || p === DB ? B : null;
+    const esDama = (p) => p === DN || p === DB;
+    const rival = (t) => (t === N ? B : N);
+    const LIMITE_SIN_AVANCE = 80;           // medias jugadas: 40 de cada uno
+
+    function inicial() {
+        const t = new Int8Array(64);
+        for (let i = 0; i < 64; i++) {
+            if (!oscura(i)) continue;
+            const f = i >> 3;
+            if (f <= 2) t[i] = FB; else if (f >= 5) t[i] = FN;
+        }
+        return { t, turno: N, sinAvance: 0 };
+    }
+    /* Direcciones (df, dc) en que se mueve y come una pieza */
+    const ADELANTE_N = [[-1, -1], [-1, 1]], ADELANTE_B = [[1, -1], [1, 1]], TODAS = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    const dirs = (p) => esDama(p) ? TODAS : (colorDe(p) === N ? ADELANTE_N : ADELANTE_B);
+    const fondo = (p, i) => (p === FN && (i >> 3) === 0) || (p === FB && (i >> 3) === 7);
+    const dentro = (f, c) => f >= 0 && f < 8 && c >= 0 && c < 8;
+
+    /* Jugadas legales. Cada una: { de, a, camino: [casillas pisadas, la
+       primera es «de»], comidas: [casillas de las piezas comidas],
+       corona: bool }. Si hay alguna captura, solo capturas */
+    function jugadas(pos) {
+        const t = pos.t, yo = pos.turno, caps = [], simples = [];
+        for (let i = 0; i < 64; i++) {
+            const p = t[i];
+            if (colorDe(p) !== yo) continue;
+            capturasDesde(t, i, p, i, [i], [], caps);
+        }
+        if (caps.length) return caps;
+        for (let i = 0; i < 64; i++) {
+            const p = t[i];
+            if (colorDe(p) !== yo) continue;
+            const f = i >> 3, c = i & 7;
+            for (const [df, dc] of dirs(p)) {
+                if (!dentro(f + df, c + dc)) continue;
+                const a = (f + df) * 8 + c + dc;
+                if (t[a] === VACIA) simples.push({ de: i, a, camino: [i, a], comidas: [], corona: fondo(p, a) });
+            }
+        }
+        return simples;
+    }
+    /* Búsqueda en profundidad de las cadenas de capturas. La casilla de
+       salida cuenta como vacía durante la jugada (una dama puede dar la
+       vuelta y volver a ella); las piezas comidas siguen en su sitio hasta
+       acabar (no se pueden comer dos veces ni sirven para posarse) */
+    function capturasDesde(t, origen, p, i, camino, comidas, salida) {
+        const f = i >> 3, c = i & 7;
+        let alguna = false;
+        for (const [df, dc] of dirs(p)) {
+            if (!dentro(f + 2 * df, c + 2 * dc)) continue;
+            const m = (f + df) * 8 + c + dc, a = (f + 2 * df) * 8 + c + 2 * dc;
+            const pm = t[m];
+            if (!pm || colorDe(pm) === colorDe(p) || comidas.includes(m)) continue;
+            if (t[a] !== VACIA && a !== origen) continue;
+            alguna = true;
+            const cam = camino.concat(a), com = comidas.concat(m);
+            /* Corona en mitad de una cadena: se acaba ahí */
+            if (fondo(p, a)) { salida.push({ de: origen, a, camino: cam, comidas: com, corona: true }); continue; }
+            capturasDesde(t, origen, p, a, cam, com, salida);
+        }
+        if (!alguna && comidas.length) salida.push({ de: origen, a: i, camino, comidas, corona: false });
+    }
+    function aplicar(pos, j) {
+        const t = new Int8Array(pos.t);
+        let p = t[j.de];
+        t[j.de] = VACIA;
+        for (const m of j.comidas) t[m] = VACIA;
+        if (j.corona) p = p === FN ? DN : p === FB ? DB : p;
+        t[j.a] = p;
+        const avance = j.comidas.length > 0 || !esDama(pos.t[j.de]);
+        return { t, turno: rival(pos.turno), sinAvance: avance ? 0 : pos.sinAvance + 1 };
+    }
+    const clave = (pos) => pos.turno + Array.prototype.join.call(pos.t, '');
+    function cuenta(pos) {
+        const r = { N: { fichas: 0, damas: 0 }, B: { fichas: 0, damas: 0 } };
+        for (let i = 0; i < 64; i++) {
+            const p = pos.t[i];
+            if (!p) continue;
+            r[colorDe(p)][esDama(p) ? 'damas' : 'fichas']++;
+        }
+        return r;
+    }
+
+    /* ---------- PARTIDA: historial, repeticiones y final ---------- */
+    function crear(op) {
+        const pos = op && op.pos ? copia(op.pos) : inicial();
+        const p = { pos, historial: [], repes: new Map(), resultado: null };
+        p.repes.set(clave(pos), 1);
+        p.resultado = resultado(p);
+        return p;
+    }
+    const copia = (pos) => ({ t: new Int8Array(pos.t), turno: pos.turno, sinAvance: pos.sinAvance || 0 });
+    /* Juega j si es legal (se compara camino entero). Devuelve la jugada
+       legal correspondiente o null */
+    function jugar(p, j) {
+        if (p.resultado) return null;
+        const legal = jugadas(p.pos).find(x => x.de === j.de && x.a === j.a && (!j.camino || mismoCamino(x.camino, j.camino)));
+        if (!legal) return null;
+        p.historial.push({ jugada: legal, antes: p.pos });
+        p.pos = aplicar(p.pos, legal);
+        const k = clave(p.pos);
+        p.repes.set(k, (p.repes.get(k) || 0) + 1);
+        p.resultado = resultado(p);
+        return legal;
+    }
+    const mismoCamino = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+    function resultado(p) {
+        const pos = p.pos, c = cuenta(pos), yo = pos.turno;
+        if (c[yo].fichas + c[yo].damas === 0) return { ganador: rival(yo), motivo: 'sinFichas' };
+        if (!jugadas(pos).length) return { ganador: rival(yo), motivo: 'bloqueo' };
+        if ((p.repes.get(clave(pos)) || 0) >= 3) return { ganador: null, motivo: 'repeticion' };
+        if (pos.sinAvance >= LIMITE_SIN_AVANCE) return { ganador: null, motivo: 'cuarenta' };
+        return null;
+    }
+    /* Deshacer (para las pruebas y los problemas) */
+    function deshacer(p) {
+        const h = p.historial.pop();
+        if (!h) return false;
+        const k = clave(p.pos);
+        p.repes.set(k, p.repes.get(k) - 1);
+        p.pos = h.antes;
+        p.resultado = resultado(p);
+        return true;
+    }
+
+    /* Recuento de jugadas a profundidad n (perft): para comprobar el
+       generador contra cifras conocidas y contra el verificador */
+    function perft(pos, n) {
+        if (n === 0) return 1;
+        const js = jugadas(pos);
+        if (n === 1) return js.length;
+        let s = 0;
+        for (const j of js) s += perft(aplicar(pos, j), n - 1);
+        return s;
+    }
+    /* Posición desde listas de casillas (para problemas y pruebas) */
+    function desde(op) {
+        const t = new Int8Array(64);
+        for (const i of op.n || []) t[i] = FN;
+        for (const i of op.dn || []) t[i] = DN;
+        for (const i of op.b || []) t[i] = FB;
+        for (const i of op.db || []) t[i] = DB;
+        return { t, turno: op.turno || N, sinAvance: 0 };
+    }
+    return { N, B, VACIA, FN, DN, FB, DB, LIMITE_SIN_AVANCE, oscura, colorDe, esDama, rival, inicial, jugadas, aplicar, clave, cuenta,
+             crear, jugar, resultado, deshacer, perft, desde, copia };
+})();
+if (typeof module !== 'undefined') module.exports = Damas;
+
+</script>
+<script>
+/* ============================================================
+   IA DE DAMAS: alfa-beta (negamax) con tabla de transposición,
+   extensión de capturas (comer es obligatorio: no se corta la búsqueda en
+   mitad de un intercambio) y evaluación de madera, avance, centro, fila
+   de atrás y canjes cuando se va ganando.
+   Los niveles cambian la profundidad y el ruido; medidos con medir-ia.js.
+   ============================================================ */
+const IADamas = (() => {
+    const D = typeof Damas !== 'undefined' ? Damas : require('./motor-damas.js');
+    const GANA = 100000;
+    /* prof: medias jugadas; ruido: ± puntos al azar en cada jugada de la
+       raíz (100 = una ficha); azar: probabilidad de jugar cualquiera;
+       ms: tope de tiempo (profundización iterativa) */
+    const NIVELES = {
+        principiante: { prof: 2, ruido: 60, azar: 0.2 },
+        avanzado:     { prof: 4, ruido: 18, azar: 0 },
+        experto:      { prof: 7, ruido: 0, azar: 0 },
+        rambo:        { prof: 14, ruido: 0, azar: 0, ms: 900 }
+    };
+    const CENTRO = new Set([3 * 8 + 2, 3 * 8 + 4, 4 * 8 + 3, 4 * 8 + 5, 3 * 8 + 6, 4 * 8 + 1]);
+
+    /* Evaluación desde el lado que juega */
+    function evaluar(pos) {
+        const t = pos.t;
+        let n = 0, b = 0, nf = 0, bf = 0, nd = 0, bd = 0, posN = 0, posB = 0;
+        for (let i = 0; i < 64; i++) {
+            const p = t[i];
+            if (!p) continue;
+            const f = i >> 3;
+            if (p === D.FN) { nf++; posN += [0, 14, 10, 7, 5, 3, 1, 0][f] + (f === 7 ? 6 : 0) + (CENTRO.has(i) ? 4 : 0); }
+            else if (p === D.FB) { bf++; posB += [0, 1, 3, 5, 7, 10, 14, 0][f] + (f === 0 ? 6 : 0) + (CENTRO.has(i) ? 4 : 0); }
+            else if (p === D.DN) { nd++; posN += CENTRO.has(i) ? 8 : 0; }
+            else { bd++; posB += CENTRO.has(i) ? 8 : 0; }
+        }
+        /* La fila de atrás solo vale mientras el rival tenga fichas por coronar */
+        if (!bf) posN -= 6 * [...[56, 58, 60, 62]].filter(i => t[i] === D.FN).length;
+        if (!nf) posB -= 6 * [1, 3, 5, 7].filter(i => t[i] === D.FB).length;
+        n = nf * 100 + nd * 160; b = bf * 100 + bd * 160;
+        let v = n - b + posN - posB;
+        /* Yendo por delante, canjear acerca la victoria */
+        const total = nf + bf + nd + bd;
+        if (n !== b) v += Math.sign(n - b) * (24 - total) * 4;
+        /* Final de damas: el que gana se acerca a las del otro */
+        if (!nf && !bf && n !== b) {
+            const gan = n > b ? [D.DN] : [D.DB], per = n > b ? D.DB : D.DN;
+            let d = 0;
+            for (let i = 0; i < 64; i++) if (gan.includes(t[i])) for (let k = 0; k < 64; k++) if (t[k] === per) d += Math.max(Math.abs((i >> 3) - (k >> 3)), Math.abs((i & 7) - (k & 7)));
+            v += (n > b ? -1 : 1) * d * 2;
+        }
+        return pos.turno === D.N ? v : -v;
+    }
+    function ordenar(js) {
+        return js.sort((x, y) => (y.comidas.length - x.comidas.length) || ((y.corona ? 1 : 0) - (x.corona ? 1 : 0)));
+    }
+    function buscar(pos, prof, alfa, beta, ply, ctx) {
+        ctx.nodos++;
+        if (ctx.tope && (ctx.nodos & 1023) === 0 && Date.now() > ctx.tope) ctx.corta = true;
+        if (ctx.corta) return 0;
+        const js = D.jugadas(pos);
+        if (!js.length) return -GANA + ply;
+        const comiendo = js[0].comidas.length > 0;
+        if (prof <= 0 && (!comiendo || prof < -10)) return evaluar(pos);
+        const k = D.clave(pos), tt = ctx.tt.get(k);
+        if (tt && tt.prof >= prof) {
+            if (tt.tipo === 0) return tt.v;
+            if (tt.tipo === 1 && tt.v >= beta) return tt.v;
+            if (tt.tipo === -1 && tt.v <= alfa) return tt.v;
+        }
+        const a0 = alfa;
+        let mejor = -Infinity;
+        for (const j of ordenar(js)) {
+            const v = -buscar(D.aplicar(pos, j), prof - 1, -beta, -alfa, ply + 1, ctx);
+            if (v > mejor) mejor = v;
+            if (v > alfa) alfa = v;
+            if (alfa >= beta) break;
+        }
+        if (!ctx.corta) ctx.tt.set(k, { prof, v: mejor, tipo: mejor <= a0 ? -1 : mejor >= beta ? 1 : 0 });
+        return mejor;
+    }
+    /* Valor de cada jugada de la raíz a una profundidad */
+    function valorarRaiz(pos, prof, ctx) {
+        const js = ordenar(D.jugadas(pos));
+        return js.map(j => ({ j, v: -buscar(D.aplicar(pos, j), prof - 1, -Infinity, Infinity, 1, ctx) }));
+    }
+    function elegir(pos, nivel, azar) {
+        const N = NIVELES[nivel] || NIVELES.avanzado;
+        azar = azar || Math.random;
+        const js = D.jugadas(pos);
+        if (!js.length) return null;
+        if (js.length === 1) return js[0];
+        if (N.azar && azar() < N.azar) return js[Math.floor(azar() * js.length)];
+        const ctx = { nodos: 0, tt: new Map(), tope: N.ms ? Date.now() + N.ms : 0, corta: false };
+        let res = null;
+        if (N.ms) {
+            /* Profundización iterativa hasta el tope de tiempo; si una vuelta
+               no acaba, vale la anterior */
+            for (let p = 2; p <= N.prof; p++) {
+                const r = valorarRaiz(pos, p, ctx);
+                if (ctx.corta) break;
+                res = r;
+                if (r.some(x => Math.abs(x.v) > GANA / 2)) break;
+            }
+            if (!res) { ctx.tope = 0; ctx.corta = false; res = valorarRaiz(pos, 2, ctx); }
+        } else res = valorarRaiz(pos, N.prof, ctx);
+        let mejor = null, mv = -Infinity;
+        for (const x of res) {
+            const v = x.v + (N.ruido ? (azar() * 2 - 1) * N.ruido : 0);
+            if (v > mv) { mv = v; mejor = x.j; }
+        }
+        elegir.ultimo = { nodos: ctx.nodos };
+        return mejor;
+    }
+    return { NIVELES, evaluar, elegir, buscar };
+})();
+if (typeof module !== 'undefined') module.exports = IADamas;
+
+</script>
+<script>
+/* ============================================================
+   PROBLEMAS TÁCTICOS: paso de casillas de texto a posición del motor y
+   búsqueda del objetivo con el motor (para el juego: saber si la jugada
+   del jugador sigue llevando a la solución y elegir la defensa).
+   Los problemas en sí están en problemas-datos.js (GENERADO por
+   buscar-problemas.js) y los comprueba verificar-damas.js con OTRA
+   implementación de las reglas.
+
+   Casillas de texto: 32 letras, las oscuras de arriba abajo y de izquierda
+   a derecha: n ficha negra, N dama negra, b ficha blanca, B dama blanca,
+   . vacía. Las negras juegan hacia arriba.
+   ============================================================ */
+const Problemas = (() => {
+    const D = typeof Damas !== 'undefined' ? Damas : require('./motor-damas.js');
+    /* 0-31 ↔ índice 0-63 del motor */
+    const aIndice = (k) => { const f = k >> 2, j = k & 3; return f * 8 + (f % 2 === 0 ? 2 * j + 1 : 2 * j); };
+    const aCasilla = (i) => (i >> 3) * 4 + ((i & 7) >> 1);
+    const LETRA = { n: D.FN, N: D.DN, b: D.FB, B: D.DB };
+    function aPosicion(pr) {
+        const t = new Int8Array(64);
+        pr.casillas.split('').forEach((ch, k) => { if (LETRA[ch]) t[aIndice(k)] = LETRA[ch]; });
+        return { t, turno: pr.turno, sinAvance: 0 };
+    }
+    function aTexto(pos) {
+        let s = '';
+        for (let k = 0; k < 32; k++) { const p = pos.t[aIndice(k)]; s += p === D.FN ? 'n' : p === D.DN ? 'N' : p === D.FB ? 'b' : p === D.DB ? 'B' : '.'; }
+        return s;
+    }
+    const piezas = (pos, lado) => { let n = 0; for (const p of pos.t) if (D.colorDe(p) === lado) n++; return n; };
+    const damas = (pos, lado) => { let n = 0; for (const p of pos.t) if (p === (lado === D.N ? D.DN : D.DB)) n++; return n; };
+    /* ¿Cumplido? Se mira cuando le vuelve a tocar al que resuelve */
+    function cumplido(pos0, pos, yo, obj) {
+        const otro = D.rival(yo);
+        if (obj.tipo === 'ventaja') return (piezas(pos, yo) - piezas(pos, otro)) - (piezas(pos0, yo) - piezas(pos0, otro)) >= obj.cuantas;
+        if (obj.tipo === 'corona') return damas(pos, yo) > damas(pos0, yo);
+        return false;
+    }
+    /* Le toca al que resuelve (n jugadas suyas por delante) */
+    function puede(pos0, pos, yo, obj, n) {
+        if (cumplido(pos0, pos, yo, obj)) return true;
+        if (n <= 0) return false;
+        return D.jugadas(pos).some(j => resiste(pos0, D.aplicar(pos, j), yo, obj, n - 1) === null);
+    }
+    /* Le toca al rival. Devuelve null si TODAS sus respuestas siguen
+       perdiendo (el objetivo sigue a mano), o la respuesta que lo evita */
+    function resiste(pos0, pos, yo, obj, n) {
+        const js = D.jugadas(pos);
+        if (!js.length) return null;
+        for (const j of js) if (!puede(pos0, D.aplicar(pos, j), yo, obj, n)) return j;
+        return null;
+    }
+    /* Defensa de la máquina en un problema: la que lo evita si la hay; si
+       no, la primera (todas pierden igual) */
+    function defensa(pos0, pos, yo, obj, n) {
+        const j = resiste(pos0, pos, yo, obj, n);
+        return j || D.jugadas(pos)[0] || null;
+    }
+    return { aIndice, aCasilla, aPosicion, aTexto, cumplido, puede, resiste, defensa, piezas, damas };
+})();
+if (typeof module !== 'undefined') module.exports = Problemas;
+
+</script>
+<script>
+/* GENERADO por buscar-problemas.js (2026-11-16): no editar a mano.
+   Comprobados con verificar-damas.js. Casillas: ver problemas.js */
+const PROBLEMAS_DAMAS = [ { "id": 1, "titulo": "Come 3 de una vez", "texto": "Hay que comer, pero solo una de las capturas se lleva 3 fichas.", "turno": "B", "casillas": "......NN.......N.bBBn...........", "objetivo": { "tipo": "come", "cuantas": 3, "jugadas": 1 }, "solucion": { "de": 18, "a": 9 } },
+{ "id": 2, "titulo": "Come 3 de una vez", "texto": "Hay que comer, pero solo una de las capturas se lleva 3 fichas.", "turno": "N", "casillas": "....bb....N..bb.n.n.n......n..nn", "objetivo": { "tipo": "come", "cuantas": 3, "jugadas": 1 }, "solucion": { "de": 10, "a": 1 } },
+{ "id": 3, "titulo": "Corona en 2 jugadas", "texto": "Consigue una dama en 2 jugadas tuyas, y que no te la coman.", "turno": "N", "casillas": "......N..n..................B...", "objetivo": { "tipo": "corona", "jugadas": 2 }, "solucion": { "de": 9, "a": 5 } },
+{ "id": 4, "titulo": "Corona en 2 jugadas", "texto": "Consigue una dama en 2 jugadas tuyas, y que no te la coman.", "turno": "N", "casillas": "........n....n...B..............", "objetivo": { "tipo": "corona", "jugadas": 2 }, "solucion": { "de": 8, "a": 4 } },
+{ "id": 5, "titulo": "Corona en 2 jugadas", "texto": "Consigue una dama en 2 jugadas tuyas, y que no te la coman.", "turno": "N", "casillas": ".B......n.................B.....", "objetivo": { "tipo": "corona", "jugadas": 2 }, "solucion": { "de": 8, "a": 4 } },
+{ "id": 6, "titulo": "Gana dos fichas en 2 jugadas", "texto": "Consigue dos fichas de ventaja en 2 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "B", "casillas": "..N............B................", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 2 }, "solucion": { "de": 15, "a": 10 } },
+{ "id": 7, "titulo": "Gana dos fichas en 2 jugadas", "texto": "Consigue dos fichas de ventaja en 2 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "B", "casillas": ".N............B.................", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 2 }, "solucion": { "de": 14, "a": 9 } },
+{ "id": 8, "titulo": "Gana dos fichas en 2 jugadas", "texto": "Consigue dos fichas de ventaja en 2 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "B", "casillas": ".................B..N...........", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 2 }, "solucion": { "de": 17, "a": 21 } },
+{ "id": 9, "titulo": "Corona en 3 jugadas", "texto": "Consigue una dama en 3 jugadas tuyas, y que no te la coman.", "turno": "B", "casillas": ".......N........B..b............", "objetivo": { "tipo": "corona", "jugadas": 3 }, "solucion": { "de": 19, "a": 23 } },
+{ "id": 10, "titulo": "Corona en 3 jugadas", "texto": "Consigue una dama en 3 jugadas tuyas, y que no te la coman.", "turno": "B", "casillas": "...........N.B.....b............", "objetivo": { "tipo": "corona", "jugadas": 3 }, "solucion": { "de": 19, "a": 23 } },
+{ "id": 11, "titulo": "Gana dos fichas en 3 jugadas", "texto": "Consigue dos fichas de ventaja en 3 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "N", "casillas": ".........N.....B................", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 3 }, "solucion": { "de": 9, "a": 14 } },
+{ "id": 12, "titulo": "Gana dos fichas en 3 jugadas", "texto": "Consigue dos fichas de ventaja en 3 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "B", "casillas": "......N..........B..............", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 3 }, "solucion": { "de": 17, "a": 14 } },
+{ "id": 13, "titulo": "Gana dos fichas en 3 jugadas", "texto": "Consigue dos fichas de ventaja en 3 jugadas tuyas, haga lo que haga el rival. Puede que haya que regalar alguna.", "turno": "B", "casillas": "..............B.N...............", "objetivo": { "tipo": "ventaja", "cuantas": 2, "jugadas": 3 }, "solucion": { "de": 14, "a": 17 } },
+{ "id": 14, "titulo": "Gana en 4 jugadas", "texto": "Deja al rival sin fichas o sin jugadas en 4 jugadas tuyas.", "turno": "B", "casillas": "..........B..........N..........", "objetivo": { "tipo": "gana", "jugadas": 4 }, "solucion": { "de": 10, "a": 14 } } ];
+if (typeof module !== 'undefined') module.exports = { PROBLEMAS: PROBLEMAS_DAMAS };
+
+</script>
+<script>
+/* ============================================================
+   DAMAS — pantalla, mandos, máquina, problemas y estadísticas.
+   Las reglas están en motor-damas.js; aquí solo se dibuja y se escucha.
+   ============================================================ */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const lienzo = $('tablero');
+const ctx = lienzo.getContext('2d');
+const PROBLEMAS = typeof PROBLEMAS_DAMAS !== 'undefined' ? PROBLEMAS_DAMAS : [];
+
+let gameState = 'menu';          // menu | playing | paused | fin
+let modo = 'maquina';            // maquina | dos | problema
+let partida = null;              // la del motor
+let humano = Damas.N;            // color de la persona contra la máquina
+let girado = false;              // tablero dado la vuelta (la persona juega blancas)
+let sel = null;                  // { camino: [casillas tocadas] }
+let cursor = null;               // casilla del cursor de teclado
+let anim = null;                 // jugada que se está moviendo
+let ultima = null;               // última jugada, marcada en el tablero
+let pista = null;                // jugada de la pista (problemas)
+let pensando = false, timerIA = null;
+let problema = null;             // { pr, pos0, quedan, resuelto, fallado }
+let bucleId = null;
+let L = 0, dpr = 1;              // lado del tablero en px CSS
+
+/* ---------- AJUSTES Y ESTADÍSTICAS (EST.leer/guardar: try/catch y memoria) ---------- */
+const AJ_DEF = { modo: 'maquina', dif: 'avanzado', color: 'N' };
+let ajustes = Object.assign({}, AJ_DEF, EST.leer('damas.ajustes', {}) || {});
+const guardarAjustes = () => EST.guardar('damas.ajustes', ajustes);
+const NIVELES = ['principiante', 'avanzado', 'experto', 'rambo'];
+const ETIQUETA = { principiante: 'Principiante', avanzado: 'Avanzado', experto: 'Experto', rambo: 'Rambo' };
+function estVacias() {
+    const m = {};
+    for (const n of NIVELES) m[n] = { g: 0, p: 0, t: 0 };
+    return { maquina: m, dos: { n: 0, b: 0, t: 0 }, racha: 0, mejorRacha: 0, problemas: [] };
+}
+function leerEst() {
+    const e = EST.leer('damas.estadisticas', null), v = estVacias();
+    if (!e || typeof e !== 'object') return v;
+    for (const n of NIVELES) if (e.maquina && e.maquina[n]) for (const k of ['g', 'p', 't']) v.maquina[n][k] = Number.isInteger(e.maquina[n][k]) ? e.maquina[n][k] : 0;
+    if (e.dos) for (const k of ['n', 'b', 't']) v.dos[k] = Number.isInteger(e.dos[k]) ? e.dos[k] : 0;
+    v.racha = Number.isInteger(e.racha) ? e.racha : 0;
+    v.mejorRacha = Number.isInteger(e.mejorRacha) ? e.mejorRacha : 0;
+    v.problemas = Array.isArray(e.problemas) ? e.problemas.filter(Number.isInteger) : [];
+    return v;
+}
+let est = leerEst();
+const guardarEst = () => EST.guardar('damas.estadisticas', est);
+
+/* ---------- SONIDO ---------- */
+const musicaFondo = EST.musica({
+    bpm: 66,
+    acordes: [
+        { bajo: 65.41, notas: [261.63, 329.63, 392.00] },
+        { bajo: 55.00, notas: [220.00, 261.63, 329.63] },
+        { bajo: 87.31, notas: [261.63, 349.23, 440.00] },
+        { bajo: 98.00, notas: [246.94, 293.66, 392.00] }
+    ]
+});
+const sonar = {
+    toc() { EST.ruido(0.05, 0.22, 2200, 900); EST.efecto('toc', 30, [[190, 0.07, 'triangle', 0.1, 0, 150]]); },
+    come() { EST.ruido(0.07, 0.3, 2600, 700); EST.efecto('come', 30, [[150, 0.09, 'square', 0.06, 0, 90]]); },
+    elige() { EST.efecto('elige', 40, [[660, 0.04, 'sine', 0.05]]); },
+    no() { EST.efecto('no', 150, [[140, 0.12, 'square', 0.05]]); },
+    corona() { EST.efecto('corona', 300, [[784, 0.09, 'triangle', 0.07], [988, 0.09, 'triangle', 0.07, 0.09], [1319, 0.25, 'triangle', 0.08, 0.18]]); },
+    gana() { EST.efecto('gana', 600, [[523, 0.12, 'triangle', 0.08], [659, 0.12, 'triangle', 0.08, 0.13], [784, 0.12, 'triangle', 0.08, 0.26], [1047, 0.4, 'triangle', 0.08, 0.39]]); },
+    pierde() { EST.efecto('pierde', 600, [[392, 0.2, 'sine', 0.07], [330, 0.2, 'sine', 0.07, 0.22], [262, 0.45, 'sine', 0.07, 0.44]]); },
+    tablas() { EST.efecto('tablas', 600, [[440, 0.2, 'sine', 0.06], [440, 0.3, 'sine', 0.06, 0.25]]); }
+};
+function alCambiarMusica(on) { if (on && gameState === 'playing') musicaFondo.arrancar(); else musicaFondo.parar(); }
+
+/* ==========================================================
+   MADERA: texturas hechas una vez (vetas con ruido) y usadas como patrón
+   ========================================================== */
+function textura(base, veta, lado, sem) {
+    const c = document.createElement('canvas');
+    c.width = c.height = lado;
+    const g = c.getContext('2d');
+    g.fillStyle = base; g.fillRect(0, 0, lado, lado);
+    let s = sem;
+    const az = () => { s = (Math.imul(s, 1103515245) + 12345) >>> 0; return s / 4294967296; };
+    for (let k = 0; k < 46; k++) {
+        const y0 = az() * lado, a = 1.5 + az() * 4, f = 0.01 + az() * 0.02, fase = az() * 6;
+        g.strokeStyle = veta.replace('A', (0.08 + az() * 0.16).toFixed(2));
+        g.lineWidth = 0.6 + az() * 1.6;
+        g.beginPath();
+        for (let x = 0; x <= lado; x += 4) {
+            const y = y0 + Math.sin(x * f + fase) * a + Math.sin(x * f * 3.1 + fase) * a * 0.3;
+            if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.stroke();
+    }
+    return c;
+}
+const TEX = {
+    clara: textura('#e6c690', 'rgba(150,100,50,A)', 256, 7),
+    oscura: textura('#7b4a2a', 'rgba(40,20,8,A)', 256, 11),
+    marco: textura('#4a2c18', 'rgba(15,8,3,A)', 256, 23)
+};
+let patrones = null;
+
+/* ---------- Medidas ---------- */
+function medir() {
+    const r = lienzo.getBoundingClientRect();
+    if (!r.width) return;
+    dpr = Math.min(2.5, window.devicePixelRatio || 1);
+    L = r.width;
+    const a = Math.round(L * dpr);
+    if (lienzo.width !== a) { lienzo.width = a; lienzo.height = a; }
+    patrones = {
+        clara: ctx.createPattern(TEX.clara, 'repeat'), oscura: ctx.createPattern(TEX.oscura, 'repeat'), marco: ctx.createPattern(TEX.marco, 'repeat')
+    };
+    pintar();
+}
+const marco = () => L * 0.045;
+const lado = () => (L - 2 * marco()) / 8;
+/* Casilla del motor (0-63) ↔ fila y columna en pantalla */
+function enPantalla(i) {
+    let f = i >> 3, c = i & 7;
+    if (girado) { f = 7 - f; c = 7 - c; }
+    return { x: marco() + c * lado(), y: marco() + f * lado() };
+}
+function casillaEn(x, y) {
+    const s = lado(), m = marco();
+    let c = Math.floor((x - m) / s), f = Math.floor((y - m) / s);
+    if (c < 0 || c > 7 || f < 0 || f > 7) return -1;
+    if (girado) { f = 7 - f; c = 7 - c; }
+    return f * 8 + c;
+}
+const centro = (i) => { const p = enPantalla(i), s = lado(); return { x: p.x + s / 2, y: p.y + s / 2 }; };
+
+/* ==========================================================
+   DIBUJO
+   ========================================================== */
+function pintar() {
+    if (!L || !partida) return;
+    const t = performance.now() / 1000;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, L, L);
+    const m = marco(), s = lado();
+    /* Marco con bisel */
+    ctx.fillStyle = patrones.marco; ctx.fillRect(0, 0, L, L);
+    ctx.strokeStyle = 'rgba(255,220,170,0.25)'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, L - 2, L - 2);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2; ctx.strokeRect(m - 1, m - 1, 8 * s + 2, 8 * s + 2);
+    for (let i = 0; i < 64; i++) {
+        const p = enPantalla(i);
+        ctx.fillStyle = Damas.oscura(i) ? patrones.oscura : patrones.clara;
+        ctx.fillRect(p.x, p.y, s + 0.5, s + 0.5);
+    }
+    /* Última jugada: casillas de salida, de paso y de llegada */
+    if (ultima && !anim) for (const i of ultima.camino) { const p = enPantalla(i); ctx.fillStyle = 'rgba(255,214,110,0.32)'; ctx.fillRect(p.x, p.y, s, s); }
+    /* Posición que se ve: durante una animación, la de antes */
+    const pos = anim ? anim.antes : partida.pos;
+    const js = esHumanoAhora() && !anim ? Damas.jugadas(partida.pos) : [];
+    const obligada = js.length && js[0].comidas.length > 0;
+    const cands = sel ? js.filter(j => empiezaPor(j.camino, sel.camino)) : [];
+    const comidasSel = new Set();
+    if (sel && sel.camino.length > 1) for (const j of cands) j.comidas.slice(0, sel.camino.length - 1).forEach(x => comidasSel.add(x));
+    for (let i = 0; i < 64; i++) {
+        const p = pos.t[i];
+        if (!p) continue;
+        if (anim && i === anim.j.de) continue;
+        let alfa = 1;
+        if (anim && anim.j.comidas.includes(i)) { const k = anim.j.comidas.indexOf(i); alfa = Math.max(0, 1 - Math.max(0, anim.t / anim.paso - k - 0.5) * 2); }
+        if (sel && sel.camino.length > 1 && i === sel.camino[0]) alfa = 0.35;
+        const c = centro(i);
+        ficha(c.x, c.y, s, p, alfa);
+        if (comidasSel.has(i)) cruz(c.x, c.y, s);
+    }
+    /* Ficha en marcha: por el camino, una casilla cada «paso» */
+    if (anim) {
+        const k = Math.min(anim.j.camino.length - 1.0001, anim.t / anim.paso);
+        const a = Math.floor(k), f = k - a, e = f * f * (3 - 2 * f);
+        const p0 = centro(anim.j.camino[a]), p1 = centro(anim.j.camino[a + 1]);
+        const salto = anim.j.comidas.length ? Math.sin(e * Math.PI) * s * 0.25 : 0;
+        ficha(p0.x + (p1.x - p0.x) * e, p0.y + (p1.y - p0.y) * e - salto, s * (1 + salto / s * 0.4), anim.antes.t[anim.j.de], 1);
+    }
+    /* Ficha a medio comer en una cadena: dibujada donde va */
+    if (sel && sel.camino.length > 1) { const c = centro(sel.camino[sel.camino.length - 1]); ficha(c.x, c.y, s, pos.t[sel.camino[0]], 1); }
+    if (!anim && esHumanoAhora()) {
+        /* Comer obligado: aro naranja que late en las que pueden */
+        if (obligada && !sel) {
+            const puls = 0.75 + 0.25 * Math.sin(t * 5);   // nunca casi invisible: es un aviso obligatorio
+            for (const de of new Set(js.map(j => j.de))) { const c = centro(de); aro(c.x, c.y, s * 0.46, `rgba(255,140,0,${puls})`, 3.5); }
+        }
+        if (sel) {
+            const c = centro(sel.camino[sel.camino.length - 1]);
+            aro(c.x, c.y, s * 0.47, '#ffd54f', 3.5);
+            const sig = new Set(cands.map(j => j.camino[sel.camino.length]).filter(x => x !== undefined));
+            for (const a of sig) { const d = centro(a); punto(d.x, d.y, s, obligada); }
+        }
+        if (pista) {
+            const puls = 0.5 + 0.5 * Math.sin(t * 6);
+            const a = centro(pista.de), b = centro(pista.a);
+            aro(a.x, a.y, s * 0.48, `rgba(64,196,255,${puls})`, 4);
+            aro(b.x, b.y, s * 0.2, `rgba(64,196,255,${puls})`, 3);
+        }
+    }
+    if (cursor !== null && document.activeElement === lienzo) {
+        const p = enPantalla(cursor);
+        ctx.setLineDash([5, 4]); ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 2.5; ctx.strokeRect(p.x + 2, p.y + 2, s - 4, s - 4); ctx.setLineDash([]);
+    }
+}
+const empiezaPor = (cam, pre) => pre.every((x, i) => cam[i] === x);
+/* Ficha de madera con relieve; la dama, dos fichas y una corona */
+function ficha(x, y, s, p, alfa) {
+    const r = s * 0.39, negra = Damas.colorDe(p) === Damas.N, dama = Damas.esDama(p);
+    ctx.globalAlpha = alfa;
+    const capa = (yy) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(x + r * 0.08, yy + r * 0.18, r, r * 0.92, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = negra ? '#1a110b' : '#b59a6c';
+        ctx.beginPath(); ctx.arc(x, yy + r * 0.1, r, 0, 7); ctx.fill();
+        const g = ctx.createRadialGradient(x - r * 0.35, yy - r * 0.4, r * 0.1, x, yy, r);
+        if (negra) { g.addColorStop(0, '#6e4c33'); g.addColorStop(0.6, '#3a2617'); g.addColorStop(1, '#1d130c'); }
+        else { g.addColorStop(0, '#fffaf0'); g.addColorStop(0.6, '#efe0bf'); g.addColorStop(1, '#cdb486'); }
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, yy, r, 0, 7); ctx.fill();
+        /* Surcos concéntricos y borde: forma, no solo color, para distinguir bandos */
+        ctx.strokeStyle = negra ? 'rgba(255,220,180,0.22)' : 'rgba(90,60,20,0.35)'; ctx.lineWidth = Math.max(1, r * 0.06);
+        ctx.beginPath(); ctx.arc(x, yy, r * 0.68, 0, 7); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, yy, r * 0.4, 0, 7); ctx.stroke();
+        ctx.strokeStyle = negra ? '#0a0604' : '#8d7650'; ctx.lineWidth = Math.max(1, r * 0.07);
+        ctx.beginPath(); ctx.arc(x, yy, r, 0, 7); ctx.stroke();
+    };
+    capa(y);
+    if (dama) {
+        capa(y - r * 0.28);
+        /* Corona dorada encima */
+        const cy = y - r * 0.32, w = r * 0.95, h = r * 0.62;
+        ctx.fillStyle = '#ffcc33'; ctx.strokeStyle = '#8a5a00'; ctx.lineWidth = Math.max(1, r * 0.06);
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, cy + h / 2); ctx.lineTo(x - w / 2, cy - h / 4); ctx.lineTo(x - w / 4, cy + h / 8);
+        ctx.lineTo(x, cy - h / 2); ctx.lineTo(x + w / 4, cy + h / 8); ctx.lineTo(x + w / 2, cy - h / 4); ctx.lineTo(x + w / 2, cy + h / 2); ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e53935'; ctx.beginPath(); ctx.arc(x, cy + h / 6, r * 0.09, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+function aro(x, y, r, col, w) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); }
+function punto(x, y, s, comer) {
+    ctx.fillStyle = comer ? 'rgba(255,120,60,0.85)' : 'rgba(120,255,140,0.8)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x, y, s * 0.15, 0, 7); ctx.fill(); ctx.stroke();
+}
+function cruz(x, y, s) {
+    ctx.strokeStyle = 'rgba(229,57,53,0.95)'; ctx.lineWidth = Math.max(2, s * 0.07); ctx.lineCap = 'round';
+    const d = s * 0.2;
+    ctx.beginPath(); ctx.moveTo(x - d, y - d); ctx.lineTo(x + d, y + d); ctx.moveTo(x + d, y - d); ctx.lineTo(x - d, y + d); ctx.stroke();
+    ctx.lineCap = 'butt';
+}
+
+/* ---------- Barra y estado ---------- */
+const NOMBRE = { N: 'negras', B: 'blancas' };
+function pintarBarra() {
+    const c = Damas.cuenta(partida.pos);
+    const txt = (l) => '<span class="ficha-ic ' + (l === 'N' ? 'n' : 'b') + '"></span>' + (c[l].fichas + c[l].damas) + (c[l].damas ? ' · ♛' + c[l].damas : '');
+    $('bN').innerHTML = txt('N'); $('bB').innerHTML = txt('B');
+    if (modo === 'maquina') { $('rN').textContent = humano === 'N' ? 'TÚ' : 'MÁQUINA'; $('rB').textContent = humano === 'B' ? 'TÚ' : 'MÁQUINA'; }
+    else if (modo === 'problema') { $('rN').textContent = problema.pr.turno === 'N' ? 'TÚ' : 'RIVAL'; $('rB').textContent = problema.pr.turno === 'B' ? 'TÚ' : 'RIVAL'; }
+    else { $('rN').textContent = 'NEGRAS'; $('rB').textContent = 'BLANCAS'; }
+    $('bTurno').innerHTML = '<span class="ficha-ic ' + (partida.pos.turno === 'N' ? 'n' : 'b') + '"></span>';
+}
+function decir(txt, aviso) { const e = $('estado'); e.textContent = txt; e.classList.toggle('aviso', !!aviso); }
+function pintarEstado() {
+    if (!partida || gameState !== 'playing') return;
+    if (modo === 'problema' && (problema.resuelto || problema.fallado)) return;
+    const js = Damas.jugadas(partida.pos), obligada = js.length && js[0].comidas.length > 0;
+    if (pensando) { decir(modo === 'problema' ? 'El rival contesta…' : 'La máquina piensa…'); return; }
+    if (!esHumanoAhora()) return;
+    if (sel && sel.camino.length > 1) { decir('Sigue comiendo con la misma ficha', true); return; }
+    const quien = modo === 'dos' ? 'Turno de las ' + NOMBRE[partida.pos.turno] : 'Te toca';
+    decir(obligada ? quien + ': ¡hay que comer!' : quien, obligada);
+}
+const esHumanoAhora = () => partida && !partida.resultado && gameState === 'playing' && !pensando &&
+    (modo === 'dos' || (modo === 'maquina' && partida.pos.turno === humano) || (modo === 'problema' && partida.pos.turno === problema.pr.turno && !problema.resuelto && !problema.fallado));
+
+/* ==========================================================
+   JUGAR
+   ========================================================== */
+function tocar(i) {
+    if (!esHumanoAhora() || anim || i < 0) return;
+    const js = Damas.jugadas(partida.pos);
+    if (sel) {
+        const cands = js.filter(j => empiezaPor(j.camino, sel.camino));
+        /* Tocar directamente la casilla final de una cadena: si solo una
+           acaba ahí, se juega entera */
+        const finales = cands.filter(j => j.a === i && j.camino.length > sel.camino.length);
+        const siguientes = cands.filter(j => j.camino[sel.camino.length] === i);
+        if (siguientes.length) {
+            sel.camino.push(i);
+            const hecha = siguientes.find(j => j.camino.length === sel.camino.length);
+            if (hecha) { sel = null; hacer(hecha); }
+            else { sonar.elige(); pintarEstado(); }
+            return;
+        }
+        if (finales.length === 1) { sel = null; hacer(finales[0]); return; }
+        if (sel.camino.length > 1) {
+            if (i === sel.camino[0]) { sel = null; pintarEstado(); return; }
+            sonar.no(); decir('Sigue comiendo con la misma ficha (o toca la de salida para empezar otra vez)', true);
+            return;
+        }
+        if (i === sel.camino[0]) { sel = null; return; }
+    }
+    const p = partida.pos.t[i];
+    if (Damas.colorDe(p) === partida.pos.turno) {
+        if (js.some(j => j.de === i)) { sel = { camino: [i] }; sonar.elige(); pintarEstado(); }
+        else { sel = null; sonar.no(); decir(js.length && js[0].comidas.length ? '¡Hay que comer! Con las fichas marcadas en naranja.' : 'Esa ficha no puede moverse', true); }
+    } else sel = null;
+}
+/* Ejecuta una jugada (de quien sea): la apunta en el motor y la anima */
+function hacer(j) {
+    const antes = partida.pos;
+    const legal = Damas.jugar(partida, j);
+    if (!legal) return;
+    pista = null;
+    anim = { j: legal, antes, t: 0, paso: legal.comidas.length ? 0.22 : 0.18 };
+    ultima = legal;
+    sonar.toc();
+    arrancar();
+}
+function finAnimacion() {
+    const j = anim.j;
+    anim = null;
+    if (j.comidas.length) sonar.come();
+    if (j.corona) sonar.corona();
+    pintarBarra();
+    if (modo === 'problema') { trasJugadaProblema(j); return; }
+    if (partida.resultado) { terminar(); return; }
+    siguienteTurno();
+}
+function siguienteTurno() {
+    pintarEstado();
+    if (modo === 'maquina' && partida.pos.turno !== humano) turnoMaquina();
+    else autoSeleccion();
+}
+/* Si solo hay una ficha que pueda mover (p. ej. comer obligado con una
+   sola), queda elegida */
+function autoSeleccion() {
+    if (!esHumanoAhora()) return;
+    const des = new Set(Damas.jugadas(partida.pos).map(j => j.de));
+    if (des.size === 1) sel = { camino: [[...des][0]] };
+}
+function turnoMaquina() {
+    pensando = true;
+    pintarEstado();
+    /* Primero se pinta «piensa»; luego la búsqueda, que bloquea un rato */
+    clearTimeout(timerIA);
+    timerIA = setTimeout(() => {
+        if (gameState !== 'playing' || !partida || partida.resultado) { pensando = false; return; }
+        const t0 = Date.now();
+        const j = IADamas.elegir(partida.pos, ajustes.dif);
+        timerIA = setTimeout(() => { if (gameState !== 'playing') return; pensando = false; if (j) hacer(j); }, Math.max(0, 380 - (Date.now() - t0)));
+    }, 60);
+}
+
+/* ---------- Final ---------- */
+const MOTIVO = {
+    sinFichas: 'se ha quedado sin fichas', bloqueo: 'no tiene ninguna jugada posible',
+    repeticion: 'la misma posición se ha repetido tres veces', cuarenta: 'han pasado 40 jugadas de cada uno sin comer ni mover una ficha',
+    acuerdo: 'de acuerdo entre los dos'
+};
+function terminar(acuerdo) {
+    const r = acuerdo ? { ganador: null, motivo: 'acuerdo' } : partida.resultado;
+    gameState = 'fin';
+    parar();
+    musicaFondo.parar();
+    let titulo, detalle;
+    const perdedor = r.ganador ? Damas.rival(r.ganador) : null;
+    if (!r.ganador) { titulo = '🤝 TABLAS'; detalle = 'Tablas: ' + MOTIVO[r.motivo] + '.'; sonar.tablas(); }
+    else if (modo === 'maquina') {
+        const yo = r.ganador === humano;
+        titulo = yo ? '🏆 ¡HAS GANADO!' : 'Ha ganado la máquina';
+        detalle = (yo ? 'La máquina ' : 'Tu lado ') + MOTIVO[r.motivo] + '.';
+        if (yo) sonar.gana(); else sonar.pierde();
+    } else {
+        titulo = '🏆 GANAN LAS ' + NOMBRE[r.ganador].toUpperCase();
+        detalle = 'Las ' + NOMBRE[perdedor] + ' ' + (r.motivo === 'sinFichas' ? 'se han quedado sin fichas.' : 'no tienen ninguna jugada posible.');
+        sonar.gana();
+    }
+    /* Estadísticas */
+    if (modo === 'maquina') {
+        const s = est.maquina[ajustes.dif];
+        if (!r.ganador) { s.t++; est.racha = 0; }
+        else if (r.ganador === humano) { s.g++; est.racha++; est.mejorRacha = Math.max(est.mejorRacha, est.racha); }
+        else { s.p++; est.racha = 0; }
+        detalle += ' Máquina: ' + ETIQUETA[ajustes.dif] + '.';
+        if (r.ganador === humano && est.racha > 1) detalle += ' ¡Llevas ' + est.racha + ' seguidas!';
+    } else if (modo === 'dos') {
+        if (!r.ganador) est.dos.t++; else est.dos[r.ganador === 'N' ? 'n' : 'b']++;
+    }
+    guardarEst();
+    $('finTitulo').textContent = titulo;
+    $('finDetalle').textContent = detalle;
+    setTimeout(() => { if (gameState === 'fin') EST.abrir('capaFin'); }, 700);
+    pintar();
+}
+
+/* ==========================================================
+   PROBLEMAS
+   ========================================================== */
+function empezarProblema(id) {
+    const pr = PROBLEMAS.find(p => p.id === id);
+    if (!pr) return;
+    modo = 'problema';
+    const pos0 = Problemas.aPosicion(pr);
+    problema = { pr, pos0, quedan: pr.objetivo.jugadas, resuelto: false, fallado: false, motivoFallo: null };
+    partida = Damas.crear({ pos: pos0 });
+    girado = pr.turno === 'B';
+    entrarEnPartida();
+    $('enunciado').textContent = 'Problema ' + pr.id + ' de ' + PROBLEMAS.length + ' · ' + pr.texto + ' Juegas con ' + NOMBRE[pr.turno] + '.';
+    $('botonesProblema').hidden = false;
+    $('btnSiguiente').hidden = true;
+    $('btnSolucion').hidden = false;
+    decir(pr.titulo);
+    autoSeleccion();
+}
+function trasJugadaProblema(j) {
+    const P = problema, o = P.pr.objetivo, yo = P.pr.turno;
+    if (partida.pos.turno === yo) {
+        /* Ha contestado el rival con la defensa que lo evita */
+        if (P.motivoFallo) return problemaFallado(P.motivoFallo);
+        /* Ha contestado el rival: ¿ya está? */
+        if (Problemas.cumplido(P.pos0, partida.pos, yo, o)) return problemaResuelto();
+        if (P.quedan <= 0) return problemaFallado('Se acabaron las jugadas.');
+        pintarEstado(); autoSeleccion();
+        return;
+    }
+    /* Ha jugado la persona */
+    P.quedan--;
+    if (o.tipo === 'come') return j.comidas.length >= o.cuantas ? problemaResuelto() : problemaFallado('Esa captura se lleva ' + j.comidas.length + '. Había otra mejor.');
+    if (!Damas.jugadas(partida.pos).length) return problemaResuelto();
+    respuestaRival();
+}
+/* La contesta el rival del problema. Si hay respuesta que lo evita, la
+   juega y el problema queda fallado al acabar la animación */
+function respuestaRival() {
+    const P = problema, o = P.pr.objetivo, yo = P.pr.turno;
+    pensando = true; pintarEstado();
+    clearTimeout(timerIA);
+    timerIA = setTimeout(() => {
+        if (gameState !== 'playing') return;
+        pensando = false;
+        const defensa = Problemas.resiste(P.pos0, partida.pos, yo, o, P.quedan);
+        if (defensa) { P.motivoFallo = 'Con esa jugada el rival se libra.'; hacer(defensa); return; }
+        hacer(Problemas.defensa(P.pos0, partida.pos, yo, o, P.quedan));
+    }, 450);
+}
+function problemaResuelto() {
+    problema.resuelto = true;
+    if (!est.problemas.includes(problema.pr.id)) { est.problemas.push(problema.pr.id); guardarEst(); }
+    sonar.gana();
+    decir('🏆 ¡Resuelto!');
+    $('btnSiguiente').hidden = !PROBLEMAS.some(p => p.id === problema.pr.id + 1);
+    $('btnSolucion').hidden = true;
+    sel = null; pista = null;
+}
+function problemaFallado(txt) {
+    if (problema.fallado) return;
+    problema.fallado = true;
+    sonar.pierde();
+    decir('Casi… ' + txt + ' Prueba otra vez.', true);
+    sel = null;
+}
+function pintarListaProblemas() {
+    $('resueltos').textContent = 'Resueltos: ' + est.problemas.length + ' de ' + PROBLEMAS.length + '.';
+    $('listaProblemas').innerHTML = PROBLEMAS.map(p =>
+        '<button class="secundario" type="button" data-id="' + p.id + '"><span class="num' + (est.problemas.includes(p.id) ? ' hecho' : '') + '">' +
+        (est.problemas.includes(p.id) ? '✓ ' : '') + p.id + '</span><span class="que">' + p.titulo.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</span></button>').join('');
+}
+
+/* ==========================================================
+   PARTIDA, PAUSA Y MENÚ
+   ========================================================== */
+function empezarPartida() {
+    modo = ajustes.modo;
+    humano = ajustes.color;
+    girado = modo === 'maquina' && humano === 'B';
+    partida = Damas.crear();
+    problema = null;
+    entrarEnPartida();
+    $('enunciado').textContent = modo === 'maquina' ? 'Contra la máquina (' + ETIQUETA[ajustes.dif] + '). Juegas con ' + NOMBRE[humano] + '.' : 'Dos jugadores: las negras abajo.';
+    $('botonesProblema').hidden = true;
+    siguienteTurno();
+}
+function entrarEnPartida() {
+    parar();
+    clearTimeout(timerIA); pensando = false;
+    ['capaFin', 'capaPausa', 'capaProblemas', 'capaEstadisticas', 'capaAyuda'].forEach(EST.cerrar);
+    sel = null; anim = null; ultima = null; pista = null; cursor = null;
+    EST.mostrar('pJuego');
+    gameState = 'playing';
+    medir();
+    pintarBarra();
+    musicaFondo.arrancar();
+    arrancar();
+}
+function pauseGame() {
+    if (gameState !== 'playing') return;
+    gameState = 'paused';
+    parar();
+    /* Lo que estuviera pensando la máquina se descarta y se vuelve a
+       pensar al seguir (reanudar) */
+    clearTimeout(timerIA);
+    pensando = false;
+    musicaFondo.parar();
+    $('btnTablas').hidden = modo !== 'dos';
+    EST.abrir('capaPausa');
+}
+function reanudar() {
+    if (gameState !== 'paused') return;
+    EST.cerrar('capaPausa');
+    gameState = 'playing';
+    musicaFondo.arrancar();
+    /* Si le tocaba a la máquina (o al rival del problema) cuando se pausó,
+       vuelve a pensar: su temporizador se canceló al pausar */
+    if (!anim && partida && !partida.resultado) {
+        if (modo === 'maquina' && partida.pos.turno !== humano) turnoMaquina();
+        else if (modo === 'problema' && !problema.resuelto && !problema.fallado && partida.pos.turno !== problema.pr.turno) respuestaRival();
+    }
+    pintarEstado();
+    arrancar();
+}
+function volverAlMenu() {
+    parar();
+    clearTimeout(timerIA); pensando = false;
+    gameState = 'menu';
+    musicaFondo.parar();
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    EST.mostrar('pMenu');
+}
+
+/* ---------- Bucle: animaciones y los aros que laten ---------- */
+let ultimoT = 0;
+function fotograma(ahora) {
+    bucleId = null;
+    const dt = Math.min(0.05, (ahora - ultimoT) / 1000 || 0);
+    ultimoT = ahora;
+    if (gameState !== 'playing' && gameState !== 'fin') return;
+    if (anim) { anim.t += dt; if (anim.t >= anim.paso * (anim.j.camino.length - 1)) finAnimacion(); }
+    pintar();
+    if (gameState === 'playing') bucleId = requestAnimationFrame(fotograma);
+}
+function arrancar() { if (bucleId === null) { ultimoT = performance.now(); bucleId = requestAnimationFrame(fotograma); } }
+function parar() { if (bucleId !== null) { cancelAnimationFrame(bucleId); bucleId = null; } }
+
+/* ---------- Entrada ---------- */
+let pulsado = -1;
+lienzo.addEventListener('pointerdown', (ev) => {
+    const r = lienzo.getBoundingClientRect();
+    const i = casillaEn(ev.clientX - r.left, ev.clientY - r.top);
+    pulsado = i;
+    cursor = null;
+    tocar(i);
+});
+/* Arrastrar: soltar en otra casilla cuenta como tocarla */
+lienzo.addEventListener('pointerup', (ev) => {
+    const r = lienzo.getBoundingClientRect();
+    const i = casillaEn(ev.clientX - r.left, ev.clientY - r.top);
+    if (i >= 0 && i !== pulsado && sel) tocar(i);
+    pulsado = -1;
+});
+lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+lienzo.addEventListener('keydown', (ev) => {
+    if (gameState !== 'playing') return;
+    const mov = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }[ev.key];
+    if (mov) {
+        ev.preventDefault();
+        if (cursor === null) cursor = girado ? 2 * 8 + 3 : 5 * 8 + 2;
+        let f = cursor >> 3, c = cursor & 7;
+        const [df, dc] = girado ? [-mov[0], -mov[1]] : mov;
+        f = Math.max(0, Math.min(7, f + df)); c = Math.max(0, Math.min(7, c + dc));
+        cursor = f * 8 + c;
+    } else if ((ev.key === 'Enter' || ev.key === ' ') && cursor !== null) { ev.preventDefault(); tocar(cursor); }
+});
+lienzo.addEventListener('focus', () => pintar());
+document.addEventListener('keydown', (ev) => {
+    if (ev.target instanceof HTMLInputElement) return;
+    if (ev.key === 'Escape') {
+        if ($('pJuego').classList.contains('activa')) {
+            if (sel && gameState === 'playing') { sel = null; pintarEstado(); return; }
+            if (gameState === 'paused') reanudar(); else pauseGame();
+        } else ['capaAyuda', 'capaProblemas', 'capaEstadisticas'].forEach(EST.cerrar);
+    } else if ((ev.key === 'p' || ev.key === 'P') && $('pJuego').classList.contains('activa')) { if (gameState === 'paused') reanudar(); else pauseGame(); }
+});
+
+/* ---------- Menú y capas ---------- */
+const btn = (id, fn) => $(id).addEventListener('click', fn);
+function pintarMenu() { $('grupoMaquina').style.display = ajustes.modo === 'maquina' ? '' : 'none'; }
+EST.grupo('grpModo', (v) => { ajustes.modo = v; guardarAjustes(); pintarMenu(); });
+EST.grupo('grpDif', (v) => { ajustes.dif = v; guardarAjustes(); });
+EST.grupo('grpColor', (v) => { ajustes.color = v; guardarAjustes(); });
+EST.elegir('grpModo', ajustes.modo);
+EST.elegir('grpDif', ajustes.dif);
+EST.elegir('grpColor', ajustes.color);
+pintarMenu();
+btn('btnJugar', empezarPartida);
+btn('btnProblemas', () => { pintarListaProblemas(); EST.abrir('capaProblemas'); });
+btn('btnCerrarProblemas', () => EST.cerrar('capaProblemas'));
+$('listaProblemas').addEventListener('click', (ev) => { const b = ev.target.closest('button[data-id]'); if (b) empezarProblema(+b.dataset.id); });
+function pintarEstadisticas() {
+    const fila = (n, s) => { const j = s.g + s.p + s.t; return '<tr><td>' + ETIQUETA[n] + '</td><td>' + j + '</td><td>' + s.g + '</td><td>' + s.p + '</td><td>' + s.t + '</td><td>' + (j ? Math.round(100 * s.g / j) + ' %' : '—') + '</td></tr>'; };
+    const d = est.dos, jd = d.n + d.b + d.t;
+    $('tablaEstadisticas').innerHTML =
+        '<table class="tabla-est"><thead><tr><th>Contra la máquina</th><th>Jug.</th><th>Gan.</th><th>Perd.</th><th>Tablas</th><th>%</th></tr></thead><tbody>' +
+        NIVELES.map(n => fila(n, est.maquina[n])).join('') + '</tbody></table>' +
+        '<p style="font-size:0.85rem">Racha de victorias: <b>' + est.racha + '</b> · la mejor: <b>' + est.mejorRacha + '</b></p>' +
+        '<table class="tabla-est"><thead><tr><th>Dos jugadores</th><th>Jug.</th><th>Negras</th><th>Blancas</th><th>Tablas</th></tr></thead><tbody><tr><td>Partidas</td><td>' + jd + '</td><td>' + d.n + '</td><td>' + d.b + '</td><td>' + d.t + '</td></tr></tbody></table>' +
+        '<p style="font-size:0.85rem">Problemas resueltos: <b>' + est.problemas.length + '</b> de ' + PROBLEMAS.length + '</p>';
+}
+btn('btnEstadisticas', () => { pintarEstadisticas(); EST.abrir('capaEstadisticas'); });
+btn('btnCerrarEst', () => EST.cerrar('capaEstadisticas'));
+btn('btnBorrarEst', () => { if (!confirm('¿Borrar todas las estadísticas?')) return; est = estVacias(); guardarEst(); pintarEstadisticas(); });
+btn('btnInstructions', () => EST.abrir('capaAyuda'));
+btn('closeInstructions', () => EST.cerrar('capaAyuda'));
+btn('btnRestart', () => { if (modo === 'problema') empezarProblema(problema.pr.id); else empezarPartida(); });
+btn('btnMenu', volverAlMenu);
+btn('btnResume', reanudar);
+btn('btnPauseToMenu', volverAlMenu);
+btn('btnTablas', () => { if (modo !== 'dos' || !partida) return; EST.cerrar('capaPausa'); gameState = 'playing'; terminar(true); });
+btn('pauseTouchBtn', () => { if (gameState === 'paused') reanudar(); else pauseGame(); });
+btn('btnReintentar', () => empezarProblema(problema.pr.id));
+btn('btnSolucion', () => {
+    if (!problema || problema.resuelto) return;
+    if (problema.fallado || partida.historial.length) { empezarProblema(problema.pr.id); }
+    const s = problema.pr.solucion;
+    pista = { de: Problemas.aIndice(s.de), a: Problemas.aIndice(s.a) };
+    decir('💡 Mueve la ficha marcada en azul a la casilla del aro');
+});
+btn('btnSiguiente', () => empezarProblema(problema.pr.id + 1));
+
+window.addEventListener('resize', () => medir());
+window.addEventListener('blur', pauseGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+EST.iniciar({ claveAudio: 'damasAudio', alCambiarMusica });
+
+/* Para las pruebas */
+window.__damas = { partida: () => partida, estado: () => gameState, modo: () => modo, humano: () => humano, girado: () => girado, sel: () => sel,
+    problema: () => problema,
+    /* Pone una posición (para probar comer obligado, coronar, finales…) */
+    poner: (op) => { partida = Damas.crear({ pos: Damas.desde(op) }); sel = null; ultima = null; anim = null; clearTimeout(timerIA); pensando = false; pintarBarra(); if (partida.resultado) terminar(); else siguienteTurno(); }, centro: (i) => centro(i), animando: () => !!anim, pensando: () => pensando, bucle: () => bucleId !== null, est: () => est, tocar };
+
+</script>
+</body>
+</html>
