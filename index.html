@@ -163,6 +163,101 @@
     .pista-fav.aviso { color: #ffd76a; }
     #rejillaFav:empty { display: none; }
 
+    /* ---------- Buscador ---------- */
+    .busca { position: relative; margin: 0 0 18px; }
+    /* 16 px como mínimo: con menos, Safari en iPhone amplía la página al
+       tocar la caja y luego no la devuelve a su tamaño */
+    .busca input {
+        width: 100%; box-sizing: border-box; font: inherit; font-size: 16px;
+        padding: 12px 44px 12px 42px; border-radius: 12px;
+        border: 1px solid var(--borde); background: var(--tarjeta); color: var(--texto);
+        -webkit-appearance: none; appearance: none;
+    }
+    .busca input:focus { outline: none; border-color: var(--acento); box-shadow: 0 0 0 3px rgba(0, 255, 200, 0.18); }
+    .busca input::placeholder { color: var(--apagado); }
+    /* La ✕ propia de Chrome/Safari se esconde: cada uno la pinta distinta y
+       en Firefox no sale. Se pone una igual para todos */
+    .busca input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+    .busca .lupa { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); pointer-events: none; opacity: 0.75; }
+    .busca .borrar {
+        position: absolute; right: 3px; top: 50%; transform: translateY(-50%);
+        width: 40px; height: 40px; padding: 0; border: none; border-radius: 50%;
+        background: transparent; color: var(--apagado); font-size: 1.1rem;
+    }
+    .busca .borrar[hidden] { display: none; }
+    #resultados[hidden] { display: none; }
+    .cuenta-busca { color: var(--apagado); font-size: 0.82rem; margin: -8px 0 10px; }
+    /* auto-fill y no auto-fit: con un solo resultado la tarjeta no se estira
+       a todo el ancho */
+    #rejillaBusca { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .juego .grupo { font-size: 0.7rem; color: var(--apagado); margin-top: -2px; }
+
+    /* ---------- Botón de capturas (a la izquierda; la ☆ va a la derecha) ---------- */
+    .ver {
+        position: absolute; top: 4px; left: 4px;
+        width: 38px; height: 38px; padding: 0;
+        border: none; border-radius: 50%; background: transparent;
+        font-size: 1.1rem; line-height: 1; opacity: 0.8;
+        display: flex; align-items: center; justify-content: center;
+    }
+    @media (hover: hover) { .ver:hover { background: rgba(255, 255, 255, 0.1); opacity: 1; } }
+
+    /* ---------- Carrusel de capturas ---------- */
+    .carrusel {
+        position: fixed; inset: 0; z-index: 60;
+        display: flex; align-items: center; justify-content: center;
+        /* calc y no max(): max() SUSTITUYE el relleno, y Chrome en Android
+           da 0 en env() aunque haya muesca */
+        padding: calc(env(safe-area-inset-top) + 10px) 10px calc(env(safe-area-inset-bottom) + 10px);
+        background: rgba(5, 4, 20, 0.85);
+    }
+    .carrusel[hidden] { display: none; }
+    .carrusel .caja {
+        position: relative; width: min(440px, 100%); max-height: 100%;
+        display: flex; flex-direction: column; align-items: center; gap: 8px;
+        background: #1b1546; border: 1px solid var(--acento); border-radius: 18px;
+        padding: 12px 10px 12px; box-shadow: 0 0 40px rgba(0, 255, 200, 0.25);
+    }
+    .carrusel.apaisado .caja { width: min(760px, 100%); }
+    .carrusel h2 { margin: 2px 48px 0; font-size: 1.1rem; text-align: center; }
+    .carrusel .cerrar {
+        position: absolute; top: 4px; right: 4px; width: 42px; height: 42px; padding: 0;
+        border: none; border-radius: 50%; background: transparent; color: var(--texto); font-size: 1.4rem;
+    }
+    /* Ventana: se mide contra svh para que quepa siempre con la barra del
+       navegador a la vista */
+    .carrusel .ventana {
+        position: relative; width: 100%; overflow: hidden; border-radius: 10px;
+        height: min(calc(100svh - 190px), 620px);
+        touch-action: pan-y; user-select: none; -webkit-user-select: none;
+    }
+    .carrusel.apaisado .ventana { height: auto; aspect-ratio: 839 / 412; max-height: calc(100svh - 190px); }
+    .carrusel .pista { display: flex; height: 100%; transition: transform 0.35s ease; }
+    .carrusel .pista.arrastrando { transition: none; }
+    .carrusel .diapo { flex: 0 0 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .carrusel .diapo img { max-width: 100%; max-height: 100%; border-radius: 8px; -webkit-user-drag: none; pointer-events: none; }
+    .carrusel .flecha {
+        position: absolute; top: 50%; transform: translateY(-50%);
+        width: 42px; height: 42px; padding: 0; border: none; border-radius: 50%;
+        background: rgba(0, 0, 0, 0.45); color: #fff; font-size: 1.3rem;
+    }
+    .carrusel .flecha.ant { left: 4px; }
+    .carrusel .flecha.sig { right: 4px; }
+    .carrusel .fallo { color: var(--apagado); font-size: 0.9rem; text-align: center; padding: 20px; }
+    .carrusel .mandos { display: flex; align-items: center; gap: 10px; }
+    .carrusel .puntos { display: flex; gap: 2px; }
+    /* Punto pequeño a la vista pero con 28 px de zona de toque */
+    .carrusel .punto { width: 28px; height: 28px; padding: 0; border: none; background: transparent; display: flex; align-items: center; justify-content: center; }
+    .carrusel .punto::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.3); }
+    .carrusel .punto[aria-current="true"]::before { background: var(--acento); }
+    .carrusel .parar { width: 38px; height: 38px; padding: 0; border: none; border-radius: 50%; background: transparent; color: var(--texto); font-size: 1rem; }
+    .carrusel .jugar {
+        display: inline-block; padding: 9px 22px; border-radius: 10px;
+        border: 1px solid var(--acento); background: rgba(0, 255, 200, 0.12); color: var(--acento);
+        font-weight: 700; text-decoration: none;
+    }
+    @media (prefers-reduced-motion: reduce) { .carrusel .pista { transition: none; } }
+
     /* ---------- Aviso de novedades ---------- */
     .novedades {
         position: fixed; inset: 0; z-index: 50;
@@ -313,6 +408,16 @@
 </div>
 
 <main>
+    <div class="busca" role="search">
+        <span class="lupa" aria-hidden="true">🔎</span>
+        <input type="search" id="busca" placeholder="Buscar juego…" aria-label="Buscar juego"
+               autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        <button type="button" class="borrar" id="borraBusca" aria-label="Borrar la búsqueda" hidden>✕</button>
+    </div>
+    <div id="resultados" hidden>
+        <p class="cuenta-busca" id="cuentaBusca" aria-live="polite"></p>
+        <div class="rejilla" id="rejillaBusca"></div>
+    </div>
     <h2 class="seccion" id="tituloFav">⭐ Favoritos</h2>
     <div class="rejilla" id="rejillaFav"></div>
     <p class="pista-fav" id="pistaFav" aria-live="polite"></p>
@@ -334,6 +439,23 @@
         <div class="estado" id="estado">Comprobando…</div>
     </section>
 </main>
+
+<div class="carrusel" id="carrusel" role="dialog" aria-modal="true" aria-labelledby="carruselTitulo" hidden>
+    <div class="caja">
+        <button class="cerrar" id="cerrarCarrusel" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="carruselTitulo"></h2>
+        <div class="ventana" id="carruselVentana" aria-roledescription="carrusel">
+            <div class="pista" id="carruselPista"></div>
+            <button class="flecha ant" id="carruselAnt" type="button" aria-label="Captura anterior">‹</button>
+            <button class="flecha sig" id="carruselSig" type="button" aria-label="Captura siguiente">›</button>
+        </div>
+        <div class="mandos">
+            <button class="parar" id="carruselParar" type="button"></button>
+            <div class="puntos" id="carruselPuntos"></div>
+        </div>
+        <a class="jugar" id="carruselJugar" href="#">▶ JUGAR</a>
+    </div>
+</div>
 
 <div class="novedades" id="novedades" role="dialog" aria-modal="true" aria-labelledby="novedadesTitulo" hidden>
     <div class="caja">
@@ -464,6 +586,51 @@
                    'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] }
     ];
 
+    /* CAPTURAS: GENERADO por _fuentes/portal/indice-capturas.js (no editar a mano)
+       archivo → { n: cuántas, v: huella (cambia la URL al rehacerlas: el
+       service worker sirve las imágenes de la caché y sin esto se verían
+       las viejas), a: 1 si son en apaisado } */
+    var CAPTURAS = {
+        'webs/PacMan.html': { n: 6, v: '381d9b35' },
+        'webs/SpaceInvaders.html': { n: 6, v: 'bf395eb4' },
+        'webs/ahorcado.html': { n: 6, v: '44cd8769' },
+        'webs/arkanoid.html': { n: 6, v: 'afb90a47' },
+        'webs/carreraCoches.html': { n: 6, v: '309a41ed' },
+        'webs/cazafantasmas.html': { n: 6, v: '1a97f202' },
+        'webs/conecta4.html': { n: 6, v: 'cf9b7e6c' },
+        'webs/crucigrama.html': { n: 6, v: '9ac7ed42' },
+        'webs/damas.html': { n: 6, v: '1213cc01' },
+        'webs/flota.html': { n: 6, v: '99ae4a77' },
+        'webs/mahjong.html': { n: 6, v: '9b8fef39' },
+        'webs/mayores-calculo.html': { n: 6, v: '71f59d44' },
+        'webs/mayores-clasificar.html': { n: 6, v: '122cb535' },
+        'webs/mayores-colores.html': { n: 6, v: '59a93380' },
+        'webs/mayores-compra.html': { n: 6, v: '4fb0bdfc' },
+        'webs/mayores-falta.html': { n: 6, v: '5b8e5cea' },
+        'webs/mayores-fotos.html': { n: 6, v: '0d9f9ff3' },
+        'webs/mayores-mahjong.html': { n: 6, v: '903fc902' },
+        'webs/mayores-monedas.html': { n: 6, v: '058fd2f8' },
+        'webs/mayores-oido.html': { n: 6, v: '4ac1a92e' },
+        'webs/mayores-orden.html': { n: 6, v: '746c24c0' },
+        'webs/mayores-puzle.html': { n: 6, v: '34b7fd06' },
+        'webs/mayores-refranes.html': { n: 6, v: '184378c7' },
+        'webs/memory.html': { n: 6, v: '5f66feae' },
+        'webs/penaltis.html': { n: 6, v: 'd9761d5f' },
+        'webs/pinball.html': { n: 6, v: '30571a41' },
+        'webs/puzle.html': { n: 6, v: '7e7bd80d' },
+        'webs/quiz.html': { n: 6, v: '9d8aa513' },
+        'webs/ranas.html': { n: 6, v: 'dae57c6e' },
+        'webs/serpiente.html': { n: 6, v: '9624bca5' },
+        'webs/sopa.html': { n: 6, v: '129eb863' },
+        'webs/sudoku.html': { n: 6, v: '712030c8' },
+        'webs/super-pang.html': { n: 6, v: 'c020449b', a: 1 },
+        'webs/tanques.html': { n: 6, v: '4a353bde' },
+        'webs/tetris.html': { n: 6, v: '201d2376' },
+        'webs/tirachinas.html': { n: 6, v: 'b7324792', a: 1 },
+        'webs/worms.html': { n: 6, v: '1a3e66f0', a: 1 }
+    };
+    /* FIN CAPTURAS */
+
     /* La portada se identifica sola en lugar de llevar su nombre escrito a
        mano: así, si el archivo se renombra (juegos.html -> index.html) o se
        mueve de carpeta, la lista de descarga sigue siendo correcta.
@@ -547,7 +714,7 @@
 
     var estrellas = {};   // archivo → botones de estrella (el de su sección y el de favoritos)
 
-    function tarjeta(j) {
+    function tarjeta(j, conGrupo) {
         /* Enlaces reales en lugar de window.open: se pueden abrir con el
            teclado, con el botón central del ratón, y sobre todo no los
            bloquea el navegador móvil como sí ocurre con las ventanas nuevas.
@@ -580,6 +747,14 @@
 
         a.appendChild(ico);
         a.appendChild(nom);
+        /* En el buscador se dice la sección: hay nombres repetidos (Mahjong
+           está en Ingenio y en Para los mayores) */
+        if (conGrupo) {
+            var gr = document.createElement('div');
+            gr.className = 'grupo';
+            gr.textContent = j.grupo || 'Juegos';
+            a.appendChild(gr);
+        }
 
         var est = document.createElement('button');
         est.type = 'button';
@@ -590,6 +765,15 @@
 
         caja.appendChild(a);
         caja.appendChild(est);
+        if (CAPTURAS[j.archivo]) {
+            var ver = document.createElement('button');
+            ver.type = 'button';
+            ver.className = 'ver';
+            ver.textContent = '🖼️';
+            ver.setAttribute('aria-label', 'Ver capturas de ' + j.nombre);
+            ver.addEventListener('click', function () { abrirCarrusel(j, ver); });
+            caja.appendChild(ver);
+        }
         return caja;
     }
     function pintarEstrella(b, j) {
@@ -627,10 +811,198 @@
         pintarFavoritos();
     }
 
+    /* ------------------------------------------------------------------
+       CARRUSEL DE CAPTURAS
+       6 pantallazos por juego (los saca _fuentes/portal/capturas.js). Pasan
+       solos cada PASO ms y con el dedo; ⏸ los para (un carrusel que se
+       mueve solo tiene que poder pararse). Las imágenes se piden al abrir,
+       no al cargar la portada, y no entran en la descarga sin conexión.
+       ------------------------------------------------------------------ */
+    var PASO = 1500;
+    var capaCar = document.getElementById('carrusel');
+    var pistaCar = document.getElementById('carruselPista');
+    var puntosCar = document.getElementById('carruselPuntos');
+    var pararCar = document.getElementById('carruselParar');
+    var car = { j: null, i: 0, n: 0, timer: null, parado: false, origen: null };
+    function irA(i, manual) {
+        car.i = (i + car.n) % car.n;
+        pistaCar.style.transform = 'translateX(' + (-100 * car.i) + '%)';
+        [].forEach.call(puntosCar.children, function (p, k) { p.setAttribute('aria-current', String(k === car.i)); });
+        /* Al mover a mano, la cuenta vuelve a empezar: si no, a veces pasa
+           sola justo después del toque y parece que ha saltado dos */
+        if (manual) programar();
+    }
+    function programar() {
+        clearTimeout(car.timer);
+        if (!car.parado && !capaCar.hidden) car.timer = setTimeout(function () { irA(car.i + 1); programar(); }, PASO);
+    }
+    function pintarParar() {
+        /* ❚❚ y no ⏸: el emoji de pausa sale como una raya en algunos Android */
+        pararCar.textContent = car.parado ? '▶' : '❚❚';
+        pararCar.setAttribute('aria-label', car.parado ? 'Pasar las capturas solas' : 'Parar las capturas');
+    }
+    function abrirCarrusel(j, origen) {
+        var c = CAPTURAS[j.archivo];
+        if (!c) return;
+        car.j = j; car.n = c.n; car.i = 0; car.origen = origen;
+        /* Con «menos movimiento» activado en el sistema, empiezan paradas */
+        try { car.parado = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { car.parado = false; }
+        capaCar.classList.toggle('apaisado', !!c.a);
+        document.getElementById('carruselTitulo').textContent = j.icono + ' ' + j.nombre;
+        document.getElementById('carruselJugar').href = j.archivo;
+        var carpeta = 'capturas/' + j.archivo.replace(/^webs\//, '').replace(/\.html$/, '') + '/';
+        pistaCar.textContent = '';
+        puntosCar.textContent = '';
+        for (var k = 0; k < c.n; k++) {
+            var d = document.createElement('div');
+            d.className = 'diapo';
+            d.setAttribute('role', 'group');
+            d.setAttribute('aria-label', (k + 1) + ' de ' + c.n);
+            var img = document.createElement('img');
+            img.alt = 'Captura ' + (k + 1) + ' de ' + j.nombre;
+            img.decoding = 'async';
+            img.onerror = function () {
+                /* Sin conexión y sin haberlas visto antes no están en la
+                   caché: se dice en vez de dejar un hueco */
+                var f = document.createElement('div');
+                f.className = 'fallo';
+                f.textContent = 'No se ha podido cargar la captura. Sin conexión solo se ven las que ya se hayan visto antes.';
+                this.parentNode.replaceChild(f, this);
+            };
+            img.src = carpeta + (k + 1) + '.webp?v=' + c.v;
+            d.appendChild(img);
+            pistaCar.appendChild(d);
+            var p = document.createElement('button');
+            p.type = 'button';
+            p.className = 'punto';
+            p.setAttribute('aria-label', 'Captura ' + (k + 1));
+            p.addEventListener('click', (function (k) { return function () { irA(k, true); }; })(k));
+            puntosCar.appendChild(p);
+        }
+        pintarParar();
+        capaCar.hidden = false;
+        pistaCar.classList.add('arrastrando');
+        irA(0);
+        pistaCar.offsetWidth;            // sin animación al abrir
+        pistaCar.classList.remove('arrastrando');
+        document.getElementById('cerrarCarrusel').focus();
+        programar();
+    }
+    function cerrarCarrusel() {
+        if (capaCar.hidden) return;
+        clearTimeout(car.timer);
+        capaCar.hidden = true;
+        pistaCar.textContent = '';      // fuera las imágenes: no siguen ocupando memoria
+        if (car.origen) car.origen.focus();
+    }
+    document.getElementById('cerrarCarrusel').addEventListener('click', cerrarCarrusel);
+    document.getElementById('carruselAnt').addEventListener('click', function () { irA(car.i - 1, true); });
+    document.getElementById('carruselSig').addEventListener('click', function () { irA(car.i + 1, true); });
+    pararCar.addEventListener('click', function () { car.parado = !car.parado; pintarParar(); programar(); });
+    capaCar.addEventListener('click', function (ev) { if (ev.target === capaCar) cerrarCarrusel(); });
+    document.addEventListener('keydown', function (ev) {
+        if (capaCar.hidden) return;
+        if (ev.key === 'Escape') { ev.stopPropagation(); cerrarCarrusel(); }
+        else if (ev.key === 'ArrowLeft') irA(car.i - 1, true);
+        else if (ev.key === 'ArrowRight') irA(car.i + 1, true);
+        else if (ev.key === 'Tab') {
+            /* El foco no se escapa a la portada de detrás */
+            var f = [].filter.call(capaCar.querySelectorAll('button, a'), function (e) { return e.offsetParent !== null; });
+            var pri = f[0], ult = f[f.length - 1];
+            if (ev.shiftKey && document.activeElement === pri) { ev.preventDefault(); ult.focus(); }
+            else if (!ev.shiftKey && document.activeElement === ult) { ev.preventDefault(); pri.focus(); }
+        }
+    });
+    /* En segundo plano no se mueve */
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearTimeout(car.timer); else programar(); });
+    /* Deslizar con el dedo: la pista sigue al dedo y al soltar pasa si se
+       ha movido más de un 15 % del ancho. touch-action: pan-y deja el
+       desplazamiento vertical al navegador */
+    (function () {
+        var ventana = document.getElementById('carruselVentana');
+        var x0 = null, y0 = 0, dx = 0, id = null;
+        ventana.addEventListener('pointerdown', function (ev) {
+            if (ev.target.closest('button')) return;
+            x0 = ev.clientX; y0 = ev.clientY; dx = 0; id = ev.pointerId;
+            clearTimeout(car.timer);       // mientras se toca, quieto
+            pistaCar.classList.add('arrastrando');
+            try { ventana.setPointerCapture(id); } catch (e) { }
+        });
+        ventana.addEventListener('pointermove', function (ev) {
+            if (x0 === null || ev.pointerId !== id) return;
+            dx = ev.clientX - x0;
+            pistaCar.style.transform = 'translateX(calc(' + (-100 * car.i) + '% + ' + dx + 'px))';
+        });
+        function soltar(ev) {
+            if (x0 === null || ev.pointerId !== id) return;
+            pistaCar.classList.remove('arrastrando');
+            var umbral = ventana.clientWidth * 0.15;
+            x0 = null;
+            if (dx < -umbral) irA(car.i + 1, true);
+            else if (dx > umbral) irA(car.i - 1, true);
+            else irA(car.i, true);
+        }
+        ventana.addEventListener('pointerup', soltar);
+        ventana.addEventListener('pointercancel', soltar);
+    })();
+
     JUEGOS.forEach(function (j) {
         rejillaDe(j.grupo || 'Juegos').appendChild(tarjeta(j));
     });
     pintarFavoritos();
+
+    /* ------------------------------------------------------------------
+       BUSCADOR
+       Busca el texto en cualquier parte del nombre, sin distinguir
+       mayúsculas ni tildes («pang» encuentra «Súper Pang», «sudoku» y
+       «SUDOKU» lo mismo). Resultados en orden alfabético.
+       ------------------------------------------------------------------ */
+    var busca = document.getElementById('busca');
+    var borraBusca = document.getElementById('borraBusca');
+    var resultados = document.getElementById('resultados');
+    var rejillaBusca = document.getElementById('rejillaBusca');
+    var cuentaBusca = document.getElementById('cuentaBusca');
+    function sinTildes(t) {
+        t = String(t).toLowerCase();
+        /* normalize existe en todos los navegadores actuales; si faltara, se
+           busca igual pero distinguiendo tildes */
+        try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) { }
+        return t;
+    }
+    var ordenAlfabetico = JUEGOS.slice().sort(function (a, b) {
+        return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }) ||
+               String(a.grupo).localeCompare(String(b.grupo), 'es');
+    });
+    var encontrados = [];
+    function buscar() {
+        var q = sinTildes(busca.value.trim());
+        borraBusca.hidden = !busca.value;
+        /* Igual que en favoritos: fuera las estrellas de las tarjetas que se
+           van a borrar, o se seguirían repintando botones que ya no están */
+        Object.keys(estrellas).forEach(function (k) {
+            estrellas[k] = estrellas[k].filter(function (b) { return !rejillaBusca.contains(b); });
+        });
+        rejillaBusca.textContent = '';
+        if (!q) { encontrados = []; resultados.hidden = true; cuentaBusca.textContent = ''; return; }
+        encontrados = ordenAlfabetico.filter(function (j) { return sinTildes(j.nombre).indexOf(q) >= 0; });
+        encontrados.forEach(function (j) { rejillaBusca.appendChild(tarjeta(j, true)); });
+        resultados.hidden = false;
+        /* textContent: lo escrito no pasa nunca por innerHTML */
+        cuentaBusca.textContent = encontrados.length
+            ? (encontrados.length === 1 ? '1 juego' : encontrados.length + ' juegos') + ' con «' + busca.value.trim() + '»'
+            : 'Ningún juego con «' + busca.value.trim() + '».';
+    }
+    busca.addEventListener('input', buscar);
+    busca.addEventListener('keydown', function (ev) {
+        /* Intro con un solo resultado lo abre; Esc borra */
+        if (ev.key === 'Enter' && encontrados.length === 1) { location.href = encontrados[0].archivo; }
+        else if (ev.key === 'Escape' && busca.value) { ev.preventDefault(); busca.value = ''; buscar(); }
+    });
+    borraBusca.addEventListener('click', function () { busca.value = ''; buscar(); busca.focus(); });
+    /* Al volver atrás desde un juego, algunos navegadores rellenan la caja
+       con lo que había: se busca con eso */
+    window.addEventListener('pageshow', buscar);
+    buscar();
 
     /* ------------------------------------------------------------------
        NOVEDADES
