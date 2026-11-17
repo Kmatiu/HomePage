@@ -1320,6 +1320,7 @@ const Worms = (() => {
     const RETIRADA = 3;                   // s para alejarse tras disparar
     const CAIDA_SEGURA = 310;             // px/s: más rápido al aterrizar, daño
     const ESPERA_MAX = 14;                // s: si nada se para, se fuerza el cambio de turno
+    const CALMA = 1;                      // s: retirada que se corta si todo está quieto
 
     /* Armas. tipo decide cómo se disparan; mun = munición por equipo
        (Infinity = sin límite). r y d: radio y daño máximo de la explosión */
@@ -1356,7 +1357,11 @@ const Worms = (() => {
         return l < 1e-6 ? { x: 0, y: -1 } : { x: sx / l, y: sy / l };
     }
     const libre = (t, x, y, r) => !normal(t, x, y, r);
-    const apoyado = (t, x, y, r) => { const n = normal(t, x, y + 1.5, r); return !!n && n.y < -0.45; };
+    const apoyado = (t, x, y, r) => { const n = normal(t, x, y + 1.5, r); return !!n && n.y < -0.2; };
+    /* Algo lo sujeta desde abajo, aunque sea una pared casi vertical: para
+       lo que YA está quieto (encajado). Si no, un gusano parado contra una
+       pared de 78° (normal -0,98, -0,20) ni caía ni contaba como quieto */
+    const sostenido = (t, x, y, r) => { const n = normal(t, x, y + 1.5, r); return !!n && n.y < -0.05; };
 
     /* Un paso de un cuerpo que rebota (gusanos lanzados, granadas, barriles,
        cajas, minas, dinamita). Devuelve la velocidad normal del choque más
@@ -1367,11 +1372,19 @@ const Worms = (() => {
         if (c.paracaidas && c.vy > 70) c.vy = 70;
         const n = Math.max(1, Math.ceil(Math.hypot(c.vx, c.vy) * h / 1.5)), hh = h / n;
         let impacto = 0;
+        const x0 = c.x, y0 = c.y;
         for (let k = 0; k < n; k++) {
             const nx = c.x + c.vx * hh, ny = c.y + c.vy * hh;
             const nr = normal(e.t, nx, ny, c.r);
             if (!nr) { c.x = nx; c.y = ny; continue; }
             const vn = c.vx * nr.x + c.vy * nr.y;
+            /* El destino toca tierra pero la velocidad va a lo largo de ella o
+               se aleja (pegado a una pared, cayendo junto a ella): se deja
+               pasar. Antes se paraba en seco sin moverse y se quedaba colgado
+               para siempre: ni quieto ni moviéndose, el cambio de turno
+               esperaba los 14 s de ESPERA_MAX y el gusano no podía andar ni
+               saltar (medido: 1 de cada 3 turnos) */
+            if (vn >= 0) { c.x = nx; c.y = ny; continue; }
             if (vn < 0) {
                 impacto = Math.max(impacto, -vn);
                 c.vx -= (1 + c.rebote) * vn * nr.x; c.vy -= (1 + c.rebote) * vn * nr.y;
@@ -1385,6 +1398,13 @@ const Worms = (() => {
             break;
         }
         if (Math.hypot(c.vx, c.vy) < 14 && apoyado(e.t, c.x, c.y, c.r)) { c.vx = 0; c.vy = 0; c.quieto = true; }
+        /* Encajado: no se ha movido en todo el paso y algo lo sostiene desde
+           abajo, aunque sea poco (sostenido: el mismo criterio que lo vuelve
+           a soltar, o parpadearía entre quieto y no quieto). Solo si va
+           despacio: en el paso de un rebote tampoco se mueve, y sin el
+           límite las granadas se paraban en el primer bote (medido: el
+           rambo pasó de 9 a 4 aciertos de 10 en llano) */
+        else if (Math.hypot(c.vx, c.vy) < 30 && Math.abs(c.x - x0) + Math.abs(c.y - y0) < 0.02 && sostenido(e.t, c.x, c.y, c.r)) { c.vx = 0; c.vy = 0; c.quieto = true; }
         return impacto;
     }
 
@@ -1769,7 +1789,13 @@ const Worms = (() => {
             if (e.turno.t <= 0) { e.turno.t = 0; e.estado = 'resolviendo'; e.turno.espera = 0; e.eventos.push({ tipo: 'tiempo' }); }
         } else if (e.estado === 'retirada') {
             e.turno.retirada -= h;
-            if (e.turno.retirada <= 0) { e.estado = 'resolviendo'; e.turno.espera = 0; }
+            /* Si ya ha estallado todo y el gusano no se mueve, no hace falta
+               agotar los segundos de retirada: con 1 s de calma basta. Antes
+               se esperaban siempre (3 s de retirada + lo que tardase todo en
+               pararse) y entre el ataque y el cambio de turno pasaban 8-10 s */
+            if ((mando.izq || mando.der) || !todoQuieto(e) || (g && !g.quieto)) e.turno.calma = 0;
+            else e.turno.calma = (e.turno.calma || 0) + h;
+            if (e.turno.retirada <= 0 || e.turno.calma >= CALMA) { e.estado = 'resolviendo'; e.turno.espera = 0; }
         }
         /* Andar */
         if (g && !g.muerto && puedeMover(e) && (mando.izq || mando.der) && !(mando.izq && mando.der)) andar(e, g, mando.izq ? -1 : 1, h);
@@ -1777,7 +1803,7 @@ const Worms = (() => {
         /* Gusanos que caen o salen volando */
         for (const o of e.gusanos) {
             if (o.muerto) continue;
-            if (o.quieto) { if (!apoyado(e.t, o.x, o.y, R)) o.quieto = false; else continue; }
+            if (o.quieto) { if (!sostenido(e.t, o.x, o.y, R)) o.quieto = false; else continue; }
             const imp = pasoCuerpo(e, o, h);
             if (imp > CAIDA_SEGURA && o.quieto !== undefined) {
                 herir(e, o, Math.min(40, (imp - CAIDA_SEGURA) / 6), null);
@@ -1814,7 +1840,7 @@ const Worms = (() => {
                 const imp = pasoCuerpo(e, c, h);
                 if (imp > 60 && c.clase === 'granada') e.eventos.push({ tipo: 'rebote', x: c.x, y: c.y });
                 if (c.clase === 'caja' && c.quieto) c.paracaidas = false;
-            } else if (!apoyado(e.t, c.x, c.y, c.r)) c.quieto = false;
+            } else if (!sostenido(e.t, c.x, c.y, c.r)) c.quieto = false;
             if (c.y - c.r > e.agua) {
                 e.cosas.splice(i, 1);
                 e.eventos.push({ tipo: 'chapuzon', x: c.x, y: e.agua });
@@ -2319,8 +2345,15 @@ function seguir(dt) {
     let obj = null;
     if (vuela.length) { obj = vuela[vuela.length - 1]; cam.manual = false; }
     else if (cam.manual) return;
-    else {
-        const mov = e.gusanos.filter(g => !g.muerto && !g.quieto).sort((a, b) => Math.hypot(b.vx, b.vy) - Math.hypot(a.vx, a.vy))[0];
+    else if (e.estado === 'turno' || e.estado === 'retirada') {
+        /* Mientras se maneja el gusano, la cámara es suya. Antes seguía a
+           cualquier otro que no estuviera «quieto», y uno encajado en una
+           ladera (ni quieto ni moviéndose) se llevaba la vista a cada paso:
+           con el zoom no se veía por dónde iba el gusano propio */
+        obj = Worms.activo(e);
+    } else {
+        /* Resolviendo el disparo: el que salga volando (deprisa de verdad) */
+        const mov = e.gusanos.filter(g => !g.muerto && !g.quieto && Math.hypot(g.vx, g.vy) > 30).sort((a, b) => Math.hypot(b.vx, b.vy) - Math.hypot(a.vx, a.vy))[0];
         obj = mov || Worms.activo(e);
     }
     if (!obj) return;
