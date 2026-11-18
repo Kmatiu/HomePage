@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="es" data-vista="menus">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f0c2d">
+    <title>Solitario</title>
+    <!-- GENERADO: no editar aquí. Fuentes en _fuentes/solitario (node construir.js) -->
+    <style>
+/* ==== ESTÁNDAR CSS ====
+   Menú, barra de partida y capas comunes a los juegos del portal (el mismo
+   armazón que el Ahorcado, Hundir la Flota y el Pinball). No se edita aquí
+   dentro de cada juego: se edita _fuentes/menu-estandar/estandar.css y se
+   vuelve a aplicar con aplicar.js, que lo copia entre estas dos marcas. */
+:root {
+    --fondo: #0f0c2d;
+    --panel: rgba(255, 255, 255, 0.06);
+    --borde: rgba(255, 255, 255, 0.16);
+    --acento: #00ffc8;
+    --rosa: #ff006e;
+    --amarillo: #ffcc00;
+    --texto: #f2f2f7;
+    --apagado: #a9a7c0;
+    /* Tipografía del sistema: se lee siempre y no depende de la red */
+    --fuente: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+              "Liberation Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    /* Holgura SUMADA al inset, no max(): Chrome en Android da
+       safe-area-inset-bottom = 0 aunque la barra de gestos tape la pantalla,
+       y Safari da 0 arriba en pestaña normal */
+    padding: calc(env(safe-area-inset-top, 0px) + 16px)
+             calc(env(safe-area-inset-right, 0px) + 6px)
+             calc(env(safe-area-inset-bottom, 0px) + 14px)
+             calc(env(safe-area-inset-left, 0px) + 6px);
+    background: radial-gradient(1000px 700px at 25% -10%, var(--c-2a1a5e, #2a1a5e) 0%, var(--fondo) 55%), var(--fondo);
+    color: var(--texto);
+    font-family: var(--fuente);
+    /* svh: la altura con la barra del navegador desplegada, la menor de las
+       tres. Lo que cabe ahí cabe siempre. */
+    height: 100vh;
+    height: 100dvh;
+    height: 100svh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.pantalla {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+    max-width: 760px;
+    height: 100%;
+    min-height: 0;
+}
+.pantalla.activa { display: flex; }
+
+/* ---------- MENÚ ---------- */
+.est-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.est-titulo {
+    font-size: clamp(1.5rem, 7vw, 2.4rem);
+    margin: 10px 0 2px;
+    text-align: center;
+    letter-spacing: 2px;
+    font-weight: bold;
+}
+.est-titulo span {
+    background: linear-gradient(90deg, var(--acento), var(--rosa));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.est-lema { text-align: center; color: var(--apagado); font-size: 0.78rem; margin: 0 0 14px; }
+
+.est-grupo {
+    border: 1px solid var(--borde);
+    border-radius: 12px;
+    background: var(--panel);
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    min-width: 0;
+}
+.est-grupo legend { font-size: 0.72rem; color: var(--acento); letter-spacing: 1px; padding: 0 6px; }
+.est-grupo .est-nota { font-size: 0.7rem; color: var(--apagado); margin: 8px 2px 0; line-height: 1.5; }
+
+.opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Las opciones de un grupo se reparten a partes iguales: con el ancho de su
+   texto, la tercera bajaba a otra fila en un móvil de 390 px */
+.opciones.iguales .opcion { flex: 1 1 0; min-width: 0; }
+
+.opcion {
+    flex: 1 1 auto;
+    min-width: 64px;
+    margin: 0;
+    padding: 10px 8px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-align: center;
+    touch-action: manipulation;
+}
+.opcion[aria-pressed="true"] {
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.16);
+    color: var(--acento);
+    font-weight: bold;
+}
+.opcion:disabled { opacity: 0.4; cursor: default; }
+.opcion .sub { display: block; font-size: 0.62rem; color: var(--apagado); margin-top: 3px; font-weight: normal; }
+.opcion[aria-pressed="true"] .sub { color: var(--acento); opacity: 0.85; }
+
+.principal {
+    width: 100%;
+    margin: 2px 0 0;
+    padding: 15px;
+    border: 2px solid var(--acento);
+    border-radius: 12px;
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.14);
+    color: var(--acento);
+    font: inherit;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.secundario {
+    margin: 0;
+    padding: 11px 16px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--apagado);
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+.secundario[aria-pressed="true"] {
+    color: var(--acento);
+    border-color: var(--acento);
+    background: rgba(var(--c-0-255-200, 0, 255, 200), 0.12);
+}
+
+.fila-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.fila-btns > * { flex: 1 1 120px; }
+
+/* En pantalla táctil el :hover se queda pegado tras tocar */
+@media (hover: hover) {
+    .opcion:not(:disabled):hover { border-color: var(--acento); }
+    .principal:hover { background: rgba(var(--c-0-255-200, 0, 255, 200), 0.26); }
+    .secundario:hover { color: var(--texto); border-color: var(--texto); }
+}
+.opcion:active, .principal:active, .secundario:active { transform: scale(0.98); }
+
+.est-campo {
+    display: block;
+    width: 100%;
+    margin: 6px 0 0;
+    padding: 12px;
+    border: 2px solid var(--borde);
+    border-radius: 10px;
+    background: var(--c-0a0820, #0a0820);
+    color: var(--texto);
+    font: inherit;
+    /* 16px evita que iOS haga zoom al enfocar el campo */
+    font-size: 16px;
+    text-align: center;
+}
+.est-campo:focus { outline: none; border-color: var(--acento); }
+
+/* ---------- BARRA DE LA PARTIDA ---------- */
+.est-barra {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 6px;
+    border: 1px solid var(--borde);
+    border-radius: 10px;
+    background: var(--panel);
+    font-size: 0.68rem;
+    flex: 0 0 auto;
+}
+.est-barra .dato { display: flex; flex-direction: column; align-items: center; min-width: 44px; }
+.est-barra .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+.est-barra .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; }
+.est-barra .dato.alerta b { color: var(--rosa); }
+.est-barra .hueco { flex: 1 1 auto; }
+
+.est-icono {
+    width: 38px;
+    height: 34px;
+    margin: 0;
+    padding: 0;
+    border: 2px solid var(--borde);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--texto);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    flex: 0 0 auto;
+}
+
+/* ---------- AVISO Y CAPAS ---------- */
+#estAviso {
+    position: fixed;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    z-index: 1100;
+    display: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: 2px solid var(--acento);
+    background: rgba(var(--c-0-0-0, 0, 0, 0), 0.9);
+    color: var(--acento);
+    font-family: var(--fuente);
+    font-size: 0.85rem;
+    font-weight: bold;
+    text-align: center;
+    max-width: 90%;
+    pointer-events: none;
+}
+#estAviso.visible { display: block; }
+#estAviso.malo { border-color: var(--rosa); color: var(--rosa); }
+
+/* z-index alto: por encima de los controles táctiles y del canvas de
+   cualquier juego */
+.capa {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    background: rgba(var(--c-5-3-20, 5, 3, 20), 0.93);
+    font-family: var(--fuente);
+    color: var(--texto);
+}
+.capa.activa { display: flex; }
+
+.caja {
+    width: 100%;
+    max-width: 420px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 18px;
+    border: 2px solid var(--acento);
+    border-radius: 14px;
+    background: var(--c-130f33, #130f33);
+    text-align: center;
+}
+.caja h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.caja p { font-size: 0.82rem; line-height: 1.6; color: var(--apagado); margin: 8px 0; }
+.caja .marcador { font-size: 2rem; color: var(--acento); font-weight: bold; margin: 6px 0; }
+.caja .destacado { color: var(--amarillo); }
+
+.est-lista { text-align: left; font-size: 0.78rem; }
+.est-lista div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dashed var(--borde); }
+.est-lista div.yo { color: var(--acento); font-weight: bold; }
+.est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+
+.est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
+.est-ayuda b { color: var(--texto); }
+.est-ayuda h3 { color: var(--acento); font-size: 0.8rem; margin: 14px 0 4px; }
+.est-ayuda ul { margin: 4px 0; padding-left: 18px; }
+
+@media (orientation: landscape) and (max-height: 560px) {
+    body {
+        padding-top: calc(env(safe-area-inset-top, 0px) + 8px);
+        padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    }
+    .pantalla { max-width: 980px; }
+    .est-titulo { font-size: 1.3rem; margin: 4px 0 0; }
+    .est-lema { margin-bottom: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .opcion, .principal, .secundario { transition: none !important; }
+}
+/* ==== FIN ESTÁNDAR CSS ==== */
+
+        /* ---------- PROPIO DEL SOLITARIO ---------- */
+        #grpRobo .sub { font-size: 0.62rem; }
+        #btnDiaria .sub, #btnContinuar .sub { display: block; font-size: 0.62rem; font-weight: 400; letter-spacing: 0.5px; opacity: 0.85; }
+        #btnContinuar[hidden] { display: none; }
+
+        /* El tapete ocupa lo que deja la barra; las cartas van con posición
+           absoluta y las coloca juego.js (medidas en px desde el tamaño del
+           tapete). Verde tranquilo: no compite con las cartas */
+        #pJuego { gap: 6px; }
+        #mesa {
+            position: relative; flex: 1 1 auto; min-height: 0; width: 100%;
+            border-radius: 12px; overflow: hidden; outline: none;
+            background: radial-gradient(120% 90% at 50% 20%, #1f8a4c 0%, #146b38 55%, #0d4f29 100%);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
+            touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+        }
+        #mesa:focus-visible { box-shadow: inset 0 0 0 3px var(--acento), inset 0 0 40px rgba(0, 0, 0, 0.35); }
+        .hueco-carta {
+            position: absolute; border-radius: 7%/5%;
+            border: 2px solid rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.12);
+            display: flex; align-items: center; justify-content: center;
+            color: rgba(255, 255, 255, 0.28); font-weight: 700;
+        }
+        .hueco-carta.mazo { cursor: pointer; }
+        .hueco-carta.mazo.fin { color: rgba(255, 255, 255, 0.18); }
+        .hueco-carta.destino { border-color: #ffe066; background: rgba(255, 224, 102, 0.18); }
+
+        /* ---------- Cartas (diseño propio) ---------- */
+        .carta {
+            position: absolute; left: 0; top: 0; border-radius: 7%/5%;
+            transition: transform 0.2s ease; will-change: transform;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+        }
+        .carta .cara, .carta .dorso { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; }
+        .carta .cara { background: #fdfdf8; border: 1px solid #b9b9ad; overflow: hidden; }
+        .carta.roja .cara { color: #d42027; }
+        .carta.negra .cara { color: #1b1b1f; }
+        .carta .dorso { display: none; border: 1px solid #0b2a63;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.85) 0 9%, transparent 10%),
+                repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.16) 0 2px, transparent 2px 7px),
+                repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.16) 0 2px, transparent 2px 7px),
+                linear-gradient(160deg, #2453b8, #173a8c);
+            box-shadow: inset 0 0 0 3px #fdfdf8, inset 0 0 0 4px rgba(11, 42, 99, 0.7); }
+        .carta.abajo .cara { display: none; }
+        .carta.abajo .dorso { display: block; }
+        /* Índice: valor grande y palo al lado, en la franja de arriba, que es
+           lo que se ve cuando las cartas se solapan */
+        .carta .ind { position: absolute; left: 6%; top: 2%; font-weight: 800; line-height: 1; letter-spacing: -0.04em; display: flex; align-items: baseline; gap: 0.04em; }
+        .carta .ind .p { font-size: 0.8em; }
+        .carta .ind2 { position: absolute; right: 6%; bottom: 2%; transform: rotate(180deg); font-weight: 800; line-height: 1; opacity: 0.9; }
+        .carta .centro { position: absolute; left: 0; right: 0; top: 34%; bottom: 12%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+        .carta .centro svg { width: 78%; height: 100%; }
+        /* Estados */
+        .carta.elegida { box-shadow: 0 0 0 3px #ffe066, 0 6px 14px rgba(0, 0, 0, 0.5); }
+        .carta.cursor { box-shadow: 0 0 0 3px var(--acento), 0 2px 4px rgba(0, 0, 0, 0.5); }
+        .carta.arrastrando { transition: none; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.55); }
+        .carta.no { animation: no 0.28s ease; }
+        @keyframes no { 25% { margin-left: -5px; } 50% { margin-left: 5px; } 75% { margin-left: -3px; } }
+        .carta.gira .cara { animation: gira 0.24s ease; }
+        @keyframes gira { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+        .carta.pista-ok { box-shadow: 0 0 0 3px #69f0ae, 0 2px 4px rgba(0, 0, 0, 0.5); }
+        @media (prefers-reduced-motion: reduce) {
+            .carta { transition: none; }
+            .carta.gira .cara, .carta.no { animation: none; }
+        }
+
+        #avisoMesa {
+            position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 10px); transform: translateX(-50%);
+            z-index: 500; background: rgba(15, 12, 45, 0.92); border: 1px solid var(--borde); border-radius: 12px;
+            padding: 8px 12px; text-align: center; font-size: 0.85rem; width: max-content; max-width: 92%;
+        }
+        #avisoMesa[hidden] { display: none; }
+        #avisoMesa .fila-btns { margin-top: 6px; }
+
+        /* Tumbado en el móvil: la barra de arriba se quita (le robaba 70 px
+           de alto a las cartas) y los datos van en el hueco de debajo de las
+           pilas, a la derecha */
+        body.tumbado #pJuego .est-barra { display: none; }
+        #marcador { position: absolute; display: none; z-index: 400; align-content: flex-start; flex-wrap: wrap; gap: 2px 6px; }
+        body.tumbado #marcador { display: flex; }
+        #marcador .dato { display: flex; flex-direction: column; min-width: 44%; }
+        #marcador .dato b { font-size: 0.85rem; color: var(--acento); }
+        #marcador .dato span { font-size: 0.5rem; letter-spacing: 1px; color: rgba(255, 255, 255, 0.75); }
+        #marcador .est-icono { width: 100%; height: 30px; }
+        /* Aviso de girar el móvil (como Súper Pang, Angry Birds y Worms) */
+        body:not(.tactil) #avisoGirar { display: none !important; }
+        #avisoGirar {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            padding: 24px; text-align: center; background: var(--c-0f0c2d, #0f0c2d); color: var(--c-fff, #fff);
+        }
+        #avisoGirar.activo { display: flex; }
+        #avisoGirar .movil { font-size: 4rem; line-height: 1; animation: girarMovil 2.2s ease-in-out infinite; }
+        #avisoGirar p { margin: 0; max-width: 22em; line-height: 1.5; }
+        #avisoGirar small { color: var(--apagado); }
+        @keyframes girarMovil { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+        @media (prefers-reduced-motion: reduce) { #avisoGirar .movil { animation: none; transform: rotate(-90deg); } }
+
+        /* Estadísticas */
+        .tabla-est { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin: 6px 0 12px; }
+        .tabla-est th, .tabla-est td { padding: 5px 3px; border-bottom: 1px solid var(--borde); text-align: center; }
+        .tabla-est th:first-child, .tabla-est td:first-child { text-align: left; }
+
+/* ==== VISTA CSS ==== */
+/* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
+   mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
+   no editar aquí.
+   El oscuro de siempre no define nada: todos los colores fijos de las hojas
+   de estilo son var(--c-XXXX, #XXXX) y caen a su valor original. El claro da
+   valor a esas variables.
+   - <html data-vista="todo">: el claro alcanza también a la partida (juegos
+     de casillas y texto).
+   - <html data-vista="menus">: solo el menú y las capas; la partida (un
+     lienzo de arcade) sigue oscura. */
+:root { font-size: calc(100% * var(--letra, 1)); }
+
+:root[data-tema="claro"]:not([data-vista="menus"]),
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa),
+:root[data-tema="claro"][data-vista="menus"] .capa {
+    color-scheme: light;
+    --fondo: #eef1f6;
+    --panel: rgba(30, 40, 70, 0.05);
+    --borde: rgba(30, 40, 70, 0.22);
+    --acento: #005a52;
+    --rosa: #c2185b;
+    --amarillo: #8a5d00;
+    --texto: #1b2030;
+    --apagado: #525a6c;
+    /* Blancos translúcidos (paneles, bordes, rótulos) → tinta oscura */
+    --c-255-255-255: 30, 40, 70;
+    /* Tintes del turquesa, rosa y amarillo: con el tono oscuro de cada uno */
+    --c-0-255-200: 0, 105, 95;
+    --c-255-0-110: 194, 24, 91;
+    /* Velos y sombras negras → velo claro */
+    --c-0-0-0: 210, 216, 228;
+    --c-8-6-26: 236, 239, 245;
+    --c-5-3-20: 236, 239, 245;
+    /* Fondos azul noche */
+    --c-2a1a5e: #dce5f5;
+    --c-0f0c2d: #eef1f6;
+    --c-15113a: #ffffff;
+    --c-130f33: #ffffff;
+    --c-0a0820: #f6f8fb;
+    --c-1d1850: #ffffff;
+    --c-1b1650: #ffffff;
+    --c-16123d: #ffffff;
+    --c-1a1450: #34449c;
+    --c-0c0a24: #e3e8f1;
+    --c-3b3194: #c8d6f2;
+    --c-2e2676: #d5def0;
+    --c-2a2170: #4b5cb8;
+    --c-26305c: #d5def0;
+    --c-2b3557: #d5def0;
+    /* Textos claros sobre fondo oscuro → oscuros */
+    --c-e4ebff: #1f2a44;
+    --c-ced8f2: #2e3a56;
+    --c-93a1c4: #4d5b7c;
+    --c-ffd98a: #7a4f00;
+    --c-cfc39a: #5e5126;
+    /* Avisos en rosa claro (notas de «2 jugadores no cabe») */
+    --c-ff8080: #b3261e;
+    /* Variables propias de cada juego */
+    --casilla: #ffffff;
+    --celda-fondo: #ffffff;
+    --tablero: #3550b0;
+    --hueco: #eef1f6;
+    --cara: #ffffff;
+    --dorso: #4b5cb8;
+    --agua: #cfe2f6;
+    --agua-tocada: #9db9db;
+    --barco: #6f7b93;
+}
+/* El color del cuerpo se resuelve en el body: en «menus» solo con el menú
+   delante, para que la partida conserve su fondo oscuro */
+:root[data-tema="claro"]:not([data-vista="menus"]) body,
+:root[data-tema="claro"][data-vista="menus"] body:has(#pMenu.activa) { color: var(--texto); }
+:root[data-tema="claro"]:not([data-vista="menus"]) { background: var(--fondo); }
+/* ==== FIN VISTA CSS ==== */
+    </style>
+    <script>
+/* ==== VISTA JS ==== */
+/* Tema (oscuro/claro) y tamaño de letra: UNA preferencia para todos los
+   juegos que no son de mayores, guardada en «juegos.vista». Oscuro por
+   defecto. GENERADO desde _fuentes/menu-estandar/vista.js: no editar aquí.
+   Va en el <head>: aplica el tema antes de pintar (sin parpadeo) y, cuando
+   hay DOM, mete el grupo VISTA en el menú y una fila en la pausa clonando
+   el grupo SONIDO de cada juego, así toma sus clases sin tocar su HTML. */
+(function () {
+    'use strict';
+    const CLAVE = 'juegos.vista';
+    const LETRAS = [1, 1.15, 1.3];
+    const NOMBRES_LETRA = ['NORMAL', 'GRANDE', 'MUY GRANDE'];
+    const raiz = document.documentElement;
+    let pref = { tema: 'oscuro', letra: 0 };
+    let memoria = null;   // sin almacenamiento (modo privado): vale mientras dure la página
+
+    function leer() {
+        try {
+            const v = JSON.parse(localStorage.getItem(CLAVE) || 'null');
+            if (v && (v.tema === 'claro' || v.tema === 'oscuro')) pref.tema = v.tema;
+            if (v && LETRAS[v.letra] !== undefined) pref.letra = v.letra;
+        } catch (e) {
+            if (memoria) pref = memoria;
+        }
+    }
+    function guardar() {
+        try { localStorage.setItem(CLAVE, JSON.stringify(pref)); }
+        catch (e) { memoria = Object.assign({}, pref); }
+    }
+
+    let colorOscuro = null;
+    function aplicar() {
+        raiz.dataset.tema = pref.tema;
+        raiz.style.setProperty('--letra', String(LETRAS[pref.letra]));
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) {
+            if (colorOscuro === null) colorOscuro = meta.getAttribute('content');
+            meta.setAttribute('content', pref.tema === 'claro' && raiz.dataset.vista !== 'menus' ? '#eef1f6' : colorOscuro);
+        }
+        document.querySelectorAll('[data-vista-tema]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.vistaTema === pref.tema)));
+        document.querySelectorAll('[data-vista-letra]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.vistaLetra) === pref.letra)));
+        document.querySelectorAll('[data-vista-alternar]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = pref.tema === 'claro' ? '🌙 OSCURO' : '☀️ CLARO';
+        });
+        document.querySelectorAll('[data-vista-ciclo]').forEach(b => {
+            const r = b.querySelector('.rotulo') || b;
+            r.textContent = '🔠 LETRA ' + NOMBRES_LETRA[pref.letra];
+        });
+    }
+
+    function cambiar(cambio) {
+        Object.assign(pref, cambio);
+        guardar();
+        aplicar();
+        // Lo que mide su hueco al redimensionar (lienzos, tableros) vuelve a medir
+        window.dispatchEvent(new Event('resize'));
+    }
+
+    // Un botón con las clases del de SONIDO, sin su data-son (si no, el juego lo trataría como suyo)
+    function boton(molde, rotulo, sub) {
+        const b = molde.cloneNode(false);
+        b.removeAttribute('data-son');
+        b.removeAttribute('id');
+        b.type = 'button';
+        const r = document.createElement('span'); r.className = 'rotulo'; r.textContent = rotulo;
+        b.appendChild(r);
+        if (sub && molde.querySelector('.sub')) {
+            const s = document.createElement('span'); s.className = 'sub'; s.textContent = sub;
+            b.appendChild(s);
+        }
+        return b;
+    }
+
+    function montar() {
+        const grupos = Array.from(document.querySelectorAll('#pMenu fieldset'));
+        const sonido = grupos.find(f => /SONIDO/i.test((f.querySelector('legend') || {}).textContent || ''));
+        if (sonido && !document.getElementById('grpVista')) {
+            const molde = sonido.querySelector('[data-son]');
+            const fila = molde && molde.parentElement;
+            if (fila) {
+                const g = sonido.cloneNode(false);
+                g.id = 'grpVista';
+                const ley = document.createElement('legend'); ley.textContent = 'VISTA';
+                g.appendChild(ley);
+                const temas = fila.cloneNode(false);
+                temas.removeAttribute('id');
+                [['oscuro', '🌙 OSCURO', 'fondo oscuro'], ['claro', '☀️ CLARO', 'fondo claro']].forEach(([v, t, s]) => {
+                    const b = boton(molde, t, s); b.dataset.vistaTema = v;
+                    b.addEventListener('click', () => cambiar({ tema: v }));
+                    temas.appendChild(b);
+                });
+                const letras = fila.cloneNode(false);
+                letras.removeAttribute('id');
+                letras.style.marginTop = '8px';
+                ['Aa', 'Aa+', 'Aa++'].forEach((t, i) => {
+                    const b = boton(molde, t, 'letra ' + NOMBRES_LETRA[i].toLowerCase()); b.dataset.vistaLetra = String(i);
+                    b.addEventListener('click', () => cambiar({ letra: i }));
+                    letras.appendChild(b);
+                });
+                g.appendChild(temas);
+                g.appendChild(letras);
+                sonido.parentNode.insertBefore(g, sonido.nextSibling);
+            }
+        }
+        const pausa = document.querySelector('#capaPausa [data-son]');
+        if (pausa && !document.querySelector('#capaPausa [data-vista-alternar]')) {
+            const fila = pausa.parentElement;
+            const f = fila.cloneNode(false);
+            f.removeAttribute('id');
+            const a = boton(pausa, '☀️ CLARO'); a.dataset.vistaAlternar = '1';
+            a.addEventListener('click', () => cambiar({ tema: pref.tema === 'claro' ? 'oscuro' : 'claro' }));
+            const c = boton(pausa, '🔠 LETRA'); c.dataset.vistaCiclo = '1';
+            c.addEventListener('click', () => cambiar({ letra: (pref.letra + 1) % LETRAS.length }));
+            f.appendChild(a); f.appendChild(c);
+            fila.parentNode.insertBefore(f, fila.nextSibling);
+        }
+        aplicar();
+    }
+
+    leer();
+    aplicar();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', montar);
+    else montar();
+    window.VISTA = { cambiar, preferencia: () => Object.assign({}, pref) };
+})();
+/* ==== FIN VISTA JS ==== */
+    </script>
+</head>
+<body>
+
+<!-- ===================== MENÚ ===================== -->
+<section class="pantalla activa est-menu" id="pMenu">
+    <div class="est-scroll">
+        <div class="est-titulo">SOLI<span>TARIO</span></div>
+        <p class="est-lema">El de toda la vida: ordena la baraja del As al Rey</p>
+
+        <fieldset class="est-grupo">
+            <legend>ROBAR DEL MAZO</legend>
+            <div class="opciones iguales" id="grpRobo">
+                <button class="opcion" type="button" data-v="1" aria-pressed="true">DE 1 EN 1<span class="sub">más fácil</span></button>
+                <button class="opcion" type="button" data-v="3" aria-pressed="false">DE 3 EN 3<span class="sub">el clásico, más difícil</span></button>
+            </div>
+            <p class="est-nota">Al mazo se le puede dar la vuelta las veces que haga falta.</p>
+        </fieldset>
+
+        <fieldset class="est-grupo">
+            <legend>SONIDO</legend>
+            <div class="opciones iguales">
+                <button class="opcion" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span><span class="sub">silenciada</span></button>
+                <button class="opcion" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span><span class="sub">silenciados</span></button>
+            </div>
+        </fieldset>
+
+        <button class="principal" id="btnContinuar" type="button" hidden>▶ CONTINUAR<span class="sub" id="subContinuar"></span></button>
+        <button class="principal" id="btnJugar" type="button">NUEVA PARTIDA</button>
+        <button class="secundario" id="btnDiaria" type="button" style="width:100%">📅 PARTIDA DEL DÍA<span class="sub" id="subDiaria">tiene solución seguro</span></button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnEstadisticas" type="button">📊 ESTADÍSTICAS</button>
+            <button class="secundario" id="btnInstructions" type="button">📖 CÓMO SE JUEGA</button>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== PARTIDA ===================== -->
+<section class="pantalla" id="pJuego">
+    <div class="est-barra">
+        <div class="dato"><b id="bPuntos">0</b><span>PUNTOS</span></div>
+        <div class="dato"><b id="bMovs">0</b><span>MOVIM.</span></div>
+        <div class="dato"><b id="bTiempo">0:00</b><span>TIEMPO</span></div>
+        <div class="dato"><b id="bModo">1</b><span id="bModoTxt">ROBA</span></div>
+        <div class="hueco"></div>
+        <button id="pauseTouchBtn" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+    </div>
+    <div id="mesa" tabindex="0" role="application" aria-label="Mesa del solitario. Flechas para moverse, Intro para jugar la carta, espacio para robar">
+        <div id="avisoMesa" hidden aria-live="polite"></div>
+        <div id="marcador">
+            <button id="pausaMesa" class="est-icono" type="button" aria-label="Pausar">⏸</button>
+            <div class="dato"><b id="mPuntos">0</b><span>PUNTOS</span></div>
+            <div class="dato"><b id="mMovs">0</b><span>MOVIM.</span></div>
+            <div class="dato"><b id="mTiempo">0:00</b><span>TIEMPO</span></div>
+            <div class="dato"><b id="mModo">1</b><span id="mModoTxt">ROBA</span></div>
+        </div>
+    </div>
+    <div class="est-oculto" id="anuncio" aria-live="polite" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"></div>
+</section>
+
+<!-- ===================== CAPAS ===================== -->
+<div class="capa" id="capaPausa">
+    <div class="caja">
+        <h2>⏸ PAUSA</h2>
+        <p id="pausaDetalle" style="font-size:0.85rem"></p>
+        <div class="fila-btns">
+            <button class="secundario" type="button" data-son="musica" aria-pressed="false"><span class="rotulo">🔇 MÚSICA</span></button>
+            <button class="secundario" type="button" data-son="efectos" aria-pressed="false"><span class="rotulo">🔇 EFECTOS</span></button>
+        </div>
+        <button class="principal" id="btnResume" type="button" style="margin-top:12px;">CONTINUAR</button>
+        <div class="fila-btns">
+            <button class="secundario" id="btnRepetir" type="button">↺ REPETIR REPARTO</button>
+            <button class="secundario" id="btnNueva" type="button">🂠 OTRA PARTIDA</button>
+        </div>
+        <button class="secundario" id="btnPauseToMenu" type="button" style="width:100%">← MENÚ <span style="font-size:0.7em">(se guarda)</span></button>
+    </div>
+</div>
+
+<div class="capa" id="capaFin">
+    <div class="caja">
+        <h2 id="finTitulo">🏆 ¡RESUELTO!</h2>
+        <p id="finDetalle"></p>
+        <div class="fila-btns">
+            <button class="principal" id="btnRestart" type="button">🂠 OTRA PARTIDA</button>
+            <button class="secundario" id="btnMenu" type="button">← MENÚ</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaEstadisticas">
+    <div class="caja">
+        <h2>📊 ESTADÍSTICAS</h2>
+        <div id="tablaEstadisticas"></div>
+        <div class="fila-btns">
+            <button class="secundario" id="btnBorrarEst" type="button">🗑 BORRAR</button>
+            <button class="principal" id="btnCerrarEst" type="button">CERRAR</button>
+        </div>
+    </div>
+</div>
+
+<div class="capa" id="capaAyuda">
+    <div class="caja">
+        <h2>📖 CÓMO SE JUEGA</h2>
+        <div class="est-ayuda">
+            <p>El solitario clásico (Klondike), con una baraja de 52 cartas. Hay que subir las 52 a las <b>cuatro pilas de arriba</b>, una por palo, del As al Rey.</p>
+            <h3>LA MESA</h3>
+            <ul>
+                <li>Siete columnas: en cada una solo la de encima está boca arriba.</li>
+                <li>En una columna se pone una carta sobre otra <b>de un valor más y del otro color</b>: un 7 rojo sobre un 8 negro.</li>
+                <li>Se puede mover una escalera entera (o un trozo) si está bien ordenada.</li>
+                <li>Al quitar la última boca arriba, la de debajo se da la vuelta sola.</li>
+                <li>En una columna vacía solo entra un <b>Rey</b> (o una escalera que empiece por Rey).</li>
+            </ul>
+            <h3>EL MAZO</h3>
+            <ul>
+                <li>Toca el mazo para robar: de una en una, o de tres en tres (y entonces solo se puede jugar la de encima).</li>
+                <li>Cuando se acaba, tócalo otra vez y se le da la vuelta al descarte, en el mismo orden, sin límite de veces.</li>
+            </ul>
+            <h3>MOVER</h3>
+            <ul>
+                <li><b>Toca una carta</b> y se va sola al mejor sitio: a su pila si puede, y si no a una columna.</li>
+                <li>Para elegir tú el sitio, <b>arrástrala</b>.</li>
+                <li>Con teclado: flechas para moverse, arriba y abajo dentro de una columna, Intro para jugar la carta, espacio para robar.</li>
+            </ul>
+            <h3>PUNTOS</h3>
+            <ul>
+                <li>+10 por carta a una pila, +5 del descarte a una columna, +5 por descubrir una carta, −15 si bajas una carta de una pila.</li>
+                <li>Darle la vuelta al mazo: −100 robando de 1; robando de 3, −20 a partir de la cuarta vuelta.</li>
+            </ul>
+            <h3>PARTIDA DEL DÍA</h3>
+            <ul><li>Cada día, el mismo reparto para todos, con solución comprobada: hay forma de ganarla seguro.</li></ul>
+        </div>
+        <button class="principal" id="closeInstructions" type="button">ENTENDIDO</button>
+    </div>
+</div>
+
+<div id="avisoGirar" role="alertdialog" aria-labelledby="avisoGirarTexto">
+    <div class="movil" aria-hidden="true">📱</div>
+    <p id="avisoGirarTexto"><b>Gira el móvil</b> para jugar: con la pantalla tumbada caben las siete columnas con cartas más grandes.</p>
+    <small>Si no gira, quita el bloqueo de rotación del móvil.</small>
+    <button class="secundario" id="btnGirarMenu" type="button">← MENÚ</button>
+</div>
+
+<script>
+/* ==== ESTÁNDAR JS ====
+   Piezas comunes del menú de los juegos del portal. No se edita aquí dentro
+   de cada juego: se edita _fuentes/menu-estandar/estandar.js y se vuelve a
+   aplicar con aplicar.js. Todo cuelga de EST para no chocar con los nombres
+   que ya usa cada juego.
+
+   EST.iniciar({ claveAudio, alCambiarMusica(on) })   — una vez, al arrancar
+   EST.audio: { musica, efectos, ctx, busMusica, busEfectos }
+   EST.contexto()          — crea el AudioContext dentro de un gesto
+   EST.voz(bus, frec, t, dur, tipo, pico, frecFin)
+   EST.efecto(nombre, minimoMs, notas)   — notas: [frec, dur, tipo, pico, retraso, frecFin]
+   EST.ruido(dur, pico, filtroDesde, filtroHasta)   — explosiones
+   EST.musica({ acordes, bpm })   — música de fondo para quien no la trae
+   EST.mostrar(idPantalla), EST.abrir(idCapa), EST.cerrar(idCapa), EST.hayCapa()
+   EST.avisar(texto, malo)
+   EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
+   EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+   EST.escapar(texto)
+   ========================================================== */
+const EST = (() => {
+    'use strict';
+
+    /* ---------- ALMACÉN ----------
+       localStorage puede lanzar (navegación privada, iframe con sandbox) o
+       tener basura: todo con try/catch y una copia en memoria */
+    const memoria = {};
+    const almacenOK = (() => {
+        try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); return true; }
+        catch (e) { return false; }
+    })();
+
+    function leer(clave, porDefecto) {
+        if (!almacenOK) return clave in memoria ? memoria[clave] : porDefecto;
+        try {
+            const t = localStorage.getItem(clave);
+            return t === null ? porDefecto : JSON.parse(t);
+        } catch (e) { return porDefecto; }
+    }
+
+    function guardar(clave, valor) {
+        memoria[clave] = valor;
+        if (!almacenOK) return;
+        try { localStorage.setItem(clave, JSON.stringify(valor)); } catch (e) {}
+    }
+
+    function borrar(clave) {
+        delete memoria[clave];
+        if (!almacenOK) return;
+        try { localStorage.removeItem(clave); } catch (e) {}
+    }
+
+    function escapar(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    /* ---------- SONIDO ----------
+       Dos canales, música y efectos, que arrancan en silencio. El contexto
+       se crea dentro del gesto que activa el sonido: creado al cargar, nace
+       suspendido y el primer sonido se pierde sin aviso. */
+    const VOL_MUSICA = 0.45;
+    const VOL_EFECTOS = 1;
+    const audio = { musica: false, efectos: false, ctx: null, busMusica: null, busEfectos: null };
+    const ultimo = {};
+    let opciones = { claveAudio: 'audio', alCambiarMusica: () => {} };
+
+    function rampa(nodo, destino) {
+        if (!audio.ctx || !nodo) return;
+        const t = audio.ctx.currentTime;
+        try {
+            nodo.gain.cancelScheduledValues(t);
+            nodo.gain.setValueAtTime(nodo.gain.value, t);
+            nodo.gain.linearRampToValueAtTime(destino, t + 0.12);   // sin chasquido
+        } catch (e) {}
+    }
+
+    function aplicarVolumenes() {
+        rampa(audio.busMusica, audio.musica ? VOL_MUSICA : 0);
+        rampa(audio.busEfectos, audio.efectos ? VOL_EFECTOS : 0);
+    }
+
+    function contexto() {
+        if (!audio.ctx) {
+            try {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return null;
+                audio.ctx = new Ctx();
+                audio.busMusica = audio.ctx.createGain();
+                audio.busEfectos = audio.ctx.createGain();
+                audio.busMusica.gain.value = 0;
+                audio.busEfectos.gain.value = 0;
+                audio.busMusica.connect(audio.ctx.destination);
+                audio.busEfectos.connect(audio.ctx.destination);
+                aplicarVolumenes();
+            } catch (e) { audio.ctx = null; return null; }
+        }
+        if (audio.ctx.state === 'suspended') { try { audio.ctx.resume(); } catch (e) {} }
+        return audio.ctx;
+    }
+
+    /* Una nota; con frecFin la frecuencia se desliza */
+    function voz(bus, frec, inicio, dur, tipo, pico, frecFin) {
+        if (!audio.ctx || !bus) return;
+        try {
+            const osc = audio.ctx.createOscillator();
+            const vol = audio.ctx.createGain();
+            osc.connect(vol);
+            vol.connect(bus);
+            /* Desconectar al acabar: dejar los nodos colgados se come la
+               memoria en una partida larga */
+            osc.onended = () => { try { osc.disconnect(); vol.disconnect(); } catch (e) {} };
+            osc.type = tipo || 'square';
+            osc.frequency.setValueAtTime(frec, inicio);
+            if (frecFin) osc.frequency.exponentialRampToValueAtTime(frecFin, inicio + dur);
+            vol.gain.setValueAtTime(0.0001, inicio);
+            vol.gain.linearRampToValueAtTime(pico, inicio + 0.008);
+            vol.gain.exponentialRampToValueAtTime(0.0001, inicio + dur);
+            osc.start(inicio);
+            osc.stop(inicio + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* Un efecto con límite por nombre: en una ráfaga se oirían veinte golpes
+       montados y saturaría */
+    function efecto(nombre, minimoMs, notas) {
+        if (!audio.efectos || !contexto()) return;
+        const ahora = performance.now();
+        if (minimoMs && (ultimo[nombre] || 0) + minimoMs > ahora) return;
+        ultimo[nombre] = ahora;
+        const t = audio.ctx.currentTime;
+        for (const n of notas) voz(audio.busEfectos, n[0], t + (n[4] || 0), n[1], n[2], n[3], n[5]);
+    }
+
+    let bufferRuido = null;
+    function ruido(dur, pico, desde, hasta) {
+        if (!audio.efectos || !contexto()) return;
+        try {
+            const c = audio.ctx;
+            if (!bufferRuido) {
+                bufferRuido = c.createBuffer(1, Math.floor(c.sampleRate * 1), c.sampleRate);
+                const d = bufferRuido.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            }
+            const src = c.createBufferSource();
+            const filtro = c.createBiquadFilter();
+            const vol = c.createGain();
+            src.buffer = bufferRuido;
+            src.connect(filtro); filtro.connect(vol); vol.connect(audio.busEfectos);
+            src.onended = () => { try { src.disconnect(); filtro.disconnect(); vol.disconnect(); } catch (e) {} };
+            const t = c.currentTime;
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(desde || 2000, t);
+            filtro.frequency.exponentialRampToValueAtTime(hasta || 100, t + dur);
+            vol.gain.setValueAtTime(pico || 0.3, t);
+            vol.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+            src.start(t);
+            src.stop(t + dur + 0.02);
+        } catch (e) {}
+    }
+
+    /* ---------- MÚSICA DE FONDO ----------
+       Para los juegos que no traen música propia. Un acorde por compás, bajo
+       en corcheas saltando de octava y un arpegio encima.
+       EST.musica({ acordes: [{ bajo, notas: [a, b, c] }], bpm }) →
+       { arrancar(), parar(), tempo(bpm) }.
+       Programador con vista adelantada: el temporizador solo despierta a
+       mirar y las notas van con la hora del reloj de audio, que no se desvía
+       aunque el hilo principal vaya cargado. */
+    function musica(cfg) {
+        let bpm = cfg.bpm || 120, paso = 0, proximo = 0, timer = null;
+        const dur = () => 30 / bpm;   // una corchea
+        function programar(t) {
+            const a = cfg.acordes[Math.floor(paso / 8) % cfg.acordes.length];
+            voz(audio.busMusica, a.bajo * (paso % 2 ? 2 : 1), t, dur() * 0.9, 'triangle', 0.15);
+            const escalera = [0, 1, 2, 1, 2, 0, 1, 2];
+            if (paso % 2 === 0) voz(audio.busMusica, a.notas[escalera[(paso / 2) % 8]] * 2, t, dur() * 1.6, 'square', 0.035);
+            if (paso % 4 === 2) voz(audio.busMusica, 3200, t, 0.03, 'square', 0.02);
+            paso = (paso + 1) % (cfg.acordes.length * 8);
+        }
+        function bucle() {
+            if (!audio.ctx || !audio.musica) { timer = null; return; }
+            const ahora = audio.ctx.currentTime;
+            if (proximo < ahora) proximo = ahora + 0.05;
+            while (proximo < ahora + 0.15) { programar(proximo); proximo += dur(); }
+            timer = setTimeout(bucle, 25);
+        }
+        return {
+            arrancar() {
+                if (timer !== null || !audio.musica || !contexto()) return;
+                proximo = audio.ctx.currentTime + 0.08;
+                bucle();
+            },
+            parar() { if (timer !== null) { clearTimeout(timer); timer = null; } },
+            tempo(n) { bpm = n; }
+        };
+    }
+
+    function pintarBotonesSonido() {
+        document.querySelectorAll('[data-son]').forEach(b => {
+            const esMusica = b.dataset.son === 'musica';
+            const on = esMusica ? audio.musica : audio.efectos;
+            b.setAttribute('aria-pressed', String(on));
+            const rotulo = b.querySelector('.rotulo');
+            if (rotulo) rotulo.textContent = (on ? (esMusica ? '🎵' : '🔊') : '🔇') + ' ' + (esMusica ? 'MÚSICA' : 'EFECTOS');
+            const sub = b.querySelector('.sub');
+            if (sub) sub.textContent = on ? (esMusica ? 'suena de fondo' : 'activados') : (esMusica ? 'silenciada' : 'silenciados');
+        });
+    }
+
+    function alternarSonido(cual) {
+        contexto();
+        if (cual === 'musica') audio.musica = !audio.musica;
+        else audio.efectos = !audio.efectos;
+        aplicarVolumenes();
+        if (cual === 'musica') opciones.alCambiarMusica(audio.musica);
+        else if (audio.efectos) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);   // confirmación
+        guardar(opciones.claveAudio, { musica: audio.musica, efectos: audio.efectos });
+        pintarBotonesSonido();
+    }
+
+    /* ---------- PANTALLAS Y CAPAS ---------- */
+    const $ = (id) => document.getElementById(id);
+    function mostrar(id) { document.querySelectorAll('.pantalla').forEach(p => p.classList.toggle('activa', p.id === id)); }
+    function abrir(id) { $(id).classList.add('activa'); }
+    function cerrar(id) { $(id).classList.remove('activa'); }
+    const hayCapa = () => !!document.querySelector('.capa.activa');
+
+    let avisoTimer = null;
+    function avisar(texto, malo) {
+        let el = $('estAviso');
+        if (!el) { el = document.createElement('div'); el.id = 'estAviso'; document.body.appendChild(el); }
+        el.textContent = texto;
+        el.classList.toggle('malo', !!malo);
+        el.classList.add('visible');
+        clearTimeout(avisoTimer);
+        avisoTimer = setTimeout(() => el.classList.remove('visible'), 1600);
+    }
+
+    function grupo(id, alElegir) {
+        const cont = $(id);
+        cont.addEventListener('click', (e) => {
+            const b = e.target.closest('.opcion');
+            if (!b || b.disabled) return;
+            cont.querySelectorAll('.opcion').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            alElegir(b.dataset.v, b);
+        });
+    }
+
+    /* Elige por código una opción de un grupo, como si se hubiera tocado */
+    function elegir(id, valor) {
+        const b = document.querySelector('#' + id + ' .opcion[data-v="' + valor + '"]');
+        if (b) b.click();
+    }
+
+    /* ---------- RÉCORDS ----------
+       Los nombres de campo son los que ya usaba cada juego, para no perder
+       los récords guardados antes del cambio de menú */
+    function ranking(cfg) {
+        const c = Object.assign({ nombre: 'name', puntos: 'score', max: 10 }, cfg);
+        const lista = () => {
+            const r = leer(c.clave, []);
+            return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
+        };
+        return {
+            lista,
+            entra(p) {
+                if (!(p > 0)) return false;
+                const r = lista();
+                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+            },
+            anadir(entrada) {
+                const r = lista();
+                r.push(entrada);
+                r.sort((a, b) => Number(b[c.puntos]) - Number(a[c.puntos]));
+                guardar(c.clave, r.slice(0, c.max));
+            },
+            borrar() { borrar(c.clave); },
+            /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
+            pintar(cont, detalle, resaltar) {
+                const r = lista();
+                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                /* El nombre lo escribió una persona y entra por innerHTML: escapado */
+                cont.innerHTML = r.map((e, i) =>
+                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
+                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+            }
+        };
+    }
+
+    /* ---------- ARRANQUE ---------- */
+    function iniciar(op) {
+        opciones = Object.assign(opciones, op || {});
+        const g = leer(opciones.claveAudio, {});
+        audio.musica = !!(g && g.musica === true);
+        audio.efectos = !!(g && g.efectos === true);
+        pintarBotonesSonido();
+
+        document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const interruptor = t.closest('[data-son]');
+            if (interruptor) { alternarSonido(interruptor.dataset.son); return; }
+            if (t.closest('.opcion, .principal, .secundario, .est-icono')) efecto('pulsar', 0, [[880, 0.035, 'square', 0.05]]);
+            /* Fuera del menú, un botón que se queda con el foco se volvería a
+               pulsar con el espacio o el Intro del juego: se le quita. Solo a
+               botones: quitárselo a todo dejaba sin foco el campo del nombre en
+               el mismo toque que lo enfocaba y en el iPhone no salía el
+               teclado (pasó en el Pinball). */
+            const activo = document.activeElement;
+            if (activo && activo.tagName === 'BUTTON' && !activo.closest('.est-menu')) activo.blur();
+        });
+
+        /* Si quedó sonido activado de otra visita, el navegador sigue sin dejar
+           sonar nada hasta el primer toque: se espera a ese gesto */
+        if (audio.musica || audio.efectos) {
+            const desbloquear = () => {
+                document.removeEventListener('pointerdown', desbloquear);
+                document.removeEventListener('keydown', desbloquear);
+                contexto();
+                aplicarVolumenes();
+                if (audio.musica) opciones.alCambiarMusica(true);
+            };
+            document.addEventListener('pointerdown', desbloquear);
+            document.addEventListener('keydown', desbloquear);
+        }
+    }
+
+    return {
+        iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+    };
+})();
+/* ==== FIN ESTÁNDAR JS ==== */
+</script>
+<script>
+/* ============================================================
+   SOLITARIO (KLONDIKE) — reglas, sin nada de pantalla.
+   Carta: número 0-51. palo = c / 13 (0 ♥, 1 ♦, 2 ♠, 3 ♣), valor = c % 13 + 1
+   (1 As … 13 Rey). Rojas: ♥ y ♦.
+   Estado:
+     t       7 columnas: [{ c, a }] (a = boca arriba), la última es la de encima
+     mazo    boca abajo; la de encima es la última
+     descarte la de encima es la última; abanico = cuántas del último robo
+             siguen encima (para enseñar el abanico de 3)
+     pilas   4 fundaciones; un As entra en cualquiera vacía y la pila queda
+             para ese palo
+   Movimientos: { de: { z: 't'|'d'|'p', i, k }, a: { z: 't'|'p', i } }
+     z 't' columna i desde la carta k (con las de debajo), 'd' descarte,
+     'p' pila i. Robar es aparte: robar(e).
+   Puntos (puntuación «estándar», como la de Windows; no hay una universal):
+     descarte→columna +5, a una pila +10, descubrir carta +5,
+     pila→columna −15, dar la vuelta al mazo −100 robando de 1 y −20 robando
+     de 3 a partir de la cuarta vuelta; nunca por debajo de 0.
+   ============================================================ */
+const Solitario = (() => {
+    const palo = (c) => Math.floor(c / 13);
+    const valor = (c) => c % 13 + 1;
+    const roja = (c) => palo(c) < 2;
+    const PALOS = ['♥', '♦', '♠', '♣'];
+    const VALORES = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const nombre = (c) => VALORES[valor(c)] + PALOS[palo(c)];
+    const PUNTOS = { descarteColumna: 5, aPila: 10, descubrir: 5, pilaColumna: -15, vuelta1: -100, vuelta3: -20 };
+
+    /* Generador con semilla (mulberry32): el mismo número de partida da el
+       mismo reparto en cualquier móvil */
+    function azar(s) {
+        s = s >>> 0;
+        return () => {
+            s = (s + 0x6D2B79F5) >>> 0;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+    function baraja(semilla) {
+        const r = azar(semilla), m = [];
+        for (let c = 0; c < 52; c++) m.push(c);
+        for (let i = 51; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [m[i], m[j]] = [m[j], m[i]]; }
+        return m;
+    }
+    /* Reparto de mesa: por filas, una a cada columna de la r a la 7 */
+    function repartir(semilla, robo) {
+        const m = baraja(semilla);
+        const t = [[], [], [], [], [], [], []];
+        let k = 0;
+        for (let r = 0; r < 7; r++) for (let c = r; c < 7; c++) t[c].push({ c: m[k++], a: c === r });
+        return {
+            semilla, robo: robo === 3 ? 3 : 1,
+            t, mazo: m.slice(k).reverse(), descarte: [], abanico: 0, pilas: [[], [], [], []],
+            vueltas: 0, puntos: 0, movs: 0, ganada: false
+        };
+    }
+    const copia = (e) => JSON.parse(JSON.stringify(e));
+    const encima = (a) => a[a.length - 1];
+
+    /* Cartas que se cogen con un origen (null si no se puede coger) */
+    function coger(e, de) {
+        if (de.z === 'd') return e.descarte.length ? [encima(e.descarte)] : null;
+        if (de.z === 'p') { const p = e.pilas[de.i]; return p && p.length ? [encima(p)] : null; }
+        if (de.z !== 't') return null;
+        const col = e.t[de.i];
+        if (!col || de.k < 0 || de.k >= col.length || !col[de.k].a) return null;
+        const cs = col.slice(de.k).map(x => x.c);
+        /* Tiene que ser una escalera bajando y alternando colores */
+        for (let i = 1; i < cs.length; i++) if (valor(cs[i]) !== valor(cs[i - 1]) - 1 || roja(cs[i]) === roja(cs[i - 1])) return null;
+        return cs;
+    }
+    function cabeEnPila(e, c, i) {
+        const p = e.pilas[i];
+        if (!p.length) return valor(c) === 1;
+        return palo(encima(p)) === palo(c) && valor(c) === valor(encima(p)) + 1;
+    }
+    function cabeEnColumna(e, c, i) {
+        const col = e.t[i];
+        if (!col.length) return valor(c) === 13;
+        const o = encima(col);
+        return o.a && valor(o.c) === valor(c) + 1 && roja(o.c) !== roja(c);
+    }
+    function puede(e, de, a) {
+        if (e.ganada || !a) return false;
+        const cs = coger(e, de);
+        if (!cs) return false;
+        if (a.z === 'p') return cs.length === 1 && a.i >= 0 && a.i < 4 && !(de.z === 'p' && de.i === a.i) && cabeEnPila(e, cs[0], a.i);
+        if (a.z === 't') return a.i >= 0 && a.i < 7 && !(de.z === 't' && de.i === a.i) && cabeEnColumna(e, cs[0], a.i);
+        return false;
+    }
+    /* Aplica un movimiento legal. Devuelve lo ocurrido (para la pantalla) o null */
+    function mover(e, de, a) {
+        if (!puede(e, de, a)) return null;
+        const cs = coger(e, de);
+        let puntos = 0, descubierta = null;
+        if (de.z === 'd') { e.descarte.pop(); e.abanico = Math.max(0, e.abanico - 1); }
+        else if (de.z === 'p') e.pilas[de.i].pop();
+        else {
+            e.t[de.i].length = de.k;
+            const col = e.t[de.i];
+            if (col.length && !encima(col).a) { encima(col).a = true; descubierta = encima(col).c; puntos += PUNTOS.descubrir; }
+        }
+        if (a.z === 'p') { e.pilas[a.i].push(cs[0]); if (de.z !== 'p') puntos += PUNTOS.aPila; }
+        else {
+            for (const c of cs) e.t[a.i].push({ c, a: true });
+            if (de.z === 'd') puntos += PUNTOS.descarteColumna;
+            if (de.z === 'p') puntos += PUNTOS.pilaColumna;
+        }
+        e.puntos = Math.max(0, e.puntos + puntos);
+        e.movs++;
+        e.ganada = e.pilas.every(p => p.length === 13);
+        return { cartas: cs, de, a, puntos, descubierta, ganada: e.ganada };
+    }
+    /* Robar del mazo (o darle la vuelta al descarte si se ha acabado) */
+    function robar(e) {
+        if (e.ganada) return null;
+        if (!e.mazo.length) {
+            if (!e.descarte.length) return null;
+            e.mazo = e.descarte.reverse();
+            e.descarte = [];
+            e.abanico = 0;
+            e.vueltas++;
+            let p = 0;
+            if (e.robo === 1) p = PUNTOS.vuelta1;
+            else if (e.vueltas > 3) p = PUNTOS.vuelta3;
+            e.puntos = Math.max(0, e.puntos + p);
+            e.movs++;
+            return { vuelta: true, puntos: p };
+        }
+        const n = Math.min(e.robo, e.mazo.length), cs = [];
+        for (let k = 0; k < n; k++) { const c = e.mazo.pop(); e.descarte.push(c); cs.push(c); }
+        e.abanico = n;
+        e.movs++;
+        return { vuelta: false, cartas: cs };
+    }
+    /* Destinos legales de un origen, en orden de preferencia: primero la
+       pila (si es una sola carta), luego columnas con cartas y por último
+       una columna vacía */
+    function destinos(e, de) {
+        const r = [];
+        const cs = coger(e, de);
+        if (!cs) return r;
+        if (cs.length === 1 && de.z !== 'p') {
+            const mismo = e.pilas.findIndex(p => p.length && palo(p[0]) === palo(cs[0]));
+            const orden = mismo >= 0 ? [mismo] : [0, 1, 2, 3];
+            for (const i of orden) if (puede(e, de, { z: 'p', i })) { r.push({ z: 'p', i }); break; }
+        }
+        const vacias = [];
+        for (let i = 0; i < 7; i++) {
+            if (!puede(e, de, { z: 't', i })) continue;
+            if (e.t[i].length) r.push({ z: 't', i }); else vacias.push({ z: 't', i });
+        }
+        /* Un Rey que ya está en el fondo de su columna no gana nada pasando a
+           otra vacía */
+        const reyAlFondo = de.z === 't' && de.k === 0;
+        if (!reyAlFondo && vacias.length) r.push(vacias[0]);
+        return r;
+    }
+    /* El sitio al que va una carta al tocarla: el primero de destinos() */
+    const mejorDestino = (e, de) => destinos(e, de)[0] || null;
+    /* ¿Queda algo que hacer? (para avisar de que la partida está atascada) */
+    /* sinMazo: sin contar lo que pueda salir robando (para saber si, tras
+       una vuelta entera sin jugar, aún queda algo en la mesa) */
+    function hayJugadas(e, sinMazo) {
+        if (!sinMazo && (e.mazo.length || e.descarte.length > 1)) return true;    // dar vueltas puede dar algo
+        const origenes = [];
+        if (e.descarte.length) origenes.push({ z: 'd' });
+        for (let i = 0; i < 7; i++) e.t[i].forEach((x, k) => { if (x.a) origenes.push({ z: 't', i, k }); });
+        for (const de of origenes) for (const a of destinos(e, de)) {
+            /* Mover una escalera entera de una columna a otra sin descubrir
+               nada no cuenta como jugada */
+            if (de.z === 't' && a.z === 't' && de.k > 0 && e.t[de.i][de.k - 1].a) continue;
+            if (de.z === 't' && a.z === 't' && de.k === 0) continue;
+            return true;
+        }
+        return false;
+    }
+    /* Guardar y restaurar una partida a medias (con comprobación: lo que
+       venga de localStorage puede estar roto o ser de otra versión) */
+    const guardar = (e) => copia(e);
+    function valida(o) {
+        try {
+            if (!o || typeof o !== 'object' || (o.robo !== 1 && o.robo !== 3)) return false;
+            if (!Array.isArray(o.t) || o.t.length !== 7 || !Array.isArray(o.pilas) || o.pilas.length !== 4) return false;
+            const vistas = new Set();
+            const ver = (c) => { if (!Number.isInteger(c) || c < 0 || c > 51 || vistas.has(c)) throw 0; vistas.add(c); };
+            for (const col of o.t) for (const x of col) { ver(x.c); if (typeof x.a !== 'boolean') return false; }
+            for (const c of o.mazo) ver(c);
+            for (const c of o.descarte) ver(c);
+            for (const p of o.pilas) p.forEach((c, k) => { ver(c); if (valor(c) !== k + 1 || palo(c) !== palo(p[0])) throw 0; });
+            if (vistas.size !== 52) return false;
+            for (const k of ['vueltas', 'puntos', 'movs', 'abanico']) if (!Number.isInteger(o[k]) || o[k] < 0) return false;
+            return true;
+        } catch (x) { return false; }
+    }
+    const restaurar = (o) => valida(o) ? copia(o) : null;
+    const ganada = (e) => e.pilas.every(p => p.length === 13);
+    return { palo, valor, roja, nombre, PALOS, VALORES, PUNTOS, azar, baraja, repartir, copia, coger, puede, mover, robar, destinos, mejorDestino, hayJugadas, guardar, valida, restaurar, ganada };
+})();
+if (typeof module !== 'undefined') module.exports = Solitario;
+
+</script>
+<script>
+/* ============================================================
+   RESOLUTOR DEL SOLITARIO — para las partidas del día: busca una solución
+   y la devuelve como lista de acciones, que verificar-solitario.js repite
+   con OTRAS reglas. Si no la encuentra dentro del presupuesto de nodos, el
+   reparto se descarta (puede que tuviera solución: da igual, solo hace falta
+   que las elegidas la tengan seguro).
+   Búsqueda en profundidad con memoria de posiciones vistas:
+   - las cartas que ya no pueden hacer falta en la mesa suben solas (las dos
+     del color contrario y valor anterior ya están en las pilas);
+   - el mazo no se recorre carta a carta: de cada posición se miran todas
+     las cartas que se pueden alcanzar robando, con los robos que cuestan;
+   - entre columnas solo se mueve para descubrir una carta, vaciar la
+     columna o dejar una carta lista para la pila.
+   Acciones: { r: n } = robar n veces; { c, a: 't'|'p', i } = mover la carta
+   c (con las que tenga encima en la columna) a la columna o pila i.
+   ============================================================ */
+const Resolver = (() => {
+    const S = typeof Solitario !== 'undefined' ? Solitario : require('./motor-solitario.js');
+    const { palo, valor, roja } = S;
+
+    function clave(e) {
+        let s = '';
+        for (const col of e.t) { for (const x of col) s += String.fromCharCode(65 + x.c + (x.a ? 0 : 52)); s += '/'; }
+        for (const p of e.pilas) s += p.length + ',';
+        return s + '|' + e.mazo.join('.') + '|' + e.descarte.join('.');
+    }
+    function donde(e, c) {
+        for (let i = 0; i < 7; i++) { const k = e.t[i].findIndex(x => x.c === c); if (k >= 0) return { z: 't', i, k }; }
+        return null;
+    }
+    const alto = (e, p) => { const q = e.pilas.find(x => x.length && palo(x[0]) === p); return q ? q.length : 0; };
+    /* Subirla a la pila no quita nada a la mesa */
+    function segura(e, c) {
+        const v = valor(c);
+        if (v <= 2) return true;
+        const contrarios = roja(c) ? [2, 3] : [0, 1];
+        return contrarios.every(p => alto(e, p) >= v - 1);
+    }
+    function aPila(e, c) {
+        for (let i = 0; i < 4; i++) if (S.puede(e, origen(e, c), { z: 'p', i })) return i;
+        return -1;
+    }
+    function origen(e, c) {
+        if (e.descarte.length && e.descarte[e.descarte.length - 1] === c) return { z: 'd' };
+        return donde(e, c);
+    }
+    /* Sube lo seguro mientras haya; devuelve las acciones hechas */
+    function subirSeguras(e) {
+        const hechas = [];
+        let otra = true;
+        while (otra) {
+            otra = false;
+            const cands = e.t.map(col => col.length ? col[col.length - 1].c : -1).filter(c => c >= 0);
+            if (e.descarte.length) cands.push(e.descarte[e.descarte.length - 1]);
+            for (const c of cands) {
+                if (!segura(e, c)) continue;
+                const i = aPila(e, c);
+                if (i < 0) continue;
+                S.mover(e, origen(e, c), { z: 'p', i });
+                hechas.push({ c, a: 'p', i });
+                otra = true;
+                break;
+            }
+        }
+        return hechas;
+    }
+    /* Cartas alcanzables robando: [{ n robos, carta de encima }] hasta que se
+       repite la disposición (con vueltas sin límite, eso es una vuelta
+       completa) */
+    function alcanzables(e) {
+        const r = [];
+        if (!e.mazo.length && !e.descarte.length) return r;
+        const f = { mazo: e.mazo.slice(), descarte: e.descarte.slice(), robo: e.robo, ganada: false, abanico: 0, vueltas: 0, puntos: 0, movs: 0 };
+        const vistas = new Set();
+        for (let n = 1; n < 200; n++) {
+            S.robar(f);
+            const k = f.mazo.length + ':' + f.descarte.length;
+            if (vistas.has(k)) break;
+            vistas.add(k);
+            if (f.descarte.length) r.push({ n, c: f.descarte[f.descarte.length - 1] });
+        }
+        return r;
+    }
+    function jugadas(e) {
+        const r = [];
+        /* De la mesa */
+        for (let i = 0; i < 7; i++) {
+            const col = e.t[i];
+            if (!col.length) continue;
+            const arriba = col.findIndex(x => x.a);
+            const tope = col[col.length - 1].c;
+            const ip = aPila(e, tope);
+            if (ip >= 0) r.push({ p: 3 + (col.length >= 2 && !col[col.length - 2].a ? 2 : 0), acc: [{ c: tope, a: 'p', i: ip }] });
+            for (let k = arriba; k < col.length; k++) {
+                const de = { z: 't', i, k };
+                if (!S.coger(e, de)) continue;
+                const descubre = k === arriba && k > 0;
+                const vacia = k === 0;
+                /* La que queda al descubierto puede subir a la pila */
+                const libera = k > arriba && aPila(e, col[k - 1].c) >= 0;
+                if (!descubre && !(vacia) && !libera) continue;
+                for (const a of S.destinos(e, de)) {
+                    if (a.z !== 't') continue;
+                    if (vacia && !e.t[a.i].length) continue;
+                    if (vacia && !hayRey(e, i)) continue;     // vaciar solo si hay un Rey que poner
+                    r.push({ p: descubre ? 4 : libera ? 2 : 1, acc: [{ c: col[k].c, a: 't', i: a.i }] });
+                }
+            }
+        }
+        /* Del mazo: cada carta alcanzable, con sus robos */
+        for (const { n, c } of alcanzables(e)) {
+            const f = { mazo: e.mazo.slice(), descarte: e.descarte.slice(), robo: e.robo, t: e.t, pilas: e.pilas, ganada: false, abanico: 0, vueltas: 0, puntos: 0, movs: 0 };
+            for (let k = 0; k < n; k++) S.robar(f);
+            for (const a of S.destinos(f, { z: 'd' })) r.push({ p: a.z === 'p' ? 3 : 2, acc: [{ r: n }, { c, a: a.z, i: a.i }], robos: n });
+        }
+        /* Antes lo que más abre; a igualdad, lo que menos robos cuesta */
+        r.sort((x, y) => (y.p - x.p) || ((x.robos || 0) - (y.robos || 0)));
+        return r;
+    }
+    /* ¿Hay un Rey (que no esté ya al fondo de su columna) para una columna vacía? */
+    function hayRey(e, salvo) {
+        for (let i = 0; i < 7; i++) {
+            if (i === salvo) continue;
+            const col = e.t[i], k = col.findIndex(x => x.a);
+            for (let j = Math.max(0, k); j < col.length; j++) if (col[j].a && valor(col[j].c) === 13 && j > 0) return true;
+        }
+        return e.mazo.concat(e.descarte).some(c => valor(c) === 13);
+    }
+    function aplicar(e, acc) {
+        for (const x of acc) {
+            if (x.r) { for (let k = 0; k < x.r; k++) S.robar(e); continue; }
+            const ok = S.mover(e, origen(e, x.c), { z: x.a, i: x.i });
+            if (!ok) throw new Error('acción ilegal en el resolutor: ' + JSON.stringify(x));
+        }
+    }
+    /* Devuelve { solucion: [acciones], nodos } o { solucion: null, nodos } */
+    function resolver(e0, presupuesto) {
+        const lim = presupuesto || 200000;
+        const vistas = new Set();
+        let nodos = 0;
+        const camino = [];
+        function dfs(e) {
+            if (++nodos > lim) return false;
+            camino.push(...subirSeguras(e).map(x => [x]));
+            if (S.ganada(e)) return true;
+            const k = clave(e);
+            if (vistas.has(k)) return false;
+            vistas.add(k);
+            for (const j of jugadas(e)) {
+                const f = S.copia(e);
+                aplicar(f, j.acc);
+                const largo = camino.length;
+                camino.push(j.acc);
+                if (dfs(f)) return true;
+                camino.length = largo;
+                if (nodos > lim) return false;
+            }
+            return false;
+        }
+        const e = S.copia(e0);
+        const largo0 = camino.length;
+        const ok = dfs(e);
+        if (!ok) camino.length = largo0;
+        return { solucion: ok ? [].concat(...camino) : null, nodos };
+    }
+    return { resolver, clave, segura, alcanzables };
+})();
+if (typeof module !== 'undefined') module.exports = Resolver;
+
+</script>
+<script>
+/* ============================================================
+   PARTIDA DEL DÍA: el mismo reparto para todos cada día, con solución
+   comprobada. Para cada fecha y modo (robar 1 o 3) se prueban semillas
+   seguidas (k = 0, 1, 2…) y se queda la primera que el resolutor gana.
+   La k de cada día ya viene calculada en TABLA (la genera
+   generar-diarias.js, y verificar-solitario.js repite cada solución con
+   otras reglas): así el móvil no tiene que resolver nada y todos ven la
+   misma partida. Pasada la tabla, se busca en el propio móvil con el
+   mismo presupuesto, que da el mismo resultado en cualquier aparato porque
+   se cuenta en nodos y no en tiempo.
+   ============================================================ */
+const Diarias = (() => {
+    const S = typeof Solitario !== 'undefined' ? Solitario : require('./motor-solitario.js');
+    const PRESUPUESTO = 20000;                      // nodos del resolutor por intento
+    const INTENTOS = 60;
+    /* TABLA: GENERADO por generar-diarias.js (no editar a mano). Un carácter
+       por día desde DESDE: la k en base 36; '-' = no se encontró */
+    const DESDE = '2026-11-18';
+    const TABLA = { 1: '3000400100003000030021030000113002100032021110101000100007114000020000000000002010130000131041110002010001100301114160021011000110100001000020021200100123000102031102011000020100002003261010103000100004111210070002115302001012000001100210010011100100000000000201011201010010100000000000220003001100001250300111000000113000040301010510002500000010140100154130102012001003010000010140110005202030010230012203000200020010210000090002000010110004000011010000611002100000001021100200000306100000000000104400011111122000120002000600000410001111001020010002100200121030010100110011000010001001200000000111110410200100000000221110131001030001710100001011000000120300300002030200011003100100010201024141100003201122011251030321030030200130001100010100000000104000001100013101214012101', 3: '04522042340313201413401410613201072400501206245000241001314431d600200012309050055206620012206331213033041d21103210012052142203235063200440172130323002711282311m08081012303122039503190002590906730580121300101000201093212007120215001443233100361011h30002108500321020040636216558020220320420234301122010921d17260130224012230e0121053125919414023017010311143002016106000151d123007001132118200201106030401a413563410201903031212131011383211401120150011120004220001001272133101060201061311331327160310032300403410011312420240121192104124130030101216055301000012043333315225030441302001141071338134002010103201a11202238113023101110250411042100910411120430161100016009711002320271500972020171010115010302201110020057210413003240210131610231001350141921127020308601231052003619250352310' };
+    /* FIN TABLA */
+    const DIA = 86400000;
+    const aDias = (f) => Math.round((Date.UTC(+f.slice(0, 4), +f.slice(5, 7) - 1, +f.slice(8, 10)) - Date.UTC(+DESDE.slice(0, 4), +DESDE.slice(5, 7) - 1, +DESDE.slice(8, 10))) / DIA);
+    /* Número de partida (1-999999) de una fecha, modo y k */
+    function semillaCon(fecha, robo, k) {
+        let h = 2166136261 >>> 0;
+        const t = fecha + '/' + robo + '/' + k;
+        for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+        return 1 + (h % 999999);
+    }
+    function semillaTabla(fecha, robo) {
+        const d = aDias(fecha), s = TABLA[robo] || '';
+        if (d < 0 || d >= s.length || s[d] === '-') return null;
+        return semillaCon(fecha, robo, parseInt(s[d], 36));
+    }
+    /* La semilla del día; resolver: el resolutor (solo hace falta pasada la tabla) */
+    function semilla(fecha, robo, resolver) {
+        const t = semillaTabla(fecha, robo);
+        if (t !== null) return t;
+        if (resolver) for (let k = 0; k < INTENTOS; k++) {
+            const s = semillaCon(fecha, robo, k);
+            if (resolver(S.repartir(s, robo), PRESUPUESTO).solucion) return s;
+        }
+        return semillaCon(fecha, robo, 0);
+    }
+    /* Fecha local del aparato, AAAA-MM-DD */
+    const hoy = (d) => { d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    return { DESDE, TABLA, PRESUPUESTO, INTENTOS, semillaCon, semillaTabla, semilla, hoy, aDias };
+})();
+if (typeof module !== 'undefined') module.exports = Diarias;
+
+</script>
+<script>
+/* ============================================================
+   SOLITARIO — pantalla, mandos, puntos, estadísticas y partida del día.
+   Las reglas están en motor-solitario.js; aquí solo se coloca, se anima y
+   se escucha. Las 52 cartas son elementos fijos que se mueven con
+   transform (la transición CSS hace la animación de cada movimiento).
+   ============================================================ */
+'use strict';
+const $ = (id) => document.getElementById(id);
+const S = Solitario;
+const mesa = $('mesa');
+
+let gameState = 'menu';            // menu | playing | paused | fin
+let e = null;                      // partida del motor
+let diaria = null;                 // fecha de la partida del día, o null
+let tiempo = 0, empezada = false;  // segundos jugados; el reloj arranca con la primera jugada
+let reloj = null;
+let pasadaSinJugar = false;        // desde la última vuelta al mazo no se ha movido ninguna carta
+let L = null;                      // medidas (medir)
+let cursor = { p: 0, k: -1 };      // teclado: posición (0 mazo, 1 descarte, 2-5 pilas, 6-12 columnas)
+let conTeclado = false;
+const els = [];                    // elemento de cada carta, por número
+
+/* ---------- AJUSTES Y ESTADÍSTICAS (EST.leer/guardar: try/catch y memoria) ---------- */
+let ajustes = Object.assign({ robo: 1 }, EST.leer('solitario.ajustes', {}) || {});
+if (ajustes.robo !== 1 && ajustes.robo !== 3) ajustes.robo = 1;
+const guardarAjustes = () => EST.guardar('solitario.ajustes', ajustes);
+const MODO_VACIO = () => ({ j: 0, g: 0, racha: 0, mejorRacha: 0, mejorTiempo: 0, mejorPuntos: 0, menosMovs: 0 });
+function leerEst() {
+    const x = EST.leer('solitario.estadisticas', null), v = { r1: MODO_VACIO(), r3: MODO_VACIO(), dia: {} };
+    if (!x || typeof x !== 'object') return v;
+    for (const m of ['r1', 'r3']) if (x[m]) for (const k of Object.keys(v[m])) v[m][k] = Number.isInteger(x[m][k]) && x[m][k] >= 0 ? x[m][k] : 0;
+    if (x.dia && typeof x.dia === 'object') for (const [k, d] of Object.entries(x.dia)) if (/^\d{4}-\d\d-\d\d\/[13]$/.test(k) && d && Number.isInteger(d.t)) v.dia[k] = { t: d.t, p: d.p | 0, m: d.m | 0 };
+    return v;
+}
+let est = leerEst();
+const guardarEst = () => EST.guardar('solitario.estadisticas', est);
+
+/* ---------- SONIDO ---------- */
+const musicaFondo = EST.musica({
+    bpm: 58,
+    acordes: [
+        { bajo: 65.41, notas: [261.63, 329.63, 392.00] },
+        { bajo: 87.31, notas: [261.63, 349.23, 440.00] },
+        { bajo: 55.00, notas: [220.00, 261.63, 329.63] },
+        { bajo: 98.00, notas: [246.94, 293.66, 392.00] }
+    ]
+});
+const NOTA = (v) => 392 * Math.pow(2, (v - 1) / 12);
+const sonar = {
+    toc() { EST.ruido(0.04, 0.18, 2400, 1200); EST.efecto('toc', 25, [[220, 0.05, 'triangle', 0.06, 0, 160]]); },
+    robar() { EST.ruido(0.06, 0.16, 4200, 2000); },
+    gira() { EST.efecto('gira', 40, [[500, 0.06, 'sine', 0.05, 0, 900]]); },
+    pila(v) { EST.efecto('pila', 30, [[NOTA(v), 0.12, 'triangle', 0.07], [NOTA(v) * 1.5, 0.16, 'sine', 0.04, 0.05]]); },
+    no() { EST.efecto('no', 150, [[150, 0.12, 'square', 0.04]]); },
+    vuelta() { EST.ruido(0.22, 0.2, 3000, 900); },
+    elige() { EST.efecto('elige', 40, [[700, 0.04, 'sine', 0.04]]); },
+    gana() { EST.efecto('gana', 900, [[523, 0.14, 'triangle', 0.08], [659, 0.14, 'triangle', 0.08, 0.15], [784, 0.14, 'triangle', 0.08, 0.3], [1047, 0.5, 'triangle', 0.08, 0.45]]); }
+};
+function alCambiarMusica(on) { if (on && gameState === 'playing') musicaFondo.arrancar(); else musicaFondo.parar(); }
+
+/* ==========================================================
+   CARTAS (diseño propio): índice grande arriba, palo grande en el centro;
+   las figuras llevan un dibujo sencillo hecho aquí (corona, tiara, gorro)
+   ========================================================== */
+const FIGURA = {
+    13: '<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M8 44 L12 18 L22 30 L30 12 L38 30 L48 18 L52 44 Z" fill="currentColor"/><rect x="8" y="46" width="44" height="6" rx="2" fill="currentColor"/><circle cx="12" cy="16" r="3.5" fill="#e8b923"/><circle cx="30" cy="10" r="3.5" fill="#e8b923"/><circle cx="48" cy="16" r="3.5" fill="#e8b923"/><circle cx="30" cy="36" r="4" fill="#fdfdf8"/></svg>',
+    12: '<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M8 46 Q30 4 52 46 Z" fill="currentColor"/><circle cx="30" cy="22" r="5" fill="#e8b923"/><circle cx="18" cy="34" r="3.5" fill="#fdfdf8"/><circle cx="42" cy="34" r="3.5" fill="#fdfdf8"/><rect x="8" y="46" width="44" height="6" rx="3" fill="currentColor"/></svg>',
+    11: '<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M10 44 Q12 22 32 22 Q48 22 50 44 Z" fill="currentColor"/><rect x="6" y="44" width="48" height="7" rx="3" fill="currentColor"/><path d="M34 22 Q44 4 56 6 Q46 12 40 24 Z" fill="#e8b923"/><circle cx="24" cy="36" r="3.5" fill="#fdfdf8"/></svg>'
+};
+function crearCartas() {
+    for (let c = 0; c < 52; c++) {
+        const d = document.createElement('div');
+        d.className = 'carta abajo ' + (S.roja(c) ? 'roja' : 'negra');
+        d.dataset.c = c;
+        const v = S.valor(c), p = S.PALOS[S.palo(c)], txt = S.VALORES[v];
+        d.innerHTML = '<div class="cara"><div class="ind"><span class="v">' + txt + '</span><span class="p">' + p + '</span></div>' +
+            '<div class="centro">' + (v >= 11 ? FIGURA[v] : '<span class="gp">' + p + '</span>') + '</div>' +
+            '<div class="ind2">' + txt + p + '</div></div><div class="dorso"></div>';
+        d.setAttribute('aria-hidden', 'true');
+        mesa.appendChild(d);
+        els[c] = d;
+    }
+}
+/* Huecos: mazo, descarte, 4 pilas, 7 columnas */
+const huecos = {};
+function crearHuecos() {
+    const h = (id, cls, txt) => { const d = document.createElement('div'); d.className = 'hueco-carta ' + cls; d.textContent = txt; mesa.appendChild(d); huecos[id] = d; return d; };
+    h('mazo', 'mazo', '↺');
+    h('descarte', '', '');
+    for (let i = 0; i < 4; i++) h('p' + i, 'pila', 'A');
+    for (let i = 0; i < 7; i++) h('t' + i, 'col', 'K');
+}
+
+/* ==========================================================
+   MEDIDAS Y COLOCACIÓN
+   ========================================================== */
+function medir() {
+    const W = mesa.clientWidth, H = mesa.clientHeight;
+    if (!W || !H) return;
+    const m = 4;
+    /* Dos disposiciones y se queda la de cartas más grandes:
+       - arriba mazo y pilas, debajo las 7 columnas; la columna necesita
+         sitio para unas 3,4 cartas de alto (13 boca arriba apretadas), así
+         que la carta no puede pasar de (alto − fila de arriba) / 4,4;
+       - tumbado: mazo y descarte a la izquierda, las pilas en columna a la
+         derecha y las 7 columnas en medio (9 anchos de carta en total).
+       Con solo mirar si la pantalla es más ancha que alta, en un ordenador
+       salían cartas de 108 px montadas unas sobre otras */
+    const gV = Math.max(3, Math.round(W * 0.012));
+    const wV = Math.min(Math.floor((W - 2 * m - 6 * gV) / 7), Math.floor((H - 2 * m - 2.5 * gV) / 4.4 / 1.42));
+    /* Tumbado: mazo y descarte a la izquierda, las pilas de 2 en 2 a la
+       derecha (con el marcador debajo) y las columnas en medio: 10 anchos
+       de carta, y de alto, sitio para una columna de 3,3 cartas. Con las 4
+       pilas en fila vertical la carta no pasaba de 47 px en un Pixel 7 */
+    const gA = 5;
+    const wA = Math.min(Math.floor((H - 2 * m) / 3.3 / 1.42), Math.floor((W - 2 * m - 14 * gA) / 10));
+    const apaisado = document.body.classList.contains('tumbado') || wA > wV;
+    let w = apaisado ? wA : wV, g = apaisado ? gA : gV;
+    const h = Math.round(w * 1.42);
+    const x = [], ys = {};
+    let pos;
+    if (!apaisado) {
+        const ox = Math.round((W - (7 * w + 6 * g)) / 2);
+        for (let i = 0; i < 7; i++) x.push(ox + i * (w + g));
+        pos = {
+            mazo: [x[0], m], descarte: [x[1], m], abanico: [Math.round(w * 0.3), 0],
+            pilas: [0, 1, 2, 3].map(i => [x[3 + i], m]),
+            colY: m + h + Math.round(g * 2.5), bajo: H - m
+        };
+    } else {
+        const izq = m + w + 3 * g, der = W - m - (2 * w + g) - 3 * g;
+        const gt = Math.max(g, Math.min(Math.round(w * 0.35), Math.floor((der - izq - 7 * w) / 6)));
+        const ox = izq + Math.round((der - izq - (7 * w + 6 * gt)) / 2);
+        for (let i = 0; i < 7; i++) x.push(ox + i * (w + gt));
+        const xp = W - m - (2 * w + g);
+        pos = {
+            mazo: [m, m], descarte: [m, m + h + 2 * g], abanico: [0, Math.round(h * 0.22)],
+            pilas: [0, 1, 2, 3].map(i => [xp + (i % 2) * (w + g), m + Math.floor(i / 2) * (h + g)]),
+            colY: m, bajo: H - m
+        };
+        const mc = $('marcador');
+        mc.style.left = xp + 'px'; mc.style.top = (m + 2 * h + 3 * g) + 'px'; mc.style.width = (2 * w + g) + 'px'; mc.style.bottom = m + 'px';
+    }
+    L = { W, H, w, h, g, x, pos, apaisado };
+    const fs = (el, f) => { el.style.fontSize = f + 'px'; };
+    for (const c of els) {
+        c.style.width = w + 'px'; c.style.height = h + 'px';
+        fs(c.querySelector('.ind'), Math.max(11, w * 0.36));
+        fs(c.querySelector('.ind2'), Math.max(8, w * 0.2));
+        const gp = c.querySelector('.gp'); if (gp) fs(gp, w * 0.62);
+    }
+    const ponHueco = (d, xy) => { d.style.width = w + 'px'; d.style.height = h + 'px'; d.style.left = xy[0] + 'px'; d.style.top = xy[1] + 'px'; d.style.fontSize = Math.round(w * 0.4) + 'px'; };
+    ponHueco(huecos.mazo, pos.mazo);
+    ponHueco(huecos.descarte, pos.descarte);
+    for (let i = 0; i < 4; i++) ponHueco(huecos['p' + i], pos.pilas[i]);
+    for (let i = 0; i < 7; i++) ponHueco(huecos['t' + i], [x[i], pos.colY]);
+    pintar(true);
+}
+/* Separación vertical de cada carta de una columna: si no cabe, se aprieta
+   (más las boca abajo, que no hace falta leer) */
+function pasos(col) {
+    const { h, pos } = L;
+    let dAbajo = h * 0.12, dArriba = h * 0.27;
+    const nA = col.filter(x => !x.a).length, nU = Math.max(0, col.length - nA - 1);
+    const sitio = pos.bajo - pos.colY - h;
+    const necesita = nA * dAbajo + nU * dArriba;
+    if (necesita > sitio && necesita > 0) {
+        dAbajo = Math.max(h * 0.05, dAbajo * sitio / necesita);
+        const resto = sitio - nA * dAbajo;
+        if (nU) dArriba = Math.max(h * 0.16, Math.min(dArriba, resto / nU));
+    }
+    return { dAbajo, dArriba };
+}
+/* Dónde va cada carta ahora mismo: { x, y, z, abajo } */
+function colocacion() {
+    const r = new Array(52);
+    const { pos, x } = L;
+    e.mazo.forEach((c, k) => { r[c] = { x: pos.mazo[0], y: pos.mazo[1], z: 1 + k, abajo: true }; });
+    /* Descarte: las del último robo en abanico (hasta 3), el resto apiladas */
+    const n = e.descarte.length, verAbanico = e.robo === 3 ? Math.min(3, Math.max(1, e.abanico), n) : Math.min(1, n);
+    e.descarte.forEach((c, k) => {
+        const j = Math.max(0, k - (n - verAbanico));
+        r[c] = { x: pos.descarte[0] + j * pos.abanico[0], y: pos.descarte[1] + j * pos.abanico[1], z: 100 + k, abajo: false };
+    });
+    e.pilas.forEach((p, i) => p.forEach((c, k) => { r[c] = { x: pos.pilas[i][0], y: pos.pilas[i][1], z: 200 + k, abajo: false }; }));
+    e.t.forEach((col, i) => {
+        const { dAbajo, dArriba } = pasos(col);
+        let y = pos.colY;
+        col.forEach((it, k) => { r[it.c] = { x: x[i], y, z: 300 + k, abajo: !it.a }; y += it.a ? dArriba : dAbajo; });
+    });
+    return r;
+}
+let ultimaColocacion = null;
+function pintar(sinAnimar) {
+    if (!L || !e) return;
+    const r = colocacion();
+    for (let c = 0; c < 52; c++) {
+        const d = els[c], p = r[c];
+        /* Una carta que no está en la partida (solo pasa en las mesas de
+           prueba) no se enseña */
+        d.style.display = p ? '' : 'none';
+        if (!p || d.classList.contains('arrastrando')) continue;
+        if (sinAnimar) d.style.transition = 'none';
+        d.style.transform = 'translate(' + Math.round(p.x) + 'px,' + Math.round(p.y) + 'px)';
+        /* Mientras viaja va por encima de todo; al llegar, a su sitio */
+        const antes = ultimaColocacion && ultimaColocacion[c];
+        const viaja = antes && (antes.x !== p.x || antes.y !== p.y) && !sinAnimar;
+        d.style.zIndex = viaja ? 900 + p.z % 100 : p.z;
+        if (viaja) setTimeout(() => { if (d.style.zIndex >= 900) d.style.zIndex = p.z; }, 220);
+        const estabaAbajo = d.classList.contains('abajo');
+        d.classList.toggle('abajo', p.abajo);
+        if (estabaAbajo && !p.abajo && !sinAnimar) { d.classList.remove('gira'); void d.offsetWidth; d.classList.add('gira'); }
+        if (sinAnimar) { void d.offsetWidth; d.style.transition = ''; }
+    }
+    ultimaColocacion = r;
+    huecos.mazo.classList.toggle('fin', !e.mazo.length && !e.descarte.length);
+    huecos.mazo.textContent = e.mazo.length ? '' : (e.descarte.length ? '↺' : '✕');
+    for (let i = 0; i < 4; i++) huecos['p' + i].textContent = e.pilas[i].length ? '' : 'A';
+    pintarCursor();
+}
+function pintarBarra() {
+    /* Dos sitios: la barra (de pie) y el marcador de la mesa (tumbado) */
+    for (const [b, mm] of [['b', 'm']]) {
+        $(b + 'Puntos').textContent = $(mm + 'Puntos').textContent = e.puntos;
+        $(b + 'Movs').textContent = $(mm + 'Movs').textContent = e.movs;
+        $(b + 'Tiempo').textContent = $(mm + 'Tiempo').textContent = mmss(tiempo);
+        $(b + 'Modo').textContent = $(mm + 'Modo').textContent = diaria ? '📅' : e.robo;
+        $(b + 'ModoTxt').textContent = $(mm + 'ModoTxt').textContent = diaria ? 'DEL DÍA · ' + e.robo : 'ROBA';
+    }
+}
+const mmss = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+const anunciar = (t) => { $('anuncio').textContent = t; };
+
+/* ==========================================================
+   JUGAR
+   ========================================================== */
+const sitioTexto = (a) => a.z === 'p' ? 'a la pila' : 'a la columna ' + (a.i + 1);
+function hacer(de, a) {
+    const r = S.mover(e, de, a);
+    if (!r) return null;
+    arrancarReloj();
+    pasadaSinJugar = false;
+    if (a.z === 'p') sonar.pila(S.valor(r.cartas[0])); else sonar.toc();
+    if (r.descubierta !== null) setTimeout(sonar.gira, 120);
+    anunciar(S.nombre(r.cartas[0]) + (r.cartas.length > 1 ? ' y ' + (r.cartas.length - 1) + ' más' : '') + ' ' + sitioTexto(a) + (r.descubierta !== null ? '. Se descubre ' + S.nombre(r.descubierta) : ''));
+    trasJugada();
+    return r;
+}
+function robarMazo() {
+    if (gameState !== 'playing') return;
+    const r = S.robar(e);
+    if (!r) { sonar.no(); return; }
+    arrancarReloj();
+    if (r.vuelta) {
+        sonar.vuelta();
+        anunciar('Vuelta al mazo' + (r.puntos ? ' (' + r.puntos + ')' : ''));
+        /* Una vuelta entera sin mover nada: lo más seguro es que no haya
+           salida (en robar de 3 la siguiente vuelta es idéntica) */
+        if (pasadaSinJugar && e.vueltas > 1 && !S.hayJugadas(e, true)) avisoMesa('Has dado una vuelta entera al mazo sin poder jugar nada: parece que esta partida ya no tiene salida.', true);
+        pasadaSinJugar = true;
+    } else { sonar.robar(); anunciar('Robas ' + r.cartas.map(S.nombre).join(', ')); }
+    trasJugada();
+}
+function trasJugada() {
+    pintar();
+    pintarBarra();
+    guardarPartida();
+    if (e.ganada) { victoria(); return; }
+    if (!S.hayJugadas(e)) avisoMesa('No quedan jugadas.', true);
+}
+/* Tocar: la carta se va sola al mejor sitio */
+function tocarOrigen(de) {
+    if (gameState !== 'playing' || !de) return false;
+    const a = S.mejorDestino(e, de);
+    if (!a) {
+        const cs = S.coger(e, de);
+        if (cs) { const d = els[cs[0]]; d.classList.remove('no'); void d.offsetWidth; d.classList.add('no'); }
+        sonar.no();
+        return false;
+    }
+    return !!hacer(de, a);
+}
+/* Origen de una carta tocada (null si no se puede coger) */
+function origenDe(c) {
+    if (e.descarte.length && e.descarte[e.descarte.length - 1] === c) return { z: 'd' };
+    for (let i = 0; i < 4; i++) { const p = e.pilas[i]; if (p.length && p[p.length - 1] === c) return { z: 'p', i }; }
+    for (let i = 0; i < 7; i++) { const k = e.t[i].findIndex(x => x.c === c); if (k >= 0) return e.t[i][k].a && S.coger(e, { z: 't', i, k }) ? { z: 't', i, k } : null; }
+    return null;
+}
+const enMazo = (c) => e.mazo.includes(c);
+
+/* ---------- Puntero: tocar o arrastrar ---------- */
+let pulso = null;
+function puntoEnMesa(ev) { const r = mesa.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+/* Suelta un toque a medias sin hacer nada (las cartas que se arrastraban
+   vuelven a su sitio) */
+function olvidarPulso() {
+    if (!pulso) return;
+    const q = pulso;
+    pulso = null;
+    if (q.grupo) q.grupo.forEach(k => els[k].classList.remove('arrastrando'));
+    marcarDestino(null);
+    if (q.arrastra) pintar();
+}
+mesa.addEventListener('pointerdown', (ev) => {
+    if (gameState !== 'playing') return;
+    /* Un dedo nuevo manda sobre el que ya estaba. Antes se ignoraba todo
+       mientras hubiera otro dedo puesto, y con el móvil tumbado el pulgar
+       que lo sujeta suele apoyarse en el borde, encima de una carta: el
+       juego parecía congelado y solo respondía la pausa (18-11) */
+    if (pulso) olvidarPulso();
+    if (conTeclado) { conTeclado = false; pintarCursor(); }
+    ocultarAviso(false);
+    const p = puntoEnMesa(ev);
+    const cartaEl = ev.target.closest('.carta');
+    const c = cartaEl ? +cartaEl.dataset.c : null;
+    if ((c !== null && enMazo(c)) || ev.target === huecos.mazo) { pulso = { mazo: true, id: ev.pointerId }; return; }
+    if (c === null) return;
+    const de = origenDe(c);
+    if (!de) return;
+    const grupo = de.z === 't' ? e.t[de.i].slice(de.k).map(x => x.c) : [c];
+    const r0 = ultimaColocacion;
+    pulso = { de, grupo, id: ev.pointerId, x0: p.x, y0: p.y, base: grupo.map(k => ({ x: r0[k].x, y: r0[k].y })), arrastra: false };
+    try { mesa.setPointerCapture(ev.pointerId); } catch (x) { }
+});
+mesa.addEventListener('pointermove', (ev) => {
+    if (!pulso || pulso.mazo || ev.pointerId !== pulso.id) return;
+    const p = puntoEnMesa(ev), dx = p.x - pulso.x0, dy = p.y - pulso.y0;
+    if (!pulso.arrastra && Math.hypot(dx, dy) < 8) return;
+    if (!pulso.arrastra) { pulso.arrastra = true; pulso.grupo.forEach((k, j) => { els[k].classList.add('arrastrando'); els[k].style.zIndex = 1000 + j; }); }
+    pulso.grupo.forEach((k, j) => { els[k].style.transform = 'translate(' + (pulso.base[j].x + dx) + 'px,' + (pulso.base[j].y + dy) + 'px)'; });
+    marcarDestino(soltarEn(pulso, dx, dy));
+});
+function terminarPulso(ev, cancelado) {
+    if (!pulso || ev.pointerId !== pulso.id) return;
+    const q = pulso;
+    pulso = null;
+    if (q.mazo) { if (!cancelado) robarMazo(); return; }
+    if (!q.arrastra) { if (!cancelado) tocarOrigen(q.de); return; }
+    const p = puntoEnMesa(ev);
+    const a = cancelado ? null : soltarEn(q, p.x - q.x0, p.y - q.y0);
+    q.grupo.forEach(k => els[k].classList.remove('arrastrando'));
+    marcarDestino(null);
+    if (a && S.puede(e, q.de, a)) hacer(q.de, a);
+    else { if (!cancelado && a) sonar.no(); pintar(); }
+}
+mesa.addEventListener('pointerup', (ev) => terminarPulso(ev, false));
+mesa.addEventListener('pointercancel', (ev) => terminarPulso(ev, true));
+mesa.addEventListener('contextmenu', (ev) => ev.preventDefault());
+/* Al soltar: el sitio que más pisa la carta arrastrada (pilas o columnas) */
+function soltarEn(q, dx, dy) {
+    const { w, h, pos, x } = L;
+    const cx = q.base[0].x + dx, cy = q.base[0].y + dy;
+    let mejor = null, area = 0;
+    const prueba = (a, rx, ry, rh) => {
+        const ix = Math.max(0, Math.min(cx + w, rx + w) - Math.max(cx, rx)), iy = Math.max(0, Math.min(cy + h, ry + rh) - Math.max(cy, ry));
+        if (ix * iy > area) { area = ix * iy; mejor = a; }
+    };
+    for (let i = 0; i < 4; i++) prueba({ z: 'p', i }, pos.pilas[i][0], pos.pilas[i][1], h);
+    for (let i = 0; i < 7; i++) {
+        /* Columna: desde su carta de encima hasta abajo del todo */
+        const col = e.t[i], top = col.length && ultimaColocacion ? ultimaColocacion[col[col.length - 1].c].y : pos.colY;
+        prueba({ z: 't', i }, x[i], top, Math.max(h, pos.bajo - top));
+    }
+    return area > w * h * 0.12 ? mejor : null;
+}
+function marcarDestino(a) {
+    document.querySelectorAll('.hueco-carta.destino').forEach(d => d.classList.remove('destino'));
+    if (!a || !pulso || !S.puede(e, pulso.de, a)) return;
+    const hueco = huecos[(a.z === 'p' ? 'p' : 't') + a.i];
+    const col = a.z === 't' ? e.t[a.i] : e.pilas[a.i];
+    if (!col.length) hueco.classList.add('destino');
+}
+
+/* ---------- Teclado ---------- */
+/* Posiciones: 0 mazo, 1 descarte, 2-5 pilas, 6-12 columnas */
+function cartaDeCursor() {
+    const p = cursor.p;
+    if (p === 0) return null;
+    if (p === 1) return e.descarte.length ? e.descarte[e.descarte.length - 1] : null;
+    if (p < 6) { const q = e.pilas[p - 2]; return q.length ? q[q.length - 1] : null; }
+    const col = e.t[p - 6];
+    if (!col.length) return null;
+    const k = cursor.k >= 0 && cursor.k < col.length && col[cursor.k].a ? cursor.k : col.length - 1;
+    return col[k].c;
+}
+function pintarCursor() {
+    document.querySelectorAll('.carta.cursor').forEach(d => d.classList.remove('cursor'));
+    Object.values(huecos).forEach(d => d.style.outline = '');
+    /* Solo si se está usando el teclado: con el dedo, el marco sobra */
+    if (document.activeElement !== mesa || gameState !== 'playing' || !conTeclado) return;
+    const c = cartaDeCursor();
+    if (cursor.p === 0 && e.mazo.length) { els[e.mazo[e.mazo.length - 1]].classList.add('cursor'); return; }
+    if (c !== null) els[c].classList.add('cursor');
+    else { const h = huecos[cursor.p === 0 ? 'mazo' : cursor.p === 1 ? 'descarte' : cursor.p < 6 ? 'p' + (cursor.p - 2) : 't' + (cursor.p - 6)]; h.style.outline = '3px solid var(--acento)'; }
+}
+mesa.addEventListener('keydown', (ev) => {
+    if (gameState !== 'playing') return;
+    if (!conTeclado) { conTeclado = true; pintarCursor(); }
+    const k = ev.key;
+    if (k === 'ArrowLeft' || k === 'ArrowRight') { ev.preventDefault(); cursor.p = (cursor.p + (k === 'ArrowRight' ? 1 : 12)) % 13; cursor.k = -1; pintarCursor(); }
+    else if ((k === 'ArrowUp' || k === 'ArrowDown') && cursor.p >= 6) {
+        ev.preventDefault();
+        const col = e.t[cursor.p - 6], primera = col.findIndex(x => x.a);
+        if (primera < 0) return;
+        let j = cursor.k >= primera ? cursor.k : col.length - 1;
+        j = Math.max(primera, Math.min(col.length - 1, j + (k === 'ArrowUp' ? -1 : 1)));
+        cursor.k = j;
+        pintarCursor();
+    } else if (k === ' ' || k === 'Enter') {
+        ev.preventDefault();
+        if (k === ' ' || cursor.p === 0) { robarMazo(); return; }
+        const c = cartaDeCursor();
+        if (c === null) { sonar.no(); return; }
+        const de = cursor.p >= 6 ? { z: 't', i: cursor.p - 6, k: e.t[cursor.p - 6].findIndex(x => x.c === c) } : origenDe(c);
+        if (de && S.coger(e, de)) { tocarOrigen(de); cursor.k = -1; pintarCursor(); } else sonar.no();
+    }
+});
+mesa.addEventListener('focus', pintarCursor);
+mesa.addEventListener('blur', pintarCursor);
+
+/* ---------- Aviso sobre la mesa (sin salida) ---------- */
+function avisoMesa(txt, conBotones) {
+    const a = $('avisoMesa');
+    a.textContent = '';
+    const p = document.createElement('div'); p.textContent = txt; a.appendChild(p);
+    if (conBotones) {
+        const f = document.createElement('div'); f.className = 'fila-btns';
+        const b1 = document.createElement('button'); b1.className = 'secundario'; b1.type = 'button'; b1.textContent = '↺ REPETIR'; b1.onclick = () => nuevaPartida(e.semilla, e.robo, diaria);
+        const b2 = document.createElement('button'); b2.className = 'principal'; b2.type = 'button'; b2.textContent = '🂠 OTRA'; b2.onclick = () => nuevaPartida(null, e.robo, null);
+        const b3 = document.createElement('button'); b3.className = 'secundario'; b3.type = 'button'; b3.textContent = 'SEGUIR'; b3.onclick = () => ocultarAviso(true);
+        f.append(b1, b2, b3); a.appendChild(f);
+    }
+    a.hidden = false;
+}
+function ocultarAviso(siempre) { if (siempre || !$('avisoMesa').querySelector('button')) $('avisoMesa').hidden = true; }
+
+/* ==========================================================
+   PARTIDA, RELOJ, GUARDADO
+   ========================================================== */
+function arrancarReloj() {
+    empezada = true;
+    if (reloj === null && gameState === 'playing') reloj = setInterval(() => { if (!document.hidden) { tiempo++; $('bTiempo').textContent = $('mTiempo').textContent = mmss(tiempo); if (tiempo % 10 === 0) guardarPartida(); } }, 1000);
+}
+function pararReloj() { if (reloj !== null) { clearInterval(reloj); reloj = null; } }
+function guardarPartida() {
+    if (!e || e.ganada) { EST.guardar('solitario.partida', null); return; }
+    EST.guardar('solitario.partida', { e: S.guardar(e), tiempo, diaria, empezada, pasadaSinJugar });
+}
+function leerGuardada() {
+    const g = EST.leer('solitario.partida', null);
+    if (!g || typeof g !== 'object') return null;
+    const p = S.restaurar(g.e);
+    if (!p || p.ganada) return null;
+    return { e: p, tiempo: Number.isInteger(g.tiempo) && g.tiempo >= 0 ? g.tiempo : 0, diaria: typeof g.diaria === 'string' && /^\d{4}-\d\d-\d\d$/.test(g.diaria) ? g.diaria : null, empezada: !!g.empezada, pasadaSinJugar: !!g.pasadaSinJugar };
+}
+/* Una partida empezada que se deja por otra cuenta como jugada y no ganada */
+function abandonarActual() {
+    const g = e && !e.ganada ? { e, empezada } : leerGuardada();
+    if (!g || !g.empezada || !g.e.movs) return;
+    const m = est['r' + g.e.robo];
+    m.j++; m.racha = 0;
+    guardarEst();
+}
+function nuevaPartida(semilla, robo, fechaDiaria) {
+    abandonarActual();
+    const s = semilla || 1 + Math.floor(Math.random() * 999999);
+    e = S.repartir(s, robo);
+    diaria = fechaDiaria || null;
+    tiempo = 0; empezada = false; pasadaSinJugar = false;
+    entrar(true);
+}
+function continuar() {
+    const g = leerGuardada();
+    if (!g) { pintarMenu(); return; }
+    e = g.e; diaria = g.diaria; tiempo = g.tiempo; empezada = g.empezada; pasadaSinJugar = g.pasadaSinJugar;
+    entrar(false);
+}
+function entrar(reparto) {
+    pararReloj();
+    ['capaFin', 'capaPausa', 'capaEstadisticas', 'capaAyuda'].forEach(EST.cerrar);
+    $('avisoMesa').hidden = true;
+    pulso = null;
+    EST.mostrar('pJuego');
+    gameState = 'playing';
+    ultimaColocacion = null;
+    ponerTumbado();
+    medir();
+    pintarBarra();
+    guardarPartida();
+    /* De pie en un móvil: se espera a que lo giren (sin reloj, sin música
+       y con el reparto sin animar hasta entonces) */
+    esperaGiro = vertical();
+    repartoPendiente = reparto;
+    comprobarGiro();
+    if (esperaGiro) return;
+    empezarDeVerdad();
+}
+function empezarDeVerdad() {
+    if (repartoPendiente && L && !matchMedia('(prefers-reduced-motion: reduce)').matches) animarReparto();
+    repartoPendiente = false;
+    if (empezada) arrancarReloj();
+    musicaFondo.arrancar();
+    mesa.focus({ preventScroll: true });
+}
+
+/* ---------- GIRAR EL MÓVIL ---------- */
+let girado = false, esperaGiro = false, repartoPendiente = false;
+const consultaVertical = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+function vertical() {
+    if (!document.body.classList.contains('tactil')) return false;
+    return consultaVertical ? consultaVertical.matches : innerHeight > innerWidth;
+}
+/* Móvil tumbado: pantalla ancha y baja */
+function ponerTumbado() { document.body.classList.toggle('tumbado', innerWidth > innerHeight * 1.3 && innerHeight < 600); }
+function comprobarGiro() {
+    const enPartida = e && (gameState === 'playing' || gameState === 'paused') && $('pJuego').classList.contains('activa');
+    const antes = girado;
+    girado = !!enPartida && vertical();
+    $('avisoGirar').classList.toggle('activo', girado);
+    /* Lo ponen de pie a media partida: pausa (al girarlo de nuevo, sale la
+       pausa para seguir) */
+    if (girado && !antes && !esperaGiro && gameState === 'playing') pauseGame();
+    if (!girado && esperaGiro) {
+        esperaGiro = false;
+        ponerTumbado();
+        medir();
+        if (gameState === 'playing') empezarDeVerdad();
+    }
+}
+if (consultaVertical && consultaVertical.addEventListener) consultaVertical.addEventListener('change', comprobarGiro);
+/* Reparto: todas salen del mazo y van llegando a su columna, una tras otra */
+function animarReparto() {
+    const r = colocacion(), orden = [];
+    for (let fila = 0; fila < 7; fila++) for (let i = fila; i < 7; i++) orden.push(e.t[i][fila].c);
+    for (const c of orden) { const d = els[c]; d.style.transition = 'none'; d.style.transform = 'translate(' + L.pos.mazo[0] + 'px,' + L.pos.mazo[1] + 'px)'; d.classList.add('abajo'); d.style.zIndex = 50; }
+    void mesa.offsetWidth;
+    orden.forEach((c, n) => setTimeout(() => {
+        if (gameState !== 'playing') return;
+        const d = els[c], p = r[c];
+        d.style.transition = '';
+        d.style.zIndex = p.z;
+        d.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+        if (!p.abajo) setTimeout(() => { d.classList.remove('abajo'); d.classList.add('gira'); }, 180);
+    }, n * 28));
+    ultimaColocacion = r;
+}
+function victoria() {
+    gameState = 'fin';
+    $('avisoMesa').hidden = true;
+    pararReloj();
+    guardarPartida();
+    sonar.gana();
+    const m = est['r' + e.robo];
+    m.j++; m.g++; m.racha++;
+    m.mejorRacha = Math.max(m.mejorRacha, m.racha);
+    const recordT = !m.mejorTiempo || tiempo < m.mejorTiempo, recordP = e.puntos > m.mejorPuntos, recordM = !m.menosMovs || e.movs < m.menosMovs;
+    if (recordT) m.mejorTiempo = tiempo;
+    if (recordP) m.mejorPuntos = e.puntos;
+    if (recordM) m.menosMovs = e.movs;
+    let primeraDiaria = false;
+    if (diaria) { const k = diaria + '/' + e.robo, d = est.dia[k]; primeraDiaria = !d; if (!d || tiempo < d.t) est.dia[k] = { t: tiempo, p: e.puntos, m: e.movs }; }
+    guardarEst();
+    const lineas = ['Tiempo ' + mmss(tiempo) + (recordT ? ' (¡tu mejor!)' : ''), e.movs + ' movimientos', e.puntos + ' puntos' + (recordP ? ' (¡récord!)' : ''), m.racha > 1 ? m.racha + ' seguidas' : ''];
+    $('finTitulo').textContent = diaria ? '📅 ¡PARTIDA DEL DÍA RESUELTA!' : '🏆 ¡RESUELTO!';
+    $('finDetalle').textContent = lineas.filter(Boolean).join(' · ') + '.' + (diaria && !primeraDiaria ? ' Ya la habías resuelto hoy.' : '') + ' Partida nº ' + e.semilla + ', robando de ' + e.robo + '.';
+    celebrar();
+    setTimeout(() => { if (gameState === 'fin') EST.abrir('capaFin'); }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 300 : 1900);
+}
+/* Las cartas saltan de las pilas y caen rebotando hacia abajo */
+function celebrar() {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const { W, H, w, h } = L;
+    let n = 0;
+    for (let v = 13; v >= 1; v--) for (let p = 0; p < 4; p++) {
+        const pila = e.pilas.find(q => q.length && S.palo(q[0]) === p);
+        if (!pila) continue;
+        const d = els[pila[v - 1]];
+        const x = Math.random() * (W - w), y = H - h - Math.random() * H * 0.25;
+        setTimeout(() => { d.style.transition = 'transform 0.9s cubic-bezier(.3,1.5,.6,1)'; d.style.zIndex = 800 + n; d.style.transform = 'translate(' + x + 'px,' + y + 'px) rotate(' + (Math.random() * 60 - 30) + 'deg)'; }, n * 25);
+        n++;
+    }
+}
+function pauseGame() {
+    if (gameState !== 'playing') return;
+    olvidarPulso();
+    gameState = 'paused';
+    pararReloj();
+    guardarPartida();
+    musicaFondo.parar();
+    $('pausaDetalle').textContent = (diaria ? 'Partida del día (' + diaria + ')' : 'Partida nº ' + e.semilla) + ', robando de ' + e.robo + '.';
+    EST.abrir('capaPausa');
+}
+function reanudar() {
+    if (gameState !== 'paused' || girado) return;
+    EST.cerrar('capaPausa');
+    gameState = 'playing';
+    if (empezada) arrancarReloj();
+    musicaFondo.arrancar();
+    mesa.focus({ preventScroll: true });
+}
+function volverAlMenu() {
+    pararReloj();
+    if (gameState !== 'fin') guardarPartida();
+    gameState = 'menu';
+    esperaGiro = false;
+    musicaFondo.parar();
+    ['capaFin', 'capaPausa'].forEach(EST.cerrar);
+    EST.mostrar('pMenu');
+    comprobarGiro();
+    pintarMenu();
+}
+
+/* ==========================================================
+   MENÚ, ESTADÍSTICAS Y PARTIDA DEL DÍA
+   ========================================================== */
+function pintarMenu() {
+    const g = leerGuardada();
+    $('btnContinuar').hidden = !g;
+    if (g) $('subContinuar').textContent = (g.diaria ? 'partida del día' : 'partida nº ' + g.e.semilla) + ' · robando de ' + g.e.robo + ' · ' + g.e.movs + ' movimientos · ' + mmss(g.tiempo);
+    const hecha = est.dia[Diarias.hoy() + '/' + ajustes.robo];
+    $('subDiaria').textContent = hecha ? '✓ resuelta hoy en ' + mmss(hecha.t) + ' · robando de ' + ajustes.robo : 'robando de ' + ajustes.robo + ' · tiene solución seguro';
+}
+function partidaDelDia() {
+    const f = Diarias.hoy(), robo = ajustes.robo;
+    /* Dentro de la tabla es inmediato; fuera, el móvil busca un reparto con
+       solución (puede tardar unos segundos): se avisa antes */
+    const enTabla = Diarias.semillaTabla(f, robo) !== null;
+    if (!enTabla) EST.avisar('Preparando la partida del día…');
+    setTimeout(() => nuevaPartida(Diarias.semilla(f, robo, Resolver.resolver), robo, f), enTabla ? 0 : 60);
+}
+function pintarEstadisticas() {
+    const fila = (t, m) => {
+        const pc = m.j ? Math.round(100 * m.g / m.j) + ' %' : '—';
+        return '<tr><td>' + t + '</td><td>' + m.j + '</td><td>' + m.g + '</td><td>' + pc + '</td><td>' + m.racha + ' / ' + m.mejorRacha + '</td><td>' + (m.mejorTiempo ? mmss(m.mejorTiempo) : '—') + '</td><td>' + (m.mejorPuntos || '—') + '</td><td>' + (m.menosMovs || '—') + '</td></tr>';
+    };
+    const dias = Object.keys(est.dia).length;
+    $('tablaEstadisticas').innerHTML =
+        '<table class="tabla-est"><thead><tr><th></th><th>Jug.</th><th>Gan.</th><th>%</th><th>Racha / mejor</th><th>Mejor tiempo</th><th>Más puntos</th><th>Menos mov.</th></tr></thead><tbody>' +
+        fila('Robando de 1', est.r1) + fila('Robando de 3', est.r3) + '</tbody></table>' +
+        '<p style="font-size:0.85rem">Partidas del día resueltas: <b>' + dias + '</b>' + (est.dia[Diarias.hoy() + '/1'] || est.dia[Diarias.hoy() + '/3'] ? ' (hoy, ✓)' : '') + '</p>' +
+        '<p style="font-size:0.75rem;color:var(--apagado)">Las partidas que se dejan a medias por otra cuentan como jugadas y no ganadas.</p>';
+}
+
+const btn = (id, fn) => $(id).addEventListener('click', fn);
+EST.grupo('grpRobo', (v) => { ajustes.robo = +v; guardarAjustes(); pintarMenu(); });
+EST.elegir('grpRobo', String(ajustes.robo));
+btn('btnJugar', () => nuevaPartida(null, ajustes.robo, null));
+btn('btnContinuar', continuar);
+btn('btnDiaria', partidaDelDia);
+btn('btnEstadisticas', () => { pintarEstadisticas(); EST.abrir('capaEstadisticas'); });
+btn('btnCerrarEst', () => EST.cerrar('capaEstadisticas'));
+btn('btnBorrarEst', () => { if (!confirm('¿Borrar todas las estadísticas?')) return; est = { r1: MODO_VACIO(), r3: MODO_VACIO(), dia: {} }; guardarEst(); pintarEstadisticas(); pintarMenu(); });
+btn('btnInstructions', () => EST.abrir('capaAyuda'));
+btn('closeInstructions', () => EST.cerrar('capaAyuda'));
+btn('btnRestart', () => nuevaPartida(null, e.robo, null));
+btn('btnMenu', volverAlMenu);
+btn('btnResume', reanudar);
+btn('btnRepetir', () => nuevaPartida(e.semilla, e.robo, diaria));
+btn('btnNueva', () => nuevaPartida(null, e.robo, null));
+btn('btnPauseToMenu', volverAlMenu);
+btn('pauseTouchBtn', () => { if (gameState === 'paused') reanudar(); else pauseGame(); });
+btn('pausaMesa', () => { if (gameState === 'paused') reanudar(); else pauseGame(); });
+btn('btnGirarMenu', volverAlMenu);
+document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') {
+        if ($('pJuego').classList.contains('activa')) { if (gameState === 'paused') reanudar(); else if (gameState === 'playing') pauseGame(); }
+        else ['capaAyuda', 'capaEstadisticas'].forEach(EST.cerrar);
+    }
+});
+let tRes = null;
+window.addEventListener('resize', () => { clearTimeout(tRes); tRes = setTimeout(() => { comprobarGiro(); ponerTumbado(); medir(); }, 80); });
+window.addEventListener('blur', pauseGame);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+window.addEventListener('pagehide', guardarPartida);
+
+if (window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches) document.body.classList.add('tactil');
+crearHuecos();
+crearCartas();
+pintarMenu();
+EST.iniciar({ claveAudio: 'solitarioAudio', alCambiarMusica });
+
+/* Para las pruebas */
+window.__solitario = {
+    e: () => e, estado: () => gameState, girado: () => girado, pulso: () => pulso, diaria: () => diaria, tiempo: () => tiempo, est: () => est, medidas: () => L,
+    caja: (c) => { const r = els[c].getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
+    hueco: (id) => { const r = huecos[id].getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
+    poner: (p) => { e = p; ultimaColocacion = null; pintar(true); pintarBarra(); },
+    tocarOrigen, robarMazo, origenDe
+};
+
+</script>
+</body>
+</html>
