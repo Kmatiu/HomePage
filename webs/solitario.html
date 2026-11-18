@@ -1817,8 +1817,23 @@ const enMazo = (c) => e.mazo.includes(c);
 /* ---------- Puntero: tocar o arrastrar ---------- */
 let pulso = null;
 function puntoEnMesa(ev) { const r = mesa.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+/* Suelta un toque a medias sin hacer nada (las cartas que se arrastraban
+   vuelven a su sitio) */
+function olvidarPulso() {
+    if (!pulso) return;
+    const q = pulso;
+    pulso = null;
+    if (q.grupo) q.grupo.forEach(k => els[k].classList.remove('arrastrando'));
+    marcarDestino(null);
+    if (q.arrastra) pintar();
+}
 mesa.addEventListener('pointerdown', (ev) => {
-    if (gameState !== 'playing' || pulso) return;
+    if (gameState !== 'playing') return;
+    /* Un dedo nuevo manda sobre el que ya estaba. Antes se ignoraba todo
+       mientras hubiera otro dedo puesto, y con el móvil tumbado el pulgar
+       que lo sujeta suele apoyarse en el borde, encima de una carta: el
+       juego parecía congelado y solo respondía la pausa (18-11) */
+    if (pulso) olvidarPulso();
     if (conTeclado) { conTeclado = false; pintarCursor(); }
     ocultarAviso(false);
     const p = puntoEnMesa(ev);
@@ -1990,6 +2005,7 @@ function entrar(reparto) {
     pararReloj();
     ['capaFin', 'capaPausa', 'capaEstadisticas', 'capaAyuda'].forEach(EST.cerrar);
     $('avisoMesa').hidden = true;
+    pulso = null;
     EST.mostrar('pJuego');
     gameState = 'playing';
     ultimaColocacion = null;
@@ -2092,6 +2108,7 @@ function celebrar() {
 }
 function pauseGame() {
     if (gameState !== 'playing') return;
+    olvidarPulso();
     gameState = 'paused';
     pararReloj();
     guardarPartida();
@@ -2190,7 +2207,7 @@ EST.iniciar({ claveAudio: 'solitarioAudio', alCambiarMusica });
 
 /* Para las pruebas */
 window.__solitario = {
-    e: () => e, estado: () => gameState, girado: () => girado, diaria: () => diaria, tiempo: () => tiempo, est: () => est, medidas: () => L,
+    e: () => e, estado: () => gameState, girado: () => girado, pulso: () => pulso, diaria: () => diaria, tiempo: () => tiempo, est: () => est, medidas: () => L,
     caja: (c) => { const r = els[c].getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
     hueco: (id) => { const r = huecos[id].getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height }; },
     poner: (p) => { e = p; ultimaColocacion = null; pintar(true); pintarBarra(); },
