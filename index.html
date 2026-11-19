@@ -191,6 +191,8 @@
        a todo el ancho */
     #rejillaBusca { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
     .juego .grupo { font-size: 0.7rem; color: var(--apagado); margin-top: -2px; }
+    /* Juegos que se pueden jugar con dos móviles (campo red del catálogo) */
+    .juego .red { font-size: 0.68rem; color: var(--acento); margin-top: -4px; white-space: nowrap; }
 
     /* ---------- Botón de capturas (a la izquierda; la ☆ va a la derecha) ---------- */
     .ver {
@@ -491,6 +493,8 @@
          cambio: 'AAAA-MM-DD HH:MM', nota: '…'
                                      novedad en un juego que ya estaba →
                                      «Nueva versión» con la nota
+         red: true                  se puede jugar con dos móviles: la
+                                     tarjeta lo dice bajo el nombre
        Solo hace falta ponerlos en lo que se añada o cambie desde ahora (los
        de antes no llevan nada). Fecha y hora en texto: se comparan como
        texto, así que siempre con ceros (09:05, no 9:5). El reloj del móvil no
@@ -534,7 +538,8 @@
           archivo: 'webs/super-pang.html',     nombre: 'Súper Pang',     icono: '🎯',
           extras: ['images/world-map.png'] },
         { grupo: 'Arcade',
-          archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥' },
+          archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥', red: true,
+          cambio: '2026-11-19 12:00', nota: 'Ahora podéis jugar dos juntos contra los enemigos, cada uno con su tanque en su móvil (en la misma wifi).' },
         { grupo: 'Arcade',
           archivo: 'webs/pinball.html',        nombre: 'Pinball',        icono: '🎰' },
         { grupo: 'Arcade',
@@ -545,8 +550,8 @@
         { grupo: 'Arcade',
           archivo: 'webs/tirachinas.html',     nombre: 'Angry Birds', icono: '🐦' },
         { grupo: 'Arcade',
-          archivo: 'webs/worms.html',          nombre: 'Worms',          icono: '🪱',
-          alta: '2026-11-16 10:00' },
+          archivo: 'webs/worms.html',          nombre: 'Worms',          icono: '🐛', red: true,
+          alta: '2026-11-16 10:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
 
         { grupo: 'Deporte y motor',
           archivo: 'webs/carreraCoches.html',  nombre: 'Ruta 66',        icono: '🏎️' },
@@ -564,15 +569,16 @@
           archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱',
           extras: ['https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
         { grupo: 'Ingenio',
-          archivo: 'webs/conecta4.html',       nombre: 'Conecta 4',      icono: '🔴' },
+          archivo: 'webs/conecta4.html',       nombre: 'Conecta 4',      icono: '🔴', red: true,
+          cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
         { grupo: 'Ingenio',
-          archivo: 'webs/damas.html',          nombre: 'Damas',          icono: '⚫',
-          alta: '2026-11-16 13:00' },
+          archivo: 'webs/damas.html',          nombre: 'Damas',          icono: '⚫', red: true,
+          alta: '2026-11-16 13:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
         { grupo: 'Ingenio',
           archivo: 'webs/solitario.html',      nombre: 'Solitario',      icono: '🃏',
           alta: '2026-11-18 15:00' },
         { grupo: 'Ingenio',
-          archivo: 'webs/flota.html',        nombre: 'Hundir la Flota', icono: '🚢' },
+          archivo: 'webs/flota.html',        nombre: 'Hundir la Flota', icono: '🚢', red: true },
         { grupo: 'Ingenio',
           archivo: 'webs/memory.html',       nombre: 'Memory',         icono: '🃏' },
         { grupo: 'Ingenio',
@@ -751,6 +757,16 @@
 
         a.appendChild(ico);
         a.appendChild(nom);
+        if (j.red) {
+            var rd = document.createElement('div');
+            rd.className = 'red';
+            var mv = document.createElement('span');
+            mv.setAttribute('aria-hidden', 'true');
+            mv.textContent = '📱📱 ';
+            rd.appendChild(mv);
+            rd.appendChild(document.createTextNode('2 móviles'));
+            a.appendChild(rd);
+        }
         /* En el buscador se dice la sección: hay nombres repetidos (Mahjong
            está en Ingenio y en Para los mayores) */
         if (conGrupo) {
