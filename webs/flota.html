@@ -1147,6 +1147,10 @@ function sdpcRehacer(d, mid) {
    los no confirmados, para que tras un corte (pantalla bloqueada, cambio de
    app) un nuevo par de QR continúe la misma partida.
 
+   Para los juegos de acción hay además un canal «rápido» (sin orden ni
+   reenvíos): lo que se manda por él puede perderse, así que solo vale para
+   estados completos que el siguiente sustituye (posiciones, mandos).
+
    Depende de: sdp-compacto.js, qrcode-generator (pintar) y el worker de
    qr-scanner (leer cuando no hay BarcodeDetector, que es el caso de Safari).
 
@@ -1156,10 +1160,14 @@ function sdpcRehacer(d, mid) {
          alConectar({ nueva, papel }) {},   // nueva: no hay partida que reanudar
          alMensaje(datos) {},              // en orden y sin duplicados
          alCorte(motivo) {},               // 'perdida' | 'adios'
-         alCancelar() {}                   // cerró la capa sin conectar
+         alCancelar() {},                  // cerró la capa sin conectar
+         alRapido(datos) {},               // opcional: lo del canal rápido
+         alAbandonar() {},                 // opcional: si está, el propio
+                                           // enlace enseña la capa de corte
+         rival: 'tu rival'                 // opcional: cómo se le llama
      });
      enlace.anfitrion();  enlace.invitado(codigoDeLaURL);  enlace.reconectar();
-     enlace.enviar({...});  enlace.cerrar();
+     enlace.enviar({...});  enlace.enviarRapido({...});  enlace.cerrar();
    ========================================================== */
 const Enlace = (() => {
     const PREFIJO_URL = 'enlace=';
@@ -1172,6 +1180,10 @@ const Enlace = (() => {
     const LATIDO = 2000, SILENCIO_MAX = 8000;
     const INTERVALO_LECTURA = 140;
     const LADO_LECTURA = 480;
+    /* Si el canal rápido tiene más de esto sin salir, la red no da abasto:
+       se tira la instantánea en vez de encolarla, porque la siguiente ya
+       la sustituye y encolar solo añadiría retraso. */
+    const TOPE_COLA_RAPIDO = 64 * 1024;
 
     /* ---------- estilos, una sola vez por página ---------- */
     let estilosPuestos = false;
@@ -1192,6 +1204,18 @@ const Enlace = (() => {
 .enl-caja h2 { margin: 0 0 6px; font-size: 1.05rem; letter-spacing: 1px; outline: none; }
 .enl-paso { margin: 4px 0; font-size: 0.74rem; color: var(--apagado, var(--c-a9a7c0, #a9a7c0)); line-height: 1.4; }
 .enl-paso b { color: var(--texto, var(--c-f2f2f7, #f2f2f7)); }
+/* El paso que toca ahora, recuadrado y más grande. En la primera prueba
+   real (dos iPhone) el anfitrión no hizo el paso 2: el texto estaba, pero
+   no destacaba sobre el resto. */
+.enl-paso.enl-ahora { font-size: 0.86rem; color: var(--texto, var(--c-f2f2f7, #f2f2f7)); border: 2px solid var(--acento, var(--c-00ffc8, #00ffc8));
+    border-radius: 10px; padding: 6px 8px; background: rgba(var(--c-0-255-200, 0, 255, 200),0.10); }
+.enl-paso.enl-hecho { opacity: 0.55; }
+/* Cuando toca leer el código del otro, el visor manda: más grande para
+   apuntar, y el QR propio (si sigue a la vista) encoge. */
+.enl-caja.enl-leer .enl-visor { width: min(70vw, 30svh, 280px); }
+.enl-caja.enl-leer .enl-qr { width: min(40vw, 20svh, 180px); }
+.enl-estado.enl-grande { font-size: 0.95rem; }
+.enl-corte-texto { margin: 6px 0; font-size: 0.8rem; line-height: 1.45; }
 /* Se mide contra svh, no vh: con la barra de direcciones a la vista, vh
    promete más alto del que hay y el QR empujaba los botones fuera. */
 .enl-qr { display: block; margin: 4px auto; width: min(88vw, 52svh, 400px); height: auto; aspect-ratio: 1;
@@ -1386,6 +1410,7 @@ const Enlace = (() => {
   <p class="enl-paso" data-p="cam"></p>
   <div class="enl-visor"><video playsinline muted></video><div class="enl-mira"></div></div>
   <p class="enl-estado" aria-live="polite"></p>
+  <p class="enl-corte-texto" hidden></p>
   <ul class="enl-ayuda" hidden></ul>
   <details class="enl-manual">
     <summary>¿Sin cámara? Pasar el código por mensaje</summary>
@@ -1395,6 +1420,8 @@ const Enlace = (() => {
   </details>
   <div class="enl-botones">
     <button type="button" data-a="reintentar" class="enl-principal" hidden>REINTENTAR</button>
+    <button type="button" data-a="reconectar" class="enl-principal" hidden>VOLVER A CONECTAR</button>
+    <button type="button" data-a="abandonar" hidden>ABANDONAR</button>
     <button type="button" data-a="cancelar">CANCELAR</button>
     <button type="button" data-a="diag">DIAGNÓSTICO</button>
   </div>
@@ -1407,7 +1434,9 @@ const Enlace = (() => {
             titulo: $('#enl-titulo'), pasoQR: $('[data-p="qr"]'), qr: $('.enl-qr'), pasoCam: $('[data-p="cam"]'),
             visor: $('.enl-visor'), video: $('video'), estado: $('.enl-estado'), ayuda: $('.enl-ayuda'),
             manual: $('.enl-manual'), texto: $('textarea'), mandar: $('[data-a="mandar"]'),
-            reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag')
+            reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag'),
+            corte: $('.enl-corte-texto'), reconectar: $('[data-a="reconectar"]'),
+            abandonar: $('[data-a="abandonar"]'), cancelar: $('[data-a="cancelar"]')
         };
 
         capa.addEventListener('click', (e) => {
@@ -1421,11 +1450,18 @@ const Enlace = (() => {
             else if (a === 'mandar') acciones.mandar();
             else if (a === 'cancelar') acciones.cancelar();
             else if (a === 'reintentar') acciones.reintentar();
+            else if (a === 'reconectar') acciones.reconectar();
+            else if (a === 'abandonar') acciones.abandonar();
         });
         /* Que el Escape de la capa no le llegue al juego: en Hundir la Flota
            pausaría la partida por debajo mientras se reconecta. */
         capa.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') { e.preventDefault(); acciones.cancelar(); }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                /* En la vista de corte no hay CANCELAR: cerrar la capa dejaría
+                   la partida parada sin ningún botón para seguir. */
+                if (!el.cancelar.hidden) acciones.cancelar();
+            }
             e.stopPropagation();
         });
 
@@ -1433,7 +1469,12 @@ const Enlace = (() => {
             video: el.video,
             abrir(titulo) {
                 el.titulo.textContent = titulo;
-                [el.pasoQR, el.qr, el.pasoCam, el.visor, el.ayuda, el.reintentar, el.diag].forEach(x => { x.hidden = true; });
+                [el.pasoQR, el.qr, el.pasoCam, el.visor, el.ayuda, el.reintentar, el.diag,
+                 el.corte, el.reconectar, el.abandonar].forEach(x => { x.hidden = true; });
+                el.cancelar.hidden = false;
+                el.manual.hidden = false;
+                [el.pasoQR, el.pasoCam].forEach(x => x.classList.remove('enl-ahora', 'enl-hecho'));
+                capa.querySelector('.enl-caja').classList.remove('enl-leer');
                 capa.querySelector('.enl-caja').classList.remove('enl-con-camara');
                 el.manual.open = false;
                 el.texto.value = '';
@@ -1453,6 +1494,27 @@ const Enlace = (() => {
                 return pintarQR(el.qr, texto);
             },
             sinQR() { el.pasoQR.hidden = true; el.qr.hidden = true; el.mandar.hidden = true; },
+            /* Qué paso toca: 'qr' (que el otro lea el mío), 'cam' (leer yo el
+               suyo) o null. El otro queda atenuado si ya se hizo. */
+            ahora(cual, hechoElOtro) {
+                el.pasoQR.classList.toggle('enl-ahora', cual === 'qr');
+                el.pasoCam.classList.toggle('enl-ahora', cual === 'cam');
+                el.pasoQR.classList.toggle('enl-hecho', cual === 'cam' && !!hechoElOtro);
+                el.pasoCam.classList.toggle('enl-hecho', cual === 'qr' && !!hechoElOtro);
+                capa.querySelector('.enl-caja').classList.toggle('enl-leer', cual === 'cam');
+            },
+            /* La vista de corte: sin QR ni cámara, con VOLVER A CONECTAR y
+               ABANDONAR (o solo MENÚ si el otro se ha ido). */
+            corte(titulo, texto, sePuedeVolver) {
+                this.abrir(titulo);
+                el.manual.hidden = true;
+                el.cancelar.hidden = true;
+                el.corte.textContent = texto;
+                el.corte.hidden = false;
+                el.reconectar.hidden = !sePuedeVolver;
+                el.abandonar.textContent = sePuedeVolver ? 'ABANDONAR' : 'MENÚ';
+                el.abandonar.hidden = false;
+            },
             camara(paso) {
                 el.pasoCam.innerHTML = paso; el.pasoCam.hidden = false; el.visor.hidden = false;
                 capa.querySelector('.enl-caja').classList.add('enl-con-camara');
@@ -1462,7 +1524,11 @@ const Enlace = (() => {
                 capa.querySelector('.enl-caja').classList.remove('enl-con-camara');
             },
             abrirManual() { el.manual.open = true; },
-            estado(texto, malo) { el.estado.textContent = texto || ''; el.estado.classList.toggle('malo', !!malo); },
+            estado(texto, malo, grande) {
+                el.estado.textContent = texto || '';
+                el.estado.classList.toggle('malo', !!malo);
+                el.estado.classList.toggle('enl-grande', !!grande);
+            },
             ayuda(lineas) {
                 el.ayuda.innerHTML = '';
                 lineas.forEach(t => { const li = document.createElement('li'); li.textContent = t; el.ayuda.appendChild(li); });
@@ -1502,6 +1568,11 @@ const Enlace = (() => {
         let miCodigo = '';
         let plazo = null, latido = null, cerrojo = null;
         let ultimoAviso = 0;
+        /* La capa de corte la lleva el enlace solo si el juego lo pide
+           (pasando alAbandonar); Hundir la Flota tiene la suya propia. */
+        const gestionaCorte = typeof opciones.alAbandonar === 'function';
+        const rival = opciones.rival || 'tu rival';
+        let cortada = false;          // hay partida a medias esperando reconexión
 
         /* Sesión: numeración de mensajes y lo que falta por confirmar */
         const S = { enviados: 0, recibidos: 0, pendientes: [], lista: false, ultimoRecibido: 0, ultimoEnvio: 0 };
@@ -1513,7 +1584,9 @@ const Enlace = (() => {
                 pegado: (t) => recibirCodigo(t, 'pegado'),
                 mandar: mandarMiCodigo,
                 cancelar,
-                reintentar: () => (papel === 'anfitrion' ? anfitrion() : invitado())
+                reintentar: () => (papel === 'anfitrion' ? anfitrion() : invitado()),
+                reconectar: () => (papel === 'invitado' ? invitado() : anfitrion()),
+                abandonar
             });
             lector = crearLector(capa.video, (t) => recibirCodigo(t, 'cámara'), apuntar);
         }
@@ -1525,6 +1598,7 @@ const Enlace = (() => {
             const viejo = con;
             con = null;
             try { viejo.dc.close(); } catch (e) {}
+            try { viejo.dr.close(); } catch (e) {}
             try { viejo.pc.close(); } catch (e) {}
         }
 
@@ -1534,11 +1608,30 @@ const Enlace = (() => {
             /* Canal negociado: los dos lo crean con el mismo id y no hace falta
                esperar a ondatachannel, que en el invitado llegaba tarde. */
             const dc = pc.createDataChannel('enlace', { negotiated: true, id: 0, ordered: true });
-            const esta = { pc, dc };
+            /* El rápido va sin orden ni reenvíos: en un juego de acción, una
+               instantánea perdida y reenviada llega cuando ya hay otra más
+               nueva, y con orden retrasaría a todas las de detrás. También
+               negociado, así que no cambia la oferta ni el QR. */
+            const dr = pc.createDataChannel('rapido', { negotiated: true, id: 1, ordered: false, maxRetransmits: 0 });
+            const esta = { pc, dc, dr };
             con = esta;
             const vigente = () => con === esta;
 
-            pc.addEventListener('iceconnectionstatechange', () => vigente() && apuntar('ice ' + pc.iceConnectionState));
+            pc.addEventListener('iceconnectionstatechange', () => {
+                if (!vigente()) return;
+                apuntar('ice ' + pc.iceConnectionState);
+                /* Medido en Safari (dos iPhone, 18-11): el anfitrión pasa a
+                   «checking» SIN haber leído aún la respuesta, porque le
+                   llegan las comprobaciones del invitado que ya leyó su
+                   oferta. Es la señal para decirle que le toca leer a él. */
+                if (papel === 'anfitrion' && esperando && esperando.tipo === 'respuesta' &&
+                    pc.iceConnectionState === 'checking' && capa && capa.abierta) {
+                    apuntar('el otro ya ha leído mi código');
+                    capa.ahora('cam', true);
+                    capa.estado('¡Ya ha leído tu código! Ahora apunta tu cámara a SU pantalla', false, true);
+                    try { if (navigator.vibrate) navigator.vibrate(120); } catch (e) {}
+                }
+            });
             pc.addEventListener('connectionstatechange', () => {
                 if (!vigente()) return;
                 apuntar('conexión ' + pc.connectionState);
@@ -1555,6 +1648,13 @@ const Enlace = (() => {
                 mandar({ t: 'hola', j: juego, s: sesion, r: S.recibidos });
             });
             dc.addEventListener('message', (e) => vigente() && llegada(e.data));
+            dr.addEventListener('message', (e) => {
+                if (!vigente()) return;
+                S.ultimoRecibido = ahora();
+                let m;
+                try { m = JSON.parse(e.data); } catch (err) { return; }
+                if (m && m.t === 'r' && S.lista && opciones.alRapido) avisar('alRapido', m.d);
+            });
             dc.addEventListener('close', () => {
                 if (!vigente()) return;
                 apuntar('canal cerrado');
@@ -1599,6 +1699,9 @@ const Enlace = (() => {
             asegurarCapa();
             const v = ++vuelta;
             papel = 'anfitrion';
+            /* El código de un intento anterior ya no vale: sin borrarlo,
+               ENVIAR MI CÓDIGO mandaba el viejo mientras se preparaba el nuevo. */
+            miCodigo = '';
             if (!sesion) sesion = idAzar();
             cerrarConexion();
             capa.abrir(S.enviados || S.recibidos ? 'VOLVER A CONECTAR' : 'PARTIDA NUEVA');
@@ -1623,12 +1726,13 @@ const Enlace = (() => {
             } catch (e) { apuntar('oferta: ' + e.message); fallo('interno'); return; }
 
             miCodigo = codigo;
-            const modulos = capa.qr(codigo, '<b>1.</b> En el otro móvil, pulsa <b>UNIRME</b> y apunta a este código.');
+            const modulos = capa.qr(codigo, '<b>PASO 1 de 2.</b> En el otro móvil, pulsa <b>UNIRME</b> y que apunte con su cámara a <b>este</b> código.');
             apuntar('QR de ' + modulos + ' módulos, ' + codigo.length + ' caracteres');
             esperando = { tipo: 'respuesta', vuelta: v };
             if (hayCamara) {
-                capa.camara('<b>2.</b> Cuando el otro te enseñe el suyo, apúntale con esta cámara.');
-                capa.estado('Esperando su código…');
+                capa.camara('<b>PASO 2 de 2.</b> Luego el otro móvil enseñará <b>su</b> código: apúntale con esta cámara.');
+                capa.ahora('qr');
+                capa.estado('Esperando a que el otro lea tu código…');
                 lector.empezar();
             } else {
                 capa.abrirManual();
@@ -1642,6 +1746,7 @@ const Enlace = (() => {
             asegurarCapa();
             const v = ++vuelta;
             papel = 'invitado';
+            miCodigo = '';
             cerrarConexion();
             capa.abrir(S.enviados || S.recibidos ? 'VOLVER A CONECTAR' : 'UNIRME A UNA PARTIDA');
             apuntar('— invitado');
@@ -1653,7 +1758,8 @@ const Enlace = (() => {
             const hayCamara = await encenderCamara();
             if (v !== vuelta) return;
             if (hayCamara) {
-                capa.camara('Apunta al código del móvil que ha creado la partida.');
+                capa.camara('<b>PASO 1 de 2.</b> Apunta con esta cámara al código del móvil que ha creado la partida.');
+                capa.ahora('cam');
                 capa.estado('Buscando el código…');
                 lector.empezar();
             } else {
@@ -1755,8 +1861,9 @@ const Enlace = (() => {
             lector.apagar();
             capa.sinCamara();
             miCodigo = codigo;
-            capa.qr(codigo, 'Ahora el otro móvil tiene que leer <b>este</b> código con la cámara de la página.');
-            capa.estado('Esperando a que lo lea…');
+            capa.qr(codigo, '<b>PASO 2 de 2.</b> Enseña <b>ESTE</b> código al otro móvil: que lo lea con la cámara de la partida.');
+            capa.ahora('qr');
+            capa.estado('Gira la pantalla hacia el otro móvil y espera…', false, true);
             /* Sin plazo duro: el otro puede tardar en apuntar. Pero si a los 30 s
                no hay nada, lo probable es que el anfitrión haya reintentado y su
                oferta ya no sea esta. */
@@ -1814,9 +1921,31 @@ const Enlace = (() => {
             esperando = null;
             if (lector) lector.apagar();
             if (!S.lista) cerrarConexion();
-            if (capa) capa.cerrar();
             apuntar('cancelado');
+            /* Cancelar a mitad de una reconexión no es irse: la partida sigue
+               cortada y se vuelve a la vista de corte. */
+            if (gestionaCorte && cortada) { verCorte('perdida'); return; }
+            if (capa) capa.cerrar();
             avisar('alCancelar');
+        }
+
+        function verCorte(motivo) {
+            asegurarCapa();
+            const Rival = rival.charAt(0).toUpperCase() + rival.slice(1);
+            if (motivo === 'adios') {
+                capa.corte('👋 ' + rival.toUpperCase() + ' SE HA IDO', 'La partida se queda sin terminar.', false);
+            } else {
+                capa.corte('📡 SE HA CORTADO', 'La partida está en pausa en los dos móviles. Pulsad VOLVER A CONECTAR en los dos: ' +
+                    (papel === 'anfitrion' ? 'tú enseñas un código nuevo y luego lees el suyo.'
+                                           : 'tú lees el código nuevo del otro y luego le enseñas el tuyo.'), true);
+                capa.ayuda([Rival + ' tiene que pulsar también VOLVER A CONECTAR.']);
+            }
+        }
+
+        function abandonar() {
+            cortada = false;
+            cerrar();
+            avisar('alAbandonar');
         }
 
         /* ---------- sesión ---------- */
@@ -1834,6 +1963,7 @@ const Enlace = (() => {
 
             if (m.t === 'hola') return saludo(m);
             if (m.t === 'p') return;
+            if (m.t === 'r') { if (S.lista && opciones.alRapido) avisar('alRapido', m.d); return; }
             if (m.t === 'a') {
                 if (typeof m.n === 'number') S.pendientes = S.pendientes.filter(p => p.n > m.n);
                 return;
@@ -1868,6 +1998,7 @@ const Enlace = (() => {
             else S.pendientes = S.pendientes.filter(p => p.n > (m.r | 0));
 
             S.lista = true;
+            cortada = false;
             S.ultimoRecibido = ahora();
             apuntar('sesión ' + sesion + (nueva ? ' nueva' : ' reanudada, reenvío ' + S.pendientes.length));
             S.pendientes.forEach(p => mandar({ t: 'm', n: p.n, d: p.d }));
@@ -1883,6 +2014,24 @@ const Enlace = (() => {
             const n = ++S.enviados;
             S.pendientes.push({ n, d: datos });
             if (S.lista) mandar({ t: 'm', n, d: datos });
+        }
+
+        /* Sin numerar ni guardar: si no sale, se pierde. Si el canal rápido
+           no está abierto (o el navegador no lo abrió) va por el normal. */
+        function enviarRapido(datos) {
+            if (!S.lista || !con) return false;
+            const texto = JSON.stringify({ t: 'r', d: datos });
+            try {
+                if (con.dr && con.dr.readyState === 'open') {
+                    if (con.dr.bufferedAmount > TOPE_COLA_RAPIDO) return false;
+                    con.dr.send(texto);
+                } else if (con.dc.readyState === 'open') {
+                    if (con.dc.bufferedAmount > TOPE_COLA_RAPIDO) return false;
+                    con.dc.send(texto);
+                } else return false;
+                S.ultimoEnvio = ahora();
+                return true;
+            } catch (e) { return false; }
         }
 
         function arrancarLatido() {
@@ -1905,7 +2054,9 @@ const Enlace = (() => {
             cerrarConexion();
             apuntar('corte: ' + motivo);
             if (motivo === 'adios') { sesion = null; S.enviados = 0; S.recibidos = 0; S.pendientes = []; }
+            cortada = motivo !== 'adios';
             avisar('alCorte', motivo);
+            if (gestionaCorte) verCorte(motivo);
         }
 
         function cerrar() {
@@ -1924,6 +2075,7 @@ const Enlace = (() => {
             setTimeout(() => {
                 if (!viejo) return;
                 try { viejo.dc.close(); } catch (e) {}
+                try { viejo.dr.close(); } catch (e) {}
                 try { viejo.pc.close(); } catch (e) {}
             }, 150);
             sesion = null; papel = null;
@@ -1955,18 +2107,24 @@ const Enlace = (() => {
             else pedirCerrojo();
         });
 
-        return {
-            anfitrion, invitado, enviar, cerrar, cancelar,
+        const api = {
+            anfitrion, invitado, enviar, enviarRapido, cerrar, cancelar,
             reconectar() { return papel === 'invitado' ? invitado() : anfitrion(); },
             get papel() { return papel; },
             get conectado() { return S.lista; },
             diagnostico: () => registro.join('\n'),
-            /* Solo para las pruebas: cortar la red a mano */
+            /* Solo para las pruebas: el código que enseña, y cortar la red */
+            get _codigo() { return miCodigo; },
             _cortarPorDebajo() { if (con) { try { con.pc.close(); } catch (e) {} } }
         };
+        ultimo = api;
+        return api;
     }
 
-    return { crear, codigoEnURL };
+    /* Solo para las pruebas: el último enlace creado en la página, para
+       leer su código sin depender de cómo guarde cada juego el suyo. */
+    let ultimo = null;
+    return { crear, codigoEnURL, get _ultimo() { return ultimo; } };
 })();
 </script>
 <script>
