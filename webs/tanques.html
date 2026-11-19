@@ -311,6 +311,7 @@ body {
         /* El campo es apaisado (800×600): la partida usa todo el ancho */
         #pJuego { max-width: 1000px; }
         #gameStage { margin-top: 6px; }
+        body.jugando #gameStage { margin-top: 4px; }
         .est-barra #levelName { max-width: 9em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         /* Aviso de que se entró por un enlace de invitación (como en la Flota) */
         .invitacion { margin: 0 0 12px; padding: 10px; border: 2px solid var(--amarillo, #ffd23f); border-radius: 10px;
@@ -324,40 +325,60 @@ body {
             #gameStage { margin-top: 3px; }
         }
 
-        /* Zona flexible que reparte la altura entre el HUD y el tablero */
+        /* ---------- PANTALLA DE JUEGO (19-11) ----------
+           Como en Súper Pang: el campo va todo lo alto que puede y, en
+           táctil, los mandos en los márgenes de los lados, NUNCA encima del
+           campo (antes la cruceta y FUEGO tapaban tanques y balas). --m es
+           el ancho de cada margen: el que deje el campo a todo lo alto, y
+           como poco 108 px o el 14 % del ancho, para que quepa la palanca.
+           Las medidas salen del contenedor (cq*), que mide el hueco que
+           queda bajo la barra en 100svh. */
         #gameStage {
             flex: 1 1 auto;
             min-height: 0;
             width: 100%;
+            container-type: size;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        /* Las tres zonas con su sitio fijo: en Grid, una sin sitio se
+           recolocaría esquivando a las otras */
+        .disposicion {
+            --m: 0px;
+            display: grid;
+            width: 100%;
+            height: 100%;
+            grid-template-areas: "izq campo der";
+            grid-template-columns: var(--m) minmax(0, 1fr) var(--m);
+            grid-template-rows: minmax(0, 1fr);
+            align-items: center;
+            justify-items: center;
+        }
+        body.touch-device .disposicion { --m: max(clamp(108px, 14cqw, 170px), (100cqw - (100cqh - 8px) * 4 / 3) / 2); }
 
-        /* Los canvas conservan su buffer de 800x600 (las coordenadas del juego
-           no cambian) y se escalan para caber. El de rastros va en flujo y
-           marca el tamaño; el principal se superpone encima. */
+        /* El marco es un anillo de sombra y no un borde: un borde come sitio
+           por dentro y el campo dejaría de ser 4:3 exacto (balas ovaladas).
+           Solo el ancho: el alto lo pone aspect-ratio. */
         #gameContainer {
-            background: var(--c-c2b280, #c2b280); /* MODIFICADO - Color de fondo de arena */
-            border: 5px solid var(--c-444, #444);
-            border-radius: 10px;
-            box-shadow: 0 10px 40px rgba(var(--c-0-0-0, 0, 0, 0),0.8);
+            grid-area: campo;
+            background: var(--c-c2b280, #c2b280); /* arena */
+            box-shadow: 0 0 0 4px var(--c-444, #444), 0 10px 40px rgba(var(--c-0-0-0, 0, 0, 0),0.8);
+            border-radius: 6px;
             position: relative;
             display: none;
-            max-width: 100%;
-            max-height: 100%;
+            width: min((100cqh - 8px) * 4 / 3, 100cqw - 2 * var(--m) - 8px);
+            aspect-ratio: 4 / 3;
             touch-action: none;
         }
 
-        #gameContainer.active { display: flex; }
+        #gameContainer.active { display: block; }
 
         #tracksCanvas {
-            position: static;
             display: block;
-            background: transparent;
-            max-width: 100%;
-            max-height: 100%;
-            z-index: 1;
+            width: 100%;
+            height: 100%;
+            border-radius: 6px;
             touch-action: none;
         }
 
@@ -371,77 +392,88 @@ body {
             z-index: 2;
             touch-action: none;
         }
-        
-        
-/* ================= CONTROLES TÁCTILES =================
-           El tanque se mueve con el chasis (cuatro direcciones) mientras la
-           torreta apunta de forma independiente, que con ratón es apuntar y
-           con el dedo es tocar el punto del campo al que quieres disparar.
-           Por eso aquí conviven las dos cosas: cruceta para el chasis y
-           puntería directa sobre el campo, que es como funciona el ratón. */
-        #touchControls {
-            position: absolute;
-            inset: 0;
-            display: none;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: 10px;
-            pointer-events: none;
-            z-index: 5;
+
+        /* ================= MANDOS TÁCTILES =================
+           El chasis va con una palanca (un aro y un pomo que sigue al dedo:
+           la dirección sale de dónde está el dedo respecto al centro, en 8
+           direcciones) y la torreta apunta sola adonde se toca el campo,
+           que con ratón es apuntar. Por eso no hay botón de disparo, sino
+           un cartel que lo explica a la altura de la palanca. */
+        .mandos { display: none; touch-action: none; -webkit-user-select: none; user-select: none; }
+        .mandos.izq { grid-area: izq; }
+        .mandos.der { grid-area: der; }
+        body.touch-device #pJuego.activa .mandos {
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            gap: 8px; height: 100%; padding-bottom: 4px; min-height: 0;
+            --lado: clamp(92px, var(--m) - 14px, 150px);
         }
-
-        body.touch-device #gameContainer.active #touchControls { display: flex; }
-
-        .touch-pad {
-            display: grid;
-            grid-template-columns: repeat(3, auto);
-            gap: 6px;
-            pointer-events: auto;
+        .palanca {
+            --color: 74, 144, 226;       /* azul del jugador 1 */
+            width: var(--lado); height: var(--lado); flex: 0 0 auto;
+            position: relative; touch-action: none; border-radius: 50%;
+            -webkit-tap-highlight-color: transparent; cursor: pointer;
         }
-
-        .touch-pad .spacer { width: 54px; height: 54px; }
-
-        .touch-btn {
-            width: 54px;
-            height: 54px;
-            border-radius: 50%;
-            border: 2px solid rgba(var(--c-255-255-255, 255, 255, 255), 0.75);
-            background: rgba(var(--c-0-0-0, 0, 0, 0), 0.42);
-            color: var(--c-fff, #fff);
-            font-family: inherit;
-            font-size: 19px;
-            font-weight: bold;
-            line-height: 1;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-            cursor: pointer;
-        }
-
-        .touch-pad.p2 .touch-btn { border-color: rgba(var(--c-231-76-60, 231, 76, 60), 0.9); color: var(--c-ffb0a6, #ffb0a6); }
-        .touch-pad.p1 .touch-btn { border-color: rgba(var(--c-74-144-226, 74, 144, 226), 0.9); color: var(--c-b9d8ff, #b9d8ff); }
-
-        .touch-btn.fire {
-            width: 76px;
-            height: 76px;
-            font-size: 12px;
-            border-color: rgba(var(--c-255-200-0, 255, 200, 0), 0.9);
-            color: var(--c-ffd700, #ffd700);
-            background: rgba(var(--c-60-45-0, 60, 45, 0), 0.45);
-        }
-
-        .touch-btn:active { background: rgba(var(--c-255-255-255, 255, 255, 255), 0.28); }
-
-        .pad-label {
-            grid-column: 1 / -1;
-            text-align: center;
-            font-size: 10px;
-            color: var(--c-fff, #fff);
-            text-shadow: 1px 1px 2px var(--c-000, #000);
+        .palanca.rojo { --color: 231, 76, 60; }
+        .palanca .aro {
+            position: absolute; inset: 0; border-radius: 50%;
+            border: 2px solid rgba(var(--color), 0.75);
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.25) 0 40%, rgba(0, 0, 0, 0.5) 100%);
             pointer-events: none;
         }
+        .palanca .pista {
+            position: absolute; color: rgba(var(--color), 0.7);
+            font: bold 15px/1 var(--fuente, sans-serif); pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        .palanca .pista.arr { left: 50%; top: 13%; }
+        .palanca .pista.aba { left: 50%; top: 87%; }
+        .palanca .pista.izq { left: 12%; top: 50%; }
+        .palanca .pista.der { left: 88%; top: 50%; }
+        .palanca .pista.on { color: #fff; text-shadow: 0 0 8px rgb(var(--color)); }
+        .palanca .pomo {
+            position: absolute; left: 50%; top: 50%; width: 40%; height: 40%;
+            margin: -20% 0 0 -20%; border-radius: 50%; pointer-events: none;
+            background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.9), rgba(var(--color), 0.95));
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+            /* Se mueve con transform: no recoloca nada alrededor */
+            transform: translate(var(--px, 0px), var(--py, 0px));
+        }
+        .palanca.activa .aro { border-color: rgb(var(--color)); }
+        .etiqueta-j { font-size: 0.7rem; color: var(--apagado); display: none; }
+        /* En táctil, el marcador sube a lo alto de los márgenes (lo mueve
+           ponerMarcadorAlLado): la barra de arriba le quitaba al campo 40 px
+           de alto, que con el móvil tumbado es lo que escasea */
+        .hud-lado {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            width: var(--lado); margin-bottom: auto; padding-top: 2px;
+            padding: 6px 4px; border: 1px solid var(--borde); border-radius: 10px; background: var(--panel);
+        }
+        .hud-lado:empty { display: none; }
+        .hud-lado .dato { display: flex; flex-direction: column; align-items: center; max-width: 100%; }
+        .hud-lado .dato b { font-size: 0.95rem; color: var(--acento); font-weight: bold; white-space: nowrap; }
+        .hud-lado .dato span { color: var(--apagado); font-size: 0.58rem; letter-spacing: 1px; max-width: 100%;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .hud-lado .hueco { display: none; }
+        body.touch-device.jugando #pJuego > .est-barra { display: none; }
+        .pista-disparo {
+            margin: 0; width: var(--lado); padding: 10px 8px; box-sizing: border-box;
+            border: 2px solid var(--c-ffd700, #ffd700); border-radius: 12px;
+            color: var(--c-ffd700, #ffd700); background: rgba(0, 0, 0, 0.35);
+            font-size: 0.78rem; line-height: 1.35; text-align: center;
+        }
+        .pista-disparo .diana { display: block; font-size: 1.6rem; margin-bottom: 4px; }
+        /* Móviles pequeños tumbados (iPhone SE: 320 px de alto): sin esto la
+           columna de la derecha no cabía y la pausa se salía por arriba */
+        @container (max-height: 330px) {
+            .pista-disparo { font-size: 0.7rem; padding: 6px; }
+            .pista-disparo .diana { font-size: 1.1rem; margin-bottom: 2px; }
+            .hud-lado { gap: 2px; padding: 4px; }
+            .hud-lado .dato b { font-size: 0.85rem; }
+        }
 
+        /* Con dos jugadores en el mismo aparato (tableta), el cartel no cabe
+           junto a la palanca del J2: va el aviso de arriba del campo, que se
+           quita al primer toque */
         #aimHint {
             position: absolute;
             left: 50%;
@@ -461,12 +493,30 @@ body {
 
         body.touch-device #aimHint.visible { display: block; }
 
-        @media (max-width: 720px), (max-height: 500px) {
-            #gameContainer { border-width: 3px; }
-            .touch-btn { width: 46px; height: 46px; font-size: 16px; }
-            .touch-pad .spacer { width: 46px; height: 46px; }
-            .touch-btn.fire { width: 64px; height: 64px; font-size: 11px; }
+        /* En partida, menos relleno alrededor: el alto es lo que manda */
+        body.jugando {
+            padding: calc(env(safe-area-inset-top, 0px) + 4px)
+                     calc(env(safe-area-inset-right, 0px) + 4px)
+                     calc(env(safe-area-inset-bottom, 0px) + 8px)
+                     calc(env(safe-area-inset-left, 0px) + 4px);
         }
+        body.jugando #pJuego { max-width: 1280px; }
+
+        /* Se juega con el móvil tumbado. Una web no puede obligar a girar (en
+           iPhone no hay bloqueo de orientación y en Android solo en pantalla
+           completa): en vertical la partida se para y se pide girar. Solo en
+           táctil: en el ordenador, una ventana alta se juega igual */
+        #avisoGirar {
+            position: fixed; inset: 0; z-index: 1200; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            padding: 24px; text-align: center; background: var(--fondo, #0f0c2d); color: var(--texto, #fff);
+        }
+        #avisoGirar.activo { display: flex; }
+        #avisoGirar .movil { font-size: 4rem; line-height: 1; animation: girarMovil 2.2s ease-in-out infinite; }
+        #avisoGirar p { margin: 0; max-width: 22em; line-height: 1.5; }
+        #avisoGirar small { color: var(--apagado); }
+        @keyframes girarMovil { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+        @media (prefers-reduced-motion: reduce) { #avisoGirar .movil { animation: none; transform: rotate(-90deg); } }
     </style>
     <style>
 /* ==== VISTA CSS ==== */
@@ -740,42 +790,43 @@ body {
     </div>
 
     <div id="gameStage">
-    <div id="gameContainer">
-        <canvas id="tracksCanvas" width="800" height="600"></canvas>
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
-
-        <div id="aimHint">Toca el campo para apuntar y disparar</div>
-
-        <div id="touchControls">
-            <div class="touch-pad p1" id="padP1">
-                <div class="pad-label" id="labelP1" style="display:none;">J1</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="1" data-dir="up" aria-label="Arriba">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="1" data-dir="left" aria-label="Izquierda">◀</button>
-                <button class="touch-btn" type="button" data-p="1" data-dir="down" aria-label="Abajo">▼</button>
-                <button class="touch-btn" type="button" data-p="1" data-dir="right" aria-label="Derecha">▶</button>
+    <div class="disposicion">
+        <div class="mandos izq">
+            <div class="hud-lado" id="hudIzq"></div>
+            <div class="etiqueta-j" id="labelP1">J1</div>
+            <div class="palanca" data-j="1" id="palancaJ1" role="group" aria-label="Mover el tanque">
+                <div class="aro"></div>
+                <span class="pista arr">▲</span><span class="pista aba">▼</span><span class="pista izq">◀</span><span class="pista der">▶</span>
+                <div class="pomo"></div>
             </div>
-
-            <div class="touch-pad p2" id="padP2" style="display:none;">
-                <div class="pad-label">J2</div>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="up" aria-label="Arriba J2">▲</button>
-                <div class="spacer"></div>
-                <button class="touch-btn" type="button" data-p="2" data-dir="left" aria-label="Izquierda J2">◀</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="down" aria-label="Abajo J2">▼</button>
-                <button class="touch-btn" type="button" data-p="2" data-dir="right" aria-label="Derecha J2">▶</button>
+        </div>
+        <div id="gameContainer">
+            <canvas id="tracksCanvas" width="800" height="600"></canvas>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div id="aimHint">J1: toca el campo para apuntar y disparar</div>
+        </div>
+        <div class="mandos der">
+            <div class="hud-lado" id="hudDer"></div>
+            <div class="etiqueta-j" id="labelP2">J2</div>
+            <div class="palanca rojo" data-j="2" id="palancaJ2" style="display:none" role="group" aria-label="Mover el tanque J2">
+                <div class="aro"></div>
+                <span class="pista arr">▲</span><span class="pista aba">▼</span><span class="pista izq">◀</span><span class="pista der">▶</span>
+                <div class="pomo"></div>
             </div>
-
-            <div class="touch-pad" id="padFire">
-                <button class="touch-btn fire" type="button" data-fire="1" aria-label="Disparar">FUEGO</button>
-            </div>
+            <p class="pista-disparo" id="pistaDisparo"><span class="diana" aria-hidden="true">🎯</span>Toca donde quieras disparar: el cañón gira solo</p>
         </div>
     </div>
     </div>
 </section>
 
 <!-- ===================== CAPAS ===================== -->
+<div id="avisoGirar" role="alertdialog" aria-labelledby="avisoGirarTexto">
+    <div class="movil" aria-hidden="true">📱</div>
+    <p id="avisoGirarTexto"><b>Gira el móvil</b> para jugar: con la pantalla tumbada el campo se ve mucho más grande y los mandos van a los lados.</p>
+    <small>Si no gira, quita el bloqueo de rotación del móvil.</small>
+    <button class="secundario" id="btnGirarMenu" type="button">← MENÚ</button>
+</div>
+
 <div class="capa" id="capaPausa">
     <div class="caja">
         <h2>⏸ PAUSA</h2>
@@ -827,7 +878,7 @@ body {
             <p>Destruye todos los tanques enemigos de cada nivel para pasar al siguiente. Son 17.</p>
             <h3>CONTROLES</h3>
             <ul>
-                <li><b>Móvil:</b> la cruceta mueve el tanque; toca el campo donde quieras apuntar y disparar. También vale el botón FUEGO.</li>
+                <li><b>Móvil:</b> se juega con el móvil tumbado. La palanca de la izquierda mueve el tanque (deja el dedo apoyado y deslízalo hacia donde quieras ir); para disparar, toca el campo donde quieras: el cañón gira hacia allí y dispara.</li>
                 <li><b>Ordenador, 1 jugador:</b> <b>W A S D</b> para moverte, el ratón para apuntar y clic para disparar.</li>
                 <li><b>Ordenador, 2 jugadores:</b> el azul se mueve con las flechas y apunta con el ratón; el rojo, <b>W A S D</b>, gira el cañón con <b>G / H</b> y dispara con <b>espacio</b>.</li>
                 <li><b>P</b> o <b>Esc</b> pausa.</li>
@@ -845,7 +896,7 @@ body {
                 <li><b>Bonus por rapidez:</b> nivel en menos de 30 s, 500 / 750 / 1000 según la dificultad; de 30 a 60 s, menos; más de un minuto, nada. El tiempo en pausa no cuenta.</li>
             </ul>
             <h3>DOS JUGADORES</h3>
-            <ul><li>En el móvil hacen falta dos crucetas a la vez: solo cabe en tableta u ordenador.</li>
+            <ul><li>En el mismo móvil hacen falta dos palancas a la vez: solo cabe en tableta u ordenador.</li>
                 <li><b>Con otro móvil</b> (los dos en la misma wifi) sí se puede: cada uno lleva su tanque en su móvil, juntos contra los enemigos. Uno pulsa <b>CREAR PARTIDA</b> y el otro <b>UNIRME</b>; primero el que se une lee con la cámara el código del que crea, y luego al revés. Quien crea lleva el azul y elige la dificultad; el otro, el rojo. Las vidas y los puntos son de los dos.</li></ul>
         </div>
         <button class="principal" id="btnCerrarAyuda" type="button" style="margin-top:10px;">ENTENDIDO</button>
@@ -4358,32 +4409,27 @@ const Enlace = (() => {
             document.body.classList.add('touch-device');
         }
 
-        document.querySelectorAll('#touchControls [data-dir]').forEach(btn => {
-            const idx = parseInt(btn.dataset.p, 10) - 1;
-            const dir = btn.dataset.dir;
-
-            const press = (e) => { e.preventDefault(); if (gameState === GAME_STATES.PLAYING) setTouchDir(idx, dir, true); };
-            const release = (e) => { e.preventDefault(); setTouchDir(idx, dir, false); };
-
-            btn.addEventListener('pointerdown', press);
-            btn.addEventListener('pointerup', release);
-            btn.addEventListener('pointercancel', release);
-            btn.addEventListener('pointerleave', release);
-        });
-
-        document.querySelectorAll('#touchControls [data-fire]').forEach(btn => {
-            btn.addEventListener('pointerdown', (e) => {
-                e.preventDefault();
-                if (gameState === GAME_STATES.PLAYING && players[0]) players[0].controls.shoot = true;
-            });
-        });
+        document.querySelectorAll('.palanca').forEach(prepararPalanca);
+        ponerMarcadorAlLado();
+        /* Respaldo: el destino de un toque es donde EMPEZÓ, aunque el dedo se
+           mueva. Si ya no queda ningún dedo que empezara en la palanca, se
+           suelta (en Súper Pang se quedó una dirección pulsada) */
+        const revisarToques = (ev) => {
+            for (const p of palancas) {
+                if (!p.conDedo()) continue;
+                const sigue = [...ev.touches].some(t => t.target instanceof Node && p.el.contains(t.target));
+                if (!sigue) p.soltar();
+            }
+        };
+        document.addEventListener('touchend', revisarToques, { passive: true });
+        document.addEventListener('touchcancel', revisarToques, { passive: true });
 
         // Puntería sobre el campo
         const container = document.getElementById('gameContainer');
         let aiming = false;
 
         const aim = (e, fire) => {
-            if (e.target.closest('#touchControls') || e.target.closest('button')) return;
+            if (e.target.closest('.mandos') || e.target.closest('button')) return;
             if (gameState !== GAME_STATES.PLAYING || !players[0]) return;
 
             const p = toCanvasPos(e.clientX, e.clientY);
@@ -4417,11 +4463,110 @@ const Enlace = (() => {
         });
     }
 
-    function showTouchPadsFor(count) {
-        document.getElementById('padP2').style.display = count === 2 ? 'grid' : 'none';
-        document.getElementById('labelP1').style.display = count === 2 ? 'block' : 'none';
-        document.getElementById('aimHint').classList.add('visible');
+    /* ---------- PALANCAS (como en Súper Pang) ----------
+       Se apoya el dedo y la dirección es hacia dónde está respecto al centro
+       del aro; deslizándolo se cambia sin levantarlo. Cada palanca sigue a
+       UN dedo y lo olvida con pointerup, pointercancel y lostpointercapture.
+       Escribe en players[j-1].controls, como hacía la cruceta: en el
+       invitado de una partida en red, players[0] es el mando que se manda. */
+    const ZONA_MUERTA = 0.25;      // fracción del recorrido sin dirección
+    const SECTOR = 0.38;           // sen 22,5°: ocho sectores de 45°
+    const palancas = [];
+    function prepararPalanca(el) {
+        const idx = Number(el.dataset.j) - 1;
+        const pomo = el.querySelector('.pomo');
+        const pistas = {};
+        el.querySelectorAll('.pista').forEach(p => { pistas[p.classList[1]] = p; });
+        let dedo = null;
+        const poner = (dir) => {
+            const p = players[idx];
+            if (!p) return;
+            p.controls.up = !!dir.arr; p.controls.down = !!dir.aba;
+            p.controls.left = !!dir.izq; p.controls.right = !!dir.der;
+        };
+        const pintar = (px, py, dir) => {
+            pomo.style.setProperty('--px', px.toFixed(1) + 'px');
+            pomo.style.setProperty('--py', py.toFixed(1) + 'px');
+            for (const k in pistas) pistas[k].classList.toggle('on', !!dir[k]);
+            el.classList.toggle('activa', dedo !== null);
+        };
+        const leer = (ev) => {
+            const r = el.getBoundingClientRect();
+            const radio = r.width / 2, tope = radio * 0.6;     // el pomo no se sale del aro
+            let dx = ev.clientX - (r.left + radio), dy = ev.clientY - (r.top + radio);
+            const d = Math.hypot(dx, dy);
+            const dir = {};
+            if (d > tope * ZONA_MUERTA && gameState === GAME_STATES.PLAYING) {
+                const ux = dx / d, uy = dy / d;
+                if (ux > SECTOR) dir.der = true; else if (ux < -SECTOR) dir.izq = true;
+                if (uy > SECTOR) dir.aba = true; else if (uy < -SECTOR) dir.arr = true;
+            }
+            if (d > tope) { dx *= tope / d; dy *= tope / d; }
+            poner(dir);
+            pintar(dx, dy, dir);
+        };
+        const soltar = () => { dedo = null; poner({}); pintar(0, 0, {}); };
+        el.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault();
+            if (dedo !== null && dedo !== ev.pointerId) return;   // ya la lleva otro dedo
+            dedo = ev.pointerId;
+            try { el.setPointerCapture(ev.pointerId); } catch (x) {}
+            leer(ev);
+        });
+        el.addEventListener('pointermove', (ev) => {
+            if (ev.pointerId !== dedo) return;
+            /* Con ratón, si ya no hay botón pulsado es que el «up» se perdió */
+            if (ev.pointerType === 'mouse' && ev.buttons === 0) { soltar(); return; }
+            leer(ev);
+        });
+        const fin = (ev) => { if (ev.pointerId === dedo) soltar(); };
+        ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => el.addEventListener(t, fin));
+        el.addEventListener('contextmenu', (ev) => ev.preventDefault());
+        palancas.push({ el, soltar, conDedo: () => dedo !== null });
     }
+
+    /* En táctil se juega tumbado: el marcador va a los márgenes (izquierda:
+       puntos, vidas y nivel; derecha: pausa, tiempo y vida extra). Se mueven
+       los mismos elementos, con sus id, y todo lo que los rellena sigue igual */
+    function ponerMarcadorAlLado() {
+        if (!document.body.classList.contains('touch-device')) return;
+        const barra = document.querySelector('#pJuego > .est-barra');
+        const datos = [...barra.querySelectorAll('.dato')];
+        datos.slice(0, 3).forEach(d => document.getElementById('hudIzq').appendChild(d));
+        const der = document.getElementById('hudDer');
+        der.appendChild(document.getElementById('pauseTouchBtn'));
+        datos.slice(3).forEach(d => der.appendChild(d));
+    }
+
+    function showTouchPadsFor(count) {
+        const dos = count === 2;
+        document.getElementById('palancaJ2').style.display = dos ? '' : 'none';
+        document.getElementById('labelP1').style.display = dos ? 'block' : 'none';
+        document.getElementById('labelP2').style.display = dos ? 'block' : 'none';
+        document.getElementById('pistaDisparo').style.display = dos ? 'none' : '';
+        document.getElementById('aimHint').classList.toggle('visible', dos);
+    }
+
+    /* ---------- GIRAR EL MÓVIL ----------
+       Táctil y en vertical: aviso a pantalla completa y la partida en pausa
+       (en red, en los dos móviles). Al volver a tumbarlo se ve la pausa y se
+       sigue cuando uno quiera, no de golpe con los enemigos disparando. */
+    let girado = false;
+    const consultaVertical = window.matchMedia ? window.matchMedia('(orientation: portrait)') : null;
+    function vertical() {
+        if (!document.body.classList.contains('touch-device')) return false;
+        return consultaVertical ? consultaVertical.matches : innerHeight > innerWidth;
+    }
+    function comprobarGiro() {
+        const enPartida = document.body.classList.contains('jugando') &&
+            (gameState === GAME_STATES.PLAYING || gameState === GAME_STATES.PAUSED);
+        const antes = girado;
+        girado = enPartida && vertical();
+        document.getElementById('avisoGirar').classList.toggle('activo', girado);
+        if (girado && !antes) { clearKeys(); pauseGame(); }
+    }
+    if (consultaVertical && consultaVertical.addEventListener) consultaVertical.addEventListener('change', comprobarGiro);
+    window.addEventListener('resize', comprobarGiro);
 
     // ================= DISPONIBILIDAD DE 2 JUGADORES =================
     // Dos crucetas más la zona de puntería no caben en un móvil. Se decide
@@ -4461,6 +4606,7 @@ const Enlace = (() => {
     function clearKeys() {
         // `keys` es const: hay que vaciarlo, no reasignarlo.
         for (const k of Object.keys(keys)) keys[k] = false;
+        palancas.forEach(p => p.soltar());
         releaseAllTouchDirs();
     }
 
@@ -4635,6 +4781,7 @@ const Enlace = (() => {
         ['capaFin', 'capaPausa'].forEach(EST.cerrar);
         showTouchPadsFor(playerCount);
         EST.mostrar('pJuego');
+        document.body.classList.add('jugando');
         document.getElementById('gameContainer').classList.add('active');
         for (const k in barraCache) delete barraCache[k];
 
@@ -4664,6 +4811,7 @@ const Enlace = (() => {
         stopBackgroundMusic();
         playBackgroundMusic();
         arrancarBucle();
+        comprobarGiro();          // empezada de pie: en pausa hasta tumbar el móvil
     }
 
     /* quien: en red, 'yo' o 'otro', solo para el texto de la capa */
@@ -4686,6 +4834,7 @@ const Enlace = (() => {
     }
 
     function resumeGame() {
+        if (girado) return;          // primero hay que tumbar el móvil
         if (red && red.papel === 'invitado') {
             if (gameState === GAME_STATES.PAUSED) enlace.enviar({ tipo: 'seguir' });
             return;
@@ -4716,6 +4865,8 @@ const Enlace = (() => {
         pararBucle();
         ['capaPausa', 'capaFin'].forEach(EST.cerrar);
         document.getElementById('gameContainer').classList.remove('active');
+        document.body.classList.remove('jugando');
+        comprobarGiro();
         updateTwoPlayersAvailability();
         EST.mostrar('pMenu');
     }
@@ -4789,6 +4940,7 @@ const Enlace = (() => {
     });
     btn('btnSeguir', resumeGame);
     btn('btnAbandonar', quitToMenu);
+    btn('btnGirarMenu', quitToMenu);
     btn('btnOtra', () => {
         if (!red) { startGame(numPlayers); return; }
         if (red.papel === 'anfitrion') startGame(2);
@@ -4866,8 +5018,7 @@ const Enlace = (() => {
 
     function salirDeRed() {
         red = null;
-        const pad = document.getElementById('padP1');
-        pad.classList.add('p1'); pad.classList.remove('p2');
+        document.getElementById('palancaJ1').classList.remove('rojo');
     }
 
     /* ---------- anfitrión ---------- */
@@ -4923,9 +5074,9 @@ const Enlace = (() => {
         red.fotos = []; red.espejos.clear(); red.balas.clear(); red.previas.clear(); red.ultimoEv = 0;
         gameDifficulty = DIF[dif] ? dif : 'recluta';
         showTouchPadsFor(1);
-        const pad = document.getElementById('padP1');
-        pad.classList.remove('p1'); pad.classList.add('p2');      // cruceta roja, como su tanque
+        document.getElementById('palancaJ1').classList.add('rojo');      // palanca roja, como su tanque
         EST.mostrar('pJuego');
+        document.body.classList.add('jugando');
         document.getElementById('gameContainer').classList.add('active');
         for (const k in barraCache) delete barraCache[k];
         numPlayers = 1;
@@ -4940,6 +5091,7 @@ const Enlace = (() => {
         stopBackgroundMusic();
         playBackgroundMusic();
         arrancarBucle();
+        comprobarGiro();          // empezada de pie: en pausa hasta tumbar el móvil
         EST.avisar('Tú llevas el tanque ROJO');
     }
 
@@ -4969,6 +5121,10 @@ const Enlace = (() => {
                 clearKeys();
                 textoPausa(m.quien === 'anfitrion' ? 'La ha pedido tu compañero.' : null);
                 EST.abrir('capaPausa');
+            } else if (m.g === 'p' && gameState === GAME_STATES.PAUSED && girado) {
+                /* El anfitrión ha seguido, pero aquí el móvil está de pie y
+                   no se ve el campo: se vuelve a pedir la pausa */
+                enlace.enviar({ tipo: 'pausa' });
             } else if (m.g === 'p' && gameState === GAME_STATES.PAUSED) {
                 gameState = GAME_STATES.PLAYING;
                 EST.cerrar('capaPausa');
