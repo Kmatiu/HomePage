@@ -1839,13 +1839,28 @@ const EST = (() => {
                 this.x += this.dx;
                 this.y += this.dy;
                 
-                if (this.x + this.radius > CONFIG.canvasWidth || this.x - this.radius < 0) {
-                    this.dx = -this.dx;
+                /* Rebote en las paredes: se devuelve la bola DENTRO y la
+                   dirección se fija hacia dentro (no se invierte). Antes solo
+                   se invertía dx: si la bola quedaba más allá de la pared
+                   (la pala pegada a la pared la devolvía con la x fuera, o
+                   un dx pequeño no le daba para salir en un paso), al
+                   siguiente fotograma seguía fuera y volvía a invertirse,
+                   cada fotograma, para siempre: subía y bajaba pegada a la
+                   pared sin moverse en x. Medido el 19-11 con la versión
+                   anterior: 300 cambios de dx en 300 pasos, x entre 799 y 804. */
+                if (this.x - this.radius < 0) {
+                    this.x = this.radius;
+                    this.dx = Math.abs(this.dx);
+                    playSound('bounce');
+                } else if (this.x + this.radius > CONFIG.canvasWidth) {
+                    this.x = CONFIG.canvasWidth - this.radius;
+                    this.dx = -Math.abs(this.dx);
                     playSound('bounce');
                 }
                 
                 if (this.y - this.radius < 0) {
-                    this.dy = -this.dy;
+                    this.y = this.radius;
+                    this.dy = Math.abs(this.dy);
                     playSound('bounce');
                 }
                 
