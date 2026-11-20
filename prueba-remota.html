@@ -182,7 +182,7 @@
 'use strict';
 /* ==== LOGICA: inicio ====
    Sin DOM ni WebRTC: lo prueba prueba-logica.js desde Node. */
-const VERSION = 1;
+const VERSION = 2;          // el código de v1 se sigue leyendo
 const STUN_PUBLICOS = ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'];
 const NOMBRES_STUN = ['Cloudflare', 'Google'];
 
@@ -214,28 +214,44 @@ function srflx4(lista) {
 }
 
 /* Tipo de salida comparando lo que contestan dos servidores STUN.
-   a y b: cada servidor por separado (dicen cuántas salidas tiene el
-   aparato: una por red). ambos: los dos servidores en la MISMA conexión, o
-   sea, desde el mismo puerto local. Si ahí salen más direcciones públicas
-   que con uno solo, el router da un puerto distinto según a quién se hable
-   (NAT simétrico): la dirección que ve un servidor no le sirve al otro
-   móvil. Chrome junta las candidatas repetidas y Firefox no: por eso se
-   cuentan direcciones distintas, no candidatas. */
+   a y b: cada servidor por separado. ambos: los dos en la MISMA conexión,
+   o sea, desde el mismo puerto local. Se agrupa por dirección pública: un
+   móvil con wifi y datos a la vez tiene dos salidas (dos «redes»), y cada
+   una se mira aparte (en la v1 se contaban todas juntas y un móvil con
+   wifi abierta y datos estrictos podía salir «abierta»).
+   - Una dirección con dos puertos distintos en «ambos»: ese router da un
+     puerto según a quién se hable (NAT simétrico).
+   - Más direcciones en «ambos» que con un solo servidor: cambia también de
+     dirección según el destino (CGNAT con varias), también simétrico.
+   Chrome junta las candidatas repetidas y Firefox no: se cuentan
+   direcciones y puertos distintos, no candidatas. */
+function porDireccion(lista) {
+    const m = new Map();
+    for (const c of lista || []) {
+        if (!c || c.tipo !== 'srflx' || c.familia !== 'v4') continue;
+        if (!m.has(c.ip)) m.set(c.ip, new Set());
+        m.get(c.ip).add(c.puerto);
+    }
+    return m;
+}
 function analizarSalida(r) {
     const a = r.a || [], b = r.b || [], ambos = r.ambos || [];
     const respA = a.some((c) => c && c.tipo === 'srflx');
     const respB = b.some((c) => c && c.tipo === 'srflx');
-    const sa = srflx4(a), sb = srflx4(b), sx = srflx4(ambos);
+    const ma = porDireccion(a), mb = porDireccion(b), mx = porDireccion(ambos);
     const todas = a.concat(b, ambos).filter(Boolean);
     const ipv6 = todas.some((c) => c.familia === 'v6' && esV6Global(c.ip));
+    // Las redes se nombran A, B… por orden: el informe no lleva direcciones
+    const redes = [...mx.values()].map((ps, k) => ({ nombre: 'ABCDEFGH'[k] || '?', puertos: [...ps].sort((x, y) => x - y), estricta: ps.size > 1 }));
     let tipo;
     if (!respA && !respB) tipo = 'cerrada';
-    else if (!respA || !respB || !sa.length || !sb.length || !sx.length) tipo = 'sinComparar';
-    else if (sx.length > Math.max(sa.length, sb.length)) tipo = 'simetrica';
+    else if (!respA || !respB || !ma.size || !mb.size || !mx.size) tipo = 'sinComparar';
+    else if (redes.some((x) => x.estricta) || mx.size > Math.max(ma.size, mb.size)) tipo = 'simetrica';
     else tipo = 'abierta';
-    const puertos = (l) => l.map((d) => ':' + d.split(':').pop()).join(' ');
-    return { tipo, respA, respB, ipv6, puertosA: puertos(sa), puertosB: puertos(sb),
-             puertosAmbos: puertos(sx), nAmbos: sx.length };
+    const puertos = (m) => [...m.values()].map((ps) => [...ps].map((x) => ':' + x).join(' ')).join(' / ');
+    return { tipo, respA, respB, ipv6, puertosA: puertos(ma), puertosB: puertos(mb), puertosAmbos: puertos(mx),
+             nAmbos: redes.reduce((n, x) => n + x.puertos.length, 0), nRedes: redes.length,
+             redes: redes.map((x) => x.nombre + ' ' + (x.estricta ? 'estricta' : 'abierta') + ' ' + x.puertos.map((p) => ':' + p).join(' ')).join(' · ') };
 }
 
 const TEXTO_SALIDA = {
@@ -324,9 +340,9 @@ async function decodificar(texto) {
             bytes = await porFlujo(bytes, new DecompressionStream('deflate-raw'));
         }
         const o = JSON.parse(new TextDecoder().decode(bytes));
-        if (!o || o.v !== VERSION || (o.k !== 'o' && o.k !== 'r') || typeof o.s !== 'string' ||
+        if (!o || (o.v !== 1 && o.v !== 2) || (o.k !== 'o' && o.k !== 'r') || typeof o.s !== 'string' ||
             o.s.length > 20000 || !o.s.startsWith('v=0')) return null;
-        return { k: o.k, t: Number(o.t) || 0, s: o.s, z: o.z === 1 };
+        return { k: o.k, t: Number(o.t) || 0, s: o.s, z: o.z === 1, i: o.i && typeof o.i === 'object' ? o.i : null };
     } catch (e) { return null; }
 }
 
@@ -379,7 +395,8 @@ function limpiarInfo(m) {
         red: limpiarTexto(o.red), compania: limpiarTexto(o.compania, 40), conexion: limpiarTexto(o.conexion, 30),
         aparato: limpiarTexto(o.aparato, 60), papel: o.papel === 'anfitrion' ? 'anfitrion' : 'invitado',
         salida: TEXTO_SALIDA[s.tipo] ? { tipo: s.tipo, puertosA: limpiarTexto(s.puertosA, 40),
-            puertosB: limpiarTexto(s.puertosB, 40), puertosAmbos: limpiarTexto(s.puertosAmbos, 40), ipv6: s.ipv6 === true } : null,
+            puertosB: limpiarTexto(s.puertosB, 40), puertosAmbos: limpiarTexto(s.puertosAmbos, 40), ipv6: s.ipv6 === true,
+            redes: limpiarTexto(s.redes, 80) } : null,
         cand, fondo: limpiarTexto(o.fondo, 60)
     };
 }
@@ -443,7 +460,7 @@ function guardar(k, v) { memoria[k] = v; try { localStorage.setItem(k, v); } cat
 
 const yo = { red: '', compania: '', conexion: '', aparato: aparatoDe(navigator.userAgent), papel: null,
              salida: null, cand: contarCandidatas([]), fondo: '' };
-const otro = { info: null, par: null, rafagaDeMi: null };
+const otro = { info: null, codigo: null, par: null, rafagaDeMi: null };
 const prueba = {
     estados: [], t0: performance.now(), tCodigo: null, tPegado: null, edadVuelta: null, edadEnlace: null,
     tConectado: null, resultado: null, pings: [], rafagaRecibida: null, par: null, larga: null,
@@ -458,10 +475,12 @@ function pintarRed() {
     document.querySelectorAll('[data-red]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.red === yo.red)));
 }
 document.querySelectorAll('[data-red]').forEach((b) => b.addEventListener('click', () => {
-    yo.red = b.dataset.red; guardar('remota.red', yo.red); pintarRed(); actualizarInforme();
+    yo.red = b.dataset.red; pintarRed(); actualizarInforme();
 }));
 $('compania').addEventListener('input', () => { yo.compania = $('compania').value.trim(); guardar('remota.compania', yo.compania); actualizarInforme(); });
-yo.red = leer('remota.red') || '';
+/* La red NO se recuerda: cambia de una prueba a otra y, recordada, el
+   informe decía la de la prueba anterior (pasó el 20-11). */
+yo.red = '';
 yo.compania = leer('remota.compania') || '';
 $('compania').value = yo.compania;
 pintarRed();
@@ -541,7 +560,7 @@ async function mirarSalida() {
         const linea = (txt) => { const e = document.createElement('li'); e.textContent = txt; ul.appendChild(e); };
         linea('Servidor ' + (NOMBRES_STUN[0] || '1') + ': ' + (r.respA ? 'contesta en ' + ms(primera(a)) + ' · puerto ' + r.puertosA : 'no contesta'));
         linea('Servidor ' + (NOMBRES_STUN[1] || '2') + ': ' + (r.respB ? 'contesta en ' + ms(primera(b)) + ' · puerto ' + r.puertosB : 'no contesta'));
-        if (r.respA && r.respB) linea('Hablando con los dos a la vez: ' + r.nAmbos + (r.nAmbos === 1 ? ' salida' : ' salidas distintas') + ' (' + r.puertosAmbos + ')');
+        if (r.respA && r.respB) linea('Hablando con los dos a la vez: ' + r.nRedes + (r.nRedes === 1 ? ' red' : ' redes') + ' (' + r.redes + ')');
         linea('IPv6 pública: ' + (r.ipv6 ? 'sí' : 'no'));
         const [clase, texto] = TEXTO_SALIDA[r.tipo];
         const v = $('salidaVeredicto');
@@ -626,7 +645,8 @@ async function empezarAnfitrion() {
     await pc.setLocalDescription(await pc.createOffer());
     await p;
     yo.cand = contarCandidatas(candidatasDeSDP(pc.localDescription.sdp));
-    const codigo = await codificar({ v: VERSION, k: 'o', t: Date.now(), s: pc.localDescription.sdp });
+    await salidaListo;
+    const codigo = await codificar({ v: VERSION, k: 'o', t: Date.now(), s: pc.localDescription.sdp, i: infoPropia() });
     const enlace = location.origin + location.pathname + location.search + '#o=' + codigo;
     prueba.tCodigo = performance.now();
     $('enlaceTexto').textContent = enlace;
@@ -660,6 +680,7 @@ async function conectarAnfitrion() {
     prueba.tPegado = performance.now();
     prueba.edadVuelta = d.t ? Date.now() - d.t : null;
     prueba.candRemotas = contarCandidatas(candidatasDeSDP(d.s));
+    if (d.i) otro.codigo = limpiarInfo(d.i);
     $('bConectar').disabled = true;
     $('pasoA1').classList.remove('activo');
     $('pasoA2').classList.add('activo');
@@ -678,6 +699,7 @@ async function empezarInvitado(codigo) {
     if (!d || d.k !== 'o') { estado('El enlace está roto o cortado. Pide que te lo manden otra vez.', 'mal'); return; }
     prueba.edadEnlace = d.t ? Date.now() - d.t : null;
     prueba.candRemotas = contarCandidatas(candidatasDeSDP(d.s));
+    if (d.i) otro.codigo = limpiarInfo(d.i);
     estado('Preparando tu código…');
     pc = crearConexion();
     pc.addEventListener('datachannel', (e) => prepararCanal(e.channel));
@@ -691,7 +713,8 @@ async function empezarInvitado(codigo) {
     await pc.setLocalDescription(await pc.createAnswer());
     await p;
     yo.cand = contarCandidatas(candidatasDeSDP(pc.localDescription.sdp));
-    const vuelta = 'R1.' + await codificar({ v: VERSION, k: 'r', t: Date.now(), s: pc.localDescription.sdp });
+    await salidaListo;
+    const vuelta = 'R1.' + await codificar({ v: VERSION, k: 'r', t: Date.now(), s: pc.localDescription.sdp, i: infoPropia() });
     prueba.tCodigo = performance.now();
     $('codigoVuelta').textContent = vuelta;
     $('bCompartirVuelta').disabled = false;
@@ -870,7 +893,7 @@ function bloqueAparato(titulo, i) {
         '  Red: ' + (i.red || 'sin decir') + (i.compania ? ' · ' + i.compania : '') + (i.conexion ? ' (el móvil dice: ' + i.conexion + ')' : ''),
         '  Aparato: ' + i.aparato,
         '  Salida: ' + (s ? NOMBRE_SALIDA[s.tipo] + ' (' + NOMBRES_STUN[0] + ' ' + (s.puertosA || '—') + ' · ' + NOMBRES_STUN[1] + ' ' + (s.puertosB || '—') +
-            ' · los dos ' + (s.puertosAmbos || '—') + ') · IPv6 pública ' + (s.ipv6 ? 'sí' : 'no') : 'sin mirar'),
+            ' · los dos ' + (s.puertosAmbos || '—') + ') · IPv6 pública ' + (s.ipv6 ? 'sí' : 'no') + (s.redes ? '\n  Por red: ' + s.redes : '') : 'sin mirar'),
         '  Candidatas: ' + textoCandidatas(i.cand),
         '  Segundo plano: ' + (i.fondo || 'no')
     ];
@@ -899,7 +922,9 @@ function textoInforme() {
     L.push('');
     const quien = (p) => (p === 'anfitrion' ? 'el que empezó' : 'el invitado');
     L.push(...bloqueAparato('YO (' + quien(yo.papel) + ')', infoPropia()));
-    L.push(...bloqueAparato('EL OTRO (' + (otro.info ? quien(otro.info.papel) : (yo.papel === 'anfitrion' ? 'el invitado' : 'el que empezó')) + ')', otro.info));
+    // Si no llegó a conectar, lo que traía su código (su red puede salir «sin decir»: el invitado hace el código al abrir el enlace)
+    const delOtro = otro.info || otro.codigo;
+    L.push(...bloqueAparato('EL OTRO (' + (yo.papel === 'anfitrion' ? 'el invitado' : 'el que empezó') + ')' + (!otro.info && otro.codigo ? ', según su código' : ''), delOtro));
     if (!otro.info && prueba.candRemotas) L.push('  Candidatas en su código: ' + textoCandidatas(prueba.candRemotas));
     if (prueba.tConectado) {
         L.push('', 'MEDIDAS');
