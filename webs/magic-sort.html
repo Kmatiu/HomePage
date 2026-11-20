@@ -1242,7 +1242,10 @@ break;case "inversionMode":switch(c){case "original":Y="dontInvert";break;case "
      [1]  algoritmo de la huella (índice en HUELLAS) y luego sus bytes
      ufrag: longitud + ASCII · pwd: longitud + ASCII
      n candidatas, y cada una: clase (4 IPv4, 6 IPv6, 1 mDNS con UUID,
-          2 nombre suelto) + dirección + puerto (2 bytes)
+          2 nombre suelto, 5 IPv4 pública vista por STUN) + dirección +
+          puerto (2 bytes)
+   La clase 5 (20-11) solo sale en el modo A DISTANCIA, que usa STUN: en el
+   de la misma wifi no hay STUN y el código sale igual que antes.
 
    Sirve igual en el navegador y en Node: no toca el DOM.
    ========================================================== */
@@ -1256,6 +1259,7 @@ const SDPC_HUELLAS = [
     { nombre: 'sha-1',   bytes: 20 }
 ];
 const SDPC_MAX_CANDIDATAS = 4;
+const SDPC_MAX_PUBLICAS = 2;     // srflx: una por red (wifi y datos), como mucho dos
 
 /* ---------- base64url sin relleno ----------
    btoa/atob existen en los navegadores y en Node 16+. Sin relleno ni + / =
@@ -1296,16 +1300,18 @@ function sdpcLeer(sdp) {
     return datos;
 }
 
-/* Solo interesan las de host por UDP: sin STUN no hay otras, y TCP en la
-   misma wifi no aporta nada y gasta 7 bytes. */
+/* Interesan las de host por UDP y, a distancia, las públicas que da el
+   STUN (srflx). TCP no aporta nada y gasta 7 bytes. */
 function sdpcLeerCandidata(texto) {
     const p = texto.split(/\s+/);
     if (p.length < 8) return null;
     if (p[2].toLowerCase() !== 'udp') return null;
     const tipo = p[p.indexOf('typ') + 1];
-    if (tipo !== 'host') return null;
+    if (tipo !== 'host' && tipo !== 'srflx') return null;
     if (p[1] !== '1') return null;            // componente RTP; con BUNDLE no hay otro
-    return { direccion: p[4], puerto: Number(p[5]) };
+    const c = { direccion: p[4], puerto: Number(p[5]) };
+    if (tipo === 'srflx') c.publica = true;
+    return c;
 }
 
 function sdpcClase(direccion) {
@@ -1329,12 +1335,16 @@ function sdpcElegir(candidatas) {
         vistas.add(clave);
         return true;
     });
-    const v4 = unicas.filter(c => sdpcClase(c.direccion) === 4 &&
+    const publicas = unicas.filter(c => c.publica && sdpcClase(c.direccion) === 4).slice(0, SDPC_MAX_PUBLICAS);
+    const locales = unicas.filter(c => !c.publica);
+    const v4 = locales.filter(c => sdpcClase(c.direccion) === 4 &&
                                   !/^(127\.|169\.254\.|0\.)/.test(c.direccion));
-    const mdns = unicas.filter(c => { const k = sdpcClase(c.direccion); return k === 1 || k === 2; });
-    const v6 = unicas.filter(c => sdpcClase(c.direccion) === 6 && !/^fe80:/i.test(c.direccion));
+    const mdns = locales.filter(c => { const k = sdpcClase(c.direccion); return k === 1 || k === 2; });
+    const v6 = locales.filter(c => sdpcClase(c.direccion) === 6 && !/^fe80:/i.test(c.direccion));
     const elegidas = v4.concat(mdns);
-    return (elegidas.length ? elegidas : v6).slice(0, SDPC_MAX_CANDIDATAS);
+    /* Las públicas van aparte del tope de las locales: a distancia son
+       las que sirven, y en la misma wifi no las hay. */
+    return (elegidas.length ? elegidas : v6).slice(0, SDPC_MAX_CANDIDATAS).concat(publicas);
 }
 
 /* ---------- direcciones a bytes ---------- */
@@ -1388,9 +1398,9 @@ function sdpcComprimir(sdp, tipo) {
     const cands = sdpcElegir(d.candidatas);
     b.push(cands.length);
     for (const c of cands) {
-        const k = sdpcClase(c.direccion);
+        const k = c.publica ? 5 : sdpcClase(c.direccion);
         b.push(k);
-        if (k === 4) b.push(...c.direccion.split('.').map(Number));
+        if (k === 4 || k === 5) b.push(...c.direccion.split('.').map(Number));
         else if (k === 6) b.push(...sdpcIPv6ABytes(c.direccion));
         else if (k === 1) b.push(...c.direccion.slice(0, 36).replace(/-/g, '').match(/../g).map(x => parseInt(x, 16)));
         else {
@@ -1433,7 +1443,7 @@ function sdpcDescomprimir(texto) {
     for (let k = 0; k < n; k++) {
         const clase = leer();
         let direccion;
-        if (clase === 4) direccion = leerN(4).join('.');
+        if (clase === 4 || clase === 5) direccion = leerN(4).join('.');
         else if (clase === 6) direccion = sdpcBytesAIPv6(leerN(16));
         else if (clase === 1) {
             const hex = leerN(16).map(x => (x < 16 ? '0' : '') + x.toString(16)).join('');
@@ -1442,7 +1452,7 @@ function sdpcDescomprimir(texto) {
         } else if (clase === 2) direccion = leerTexto();
         else throw new Error('Clase de candidata desconocida: ' + clase);
         const puerto = (leer() << 8) | leer();
-        candidatas.push({ direccion, puerto });
+        candidatas.push(clase === 5 ? { direccion, puerto, publica: true } : { direccion, puerto });
     }
     if (p !== b.length) throw new Error('Sobran ' + (b.length - p) + ' bytes en el código');
 
@@ -1454,7 +1464,21 @@ function sdpcDescomprimir(texto) {
    Quien recibe la oferta no lo sabe y usa '0' (lo que ponen Chrome, Safari y
    el Firefox actual); quien recibe la respuesta sí lo sabe, porque la
    respuesta repite el de su propia oferta, y debe pasarlo. */
-function sdpcRehacer(d, mid) {
+/* Las líneas de candidata, sin «a=»: sirven para el SDP y, tal cual, para
+   addIceCandidate (el arranque a la vez del modo A DISTANCIA). La prioridad
+   solo ordena las pruebas: primero las locales (en la misma wifi, lo más
+   rápido) y luego las públicas. */
+function sdpcLineasCandidatas(d) {
+    return d.candidatas.map((c, n) => {
+        const prioridad = ((c.publica ? 100 : 126) << 24) + ((65535 - n) << 8) + 255;
+        return 'candidate:' + (n + 1) + ' 1 udp ' + prioridad + ' ' + c.direccion + ' ' + c.puerto +
+               (c.publica ? ' typ srflx raddr 0.0.0.0 rport 0' : ' typ host');
+    });
+}
+
+/* sinCandidatas: para el arranque a la vez, en que las candidatas se dan
+   más tarde con addIceCandidate. */
+function sdpcRehacer(d, mid, sinCandidatas) {
     mid = mid || '0';
     const lineas = [
         'v=0',
@@ -1466,13 +1490,10 @@ function sdpcRehacer(d, mid) {
         'm=application 9 UDP/DTLS/SCTP webrtc-datachannel',
         'c=IN IP4 0.0.0.0'
     ];
-    d.candidatas.forEach((c, n) => {
-        /* La prioridad solo ordena las pruebas; se da más a las primeras,
-           que son las IPv4 que más probablemente funcionen. */
-        const prioridad = (126 << 24) + ((65535 - n) << 8) + 255;
-        lineas.push('a=candidate:' + (n + 1) + ' 1 udp ' + prioridad + ' ' + c.direccion + ' ' + c.puerto + ' typ host');
-    });
-    if (d.candidatas.length) lineas.push('a=end-of-candidates');
+    if (!sinCandidatas) {
+        sdpcLineasCandidatas(d).forEach(l => lineas.push('a=' + l));
+        if (d.candidatas.length) lineas.push('a=end-of-candidates');
+    }
     lineas.push(
         'a=ice-ufrag:' + d.ufrag,
         'a=ice-pwd:' + d.pwd,
@@ -1488,6 +1509,7 @@ function sdpcRehacer(d, mid) {
 /* ---- enlace/enlace.js ---- */
 /* ==========================================================
    ENLACE · dos móviles en la misma wifi, sin servidor
+   (y desde el 20-11, también A DISTANCIA entre dos wifis de casa)
    Un canal de datos WebRTC cuya señalización viaja en dos QR: el anfitrión
    enseña su oferta, el invitado la lee y enseña su respuesta, el anfitrión
    la lee. No hay servidor de cita ni STUN: en la misma red bastan las
@@ -1500,6 +1522,17 @@ function sdpcRehacer(d, mid) {
    Para los juegos de acción hay además un canal «rápido» (sin orden ni
    reenvíos): lo que se manda por él puede perderse, así que solo vale para
    estados completos que el siguiente sustituye (posiciones, mandos).
+
+   A DISTANCIA (20-11): sin QR. El anfitrión manda su código por WhatsApp
+   (un enlace), el invitado le devuelve el suyo y el anfitrión lo pega. Se
+   usa STUN (Cloudflare y Google) para conocer la dirección pública de cada
+   uno. Medido con dos iPhone el 20-11: entre dos wifis de casa conecta
+   directo SOLO si los dos empiezan a probar a la vez (si no, el router del
+   que empezó antes ya no deja pasar al otro cuando este empieza). Por eso
+   el código de vuelta lleva una hora de arranque y, hasta entonces, nadie
+   le da al navegador las direcciones del otro. Con datos móviles (Vodafone
+   y Orange, NAT simétrico) no conecta: haría falta un servidor de
+   retransmisión (TURN), que se ha decidido no usar.
 
    Depende de: sdp-compacto.js, qrcode-generator (pintar) y el worker de
    qr-scanner (leer cuando no hay BarcodeDetector, que es el caso de Safari).
@@ -1534,6 +1567,26 @@ const Enlace = (() => {
        se tira la instantánea en vez de encolarla, porque la siguiente ya
        la sustituye y encolar solo añadiría retraso. */
     const TOPE_COLA_RAPIDO = 64 * 1024;
+    /* A distancia: servidores STUN públicos, sin cuenta (solo ven la
+       dirección). Se pueden cambiar para las pruebas con window.__enlaceStun. */
+    const STUN_PUBLICOS = ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'];
+    const stunes = () => (typeof window !== 'undefined' && window.__enlaceStun) || STUN_PUBLICOS;
+    /* De que el invitado hace su código a la hora de arranque. Medido el
+       20-11: el código se pegaba a los 17-34 s de hacerlo. */
+    const ESPERA_ARRANQUE = 50000;
+    const esperaArranque = () => (typeof window !== 'undefined' && window.__enlaceEspera) || ESPERA_ARRANQUE;
+    /* Recogida a distancia: hay que esperar a la pública (srflx), que llega
+       cuando contesta el STUN (unos 50-300 ms; sin red, nunca). */
+    const GRACIA_PUBLICA = 400, TOPE_RECOGIDA_LEJOS = 5000;
+    /* Marcas al final del código: «.d» en la oferta a distancia; en la
+       respuesta, «.» y la hora de arranque en segundos, en base 36. */
+    function partirCodigo(c) {
+        const k = c.lastIndexOf('.');
+        if (k === -1) return { base: c, lejos: false, arranque: null };
+        const extra = c.slice(k + 1);
+        const seg = extra === 'd' ? NaN : parseInt(extra, 36);
+        return { base: c.slice(0, k), lejos: true, arranque: Number.isFinite(seg) && seg > 1e9 ? seg * 1000 : null };
+    }
 
     /* ---------- estilos, una sola vez por página ---------- */
     let estilosPuestos = false;
@@ -1769,6 +1822,7 @@ const Enlace = (() => {
     <button type="button" data-a="usar">USAR ESTE CÓDIGO</button>
   </details>
   <div class="enl-botones">
+    <button type="button" data-a="lejos" hidden>🌍 ESTAMOS LEJOS (WIFI DE CASA)</button>
     <button type="button" data-a="reintentar" class="enl-principal" hidden>REINTENTAR</button>
     <button type="button" data-a="reconectar" class="enl-principal" hidden>VOLVER A CONECTAR</button>
     <button type="button" data-a="abandonar" hidden>ABANDONAR</button>
@@ -1786,7 +1840,7 @@ const Enlace = (() => {
             manual: $('.enl-manual'), texto: $('textarea'), mandar: $('[data-a="mandar"]'),
             reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag'),
             corte: $('.enl-corte-texto'), reconectar: $('[data-a="reconectar"]'),
-            abandonar: $('[data-a="abandonar"]'), cancelar: $('[data-a="cancelar"]')
+            abandonar: $('[data-a="abandonar"]'), cancelar: $('[data-a="cancelar"]'), lejos: $('[data-a="lejos"]')
         };
 
         capa.addEventListener('click', (e) => {
@@ -1802,6 +1856,7 @@ const Enlace = (() => {
             else if (a === 'reintentar') acciones.reintentar();
             else if (a === 'reconectar') acciones.reconectar();
             else if (a === 'abandonar') acciones.abandonar();
+            else if (a === 'lejos') acciones.lejos();
         });
         /* Que el Escape de la capa no le llegue al juego: en Hundir la Flota
            pausaría la partida por debajo mientras se reconecta. */
@@ -1820,7 +1875,7 @@ const Enlace = (() => {
             abrir(titulo) {
                 el.titulo.textContent = titulo;
                 [el.pasoQR, el.qr, el.pasoCam, el.visor, el.ayuda, el.reintentar, el.diag,
-                 el.corte, el.reconectar, el.abandonar].forEach(x => { x.hidden = true; });
+                 el.corte, el.reconectar, el.abandonar, el.lejos].forEach(x => { x.hidden = true; });
                 el.cancelar.hidden = false;
                 el.manual.hidden = false;
                 [el.pasoQR, el.pasoCam].forEach(x => x.classList.remove('enl-ahora', 'enl-hecho'));
@@ -1885,6 +1940,19 @@ const Enlace = (() => {
                 el.ayuda.hidden = !lineas.length;
             },
             reintentable(si) { el.reintentar.hidden = !si; },
+            ofrecerLejos(si) { el.lejos.hidden = !si; },
+            /* A distancia no hay QR ni cámara: dos pasos de texto, el botón
+               de mandar el código y el cuadro para pegar el del otro. */
+            lejos(paso1, paso2) {
+                el.pasoQR.innerHTML = paso1; el.pasoQR.hidden = false;   // textos fijos del módulo
+                el.qr.hidden = true;
+                el.pasoCam.innerHTML = paso2; el.pasoCam.hidden = !paso2;
+                el.visor.hidden = true;
+                capa.querySelector('.enl-caja').classList.remove('enl-con-camara', 'enl-leer');
+                el.manual.hidden = false; el.manual.open = true;
+                el.mandar.hidden = false;
+                el.lejos.hidden = true;
+            },
             refrescarDiagnostico() { if (!el.diag.hidden) el.diag.textContent = acciones.diagnostico(); }
         };
     }
@@ -1934,9 +2002,10 @@ const Enlace = (() => {
                 pegado: (t) => recibirCodigo(t, 'pegado'),
                 mandar: mandarMiCodigo,
                 cancelar,
-                reintentar: () => (papel === 'anfitrion' ? anfitrion() : invitado()),
+                reintentar: () => (papel === 'anfitrion' ? (lejos ? anfitrionLejos() : anfitrion()) : invitado()),
                 reconectar: () => (papel === 'invitado' ? invitado() : anfitrion()),
-                abandonar
+                abandonar,
+                lejos: () => anfitrionLejos()
             });
             lector = crearLector(capa.video, (t) => recibirCodigo(t, 'cámara'), apuntar);
         }
@@ -1944,6 +2013,8 @@ const Enlace = (() => {
         /* ---------- conexión ---------- */
         function cerrarConexion() {
             if (plazo) { clearTimeout(plazo); plazo = null; }
+            if (arranqueTimer) { clearTimeout(arranqueTimer); arranqueTimer = null; }
+            if (cuentaTimer) { clearInterval(cuentaTimer); cuentaTimer = null; }
             if (!con) return;
             const viejo = con;
             con = null;
@@ -1952,9 +2023,13 @@ const Enlace = (() => {
             try { viejo.pc.close(); } catch (e) {}
         }
 
-        function nuevaConexion() {
+        let lejos = false;              // este intento es A DISTANCIA
+        let arranqueTimer = null, cuentaTimer = null;
+        function nuevaConexion(aDistancia) {
             cerrarConexion();
-            const pc = new RTCPeerConnection({ iceServers: [] });
+            lejos = !!aDistancia;
+            /* En la misma wifi, sin STUN, como siempre: el código no cambia. */
+            const pc = new RTCPeerConnection({ iceServers: lejos ? stunes().map(u => ({ urls: u })) : [] });
             /* Canal negociado: los dos lo crean con el mismo id y no hace falta
                esperar a ondatachannel, que en el invitado llegaba tarde. */
             const dc = pc.createDataChannel('enlace', { negotiated: true, id: 0, ordered: true });
@@ -2013,9 +2088,10 @@ const Enlace = (() => {
             return esta;
         }
 
-        function recoger(pc) {
+        function recoger(pc, aDistancia) {
             return new Promise((listo) => {
                 let hecho = false, gracia = null;
+                const tope0 = aDistancia ? TOPE_RECOGIDA_LEJOS : TOPE_RECOGIDA;
                 const acabar = (por) => {
                     if (hecho) return;
                     hecho = true;
@@ -2023,12 +2099,16 @@ const Enlace = (() => {
                     apuntar('recogida: ' + por);
                     listo();
                 };
-                const tope = setTimeout(() => acabar('tope de ' + TOPE_RECOGIDA + ' ms'), TOPE_RECOGIDA);
+                const tope = setTimeout(() => acabar('tope de ' + tope0 + ' ms'), tope0);
                 pc.addEventListener('icecandidate', (e) => {
                     if (!e.candidate) return acabar('completa');
                     const c = e.candidate.candidate || '';
-                    if (/ udp /i.test(c) && / typ host/.test(c) && !gracia) {
-                        gracia = setTimeout(() => acabar('gracia tras la primera UDP'), GRACIA_RECOGIDA);
+                    /* A distancia se espera a la pública; en la misma wifi
+                       basta la primera de host. */
+                    if (aDistancia ? (/ udp /i.test(c) && / typ srflx/.test(c) && !gracia)
+                                   : (/ udp /i.test(c) && / typ host/.test(c) && !gracia)) {
+                        gracia = setTimeout(() => acabar(aDistancia ? 'gracia tras la primera pública' : 'gracia tras la primera UDP'),
+                                            aDistancia ? GRACIA_PUBLICA : GRACIA_RECOGIDA);
                     }
                 });
                 if (pc.iceGatheringState === 'complete') acabar('ya estaba');
@@ -2040,7 +2120,7 @@ const Enlace = (() => {
             : codigo;
 
         function apuntarCandidatas(quien, datos) {
-            apuntar(quien + ': ' + (datos.candidatas.length ? datos.candidatas.map(c => claseDe(c.direccion) + ':' + c.puerto).join(', ') : 'NINGUNA'));
+            apuntar(quien + ': ' + (datos.candidatas.length ? datos.candidatas.map(c => (c.publica ? 'pública ' : '') + claseDe(c.direccion) + ':' + c.puerto).join(', ') : 'NINGUNA'));
         }
 
         /* ---------- anfitrión ---------- */
@@ -2077,6 +2157,7 @@ const Enlace = (() => {
 
             miCodigo = codigo;
             const modulos = capa.qr(codigo, '<b>PASO 1 de 2.</b> En el otro móvil, pulsa <b>UNIRME</b> y que apunte con su cámara a <b>este</b> código.');
+            capa.ofrecerLejos(true);
             apuntar('QR de ' + modulos + ' módulos, ' + codigo.length + ' caracteres');
             esperando = { tipo: 'respuesta', vuelta: v };
             if (hayCamara) {
@@ -2088,6 +2169,40 @@ const Enlace = (() => {
                 capa.abrirManual();
                 capa.estado('Pega el código que te mande el otro móvil');
             }
+        }
+
+        /* ---------- anfitrión A DISTANCIA ---------- */
+        async function anfitrionLejos() {
+            if (!comprobarWebRTC()) return;
+            asegurarCapa();
+            const v = ++vuelta;
+            papel = 'anfitrion';
+            miCodigo = '';
+            if (!sesion) sesion = idAzar();
+            if (lector) lector.apagar();
+            cerrarConexion();
+            capa.abrir(S.enviados || S.recibidos ? 'VOLVER A CONECTAR A DISTANCIA' : 'PARTIDA A DISTANCIA');
+            capa.estado('Preparando…');
+            apuntar('— anfitrión a distancia, sesión ' + sesion);
+            let codigo, datos;
+            try {
+                const { pc } = nuevaConexion(true);
+                await pc.setLocalDescription(await pc.createOffer());
+                await recoger(pc, true);
+                if (v !== vuelta) return;
+                codigo = sdpcComprimir(pc.localDescription.sdp, 'oferta') + '.d';
+                datos = sdpcDescomprimir(partirCodigo(codigo).base);
+                apuntarCandidatas('mías', datos);
+            } catch (e) { apuntar('oferta: ' + e.message); fallo('interno'); return; }
+            miCodigo = codigo;
+            capa.lejos('<b>PASO 1 de 2.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y mándaselo al otro por WhatsApp. Que lo abra.',
+                       '<b>PASO 2 de 2.</b> Te devolverá su código: cópialo, pégalo abajo y pulsa <b>USAR ESTE CÓDIGO</b> antes de que acabe su cuenta atrás.');
+            capa.ahora('qr');
+            esperando = { tipo: 'respuesta', vuelta: v };
+            if (!datos.candidatas.some(c => c.publica)) {
+                capa.estado('No se ve la salida a Internet de este móvil: a distancia no va a conectar', true);
+                capa.ayuda(['Comprueba que hay conexión a Internet. Con datos móviles no funciona: tiene que ser una wifi de casa.']);
+            } else capa.estado('Esperando su código…');
         }
 
         /* ---------- invitado ---------- */
@@ -2105,6 +2220,7 @@ const Enlace = (() => {
             if (codigoInicial) { recibirCodigo(codigoInicial, 'URL'); return; }
 
             capa.estado('Preparando la cámara…');
+            capa.ayuda(['¿Estáis lejos? Si te ha mandado su código por mensaje, pégalo abajo, en «Pasar el código por mensaje».']);
             const hayCamara = await encenderCamara();
             if (v !== vuelta) return;
             if (hayCamara) {
@@ -2148,8 +2264,8 @@ const Enlace = (() => {
         async function recibirCodigo(texto, via) {
             const esp = esperando;
             if (!esp || esp.vuelta !== vuelta) return;
-            let datos;
-            try { datos = sdpcDescomprimir(extraerCodigo(texto)); }
+            let datos, partes;
+            try { partes = partirCodigo(extraerCodigo(texto)); datos = sdpcDescomprimir(partes.base); datos.lejos = partes.lejos; datos.arranque = partes.arranque; }
             catch (e) {
                 /* La cámara lee el mismo QR equivocado diez veces por segundo:
                    un aviso cada dos segundos basta. Lo pegado a mano se
@@ -2188,13 +2304,54 @@ const Enlace = (() => {
                 /* El mid tiene que ser el de MI oferta: Firefox antiguo usaba
                    «sdparta_0» y la plantilla pone «0». */
                 const m = /a=mid:(\S+)/.exec(pc.localDescription.sdp);
-                await pc.setRemoteDescription({ type: 'answer', sdp: sdpcRehacer(datos, m ? m[1] : '0') });
+                const mid = m ? m[1] : '0';
+                if (datos.arranque) {
+                    // A distancia: sus direcciones, a la hora de arranque
+                    await pc.setRemoteDescription({ type: 'answer', sdp: sdpcRehacer(datos, mid, true) });
+                    if (v !== vuelta) return;
+                    programarArranque(datos.arranque, datos, mid, v);
+                    return;
+                }
+                await pc.setRemoteDescription({ type: 'answer', sdp: sdpcRehacer(datos, mid) });
             } catch (e) { apuntar('respuesta: ' + e.message); fallo('interno'); return; }
             if (v !== vuelta) return;
             plazo = setTimeout(() => fallo('no-conecta'), PLAZO_CONECTAR);
         }
 
+        /* A la hora de arranque (el reloj de cada móvil, que va en hora por
+           la red), cada uno da al navegador las direcciones del otro y los
+           dos prueban a la vez. Hasta entonces, cuenta atrás. Si llega
+           tarde (se pegó pasada la hora), se dan en el acto. */
+        function programarArranque(hora, datos, mid, v) {
+            const pintar = () => {
+                const q = Math.ceil((hora - ahora()) / 1000);
+                if (q > 0) capa.estado((papel === 'anfitrion' ? 'Código puesto. ' : 'Mándaselo: tiene que pegarlo antes de que acabe. ') +
+                    'Os conectáis a la vez dentro de ' + q + ' s', false, true);
+            };
+            if (cuentaTimer) clearInterval(cuentaTimer);
+            pintar();
+            cuentaTimer = setInterval(pintar, 500);
+            const falta = hora - ahora();
+            apuntar('arranque a la vez en ' + Math.round(falta / 100) / 10 + ' s');
+            const dar = async () => {
+                arranqueTimer = null;
+                if (cuentaTimer) { clearInterval(cuentaTimer); cuentaTimer = null; }
+                if (v !== vuelta || !con) return;
+                apuntar('arranque: ' + datos.candidatas.length + ' candidatas del otro');
+                capa.estado('Conectando…');
+                for (const linea of sdpcLineasCandidatas(datos)) {
+                    try { await con.pc.addIceCandidate({ candidate: linea, sdpMid: mid, sdpMLineIndex: 0 }); }
+                    catch (e) { apuntar('candidata no admitida: ' + e.message); }
+                }
+                if (v !== vuelta) return;
+                plazo = setTimeout(() => fallo('no-conecta'), PLAZO_CONECTAR);
+            };
+            if (falta > 0) arranqueTimer = setTimeout(dar, falta);
+            else { apuntar('se pegó ' + Math.round(-falta / 1000) + ' s tarde'); dar(); }
+        }
+
         async function responderOferta(datos, v) {
+            if (datos.lejos) return responderLejos(datos, v);
             capa.estado('Preparando mi código…');
             let codigo;
             try {
@@ -2225,6 +2382,30 @@ const Enlace = (() => {
             }, 30000);
         }
 
+        async function responderLejos(datos, v) {
+            if (lector) lector.apagar();
+            capa.sinCamara();
+            capa.ayuda([]);
+            capa.estado('Preparando mi código…');
+            let codigo, hora;
+            try {
+                const { pc } = nuevaConexion(true);
+                // Sin sus direcciones todavía: se dan a la hora de arranque
+                await pc.setRemoteDescription({ type: 'offer', sdp: sdpcRehacer(datos, '0', true) });
+                await pc.setLocalDescription(await pc.createAnswer());
+                await recoger(pc, true);
+                if (v !== vuelta) return;
+                hora = Math.round((ahora() + esperaArranque()) / 1000) * 1000;
+                codigo = sdpcComprimir(pc.localDescription.sdp, 'respuesta') + '.' + (hora / 1000).toString(36);
+                apuntarCandidatas('mías', sdpcDescomprimir(partirCodigo(codigo).base));
+            } catch (e) { apuntar('respuesta a distancia: ' + e.message); fallo('interno'); return; }
+            miCodigo = codigo;
+            capa.lejos('<b>PASO 2 de 2.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y devuélveselo por WhatsApp. Luego vuelve aquí sin cerrar.', '');
+            capa.ahora('qr');
+            const m = /a=mid:(\S+)/.exec(con.pc.remoteDescription.sdp);
+            programarArranque(hora, datos, m ? m[1] : '0', v);
+        }
+
         async function mandarMiCodigo() {
             if (!miCodigo) return;
             const texto = papel === 'anfitrion' ? urlDe(miCodigo) : miCodigo;
@@ -2250,7 +2431,14 @@ const Enlace = (() => {
             capa.sinCamara();
             capa.sinQR();
             capa.reintentable(true);
-            if (motivo === 'no-conecta') {
+            if (motivo === 'no-conecta' && lejos) {
+                capa.estado('Los móviles no consiguen verse', true);
+                capa.ayuda([
+                    'A distancia solo funciona entre dos WIFIS DE CASA: con datos móviles no.',
+                    'El código hay que pegarlo antes de que acabe la cuenta atrás.',
+                    'Pulsad REINTENTAR en los dos y volved a pasaros los códigos.'
+                ]);
+            } else if (motivo === 'no-conecta') {
                 capa.estado('Los móviles no consiguen verse', true);
                 capa.ayuda([
                     'Los dos tienen que estar en la MISMA wifi, no con datos móviles.',
