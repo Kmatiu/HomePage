@@ -116,6 +116,40 @@
         background: var(--borde);
     }
 
+    /* ---------- Secciones plegables (20-11) ----------
+       Un botón por sección; al tocarlo se despliegan sus juegos. Cada móvil
+       recuerda cuáles dejó abiertas (portal.secciones). */
+    /* Alto medido: con 56 px y 10 de separación, el 7.º botón quedaba 43 px
+       por debajo de la primera pantalla de un iPhone 13 (707 de 664) */
+    .plegable { margin: 0 0 8px; }
+    .plegable h2 { margin: 0; font-size: inherit; }
+    .boton-seccion {
+        width: 100%; min-height: 50px;
+        display: flex; align-items: center; gap: 12px;
+        padding: 8px 16px;
+        background: var(--tarjeta); color: var(--texto);
+        border: 1px solid var(--borde); border-radius: 14px;
+        font: inherit; font-size: 1.02rem; font-weight: 600; text-align: left;
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .boton-seccion[aria-expanded="true"] { border-color: var(--acento); background: rgba(0, 255, 200, 0.07); }
+    .boton-seccion:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+    @media (hover: hover) { .boton-seccion:hover { border-color: var(--acento); } }
+    .boton-seccion .ico { font-size: 1.5rem; line-height: 1; width: 2rem; text-align: center; flex: 0 0 auto; }
+    .boton-seccion .tit { flex: 1 1 auto; min-width: 0; }
+    .boton-seccion .cuantos { color: var(--apagado); font-weight: 400; font-size: 0.88rem; }
+    .boton-seccion .nuevo {
+        font-size: 0.66rem; font-weight: 700; letter-spacing: 1px;
+        color: #fff; background: var(--acento2); border-radius: 6px; padding: 3px 6px;
+    }
+    .boton-seccion .flecha { color: var(--apagado); transition: transform 0.2s; }
+    .boton-seccion[aria-expanded="true"] .flecha { transform: rotate(90deg); }
+    .plegable .rejilla { margin: 12px 0 18px; }
+    /* El display:grid de .rejilla gana al atributo hidden: sin esto, las
+       secciones cerradas se seguirían viendo */
+    .plegable .rejilla[hidden] { display: none; }
+    #secciones { margin-bottom: 26px; }
+
     /* Caja de alto fijo: cada glifo tiene sus propias métricas y, sin esto,
        el nombre de un juego queda unos píxeles más bajo que el de al lado. */
     .juego .icono {
@@ -469,7 +503,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v13</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v14</div>
 </footer>
 
 <script>
@@ -483,9 +517,10 @@
        nuevo es añadir una línea aquí y nada más.
        "extras" son los archivos que ese juego necesita aparte de su HTML.
        ------------------------------------------------------------------ */
-    /* "grupo" es la sección en la que sale la tarjeta. El orden de las
-       secciones es el de su primera aparición en esta lista, así que para
-       mover un juego de sección basta con cambiarle la palabra.
+    /* "grupo" es la sección en la que sale la tarjeta; para moverlo de
+       sección basta con cambiarle la palabra. El orden y el icono de las
+       secciones están en SECCIONES, debajo del catálogo; un grupo que no
+       esté allí sale al final, con 🎮.
 
        AVISO DE NOVEDADES (16-11-2026). Al abrir la portada, cada móvil
        compara el catálogo con lo que vio la última vez:
@@ -537,80 +572,80 @@
           archivo: 'webs/PacMan.html',         nombre: 'PacMan',         icono: '🟡' },
         { grupo: 'Arcade',
           archivo: 'webs/arkanoid.html',       nombre: 'Arkanoid',       icono: '🧩', red: true,
-          cambio: '2026-11-19 20:00', nota: 'Juega con un amigo, cada uno con su pala en su móvil, los dos contra los ladrillos (en la misma wifi). Arreglada también la bola que se quedaba subiendo y bajando pegada a una pared.' },
+          cambio: '2026-11-19 20:00', nota: 'Juega con un amigo, cada uno con su pala en su móvil, los dos contra los ladrillos (con wifi, juntos o cada uno en su casa). Arreglada también la bola que se quedaba subiendo y bajando pegada a una pared.' },
         { grupo: 'Arcade',
           archivo: 'webs/super-pang.html',     nombre: 'Súper Pang',     icono: '🎯', red: true,
-          cambio: '2026-11-19 14:00', nota: 'Ahora podéis jugar dos juntos, cada uno con su personaje en su móvil (en la misma wifi).',
+          cambio: '2026-11-19 14:00', nota: 'Ahora podéis jugar dos juntos, cada uno con su personaje en su móvil (con wifi, juntos o cada uno en su casa).',
           extras: ['images/world-map.png'] },
         { grupo: 'Arcade',
           archivo: 'webs/tanques.html',        nombre: 'Tanques',        icono: '💥', red: true,
-          cambio: '2026-11-19 12:00', nota: 'Ahora podéis jugar dos juntos contra los enemigos, cada uno con su tanque en su móvil (en la misma wifi).' },
+          cambio: '2026-11-19 12:00', nota: 'Ahora podéis jugar dos juntos contra los enemigos, cada uno con su tanque en su móvil (con wifi, juntos o cada uno en su casa).' },
         { grupo: 'Arcade',
           archivo: 'webs/pinball.html',        nombre: 'Pinball',        icono: '🎰' },
         { grupo: 'Arcade',
           archivo: 'webs/serpiente.html',      nombre: 'La serpiente',   icono: '🐍', red: true,
-          cambio: '2026-11-19 22:00', nota: 'Nuevo modo DUELO: dos serpientes en la misma pantalla, cada una desde su móvil (en la misma wifi). Pierde quien choque antes. Y en el móvil, palanca en lugar de flechas.' },
+          cambio: '2026-11-19 22:00', nota: 'Nuevo modo DUELO: dos serpientes en la misma pantalla, cada una desde su móvil (con wifi, juntos o cada uno en su casa). Pierde quien choque antes. Y en el móvil, palanca en lugar de flechas.' },
         { grupo: 'Arcade',
           archivo: 'webs/ranas.html',          nombre: 'Bubble Bobble', icono: '🐸', red: true,
-          cambio: '2026-11-19 21:00', nota: 'Las dos ranas juntas, cada una en su móvil (en la misma wifi): ahora el modo de dos jugadores también se juega en el móvil.' },
-        { grupo: 'Arcade',
+          cambio: '2026-11-19 21:00', nota: 'Las dos ranas juntas, cada una en su móvil (con wifi, juntos o cada uno en su casa): ahora el modo de dos jugadores también se juega en el móvil.' },
+        { grupo: 'Puntería',
           archivo: 'webs/tirachinas.html',     nombre: 'Angry Birds', icono: '🐦' },
-        { grupo: 'Arcade',
+        { grupo: 'Puntería',
           archivo: 'webs/worms.html',          nombre: 'Worms',          icono: '🐛', red: true,
-          alta: '2026-11-16 10:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
+          alta: '2026-11-16 10:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (con wifi, juntos o cada uno en su casa).' },
         { grupo: 'Arcade',
           archivo: 'webs/aero.html',           nombre: 'Aero Fighters',  icono: '✈️', red: true,
-          alta: '2026-11-19 23:30', nota: 'Seis aviones, cada uno con su disparo y su bomba, por ocho fases con rutas: el ala que derribas decide adónde vas. Solo o con un amigo, cada uno en su móvil (en la misma wifi).' },
+          alta: '2026-11-19 23:30', nota: 'Seis aviones, cada uno con su disparo y su bomba, por ocho fases con rutas: el ala que derribas decide adónde vas. Solo o con un amigo, cada uno en su móvil (con wifi, juntos o cada uno en su casa).' },
 
-        { grupo: 'Deporte y motor',
+        { grupo: 'Arcade',
           archivo: 'webs/carreraCoches.html',  nombre: 'Ruta 66',        icono: '🏎️' },
-        { grupo: 'Deporte y motor',
+        { grupo: 'Puntería',
           archivo: 'webs/penaltis.html',       nombre: 'Penaltis',       icono: '⚽', red: true,
-          cambio: '2026-11-19 16:00', nota: 'Tanda con dos móviles: cuando tiras tú, para tu amigo en el suyo, y al revés (en la misma wifi).' },
+          cambio: '2026-11-19 16:00', nota: 'Tanda con dos móviles: cuando tiras tú, para tu amigo en el suyo, y al revés (con wifi, juntos o cada uno en su casa).' },
 
-        { grupo: 'Palabras',
+        { grupo: 'Palabras y memoria',
           archivo: 'webs/ahorcado.html',       nombre: 'El Ahorcado',    icono: '🧍', red: true,
-          cambio: '2026-11-19 15:00', nota: 'Duelo con dos móviles: cada uno escribe su palabra en el suyo, sin pasárselo, y adivina la del otro (en la misma wifi).' },
-        { grupo: 'Palabras',
+          cambio: '2026-11-19 15:00', nota: 'Duelo con dos móviles: cada uno escribe su palabra en el suyo, sin pasárselo, y adivina la del otro (con wifi, juntos o cada uno en su casa).' },
+        { grupo: 'Palabras y memoria',
           archivo: 'webs/crucigrama.html',     nombre: 'Crucigrama',     icono: '▦' },
-        { grupo: 'Palabras',
+        { grupo: 'Palabras y memoria',
           archivo: 'webs/sopa.html',           nombre: 'Sopa de Letras', icono: '🔠' },
 
-        { grupo: 'Ingenio',
+        { grupo: 'Arcade',
           archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱', red: true,
-          cambio: '2026-11-19 19:00', nota: 'Contra un amigo, cada uno en su móvil y con las mismas piezas: tus líneas le suben filas al otro (en la misma wifi).',
+          cambio: '2026-11-19 19:00', nota: 'Contra un amigo, cada uno en su móvil y con las mismas piezas: tus líneas le suben filas al otro (con wifi, juntos o cada uno en su casa).',
           extras: ['https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] },
-        { grupo: 'Ingenio',
+        { grupo: 'Tablero',
           archivo: 'webs/conecta4.html',       nombre: 'Conecta 4',      icono: '🔴', red: true,
-          cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
-        { grupo: 'Ingenio',
+          cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (con wifi, juntos o cada uno en su casa).' },
+        { grupo: 'Tablero',
           archivo: 'webs/damas.html',          nombre: 'Damas',          icono: '⚫', red: true,
-          alta: '2026-11-16 13:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (en la misma wifi).' },
-        { grupo: 'Ingenio',
+          alta: '2026-11-16 13:00', cambio: '2026-11-19 12:00', nota: 'Ahora puedes jugar contra un amigo, cada uno desde su móvil (con wifi, juntos o cada uno en su casa).' },
+        { grupo: 'Tablero',
           archivo: 'webs/ajedrez.html',        nombre: 'Ajedrez',        icono: '♟️', red: true,
-          alta: '2026-11-19 23:00', nota: 'Contra la máquina (cuatro niveles), dos en el mismo móvil o cada uno en el suyo (en la misma wifi). Con reloj, historial de jugadas y problemas de mate.' },
-        { grupo: 'Ingenio',
+          alta: '2026-11-19 23:00', nota: 'Contra la máquina (cuatro niveles), dos en el mismo móvil o cada uno en el suyo (con wifi, juntos o cada uno en su casa). Con reloj, historial de jugadas y problemas de mate.' },
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/magic-sort.html',     nombre: 'Magic Sort',     icono: '🧪', red: true,
-          alta: '2026-11-20 09:00', nota: 'Vierte los colores de un frasco a otro hasta que cada uno tenga uno solo. Seis capítulos de 40 niveles, nivel del día y duelo con un amigo, cada uno en su móvil (en la misma wifi).' },
-        { grupo: 'Ingenio',
+          alta: '2026-11-20 09:00', nota: 'Vierte los colores de un frasco a otro hasta que cada uno tenga uno solo. Seis capítulos de 40 niveles, nivel del día y duelo con un amigo, cada uno en su móvil (con wifi, juntos o cada uno en su casa).' },
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/solitario.html',      nombre: 'Solitario',      icono: '🃏',
           alta: '2026-11-18 15:00' },
-        { grupo: 'Ingenio',
+        { grupo: 'Tablero',
           archivo: 'webs/flota.html',        nombre: 'Hundir la Flota', icono: '🚢', red: true },
-        { grupo: 'Ingenio',
+        { grupo: 'Palabras y memoria',
           archivo: 'webs/memory.html',       nombre: 'Memory',         icono: '🃏', red: true,
-          cambio: '2026-11-19 18:00', nota: 'Contra un amigo, cada uno en su móvil y con la misma mesa: las cartas que levanta el otro también las ves tú (en la misma wifi).' },
-        { grupo: 'Ingenio',
+          cambio: '2026-11-19 18:00', nota: 'Contra un amigo, cada uno en su móvil y con la misma mesa: las cartas que levanta el otro también las ves tú (con wifi, juntos o cada uno en su casa).' },
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/puzle.html',          nombre: 'Puzle deslizante', icono: '🧩' },
-        { grupo: 'Ingenio',
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/sudoku.html',         nombre: 'Sudoku',         icono: '9️⃣' },
-        { grupo: 'Ingenio',
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/cazafantasmas.html',  nombre: 'Cazafantasmas',  icono: '👻' },
-        { grupo: 'Ingenio',
+        { grupo: 'Puzles y cartas',
           archivo: 'webs/mahjong.html',        nombre: 'Mahjong',        icono: '🀄' },
-        { grupo: 'Ingenio',
+        { grupo: 'Palabras y memoria',
           archivo: 'webs/quiz.html',           nombre: 'Quiz',           icono: '❓', red: true,
-          cambio: '2026-11-19 17:00', nota: 'Contra un amigo, cada uno en su móvil: las mismas preguntas a la vez y quien acierta antes suma más (en la misma wifi).',
+          cambio: '2026-11-19 17:00', nota: 'Contra un amigo, cada uno en su móvil: las mismas preguntas a la vez y quien acierta antes suma más (con wifi, juntos o cada uno en su casa).',
           extras: ['https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js',
                    'https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap'] }
     ];
@@ -704,22 +739,63 @@
        JUEGOS, no por orden alfabético ni por una lista aparte: así el
        catálogo sigue siendo una sola fuente y no hay dos sitios que puedan
        acabar diciendo cosas distintas. */
-    var rejillasPorGrupo = {};
+    /* Secciones por cómo se juega (20-11). «abierta»: como sale la primera
+       vez en un móvil; luego manda lo que dejó cada uno. «Con otro móvil» no
+       es un grupo del catálogo: reúne los que llevan red: true, que salen
+       también en su sección. */
+    var SECCIONES = [
+        { grupo: 'Para los mayores', icono: '👵', abierta: true },
+        { grupo: 'Arcade', icono: '🕹️' },
+        { grupo: 'Puntería', icono: '🎯' },
+        { grupo: 'Tablero', icono: '♟️' },
+        { grupo: 'Puzles y cartas', icono: '🧩' },
+        { grupo: 'Palabras y memoria', icono: '🔤' }
+    ];
+    var CON_RED = { grupo: 'Con otro móvil', icono: '📱', red: true };
 
-    function rejillaDe(grupo) {
-        if (rejillasPorGrupo[grupo]) return rejillasPorGrupo[grupo];
+    var abiertas = {};   // se lee al pintar: leer() necesita «memoria», que va más abajo
 
-        var titulo = document.createElement('h2');
-        titulo.className = 'seccion';
-        titulo.textContent = grupo;
-        contenedor.appendChild(titulo);
+    var secciones = {};   // grupo → { rejilla, boton, cuantos, nuevo }
+    var nSeccion = 0;
 
+    function crearSeccion(def) {
+        var caja = document.createElement('section');
+        caja.className = 'plegable';
+        var h = document.createElement('h2');
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'boton-seccion';
+        var id = 'seccion' + (++nSeccion);
+        b.setAttribute('aria-controls', id);
+        var ico = document.createElement('span'); ico.className = 'ico'; ico.setAttribute('aria-hidden', 'true'); ico.textContent = def.icono;
+        var tit = document.createElement('span'); tit.className = 'tit'; tit.textContent = def.grupo + ' ';
+        var cu = document.createElement('span'); cu.className = 'cuantos'; tit.appendChild(cu);
+        var nu = document.createElement('span'); nu.className = 'nuevo'; nu.textContent = 'NUEVO'; nu.hidden = true;
+        var fl = document.createElement('span'); fl.className = 'flecha'; fl.setAttribute('aria-hidden', 'true'); fl.textContent = '▸';
+        b.appendChild(ico); b.appendChild(tit); b.appendChild(nu); b.appendChild(fl);
+        h.appendChild(b);
         var r = document.createElement('div');
         r.className = 'rejilla';
-        contenedor.appendChild(r);
-
-        rejillasPorGrupo[grupo] = r;
-        return r;
+        r.id = id;
+        caja.appendChild(h); caja.appendChild(r);
+        contenedor.appendChild(caja);
+        var sec = { rejilla: r, boton: b, cuantos: cu, nuevo: nu, n: 0 };
+        function poner(abierta) {
+            b.setAttribute('aria-expanded', String(abierta));
+            r.hidden = !abierta;
+        }
+        poner(def.grupo in abiertas ? !!abiertas[def.grupo] : !!def.abierta);
+        b.addEventListener('click', function () {
+            var abierta = b.getAttribute('aria-expanded') !== 'true';
+            poner(abierta);
+            abiertas[def.grupo] = abierta;
+            guardar('portal.secciones', JSON.stringify(abiertas));
+        });
+        secciones[def.grupo] = sec;
+        return sec;
+    }
+    function seccionDe(grupo) {
+        return secciones[grupo] || crearSeccion({ grupo: grupo, icono: '🎮' });
     }
 
     /* ------------------------------------------------------------------
@@ -990,8 +1066,21 @@
         ventana.addEventListener('pointercancel', soltar);
     })();
 
+    try { abiertas = JSON.parse(leer('portal.secciones') || '{}') || {}; } catch (e) { abiertas = {}; }
+    if (typeof abiertas !== 'object') abiertas = {};
+    SECCIONES.forEach(crearSeccion);
     JUEGOS.forEach(function (j) {
-        rejillaDe(j.grupo || 'Juegos').appendChild(tarjeta(j));
+        var s = seccionDe(j.grupo || 'Juegos');
+        s.rejilla.appendChild(tarjeta(j)); s.n++;
+    });
+    // Después de los grupos del catálogo, para que un grupo nuevo no quede detrás
+    var conRed = crearSeccion(CON_RED);
+    JUEGOS.forEach(function (j) { if (j.red) { conRed.rejilla.appendChild(tarjeta(j)); conRed.n++; } });
+    Object.keys(secciones).forEach(function (g) {
+        var s = secciones[g];
+        s.cuantos.textContent = '· ' + s.n;
+        // Una sección vacía (p. ej. si se vacía un grupo) no se enseña
+        if (!s.n) s.boton.parentNode.parentNode.hidden = true;
     });
     pintarFavoritos();
 
@@ -1066,6 +1155,13 @@
     JUEGOS.forEach(function (j) {
         if (j.alta && j.alta > visto) novedades.push({ j: j, nuevo: true });
         else if (j.cambio && j.cambio > visto) novedades.push({ j: j, nuevo: false });
+    });
+    /* Con las secciones cerradas, una novedad podía quedar escondida: su
+       botón lleva «NUEVO» durante esta visita (aunque se cierre el aviso) */
+    novedades.forEach(function (n) {
+        var s = secciones[n.j.grupo || 'Juegos'];
+        if (s) s.nuevo.hidden = false;
+        if (n.j.red) conRed.nuevo.hidden = false;
     });
     var capaNov = document.getElementById('novedades');
     function cerrarNovedades() {
