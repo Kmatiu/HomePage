@@ -126,7 +126,7 @@
                 </div>
             </div>
             <div class="paso" id="pasoA2">
-                <p><b>Paso 2 de 2 ·</b> Te devolverá un código que empieza por <b>R1.</b> Cópialo de WhatsApp y pégalo aquí.</p>
+                <p><b>Paso 2 de 2 ·</b> Te devolverá un código que empieza por <b>R1.</b> Cópialo de WhatsApp y pégalo aquí <b>antes de que acabe su cuenta atrás (1 minuto)</b>. Luego los dos se conectan a la vez.</p>
                 <label for="respuesta">Código de vuelta</label>
                 <textarea id="respuesta" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
                 <div class="fila"><button type="button" class="principal" id="bConectar">CONECTAR</button></div>
@@ -137,7 +137,7 @@
         <div id="vInvitado" hidden>
             <p><b>Te han invitado a una prueba.</b></p>
             <div class="paso activo">
-                <p><b>Paso único ·</b> Devuelve este código por WhatsApp a quien te mandó el enlace y <b>vuelve a esta página sin cerrarla</b>.</p>
+                <p><b>Paso único ·</b> Devuelve este código por WhatsApp a quien te mandó el enlace y <b>vuelve a esta página sin cerrarla</b>. Tiene 1 minuto para pegarlo: al acabar la cuenta atrás los dos se conectan a la vez.</p>
                 <div class="codigo" id="codigoVuelta">Preparando…</div>
                 <div class="fila">
                     <button type="button" class="principal" id="bCompartirVuelta" disabled>COMPARTIR</button>
@@ -182,7 +182,7 @@
 'use strict';
 /* ==== LOGICA: inicio ====
    Sin DOM ni WebRTC: lo prueba prueba-logica.js desde Node. */
-const VERSION = 2;          // el código de v1 se sigue leyendo
+const VERSION = 3;          // los códigos de v1 y v2 se siguen leyendo
 const STUN_PUBLICOS = ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'];
 const NOMBRES_STUN = ['Cloudflare', 'Google'];
 
@@ -206,6 +206,21 @@ function esV6Global(ip) { return /^[23][0-9a-f]{0,3}:/i.test(String(ip)); }
 function candidatasDeSDP(sdp) {
     return String(sdp || '').split(/\r?\n/).filter((l) => l.startsWith('a=candidate:'))
         .map(parsearCandidata).filter(Boolean);
+}
+
+/* Arranque a la vez (v3). Medido el 20-11: dos casas con salida abierta
+   NO conectaban. El invitado empieza a probar caminos en cuanto abre el
+   enlace, el navegador se rinde a los 15 s, y el otro pegaba el código
+   24 s después: cuando por fin probaba él, el router del invitado ya no
+   dejaba pasar nada. Por eso ninguno de los dos recibe las direcciones del
+   otro (las candidatas) al leer el código: se guardan y se dan a la vez,
+   a una hora fijada, para que los dos llamen a la puerta al mismo tiempo. */
+function quitarCandidatas(sdp) {
+    const lineas = String(sdp || '').split(/\r?\n/);
+    const cand = lineas.filter((l) => l.startsWith('a=candidate:')).map((l) => l.slice(2));
+    const mid = (lineas.find((l) => l.startsWith('a=mid:')) || 'a=mid:0').slice(6);
+    const resto = lineas.filter((l) => !l.startsWith('a=candidate:') && l !== 'a=end-of-candidates');
+    return { sdp: resto.join('\r\n'), candidatas: cand, mid };
 }
 
 function srflx4(lista) {
@@ -340,9 +355,11 @@ async function decodificar(texto) {
             bytes = await porFlujo(bytes, new DecompressionStream('deflate-raw'));
         }
         const o = JSON.parse(new TextDecoder().decode(bytes));
-        if (!o || (o.v !== 1 && o.v !== 2) || (o.k !== 'o' && o.k !== 'r') || typeof o.s !== 'string' ||
+        if (!o || (o.v !== 1 && o.v !== 2 && o.v !== 3) || (o.k !== 'o' && o.k !== 'r') || typeof o.s !== 'string' ||
             o.s.length > 20000 || !o.s.startsWith('v=0')) return null;
-        return { k: o.k, t: Number(o.t) || 0, s: o.s, z: o.z === 1, i: o.i && typeof o.i === 'object' ? o.i : null };
+        const a = Number(o.a);
+        return { k: o.k, t: Number(o.t) || 0, s: o.s, z: o.z === 1, i: o.i && typeof o.i === 'object' ? o.i : null,
+                 a: Number.isFinite(a) && a > 0 ? a : null };
     } catch (e) { return null; }
 }
 
@@ -446,8 +463,8 @@ const STUN = parametros.has('stun')
     ? parametros.get('stun').split(',').map((s) => s.trim()).filter(Boolean)
     : STUN_PUBLICOS.slice();
 const LIMITE_RECOGIDA = 6000;
-const LIMITE_ANFITRION = RAPIDA ? 10000 : 30000;     // tras pegar el código de vuelta
-const LIMITE_INVITADO = RAPIDA ? 25000 : 240000;     // tras enseñar su código
+const LIMITE_ANFITRION = RAPIDA ? 10000 : 30000;     // tras el arranque (o tras pegar, con códigos antiguos)
+const ESPERA_ARRANQUE = RAPIDA ? 6000 : 60000;      // del código de vuelta a la hora de arrancar
 const DURACION_LARGA = RAPIDA ? 3 : 60;              // segundos de prueba larga
 const N_PINGS = 20;
 const N_RAFAGA = 150, RAFAGA_HZ = 30;
@@ -609,7 +626,7 @@ function crearConexion() {
     const con = new RTCPeerConnection({ iceServers: servidoresICE(), iceTransportPolicy: hayTurn() && $('turnSolo').checked ? 'relay' : 'all' });
     con.addEventListener('iceconnectionstatechange', () => {
         apuntarEstado('ice', con.iceConnectionState);
-        if (con.iceConnectionState === 'failed' && yo.papel === 'anfitrion' && prueba.tPegado != null && !prueba.tConectado) noConecta('el navegador da la conexión por fallida');
+        if (con.iceConnectionState === 'failed' && prueba.tArranque != null && !prueba.tConectado) noConecta('el navegador da la conexión por fallida');
         if ((con.iceConnectionState === 'disconnected' || con.iceConnectionState === 'failed') && prueba.tConectado) {
             prueba.cortes++;
             if (!prueba.resultado || prueba.resultado.ok) aviso('Se ha cortado la conexión (' + con.iceConnectionState + ').');
@@ -671,8 +688,10 @@ async function conectarAnfitrion() {
     for (const c of candidatos) { d = await decodificar(c); if (d) break; }
     if (d && d.error === 'sinDescomprimir') { aviso('Este navegador no puede leer ese código. Prueba con Chrome o Safari actualizados.'); return; }
     if (!d || d.k !== 'r') { aviso('Ese código no vale (¿está cortado?). Pídele que lo copie entero.'); return; }
+    const q = quitarCandidatas(d.s);
     try {
-        await pc.setRemoteDescription({ type: 'answer', sdp: d.s });
+        // Con hora de arranque (v3) se guardan sus candidatas para darlas a esa hora
+        await pc.setRemoteDescription({ type: 'answer', sdp: d.a ? q.sdp : d.s });
     } catch (e) {
         aviso('El código no encaja con este enlace. ¿Es la respuesta a ESTE enlace?');
         return;
@@ -684,8 +703,14 @@ async function conectarAnfitrion() {
     $('bConectar').disabled = true;
     $('pasoA1').classList.remove('activo');
     $('pasoA2').classList.add('activo');
-    estado('Conectando…');
-    temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + LIMITE_ANFITRION / 1000 + ' s'), LIMITE_ANFITRION);
+    if (d.a) {
+        prueba.margen = d.a - Date.now();
+        programarArranque(d.a, q.candidatas, q.mid);
+    } else {
+        estado('Conectando…');
+        prueba.tArranque = performance.now();
+        temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + LIMITE_ANFITRION / 1000 + ' s'), LIMITE_ANFITRION);
+    }
     actualizarInforme();
 }
 
@@ -703,8 +728,9 @@ async function empezarInvitado(codigo) {
     estado('Preparando tu código…');
     pc = crearConexion();
     pc.addEventListener('datachannel', (e) => prepararCanal(e.channel));
+    const q = quitarCandidatas(d.s);
     try {
-        await pc.setRemoteDescription({ type: 'offer', sdp: d.s });
+        await pc.setRemoteDescription({ type: 'offer', sdp: q.sdp });
     } catch (e) {
         estado('El enlace no se puede usar en este navegador.', 'mal');
         return;
@@ -714,18 +740,50 @@ async function empezarInvitado(codigo) {
     await p;
     yo.cand = contarCandidatas(candidatasDeSDP(pc.localDescription.sdp));
     await salidaListo;
-    const vuelta = 'R1.' + await codificar({ v: VERSION, k: 'r', t: Date.now(), s: pc.localDescription.sdp, i: infoPropia() });
+    const arranque = Math.round((Date.now() + ESPERA_ARRANQUE) / 1000) * 1000;
+    const vuelta = 'R1.' + await codificar({ v: VERSION, k: 'r', t: Date.now(), s: pc.localDescription.sdp, i: infoPropia(), a: arranque });
     prueba.tCodigo = performance.now();
     $('codigoVuelta').textContent = vuelta;
     $('bCompartirVuelta').disabled = false;
     $('bCopiarVuelta').disabled = false;
-    estado('Esperando a que lo pegue la otra persona…');
+    programarArranque(arranque, q.candidatas, q.mid);
     /* El invitado llega por el enlace y lo único que tiene que hacer es
        esto: se le lleva ahí sin que tenga que bajar buscando. */
     try { $('t3').scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* navegador antiguo */ }
-    temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + Math.round(LIMITE_INVITADO / 60000 * 10) / 10 + ' min'), LIMITE_INVITADO);
     actualizarInforme();
     window.__remota.vuelta = vuelta;
+}
+
+/* A la hora fijada (reloj de cada móvil: van en hora por la red, con
+   menos de un segundo de diferencia) se dan las candidatas del otro y
+   empiezan los dos a probar caminos a la vez. Hasta entonces, cuenta
+   atrás. Si el código se pegó tarde, se dan en el acto (y se dice). */
+function programarArranque(hora, candidatas, mid) {
+    prueba.horaArranque = hora;
+    const hh = new Date(hora);
+    const reloj = String(hh.getHours()).padStart(2, '0') + ':' + String(hh.getMinutes()).padStart(2, '0') + ':' + String(hh.getSeconds()).padStart(2, '0');
+    clearInterval(relojIv);
+    const pintar = () => {
+        const q = Math.ceil((hora - Date.now()) / 1000);
+        if (q > 0) estado((yo.papel === 'anfitrion' ? 'Pegado. ' : 'Mándale el código: tiene que pegarlo antes de las ' + reloj + '. ') +
+            'Los dos se conectan a la vez dentro de ' + q + ' s.', 'duda');
+    };
+    pintar();
+    relojIv = setInterval(pintar, 500);
+    const dar = async () => {
+        clearInterval(relojIv);
+        prueba.tArranque = performance.now();
+        apuntarEstado('arranque', candidatas.length + ' candidatas del otro');
+        estado('Conectando…');
+        for (const c of candidatas) {
+            try { await pc.addIceCandidate({ candidate: c, sdpMid: mid, sdpMLineIndex: 0 }); } catch (e) { apuntarEstado('candidata', 'no admitida'); }
+        }
+        const limite = yo.papel === 'anfitrion' ? LIMITE_ANFITRION : LIMITE_ANFITRION + 5000;
+        temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + limite / 1000 + ' s desde el arranque'), limite);
+        actualizarInforme();
+    };
+    const falta = hora - Date.now();
+    if (falta > 0) setTimeout(dar, falta); else dar();
 }
 
 function noConecta(motivo) {
@@ -912,10 +970,13 @@ function textoInforme() {
     if (yo.papel === 'anfitrion') {
         if (prueba.tPegado != null) L.push('Código de vuelta pegado a los ' + seg(prueba.tPegado - prueba.tCodigo) + ' de crear el enlace' +
             (prueba.edadVuelta != null ? ' (el código tenía ' + seg(prueba.edadVuelta) + ')' : ''));
-        if (prueba.tConectado && prueba.tPegado != null) L.push('Conectar: ' + seg(prueba.tConectado - prueba.tPegado) + ' después de pegarlo');
+        if (prueba.margen != null) L.push(prueba.margen >= 0 ? 'Arranque a la vez: pegado ' + seg(prueba.margen) + ' antes de la hora' : 'Arranque: pegado ' + seg(-prueba.margen) + ' TARDE (cada uno arrancó por su lado)');
+        else if (prueba.tPegado != null) L.push('Sin arranque a la vez (código de una versión anterior)');
+        if (prueba.tConectado && prueba.tArranque != null) L.push('Conectar: ' + seg(prueba.tConectado - prueba.tArranque) + ' después del arranque');
     } else if (yo.papel === 'invitado') {
         if (prueba.edadEnlace != null) L.push('El enlace tenía ' + seg(prueba.edadEnlace) + ' al abrirlo');
-        if (prueba.tConectado && prueba.tCodigo) L.push('Conectado a los ' + seg(prueba.tConectado - prueba.tCodigo) + ' de enseñar mi código');
+        if (prueba.horaArranque) L.push('Arranque a la vez a la hora fijada (' + seg(ESPERA_ARRANQUE) + ' después de enseñar mi código)');
+        if (prueba.tConectado && prueba.tArranque != null) L.push('Conectar: ' + seg(prueba.tConectado - prueba.tArranque) + ' después del arranque');
     }
     if (hayTurn()) L.push('Con retransmisor configurado' + ($('turnSolo').checked ? ' (solo retransmisor)' : ''));
     if (parametros.has('stun')) L.push('STUN cambiados: ' + STUN.length);
