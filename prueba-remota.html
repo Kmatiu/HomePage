@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Prueba de conexión a distancia</title>
+<style>
+    :root {
+        --fondo: #0f0c2d;
+        --tarjeta: rgba(255, 255, 255, 0.06);
+        --borde: rgba(255, 255, 255, 0.14);
+        --acento: #00ffc8;
+        --texto: #f2f2f7;
+        --apagado: #a9a7c0;
+        --bien: #4be38a;
+        --mal: #ff6b81;
+        --duda: #ffd23a;
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--fondo); }
+    body {
+        margin: 0; background: var(--fondo); color: var(--texto);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        font-size: 16px; line-height: 1.45;
+        /* calc y no max(): max() SUSTITUYE el relleno y Chrome en Android
+           informa de 0 aunque haya viewport-fit=cover. */
+        padding: calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 24px);
+        -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 560px; margin: 0 auto; }
+    h1 { font-size: 1.35rem; margin: 4px 0 6px; }
+    h2 { font-size: 1.05rem; margin: 0 0 8px; color: var(--acento); }
+    p { margin: 6px 0; }
+    .apagado { color: var(--apagado); font-size: 0.92rem; }
+    .tarjeta {
+        background: var(--tarjeta); border: 1px solid var(--borde);
+        border-radius: 14px; padding: 14px; margin: 12px 0;
+    }
+    .fila { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    button {
+        font: inherit; font-weight: 700; letter-spacing: 0.02em;
+        min-height: 48px; padding: 10px 16px; border-radius: 12px;
+        border: 2px solid var(--acento); background: transparent; color: var(--acento);
+        cursor: pointer; touch-action: manipulation;
+    }
+    button.principal { background: var(--acento); color: #06261f; }
+    button:disabled { opacity: 0.45; cursor: default; }
+    button.chip { min-height: 40px; padding: 6px 12px; border-width: 1px; font-weight: 600; color: var(--texto); border-color: var(--borde); }
+    button.chip[aria-pressed="true"] { border-color: var(--acento); background: rgba(0, 255, 200, 0.16); color: var(--acento); }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--duda); outline-offset: 2px; }
+    /* 16 px como poco: con menos, Safari en iPhone amplía la página al tocar. */
+    input, textarea {
+        font: inherit; font-size: 16px; width: 100%; color: var(--texto);
+        background: rgba(0, 0, 0, 0.35); border: 1px solid var(--borde); border-radius: 10px; padding: 10px;
+    }
+    textarea { min-height: 90px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 16px; }
+    label { display: block; font-size: 0.92rem; color: var(--apagado); margin-top: 8px; }
+    .codigo {
+        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem;
+        background: rgba(0, 0, 0, 0.35); border-radius: 10px; padding: 10px;
+        word-break: break-all; max-height: 7.5em; overflow: auto; user-select: all;
+    }
+    .paso { border-left: 4px solid var(--borde); padding-left: 10px; margin: 12px 0; }
+    .paso.activo { border-left-color: var(--acento); }
+    .estado { font-weight: 700; font-size: 1.05rem; margin: 10px 0 4px; }
+    .estado.bien { color: var(--bien); }
+    .estado.mal { color: var(--mal); }
+    .estado.duda { color: var(--duda); }
+    .lineas { margin: 6px 0 0; padding: 0; list-style: none; }
+    .lineas li { padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+    .veredicto { margin-top: 10px; padding: 10px; border-radius: 10px; font-weight: 600; }
+    .veredicto.bien { background: rgba(75, 227, 138, 0.14); color: var(--bien); }
+    .veredicto.mal { background: rgba(255, 107, 129, 0.14); color: var(--mal); }
+    .veredicto.duda { background: rgba(255, 210, 58, 0.12); color: var(--duda); }
+    pre#informe {
+        white-space: pre-wrap; word-break: break-word; font-size: 0.8rem;
+        background: rgba(0, 0, 0, 0.35); border-radius: 10px; padding: 10px; margin: 8px 0;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+    }
+    .aviso { color: var(--duda); font-size: 0.92rem; min-height: 1.3em; }
+    details summary { cursor: pointer; color: var(--apagado); padding: 6px 0; }
+    [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+    <h1>📡 Prueba de conexión a distancia</h1>
+    <p class="apagado">Sirve para saber si dos móviles pueden jugar juntos <b>sin estar en la misma wifi</b>. No es un juego: mide y prepara un informe para pasárselo a quien está preparando los juegos.</p>
+
+    <section class="tarjeta" aria-labelledby="t1">
+        <h2 id="t1">1 · ¿Desde qué red estás?</h2>
+        <div class="fila" role="group" aria-label="Tipo de red">
+            <button type="button" class="chip" data-red="Wifi de casa" aria-pressed="false">🏠 WIFI DE CASA</button>
+            <button type="button" class="chip" data-red="Datos móviles" aria-pressed="false">📶 DATOS MÓVILES</button>
+            <button type="button" class="chip" data-red="Otra wifi" aria-pressed="false">☕ OTRA WIFI</button>
+        </div>
+        <label for="compania">Compañía (si la sabes): Movistar, Vodafone, Orange, Digi…</label>
+        <input id="compania" maxlength="40" autocomplete="off">
+        <p class="apagado" id="detectada"></p>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="t2">
+        <h2 id="t2">2 · Tu salida a Internet</h2>
+        <p class="apagado">Se mira sola al abrir la página (unos segundos).</p>
+        <ul class="lineas" id="salidaLineas"></ul>
+        <div class="veredicto" id="salidaVeredicto" hidden></div>
+        <div class="fila"><button type="button" id="bMirar">VOLVER A MIRAR</button></div>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="t3">
+        <h2 id="t3">3 · Probar con otra persona</h2>
+
+        <div id="vInicio">
+            <p>Uno de los dos pulsa <b>EMPIEZO YO</b> y le manda el enlace al otro por WhatsApp. El otro no tiene que hacer nada antes: solo abrir ese enlace.</p>
+            <div class="fila"><button type="button" class="principal" id="bEmpiezo">EMPIEZO YO</button></div>
+        </div>
+
+        <div id="vAnfitrion" hidden>
+            <div class="paso activo" id="pasoA1">
+                <p><b>Paso 1 de 2 ·</b> Manda este enlace por WhatsApp a la otra persona. <b>No cierres esta página.</b></p>
+                <div class="codigo" id="enlaceTexto">Preparando…</div>
+                <div class="fila">
+                    <button type="button" class="principal" id="bCompartirEnlace" disabled>COMPARTIR</button>
+                    <button type="button" id="bCopiarEnlace" disabled>COPIAR</button>
+                </div>
+            </div>
+            <div class="paso" id="pasoA2">
+                <p><b>Paso 2 de 2 ·</b> Te devolverá un código que empieza por <b>R1.</b> Cópialo de WhatsApp y pégalo aquí.</p>
+                <label for="respuesta">Código de vuelta</label>
+                <textarea id="respuesta" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea>
+                <div class="fila"><button type="button" class="principal" id="bConectar">CONECTAR</button></div>
+                <p class="apagado" id="reloj"></p>
+            </div>
+        </div>
+
+        <div id="vInvitado" hidden>
+            <p><b>Te han invitado a una prueba.</b></p>
+            <div class="paso activo">
+                <p><b>Paso único ·</b> Devuelve este código por WhatsApp a quien te mandó el enlace y <b>vuelve a esta página sin cerrarla</b>.</p>
+                <div class="codigo" id="codigoVuelta">Preparando…</div>
+                <div class="fila">
+                    <button type="button" class="principal" id="bCompartirVuelta" disabled>COMPARTIR</button>
+                    <button type="button" id="bCopiarVuelta" disabled>COPIAR</button>
+                </div>
+                <p class="apagado">Si esta página se abrió dentro de WhatsApp y al volver se recarga sola, ábrela en Chrome o Safari (menú ⋮ o ⋯ → «Abrir en el navegador») y manda el código nuevo.</p>
+            </div>
+        </div>
+
+        <p class="aviso" id="aviso" role="status" aria-live="polite"></p>
+        <p class="estado" id="estado" aria-live="polite"></p>
+        <ul class="lineas" id="medidas"></ul>
+    </section>
+
+    <section class="tarjeta" aria-labelledby="t4" id="cajaInforme" hidden>
+        <h2 id="t4">4 · Informe</h2>
+        <p class="apagado">Cópialo o compártelo tal cual. No lleva tus direcciones de Internet. Con que lo mande uno de los dos basta, porque lleva los datos de los dos.</p>
+        <pre id="informe"></pre>
+        <div class="fila">
+            <button type="button" class="principal" id="bCopiarInforme">COPIAR INFORME</button>
+            <button type="button" id="bCompartirInforme">COMPARTIR</button>
+        </div>
+        <div class="fila"><button type="button" id="bOtra">EMPEZAR OTRA PRUEBA</button></div>
+    </section>
+
+    <details class="tarjeta">
+        <summary>Avanzado: retransmisor (TURN)</summary>
+        <p class="apagado">Solo hace falta si te lo piden para una prueba concreta. Vacío, no se usa.</p>
+        <label for="turnUrl">Dirección (turn:… o turns:…)</label>
+        <input id="turnUrl" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <label for="turnUsuario">Usuario</label>
+        <input id="turnUsuario" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <label for="turnClave">Clave</label>
+        <input id="turnClave" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <label><input type="checkbox" id="turnSolo" style="width:auto"> Ir solo por el retransmisor</label>
+    </details>
+
+    <p class="apagado">Para ver tu salida a Internet se pregunta a dos servidores públicos (Cloudflare y Google), que solo ven tu dirección. La prueba va de un móvil al otro sin pasar por nadie más.</p>
+</main>
+
+<script>
+'use strict';
+/* ==== LOGICA: inicio ====
+   Sin DOM ni WebRTC: lo prueba prueba-logica.js desde Node. */
+const VERSION = 1;
+const STUN_PUBLICOS = ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'];
+const NOMBRES_STUN = ['Cloudflare', 'Google'];
+
+function parsearCandidata(linea) {
+    const s = String(linea || '').trim().replace(/^a=/, '').replace(/^candidate:/, '');
+    const p = s.split(/\s+/);
+    if (p.length < 8 || p[6] !== 'typ') return null;
+    const ip = p[4];
+    const puerto = Number(p[5]);
+    if (!Number.isFinite(puerto)) return null;
+    let familia = 'mdns';
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) familia = 'v4';
+    else if (ip.includes(':')) familia = 'v6';
+    return { proto: p[2].toLowerCase(), ip, puerto, tipo: p[7], familia };
+}
+
+/* IPv6 global = 2000::/3. Las fe80 (enlace local) y fc/fd (privadas) no
+   sirven para llegar desde fuera. */
+function esV6Global(ip) { return /^[23][0-9a-f]{0,3}:/i.test(String(ip)); }
+
+function candidatasDeSDP(sdp) {
+    return String(sdp || '').split(/\r?\n/).filter((l) => l.startsWith('a=candidate:'))
+        .map(parsearCandidata).filter(Boolean);
+}
+
+function srflx4(lista) {
+    return [...new Set((lista || []).filter((c) => c && c.tipo === 'srflx' && c.familia === 'v4')
+        .map((c) => c.ip + ':' + c.puerto))];
+}
+
+/* Tipo de salida comparando lo que contestan dos servidores STUN.
+   a y b: cada servidor por separado (dicen cuántas salidas tiene el
+   aparato: una por red). ambos: los dos servidores en la MISMA conexión, o
+   sea, desde el mismo puerto local. Si ahí salen más direcciones públicas
+   que con uno solo, el router da un puerto distinto según a quién se hable
+   (NAT simétrico): la dirección que ve un servidor no le sirve al otro
+   móvil. Chrome junta las candidatas repetidas y Firefox no: por eso se
+   cuentan direcciones distintas, no candidatas. */
+function analizarSalida(r) {
+    const a = r.a || [], b = r.b || [], ambos = r.ambos || [];
+    const respA = a.some((c) => c && c.tipo === 'srflx');
+    const respB = b.some((c) => c && c.tipo === 'srflx');
+    const sa = srflx4(a), sb = srflx4(b), sx = srflx4(ambos);
+    const todas = a.concat(b, ambos).filter(Boolean);
+    const ipv6 = todas.some((c) => c.familia === 'v6' && esV6Global(c.ip));
+    let tipo;
+    if (!respA && !respB) tipo = 'cerrada';
+    else if (!respA || !respB || !sa.length || !sb.length || !sx.length) tipo = 'sinComparar';
+    else if (sx.length > Math.max(sa.length, sb.length)) tipo = 'simetrica';
+    else tipo = 'abierta';
+    const puertos = (l) => l.map((d) => ':' + d.split(':').pop()).join(' ');
+    return { tipo, respA, respB, ipv6, puertosA: puertos(sa), puertosB: puertos(sb),
+             puertosAmbos: puertos(sx), nAmbos: sx.length };
+}
+
+const TEXTO_SALIDA = {
+    abierta: ['bien', 'ABIERTA: sales siempre por el mismo puerto. A distancia suele conectar directo.'],
+    simetrica: ['duda', 'ESTRICTA (simétrica): cambia de puerto según a quién hablas. A distancia puede que haga falta un retransmisor, sobre todo si el otro móvil también la tiene estricta.'],
+    cerrada: ['mal', 'CERRADA: no contesta ningún servidor. Esta red no deja la vía directa; haría falta un retransmisor.'],
+    sinComparar: ['duda', 'Solo contesta un servidor: no se puede saber el tipo de salida.']
+};
+const NOMBRE_SALIDA = { abierta: 'ABIERTA', simetrica: 'ESTRICTA (simétrica)', cerrada: 'CERRADA', sinComparar: 'SIN COMPARAR' };
+
+function percentil(valores, q) {
+    const v = valores.filter((x) => Number.isFinite(x)).slice().sort((x, y) => x - y);
+    if (!v.length) return null;
+    const i = Math.min(v.length - 1, Math.max(0, Math.ceil(q * v.length) - 1));
+    return v[i];
+}
+
+/* Ráfaga recibida: cada llegada lleva su número, la hora de envío del otro
+   y la de llegada aquí. Los relojes de los dos móviles no coinciden, pero la
+   diferencia es constante: restando el mínimo queda lo que cada mensaje se
+   retrasa respecto al más rápido, que es lo que nota un juego. */
+function resumenRafaga(llegadas, total) {
+    const vistos = new Set();
+    let desordenados = 0, ultimo = -1;
+    const d = [];
+    for (const l of llegadas || []) {
+        if (!Number.isInteger(l.seq) || l.seq < 0 || l.seq >= total || vistos.has(l.seq)) continue;
+        vistos.add(l.seq);
+        if (l.seq < ultimo) desordenados++;
+        ultimo = Math.max(ultimo, l.seq);
+        d.push(l.llegada - l.envio);
+    }
+    const base = d.length ? Math.min(...d) : 0;
+    const extra = d.map((x) => x - base);
+    const r = (x) => (x == null ? null : Math.round(x));
+    return { recibidos: vistos.size, total, desordenados,
+             variacionP95: r(percentil(extra, 0.95)), variacionMax: r(extra.length ? Math.max(...extra) : null) };
+}
+
+function interpretarPar(par) {
+    if (!par || !par.local || !par.remoto) return 'desconocido';
+    if (par.local === 'relay' || par.remoto === 'relay') return 'retransmisor';
+    if (par.local === 'host' && par.remoto === 'host') return 'mismaRed';
+    return 'internet';
+}
+const TEXTO_PAR = {
+    mismaRed: 'directo dentro de la misma red',
+    internet: 'directo a través de Internet',
+    retransmisor: 'por el retransmisor (TURN)',
+    desconocido: 'sin saber por dónde'
+};
+
+/* ---- Códigos: JSON → deflate (si el navegador sabe) → base64url ----
+   'Z' delante si va comprimido, 'P' si no: así un móvil sin
+   CompressionStream (Safari < 16.4) sigue entendiendo y haciéndose
+   entender. base64url sin relleno para que vaya en un enlace sin escapar. */
+function aB64(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function deB64(t) {
+    const s = atob(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4));
+    const b = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i);
+    return b;
+}
+async function porFlujo(bytes, flujo) {
+    const res = new Response(new Blob([bytes]).stream().pipeThrough(flujo));
+    return new Uint8Array(await res.arrayBuffer());
+}
+async function codificar(obj, sinComprimir) {
+    const bytes = new TextEncoder().encode(JSON.stringify(obj));
+    if (!sinComprimir && typeof CompressionStream === 'function') {
+        try { return 'Z' + aB64(await porFlujo(bytes, new CompressionStream('deflate-raw'))); } catch (e) { /* sigue sin comprimir */ }
+    }
+    return 'P' + aB64(bytes);
+}
+async function decodificar(texto) {
+    const t = String(texto || '');
+    if (!/^[ZP][A-Za-z0-9_-]{10,}$/.test(t)) return null;
+    try {
+        let bytes = deB64(t.slice(1));
+        if (t[0] === 'Z') {
+            if (typeof DecompressionStream !== 'function') return { error: 'sinDescomprimir' };
+            bytes = await porFlujo(bytes, new DecompressionStream('deflate-raw'));
+        }
+        const o = JSON.parse(new TextDecoder().decode(bytes));
+        if (!o || o.v !== VERSION || (o.k !== 'o' && o.k !== 'r') || typeof o.s !== 'string' ||
+            o.s.length > 20000 || !o.s.startsWith('v=0')) return null;
+        return { k: o.k, t: Number(o.t) || 0, s: o.s, z: o.z === 1 };
+    } catch (e) { return null; }
+}
+
+/* Lo pegado puede traer texto alrededor o la línea partida. Se devuelven
+   candidatos, del más probable al menos: el código tal cual y, por si se
+   partió, el código con lo que sigue juntado. Quien llama prueba a
+   decodificar cada uno: un trozo de más no pasa la comprobación. */
+function extraerVuelta(texto) {
+    const t = String(texto || '');
+    const l = [];
+    const m = t.match(/R1\.([ZP][A-Za-z0-9_-]{10,})/);
+    if (m) l.push(m[1]);
+    const j = t.replace(/\s+/g, '').match(/R1\.([ZP][A-Za-z0-9_-]{10,})/);
+    if (j && !l.includes(j[1])) l.push(j[1]);
+    return l;
+}
+function extraerOferta(hash) {
+    const m = String(hash || '').match(/[#&]o=([ZP][A-Za-z0-9_-]{10,})/);
+    return m ? m[1] : null;
+}
+
+function contarCandidatas(lista) {
+    const c = { host: 0, mdns: 0, v6: 0, srflx: 0, prflx: 0, relay: 0 };
+    for (const x of lista || []) {
+        if (!x) continue;
+        if (c[x.tipo] != null) c[x.tipo]++;
+        if (x.tipo === 'host' && x.familia === 'mdns') c.mdns++;
+        if (x.familia === 'v6' && esV6Global(x.ip)) c.v6++;
+    }
+    return c;
+}
+function textoCandidatas(c) {
+    return 'host ' + c.host + ' (mDNS ' + c.mdns + '), srflx ' + c.srflx + ', relay ' + c.relay + ', IPv6 públicas ' + c.v6;
+}
+
+/* Lo que llega del otro móvil se copia campo a campo, acotado: nada suyo
+   entra tal cual en la página ni en el informe. */
+function limpiarTexto(x, n) { return String(x == null ? '' : x).replace(/[\u0000-\u001f]/g, ' ').slice(0, n || 60); }
+function limpiarNumero(x, min, max) {
+    const n = Number(x);
+    return Number.isFinite(n) && n >= min && n <= max ? Math.round(n * 10) / 10 : null;
+}
+function limpiarInfo(m) {
+    const o = m && typeof m === 'object' ? m : {};
+    const s = o.salida && typeof o.salida === 'object' ? o.salida : {};
+    const c = o.cand && typeof o.cand === 'object' ? o.cand : {};
+    const cand = {};
+    for (const k of ['host', 'mdns', 'v6', 'srflx', 'prflx', 'relay']) cand[k] = limpiarNumero(c[k], 0, 99) || 0;
+    return {
+        red: limpiarTexto(o.red), compania: limpiarTexto(o.compania, 40), conexion: limpiarTexto(o.conexion, 30),
+        aparato: limpiarTexto(o.aparato, 60), papel: o.papel === 'anfitrion' ? 'anfitrion' : 'invitado',
+        salida: TEXTO_SALIDA[s.tipo] ? { tipo: s.tipo, puertosA: limpiarTexto(s.puertosA, 40),
+            puertosB: limpiarTexto(s.puertosB, 40), puertosAmbos: limpiarTexto(s.puertosAmbos, 40), ipv6: s.ipv6 === true } : null,
+        cand, fondo: limpiarTexto(o.fondo, 60)
+    };
+}
+function limpiarPar(p) {
+    if (!p || typeof p !== 'object') return null;
+    const tipos = ['host', 'srflx', 'prflx', 'relay'];
+    return { local: tipos.includes(p.local) ? p.local : null, remoto: tipos.includes(p.remoto) ? p.remoto : null,
+             proto: limpiarTexto(p.proto, 6), relayProto: limpiarTexto(p.relayProto, 6), rtt: limpiarNumero(p.rtt, 0, 60000) };
+}
+function limpiarRafaga(r) {
+    if (!r || typeof r !== 'object') return null;
+    return { recibidos: limpiarNumero(r.recibidos, 0, 100000), total: limpiarNumero(r.total, 0, 100000),
+             desordenados: limpiarNumero(r.desordenados, 0, 100000),
+             variacionP95: limpiarNumero(r.variacionP95, 0, 600000), variacionMax: limpiarNumero(r.variacionMax, 0, 600000) };
+}
+
+function aparatoDe(ua) {
+    ua = String(ua || '');
+    let so = 'otro';
+    let m;
+    if ((m = ua.match(/iPhone OS (\d+)[_.](\d+)/))) so = 'iPhone iOS ' + m[1] + '.' + m[2];
+    else if ((m = ua.match(/iPad.*OS (\d+)[_.](\d+)/))) so = 'iPad iOS ' + m[1] + '.' + m[2];
+    else if ((m = ua.match(/Android (\d+(\.\d+)?)/))) so = 'Android ' + m[1];
+    else if (/Windows/.test(ua)) so = 'Windows';
+    else if (/Mac OS X/.test(ua)) so = 'Mac';
+    else if (/Linux/.test(ua)) so = 'Linux';
+    let nav = 'navegador desconocido';
+    if (/WhatsApp/i.test(ua)) nav = 'dentro de WhatsApp';
+    else if ((m = ua.match(/SamsungBrowser\/(\d+)/))) nav = 'Samsung Internet ' + m[1];
+    else if ((m = ua.match(/(?:Firefox|FxiOS)\/(\d+)/))) nav = 'Firefox ' + m[1];
+    else if ((m = ua.match(/EdgA?\/(\d+)/))) nav = 'Edge ' + m[1];
+    else if ((m = ua.match(/CriOS\/(\d+)/))) nav = 'Chrome ' + m[1] + ' (iOS)';
+    else if ((m = ua.match(/Chrome\/(\d+)/))) nav = 'Chrome ' + m[1];
+    else if ((m = ua.match(/Version\/(\d+(\.\d+)?).*Safari/))) nav = 'Safari ' + m[1];
+    return so + ' · ' + nav;
+}
+
+function ms(x) { return x == null ? '—' : Math.round(x) + ' ms'; }
+function seg(x) { return x == null ? '—' : (x / 1000).toFixed(1).replace('.', ',') + ' s'; }
+/* ==== LOGICA: fin ==== */
+
+/* =================== Página =================== */
+const $ = (id) => document.getElementById(id);
+const parametros = new URLSearchParams(location.search);
+const RAPIDA = parametros.get('rapida') === '1';            // solo para las pruebas automáticas
+const STUN = parametros.has('stun')
+    ? parametros.get('stun').split(',').map((s) => s.trim()).filter(Boolean)
+    : STUN_PUBLICOS.slice();
+const LIMITE_RECOGIDA = 6000;
+const LIMITE_ANFITRION = RAPIDA ? 10000 : 30000;     // tras pegar el código de vuelta
+const LIMITE_INVITADO = RAPIDA ? 25000 : 240000;     // tras enseñar su código
+const DURACION_LARGA = RAPIDA ? 3 : 60;              // segundos de prueba larga
+const N_PINGS = 20;
+const N_RAFAGA = 150, RAFAGA_HZ = 30;
+
+/* localStorage lanza en navegación privada (Safari antiguo): siempre en
+   try/catch y con la copia en memoria. */
+const memoria = {};
+function leer(k) { try { const v = localStorage.getItem(k); return v == null ? memoria[k] : v; } catch (e) { return memoria[k]; } }
+function guardar(k, v) { memoria[k] = v; try { localStorage.setItem(k, v); } catch (e) { /* memoria */ } }
+
+const yo = { red: '', compania: '', conexion: '', aparato: aparatoDe(navigator.userAgent), papel: null,
+             salida: null, cand: contarCandidatas([]), fondo: '' };
+const otro = { info: null, par: null, rafagaDeMi: null };
+const prueba = {
+    estados: [], t0: performance.now(), tCodigo: null, tPegado: null, edadVuelta: null, edadEnlace: null,
+    tConectado: null, resultado: null, pings: [], rafagaRecibida: null, par: null, larga: null,
+    fondoVeces: 0, fondoMs: 0, candRemotas: null, cortes: 0
+};
+let pc = null, fiable = null, rapido = null;
+let temporizadorFallo = null, relojIv = null, cerrojo = null;
+let salidaListo = null;
+
+/* ---- Red elegida ---- */
+function pintarRed() {
+    document.querySelectorAll('[data-red]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.red === yo.red)));
+}
+document.querySelectorAll('[data-red]').forEach((b) => b.addEventListener('click', () => {
+    yo.red = b.dataset.red; guardar('remota.red', yo.red); pintarRed(); actualizarInforme();
+}));
+$('compania').addEventListener('input', () => { yo.compania = $('compania').value.trim(); guardar('remota.compania', yo.compania); actualizarInforme(); });
+yo.red = leer('remota.red') || '';
+yo.compania = leer('remota.compania') || '';
+$('compania').value = yo.compania;
+pintarRed();
+(function detectar() {
+    const c = navigator.connection;
+    if (c && (c.type || c.effectiveType)) {
+        yo.conexion = [c.type, c.effectiveType].filter(Boolean).join(' / ');
+        $('detectada').textContent = 'El móvil dice: ' + yo.conexion + ' (no todos lo dicen).';
+    }
+})();
+
+/* ---- TURN (avanzado) ---- */
+['turnUrl', 'turnUsuario', 'turnClave'].forEach((id) => {
+    $(id).value = leer('remota.' + id) || '';
+    $(id).addEventListener('input', () => guardar('remota.' + id, $(id).value.trim()));
+});
+$('turnSolo').checked = leer('remota.turnSolo') === '1';
+$('turnSolo').addEventListener('change', () => guardar('remota.turnSolo', $('turnSolo').checked ? '1' : '0'));
+function servidoresICE() {
+    const l = STUN.map((u) => ({ urls: u }));
+    const u = $('turnUrl').value.trim();
+    if (/^turns?:/i.test(u)) l.push({ urls: u, username: $('turnUsuario').value.trim(), credential: $('turnClave').value.trim() });
+    return l;
+}
+function hayTurn() { return /^turns?:/i.test($('turnUrl').value.trim()); }
+
+/* ---- Recoger candidatas ----
+   El escuchador va ANTES de setLocalDescription: las primeras candidatas
+   pueden llegar en el mismo turno. Tope de tiempo porque, si la red
+   bloquea UDP, el navegador tarda en rendirse con los servidores. */
+function recogerCandidatas(con, limite) {
+    return new Promise((res) => {
+        const lista = [];
+        const t0 = performance.now();
+        let hecho = false;
+        const fin = () => { if (hecho) return; hecho = true; clearTimeout(tope); res(lista); };
+        con.addEventListener('icecandidate', (e) => {
+            if (!e.candidate || !e.candidate.candidate) return fin();
+            const c = parsearCandidata(e.candidate.candidate);
+            if (c) { c.t = Math.round(performance.now() - t0); lista.push(c); }
+        });
+        con.addEventListener('icegatheringstatechange', () => { if (con.iceGatheringState === 'complete') fin(); });
+        const tope = setTimeout(fin, limite);
+    });
+}
+
+async function sondear(urls) {
+    const con = new RTCPeerConnection({ iceServers: urls.map((u) => ({ urls: u })) });
+    con.createDataChannel('sonda');
+    const p = recogerCandidatas(con, LIMITE_RECOGIDA);
+    await con.setLocalDescription(await con.createOffer());
+    const l = await p;
+    con.close();
+    return l;
+}
+
+async function mirarSalida() {
+    $('bMirar').disabled = true;
+    const ul = $('salidaLineas');
+    ul.textContent = '';
+    $('salidaVeredicto').hidden = true;
+    const li = document.createElement('li');
+    li.textContent = 'Mirando…';
+    ul.appendChild(li);
+    if (typeof RTCPeerConnection !== 'function') {
+        li.textContent = 'Este navegador no tiene WebRTC: no puede jugar con otro móvil.';
+        $('bMirar').disabled = false;
+        return;
+    }
+    try {
+        const s0 = STUN[0] ? [STUN[0]] : [], s1 = STUN[1] ? [STUN[1]] : [];
+        const [a, b, ambos] = await Promise.all([sondear(s0), sondear(s1), sondear(STUN)]);
+        const r = analizarSalida({ a, b, ambos });
+        yo.salida = r;
+        ul.textContent = '';
+        const primera = (l) => { const c = l.find((x) => x.tipo === 'srflx'); return c ? c.t : null; };
+        const linea = (txt) => { const e = document.createElement('li'); e.textContent = txt; ul.appendChild(e); };
+        linea('Servidor ' + (NOMBRES_STUN[0] || '1') + ': ' + (r.respA ? 'contesta en ' + ms(primera(a)) + ' · puerto ' + r.puertosA : 'no contesta'));
+        linea('Servidor ' + (NOMBRES_STUN[1] || '2') + ': ' + (r.respB ? 'contesta en ' + ms(primera(b)) + ' · puerto ' + r.puertosB : 'no contesta'));
+        if (r.respA && r.respB) linea('Hablando con los dos a la vez: ' + r.nAmbos + (r.nAmbos === 1 ? ' salida' : ' salidas distintas') + ' (' + r.puertosAmbos + ')');
+        linea('IPv6 pública: ' + (r.ipv6 ? 'sí' : 'no'));
+        const [clase, texto] = TEXTO_SALIDA[r.tipo];
+        const v = $('salidaVeredicto');
+        v.className = 'veredicto ' + clase;
+        v.textContent = texto;
+        v.hidden = false;
+    } catch (e) {
+        ul.textContent = '';
+        const x = document.createElement('li');
+        x.textContent = 'No se ha podido mirar: ' + limpiarTexto(e && e.message, 80);
+        ul.appendChild(x);
+    }
+    $('bMirar').disabled = false;
+    actualizarInforme();
+}
+$('bMirar').addEventListener('click', () => { salidaListo = mirarSalida(); });
+
+/* ---- Estado y avisos ---- */
+function aviso(t) { $('aviso').textContent = t || ''; }
+function estado(t, clase) { const e = $('estado'); e.textContent = t; e.className = 'estado' + (clase ? ' ' + clase : ''); }
+function medida(clave, texto) {
+    let li = document.querySelector('#medidas [data-m="' + clave + '"]');
+    if (!li) { li = document.createElement('li'); li.dataset.m = clave; $('medidas').appendChild(li); }
+    li.textContent = texto;
+}
+function apuntarEstado(quien, valor) {
+    prueba.estados.push(seg(performance.now() - prueba.t0) + ' ' + quien + ' ' + valor);
+    if (prueba.estados.length > 40) prueba.estados.splice(1, 1);
+}
+
+/* Lo que pasa en segundo plano importa: al ir a WhatsApp y volver, el
+   sistema puede dormir la página y con ella la conexión. */
+let desdeOculta = null;
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { desdeOculta = performance.now(); prueba.fondoVeces++; apuntarEstado('página', 'oculta'); }
+    else if (desdeOculta != null) { prueba.fondoMs += performance.now() - desdeOculta; desdeOculta = null; apuntarEstado('página', 'visible'); }
+});
+
+async function pedirCerrojo() {
+    try { if (navigator.wakeLock && !document.hidden) cerrojo = await navigator.wakeLock.request('screen'); } catch (e) { /* no importa */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && pc) pedirCerrojo(); });
+
+/* ---- Conexión ---- */
+function crearConexion() {
+    const con = new RTCPeerConnection({ iceServers: servidoresICE(), iceTransportPolicy: hayTurn() && $('turnSolo').checked ? 'relay' : 'all' });
+    con.addEventListener('iceconnectionstatechange', () => {
+        apuntarEstado('ice', con.iceConnectionState);
+        if (con.iceConnectionState === 'failed' && yo.papel === 'anfitrion' && prueba.tPegado != null && !prueba.tConectado) noConecta('el navegador da la conexión por fallida');
+        if ((con.iceConnectionState === 'disconnected' || con.iceConnectionState === 'failed') && prueba.tConectado) {
+            prueba.cortes++;
+            if (!prueba.resultado || prueba.resultado.ok) aviso('Se ha cortado la conexión (' + con.iceConnectionState + ').');
+            actualizarInforme();
+        }
+    });
+    con.addEventListener('connectionstatechange', () => apuntarEstado('conexión', con.connectionState));
+    return con;
+}
+
+function prepararCanal(c) {
+    if (c.label === 'fiable') {
+        fiable = c;
+        c.addEventListener('open', conectado);
+        c.addEventListener('message', (e) => { let m; try { m = JSON.parse(e.data); } catch (x) { return; } alMensaje(m); });
+        c.addEventListener('close', () => apuntarEstado('canal', 'cerrado'));
+    } else if (c.label === 'rapido') {
+        rapido = c;
+        c.addEventListener('message', (e) => alRafaga(e.data));
+    }
+}
+
+async function empezarAnfitrion() {
+    yo.papel = 'anfitrion';
+    $('vInicio').hidden = true;
+    $('vAnfitrion').hidden = false;
+    pedirCerrojo();
+    estado('Preparando el enlace…');
+    pc = crearConexion();
+    prepararCanal(pc.createDataChannel('fiable', { ordered: true }));
+    prepararCanal(pc.createDataChannel('rapido', { ordered: false, maxRetransmits: 0 }));
+    const p = recogerCandidatas(pc, LIMITE_RECOGIDA);
+    await pc.setLocalDescription(await pc.createOffer());
+    await p;
+    yo.cand = contarCandidatas(candidatasDeSDP(pc.localDescription.sdp));
+    const codigo = await codificar({ v: VERSION, k: 'o', t: Date.now(), s: pc.localDescription.sdp });
+    const enlace = location.origin + location.pathname + location.search + '#o=' + codigo;
+    prueba.tCodigo = performance.now();
+    $('enlaceTexto').textContent = enlace;
+    $('bCompartirEnlace').disabled = false;
+    $('bCopiarEnlace').disabled = false;
+    estado('Esperando el código de vuelta…');
+    relojIv = setInterval(() => {
+        if (prueba.tPegado != null) return;
+        const s = Math.round((performance.now() - prueba.tCodigo) / 1000);
+        $('reloj').textContent = 'Enlace creado hace ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' · cuanto antes, mejor.';
+    }, 1000);
+    actualizarInforme();
+    window.__remota.enlace = enlace;
+}
+
+async function conectarAnfitrion() {
+    aviso('');
+    if (!pc || prueba.tPegado != null) return;
+    const candidatos = extraerVuelta($('respuesta').value);
+    if (!candidatos.length) { aviso('No encuentro el código. Tiene que empezar por R1. y estar entero.'); return; }
+    let d = null;
+    for (const c of candidatos) { d = await decodificar(c); if (d) break; }
+    if (d && d.error === 'sinDescomprimir') { aviso('Este navegador no puede leer ese código. Prueba con Chrome o Safari actualizados.'); return; }
+    if (!d || d.k !== 'r') { aviso('Ese código no vale (¿está cortado?). Pídele que lo copie entero.'); return; }
+    try {
+        await pc.setRemoteDescription({ type: 'answer', sdp: d.s });
+    } catch (e) {
+        aviso('El código no encaja con este enlace. ¿Es la respuesta a ESTE enlace?');
+        return;
+    }
+    prueba.tPegado = performance.now();
+    prueba.edadVuelta = d.t ? Date.now() - d.t : null;
+    prueba.candRemotas = contarCandidatas(candidatasDeSDP(d.s));
+    $('bConectar').disabled = true;
+    $('pasoA1').classList.remove('activo');
+    $('pasoA2').classList.add('activo');
+    estado('Conectando…');
+    temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + LIMITE_ANFITRION / 1000 + ' s'), LIMITE_ANFITRION);
+    actualizarInforme();
+}
+
+async function empezarInvitado(codigo) {
+    yo.papel = 'invitado';
+    $('vInicio').hidden = true;
+    $('vInvitado').hidden = false;
+    pedirCerrojo();
+    const d = await decodificar(codigo);
+    if (d && d.error === 'sinDescomprimir') { estado('Este navegador no puede leer el enlace. Ábrelo en Chrome o Safari actualizados.', 'mal'); return; }
+    if (!d || d.k !== 'o') { estado('El enlace está roto o cortado. Pide que te lo manden otra vez.', 'mal'); return; }
+    prueba.edadEnlace = d.t ? Date.now() - d.t : null;
+    prueba.candRemotas = contarCandidatas(candidatasDeSDP(d.s));
+    estado('Preparando tu código…');
+    pc = crearConexion();
+    pc.addEventListener('datachannel', (e) => prepararCanal(e.channel));
+    try {
+        await pc.setRemoteDescription({ type: 'offer', sdp: d.s });
+    } catch (e) {
+        estado('El enlace no se puede usar en este navegador.', 'mal');
+        return;
+    }
+    const p = recogerCandidatas(pc, LIMITE_RECOGIDA);
+    await pc.setLocalDescription(await pc.createAnswer());
+    await p;
+    yo.cand = contarCandidatas(candidatasDeSDP(pc.localDescription.sdp));
+    const vuelta = 'R1.' + await codificar({ v: VERSION, k: 'r', t: Date.now(), s: pc.localDescription.sdp });
+    prueba.tCodigo = performance.now();
+    $('codigoVuelta').textContent = vuelta;
+    $('bCompartirVuelta').disabled = false;
+    $('bCopiarVuelta').disabled = false;
+    estado('Esperando a que lo pegue la otra persona…');
+    /* El invitado llega por el enlace y lo único que tiene que hacer es
+       esto: se le lleva ahí sin que tenga que bajar buscando. */
+    try { $('t3').scrollIntoView({ block: 'start', behavior: 'smooth' }); } catch (e) { /* navegador antiguo */ }
+    temporizadorFallo = setTimeout(() => noConecta('no conecta en ' + Math.round(LIMITE_INVITADO / 60000 * 10) / 10 + ' min'), LIMITE_INVITADO);
+    actualizarInforme();
+    window.__remota.vuelta = vuelta;
+}
+
+function noConecta(motivo) {
+    if (prueba.tConectado || prueba.resultado) return;
+    clearTimeout(temporizadorFallo);
+    prueba.resultado = { ok: false, motivo };
+    estado('❌ NO HA CONECTADO (' + motivo + ')', 'mal');
+    actualizarInforme(true);
+}
+
+function conectado() {
+    if (prueba.tConectado) return;
+    prueba.tConectado = performance.now();
+    clearTimeout(temporizadorFallo);
+    clearInterval(relojIv);
+    estado('✅ CONECTADOS. Midiendo…', 'bien');
+    /* La salida se mira a la vez que se prepara la conexión: si aún no ha
+       acabado, se espera, o el otro recibiría «sin mirar». */
+    Promise.resolve(salidaListo).then(() => enviar({ t: 'info', info: infoPropia() }));
+    if (yo.papel === 'anfitrion') medir();
+}
+
+function infoPropia() {
+    yo.fondo = prueba.fondoVeces ? prueba.fondoVeces + ' veces, ' + seg(prueba.fondoMs) : 'no';
+    return { red: yo.red, compania: yo.compania, conexion: yo.conexion, aparato: yo.aparato, papel: yo.papel,
+             salida: yo.salida, cand: yo.cand, fondo: yo.fondo };
+}
+
+function enviar(o) { try { if (fiable && fiable.readyState === 'open') fiable.send(JSON.stringify(o)); } catch (e) { /* cortado */ } }
+
+/* ---- Mensajes ---- */
+const pendientes = new Map();
+let esperandoRafaga = null, esperandoInfo = null;
+function alMensaje(m) {
+    if (!m || typeof m !== 'object') return;
+    switch (m.t) {
+        case 'info': otro.info = limpiarInfo(m.info); if (esperandoInfo) esperandoInfo(); actualizarInforme(); break;
+        case 'ping': enviar({ t: 'pong', i: m.i }); break;
+        case 'pong': { const p = pendientes.get(m.i); if (p) { pendientes.delete(m.i); p(performance.now()); } break; }
+        case 'rafaga': empezarRafaga(); break;
+        case 'resRafaga': otro.rafagaDeMi = limpiarRafaga(m.r); if (esperandoRafaga) esperandoRafaga(); actualizarInforme(); break;
+        case 'par': otro.par = limpiarPar(m.par); actualizarInforme(); break;
+        case 'pidePar': parElegido().then((p) => { prueba.par = p; enviar({ t: 'par', par: p }); actualizarInforme(); }); break;
+        case 'pings': prueba.pings = Array.isArray(m.v) ? m.v.slice(0, 100).map((x) => limpiarNumero(x, 0, 60000)) : []; pintarMedidas(); break;
+        case 'larga': prueba.larga = { s: limpiarNumero(m.s, 0, 3600), ok: limpiarNumero(m.ok, 0, 3600), med: limpiarNumero(m.med, 0, 60000),
+                                         max: limpiarNumero(m.max, 0, 60000), fin: m.fin === true };
+            pintarMedidas(); if (prueba.larga.fin) terminar(); break;
+        default: break;
+    }
+}
+
+function ping(i) {
+    return new Promise((res) => {
+        const t = performance.now();
+        pendientes.set(i, (llegada) => res(llegada - t));
+        enviar({ t: 'ping', i });
+        setTimeout(() => { if (pendientes.has(i)) { pendientes.delete(i); res(null); } }, 2000);
+    });
+}
+const espera = (n) => new Promise((r) => setTimeout(r, n));
+
+/* ---- Ráfaga como la de un juego ----
+   El anfitrión manda fotos de 2,4 KB 30 veces por segundo (lo que pesa una
+   foto de Aero Fighters) y el invitado mandos de 80 bytes, a la vez, por un
+   canal sin orden ni reenvíos: lo perdido se pierde, como en el juego. */
+let llegadas = [];
+function empezarRafaga() {
+    llegadas = [];
+    const tam = yo.papel === 'anfitrion' ? 2400 : 80;
+    const relleno = 'x'.repeat(tam);
+    let i = 0;
+    const iv = setInterval(() => {
+        if (i >= N_RAFAGA) { clearInterval(iv); return; }
+        try { if (rapido && rapido.readyState === 'open' && rapido.bufferedAmount < 65536) rapido.send(i + '|' + performance.now().toFixed(1) + '|' + relleno); } catch (e) { /* cortado */ }
+        i++;
+    }, 1000 / RAFAGA_HZ);
+    setTimeout(() => {
+        prueba.rafagaRecibida = resumenRafaga(llegadas, N_RAFAGA);
+        enviar({ t: 'resRafaga', r: prueba.rafagaRecibida });
+        pintarMedidas();
+        actualizarInforme();
+    }, N_RAFAGA / RAFAGA_HZ * 1000 + 2000);
+}
+function alRafaga(dato) {
+    if (typeof dato !== 'string') return;
+    const p = dato.split('|', 2);
+    llegadas.push({ seq: Number(p[0]), envio: Number(p[1]), llegada: performance.now() });
+}
+
+async function parElegido() {
+    try {
+        const st = await pc.getStats();
+        let par = null, transporte = null;
+        st.forEach((r) => { if (r.type === 'transport' && r.selectedCandidatePairId) transporte = r; });
+        if (transporte) par = st.get(transporte.selectedCandidatePairId);
+        if (!par) st.forEach((r) => { if (!par && r.type === 'candidate-pair' && (r.selected || (r.nominated && r.state === 'succeeded'))) par = r; });
+        if (!par) return null;
+        const l = st.get(par.localCandidateId), rm = st.get(par.remoteCandidateId);
+        return { local: l && l.candidateType, remoto: rm && rm.candidateType, proto: (l && l.protocol) || '',
+                 relayProto: (l && l.relayProtocol) || '',
+                 rtt: par.currentRoundTripTime != null ? Math.round(par.currentRoundTripTime * 1000) : null };
+    } catch (e) { return null; }
+}
+
+/* El anfitrión lleva la prueba de principio a fin y le cuenta al invitado
+   lo que mide; así los dos informes salen iguales. */
+async function medir() {
+    if (!otro.info) await Promise.race([new Promise((r) => { esperandoInfo = r; }), espera(3000)]);
+    estado('✅ CONECTADOS · midiendo la ida y vuelta…', 'bien');
+    for (let i = 0; i < N_PINGS; i++) {
+        prueba.pings.push(await ping(i));
+        pintarMedidas();
+        await espera(100);
+    }
+    enviar({ t: 'pings', v: prueba.pings });
+    estado('✅ CONECTADOS · midiendo una ráfaga como la de un juego (5 s)…', 'bien');
+    const recibida = new Promise((r) => { esperandoRafaga = r; });
+    enviar({ t: 'rafaga' });
+    empezarRafaga();
+    await Promise.race([recibida, espera(N_RAFAGA / RAFAGA_HZ * 1000 + 6000)]);
+    prueba.par = await parElegido();
+    enviar({ t: 'par', par: prueba.par });
+    enviar({ t: 'pidePar' });
+    await espera(400);
+    actualizarInforme();
+    estado('✅ CONECTADOS · prueba larga (' + DURACION_LARGA + ' s); deja los dos móviles con esta página delante…', 'bien');
+    const rtts = [];
+    for (let s = 1; s <= DURACION_LARGA; s++) {
+        const t = performance.now();
+        const r = await ping(1000 + s);
+        if (r != null) rtts.push(r);
+        prueba.larga = { s, ok: rtts.length, med: percentil(rtts, 0.5), max: rtts.length ? Math.max(...rtts) : null, fin: s === DURACION_LARGA };
+        enviar(Object.assign({ t: 'larga' }, prueba.larga));
+        pintarMedidas();
+        await espera(Math.max(0, 1000 - (performance.now() - t)));
+    }
+    terminar();
+}
+
+function terminar() {
+    if (prueba.resultado) return;
+    prueba.resultado = { ok: true };
+    // Otra vez la información propia: el tiempo en segundo plano puede haber cambiado.
+    enviar({ t: 'info', info: infoPropia() });
+    const tipo = interpretarPar(prueba.par || otro.par);
+    estado('✅ CONECTADOS · ' + TEXTO_PAR[tipo] + '. Prueba acabada.', 'bien');
+    actualizarInforme(true);
+}
+
+function pintarMedidas() {
+    const v = prueba.pings.filter((x) => x != null);
+    if (prueba.pings.length) medida('ping', 'Ida y vuelta: ' + v.length + '/' + prueba.pings.length + ' · mediana ' + ms(percentil(v, 0.5)) + ' · máx ' + ms(v.length ? Math.max(...v) : null));
+    const r = prueba.rafagaRecibida;
+    if (r) medida('rafaga', 'Ráfaga que me llega: ' + r.recibidos + '/' + r.total + ' · retraso extra p95 ' + ms(r.variacionP95));
+    const l = prueba.larga;
+    if (l) medida('larga', 'Prueba larga: ' + l.s + '/' + DURACION_LARGA + ' s · contesta ' + l.ok + ' · mediana ' + ms(l.med) + ' · máx ' + ms(l.max));
+}
+
+/* ---- Informe ---- */
+function bloqueAparato(titulo, i) {
+    if (!i) return [titulo, '  (sin datos: no llegó a conectar)'];
+    const s = i.salida;
+    return [
+        titulo,
+        '  Red: ' + (i.red || 'sin decir') + (i.compania ? ' · ' + i.compania : '') + (i.conexion ? ' (el móvil dice: ' + i.conexion + ')' : ''),
+        '  Aparato: ' + i.aparato,
+        '  Salida: ' + (s ? NOMBRE_SALIDA[s.tipo] + ' (' + NOMBRES_STUN[0] + ' ' + (s.puertosA || '—') + ' · ' + NOMBRES_STUN[1] + ' ' + (s.puertosB || '—') +
+            ' · los dos ' + (s.puertosAmbos || '—') + ') · IPv6 pública ' + (s.ipv6 ? 'sí' : 'no') : 'sin mirar'),
+        '  Candidatas: ' + textoCandidatas(i.cand),
+        '  Segundo plano: ' + (i.fondo || 'no')
+    ];
+}
+function textoInforme() {
+    const ahora = new Date();
+    const f = ahora.getFullYear() + '-' + String(ahora.getMonth() + 1).padStart(2, '0') + '-' + String(ahora.getDate()).padStart(2, '0') +
+              ' ' + String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
+    const r = prueba.resultado;
+    const par = prueba.par || otro.par;
+    const L = ['PRUEBA DE CONEXIÓN A DISTANCIA · v' + VERSION, 'Fecha: ' + f];
+    if (!r) L.push('Resultado: en curso');
+    else if (r.ok || prueba.tConectado) L.push('Resultado: CONECTADOS · ' + TEXTO_PAR[interpretarPar(par)] +
+        (par ? ' (' + par.local + ' ↔ ' + par.remoto + ', ' + (par.proto || '?') + (par.relayProto ? ', retransmisor por ' + par.relayProto : '') + ')' : ''));
+    else L.push('Resultado: NO HA CONECTADO · ' + r.motivo);
+    if (yo.papel === 'anfitrion') {
+        if (prueba.tPegado != null) L.push('Código de vuelta pegado a los ' + seg(prueba.tPegado - prueba.tCodigo) + ' de crear el enlace' +
+            (prueba.edadVuelta != null ? ' (el código tenía ' + seg(prueba.edadVuelta) + ')' : ''));
+        if (prueba.tConectado && prueba.tPegado != null) L.push('Conectar: ' + seg(prueba.tConectado - prueba.tPegado) + ' después de pegarlo');
+    } else if (yo.papel === 'invitado') {
+        if (prueba.edadEnlace != null) L.push('El enlace tenía ' + seg(prueba.edadEnlace) + ' al abrirlo');
+        if (prueba.tConectado && prueba.tCodigo) L.push('Conectado a los ' + seg(prueba.tConectado - prueba.tCodigo) + ' de enseñar mi código');
+    }
+    if (hayTurn()) L.push('Con retransmisor configurado' + ($('turnSolo').checked ? ' (solo retransmisor)' : ''));
+    if (parametros.has('stun')) L.push('STUN cambiados: ' + STUN.length);
+    L.push('');
+    const quien = (p) => (p === 'anfitrion' ? 'el que empezó' : 'el invitado');
+    L.push(...bloqueAparato('YO (' + quien(yo.papel) + ')', infoPropia()));
+    L.push(...bloqueAparato('EL OTRO (' + (otro.info ? quien(otro.info.papel) : (yo.papel === 'anfitrion' ? 'el invitado' : 'el que empezó')) + ')', otro.info));
+    if (!otro.info && prueba.candRemotas) L.push('  Candidatas en su código: ' + textoCandidatas(prueba.candRemotas));
+    if (prueba.tConectado) {
+        L.push('', 'MEDIDAS');
+        const v = prueba.pings.filter((x) => x != null);
+        if (prueba.pings.length) L.push('  Ida y vuelta (' + prueba.pings.length + ' mensajes): mediana ' + ms(percentil(v, 0.5)) +
+            ', p90 ' + ms(percentil(v, 0.9)) + ', máx ' + ms(v.length ? Math.max(...v) : null) + ', sin respuesta ' + (prueba.pings.length - v.length));
+        if (par && par.rtt != null) L.push('  Ida y vuelta según el navegador: ' + ms(par.rtt));
+        const desc = (x) => (x ? x.recibidos + '/' + x.total + ', desordenados ' + x.desordenados + ', retraso extra p95 ' + ms(x.variacionP95) + ' (máx ' + ms(x.variacionMax) + ')' : 'sin datos');
+        const yoGrande = yo.papel === 'anfitrion';
+        L.push('  Ráfaga 5 s a 30/s, del que empezó (2,4 KB): ' + desc(yoGrande ? otro.rafagaDeMi : prueba.rafagaRecibida));
+        L.push('  Ráfaga 5 s a 30/s, del invitado (80 B): ' + desc(yoGrande ? prueba.rafagaRecibida : otro.rafagaDeMi));
+        const l = prueba.larga;
+        if (l) L.push('  Prueba larga: ' + l.s + ' s, contesta ' + l.ok + ', mediana ' + ms(l.med) + ', máx ' + ms(l.max));
+        if (prueba.cortes) L.push('  Cortes durante la prueba: ' + prueba.cortes);
+    }
+    L.push('', 'Estados: ' + prueba.estados.join(' · '));
+    return L.join('\n');
+}
+function actualizarInforme(mostrar) {
+    if (mostrar) $('cajaInforme').hidden = false;
+    if (!$('cajaInforme').hidden) $('informe').textContent = textoInforme();
+}
+
+/* ---- Copiar y compartir ----
+   navigator.clipboard falla a veces (sin permiso, dentro de WhatsApp): se
+   cae a seleccionar un textarea y execCommand. */
+async function copiar(texto) {
+    try { await navigator.clipboard.writeText(texto); aviso('Copiado.'); return; } catch (e) { /* plan B */ }
+    const t = document.createElement('textarea');
+    t.value = texto; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { /* nada */ }
+    t.remove();
+    aviso(ok ? 'Copiado.' : 'No se ha podido copiar: mantén pulsado el texto y elige Copiar.');
+}
+async function compartir(texto, titulo) {
+    if (navigator.share) {
+        try { await navigator.share({ title: titulo, text: texto }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    copiar(texto);
+}
+$('bCompartirEnlace').addEventListener('click', () => compartir('Prueba de conexión para jugar a distancia. Abre esto y devuélveme el código que te salga: ' + $('enlaceTexto').textContent, 'Prueba de conexión'));
+$('bCopiarEnlace').addEventListener('click', () => copiar($('enlaceTexto').textContent));
+$('bCompartirVuelta').addEventListener('click', () => compartir($('codigoVuelta').textContent, 'Código de vuelta'));
+$('bCopiarVuelta').addEventListener('click', () => copiar($('codigoVuelta').textContent));
+$('bCopiarInforme').addEventListener('click', () => copiar(textoInforme()));
+$('bCompartirInforme').addEventListener('click', () => compartir(textoInforme(), 'Informe de la prueba'));
+$('bEmpiezo').addEventListener('click', () => { $('bEmpiezo').disabled = true; empezarAnfitrion().catch((e) => estado('No se ha podido preparar: ' + limpiarTexto(e && e.message, 80), 'mal')); });
+$('bConectar').addEventListener('click', () => { conectarAnfitrion(); });
+$('bOtra').addEventListener('click', () => { location.href = location.origin + location.pathname + location.search; });
+
+/* Ganchos para las pruebas automáticas. */
+window.__remota = { prueba, yo, otro, informe: textoInforme, get pc() { return pc; } };
+
+/* ---- Arranque ---- */
+salidaListo = mirarSalida();
+const ofertaURL = extraerOferta(location.hash);
+if (ofertaURL) empezarInvitado(ofertaURL).catch((e) => estado('No se ha podido preparar: ' + limpiarTexto(e && e.message, 80), 'mal'));
+</script>
+</body>
+</html>
