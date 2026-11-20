@@ -905,7 +905,8 @@ body {
             </ul>
             <h3>CONTRA OTRO MÓVIL</h3>
             <ul>
-                <li>Los dos juntos contra los ladrillos, cada uno en su móvil y en la misma wifi. Uno crea la partida y el otro se une leyendo los dos códigos con la cámara.</li>
+                <li>Los dos juntos contra los ladrillos, cada uno en su móvil. Juntos, en la misma wifi: uno crea la partida y el otro se une leyendo los dos códigos con la cámara.</li>
+                <li><b>Cada uno en su casa</b> también se puede, si los dos tenéis la wifi de casa (con datos móviles no conecta): quien crea la partida pulsa <b>ESTAMOS LEJOS</b> en la pantalla del código y se lo manda por WhatsApp; el otro lo abre, pulsa <b>UNIRME</b> y le devuelve el suyo. Los pasos salen en la pantalla.</li>
                 <li>Quien crea lleva la pala azul; el otro, la rosa. Cada uno mueve la suya con el dedo y toca para lanzar o disparar.</li>
                 <li>Las vidas van juntas, como en 2 jugadores. Si uno pausa, se pausa en los dos.</li>
             </ul>
@@ -1452,6 +1453,10 @@ const Enlace = (() => {
 .enl-botones > button, .enl-manual button { flex: 1 1 100px; padding: 10px 8px; border: 2px solid var(--borde, rgba(var(--c-255-255-255, 255, 255, 255),0.16));
     border-radius: 10px; background: transparent; color: var(--texto, var(--c-f2f2f7, #f2f2f7)); font: inherit; font-size: 0.74rem;
     cursor: pointer; touch-action: manipulation; }
+.enl-manual button.enl-principal { border-color: var(--acento, var(--c-00ffc8, #00ffc8)); color: var(--acento, var(--c-00ffc8, #00ffc8)); background: rgba(var(--c-0-255-200, 0, 255, 200),0.12); font-weight: bold; font-size: 0.86rem; }
+/* A distancia el cuadro de pegar no se pliega: sin «¿Sin cámara?», que
+   confundía (lo vio el usuario el 20-11). */
+.enl-manual.enl-sin-titulo summary { display: none; }
 .enl-botones > button.enl-principal { border-color: var(--acento, var(--c-00ffc8, #00ffc8)); color: var(--acento, var(--c-00ffc8, #00ffc8)); background: rgba(var(--c-0-255-200, 0, 255, 200),0.12); font-weight: bold; }
 .enl-diag { text-align: left; font-size: 0.6rem; line-height: 1.35; white-space: pre-wrap; word-break: break-all;
     background: rgba(var(--c-0-0-0, 0, 0, 0),0.35); border-radius: 8px; padding: 8px; margin: 8px 0 0; max-height: 30svh; overflow-y: auto; user-select: text; }
@@ -1648,7 +1653,7 @@ const Enlace = (() => {
             titulo: $('#enl-titulo'), pasoQR: $('[data-p="qr"]'), qr: $('.enl-qr'), pasoCam: $('[data-p="cam"]'),
             visor: $('.enl-visor'), video: $('video'), estado: $('.enl-estado'), ayuda: $('.enl-ayuda'),
             manual: $('.enl-manual'), texto: $('textarea'), mandar: $('[data-a="mandar"]'),
-            reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag'),
+            reintentar: $('[data-a="reintentar"]'), diag: $('.enl-diag'), usar: $('[data-a="usar"]'),
             corte: $('.enl-corte-texto'), reconectar: $('[data-a="reconectar"]'),
             abandonar: $('[data-a="abandonar"]'), cancelar: $('[data-a="cancelar"]'), lejos: $('[data-a="lejos"]')
         };
@@ -1692,8 +1697,12 @@ const Enlace = (() => {
                 capa.querySelector('.enl-caja').classList.remove('enl-leer');
                 capa.querySelector('.enl-caja').classList.remove('enl-con-camara');
                 el.manual.open = false;
+                el.manual.classList.remove('enl-sin-titulo');
                 el.texto.value = '';
+                el.texto.hidden = false; el.usar.hidden = false;
+                el.texto.placeholder = 'Pega aquí el código del otro móvil';
                 el.mandar.hidden = true;
+                el.mandar.classList.remove('enl-principal');
                 this.estado('');
                 capa.hidden = false;
                 el.titulo.focus();
@@ -1753,15 +1762,24 @@ const Enlace = (() => {
             ofrecerLejos(si) { el.lejos.hidden = !si; },
             /* A distancia no hay QR ni cámara: dos pasos de texto, el botón
                de mandar el código y el cuadro para pegar el del otro. */
-            lejos(paso1, paso2) {
+            /* conPegar: el anfitrión pega el código de vuelta; el invitado no
+               pega nada (su invitación ya traía el código del otro), así que
+               a él no se le enseña el cuadro: le hacía pensar que el otro
+               tenía que mandarle algo más (20-11). */
+            lejos(paso1, paso2, conPegar) {
                 el.pasoQR.innerHTML = paso1; el.pasoQR.hidden = false;   // textos fijos del módulo
                 el.qr.hidden = true;
                 el.pasoCam.innerHTML = paso2; el.pasoCam.hidden = !paso2;
                 el.visor.hidden = true;
                 capa.querySelector('.enl-caja').classList.remove('enl-con-camara', 'enl-leer');
                 el.manual.hidden = false; el.manual.open = true;
+                el.manual.classList.add('enl-sin-titulo');
+                el.texto.hidden = !conPegar; el.usar.hidden = !conPegar;
+                el.texto.placeholder = conPegar ? 'Pega aquí el código que te devuelva' : 'Pega aquí el código del otro móvil';
                 el.mandar.hidden = false;
+                el.mandar.classList.add('enl-principal');
                 el.lejos.hidden = true;
+                this.ayuda([]);
             },
             refrescarDiagnostico() { if (!el.diag.hidden) el.diag.textContent = acciones.diagnostico(); }
         };
@@ -1792,6 +1810,7 @@ const Enlace = (() => {
         let sesion = null;              // la pone el anfitrión; el invitado la adopta
         let vuelta = 0;                 // invalida los pasos de un intento cancelado
         let con = null;                 // { pc, dc }
+        let enviado = false;            // a distancia: ya se pulsó ENVIAR MI CÓDIGO en este intento
         let esperando = null;           // { tipo, vuelta }: qué código se acepta ahora
         let miCodigo = '';
         let plazo = null, latido = null, cerrojo = null;
@@ -1985,6 +2004,7 @@ const Enlace = (() => {
         async function anfitrionLejos() {
             if (!comprobarWebRTC()) return;
             asegurarCapa();
+            enviado = false;
             const v = ++vuelta;
             papel = 'anfitrion';
             miCodigo = '';
@@ -2005,14 +2025,14 @@ const Enlace = (() => {
                 apuntarCandidatas('mías', datos);
             } catch (e) { apuntar('oferta: ' + e.message); fallo('interno'); return; }
             miCodigo = codigo;
-            capa.lejos('<b>PASO 1 de 2.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y mándaselo al otro por WhatsApp. Que lo abra.',
-                       '<b>PASO 2 de 2.</b> Te devolverá su código: cópialo, pégalo abajo y pulsa <b>USAR ESTE CÓDIGO</b> antes de que acabe su cuenta atrás.');
+            capa.lejos('<b>PASO 1 de 2.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y mándaselo por WhatsApp. El otro tiene que abrirlo y pulsar <b>UNIRME</b>.',
+                       '<b>PASO 2 de 2.</b> El otro te devolverá un código: cópialo de WhatsApp, pégalo aquí debajo y pulsa <b>USAR ESTE CÓDIGO</b> antes de que acabe su cuenta atrás (1 minuto).', true);
             capa.ahora('qr');
             esperando = { tipo: 'respuesta', vuelta: v };
             if (!datos.candidatas.some(c => c.publica)) {
                 capa.estado('No se ve la salida a Internet de este móvil: a distancia no va a conectar', true);
                 capa.ayuda(['Comprueba que hay conexión a Internet. Con datos móviles no funciona: tiene que ser una wifi de casa.']);
-            } else capa.estado('Esperando su código…');
+            } else capa.estado('Cuando lo hayas mandado, espera su código');
         }
 
         /* ---------- invitado ---------- */
@@ -2030,7 +2050,7 @@ const Enlace = (() => {
             if (codigoInicial) { recibirCodigo(codigoInicial, 'URL'); return; }
 
             capa.estado('Preparando la cámara…');
-            capa.ayuda(['¿Estáis lejos? Si te ha mandado su código por mensaje, pégalo abajo, en «Pasar el código por mensaje».']);
+            capa.ayuda(['¿Estáis lejos? Abre el enlace que te haya mandado por WhatsApp y pulsa UNIRME (o pega ese enlace abajo, en «¿Sin cámara?»).']);
             const hayCamara = await encenderCamara();
             if (v !== vuelta) return;
             if (hayCamara) {
@@ -2135,8 +2155,9 @@ const Enlace = (() => {
         function programarArranque(hora, datos, mid, v) {
             const pintar = () => {
                 const q = Math.ceil((hora - ahora()) / 1000);
-                if (q > 0) capa.estado((papel === 'anfitrion' ? 'Código puesto. ' : 'Mándaselo: tiene que pegarlo antes de que acabe. ') +
-                    'Os conectáis a la vez dentro de ' + q + ' s', false, true);
+                if (q <= 0) return;
+                if (papel === 'anfitrion') capa.estado('Código puesto. Os conectáis a la vez dentro de ' + q + ' s', false, true);
+                else capa.estado((enviado ? 'Enviado. ' : '') + 'El otro tiene ' + q + ' s para pegarlo; luego os conectáis solos', false, true);
             };
             if (cuentaTimer) clearInterval(cuentaTimer);
             pintar();
@@ -2193,6 +2214,7 @@ const Enlace = (() => {
         }
 
         async function responderLejos(datos, v) {
+            enviado = false;
             if (lector) lector.apagar();
             capa.sinCamara();
             capa.ayuda([]);
@@ -2210,21 +2232,28 @@ const Enlace = (() => {
                 apuntarCandidatas('mías', sdpcDescomprimir(partirCodigo(codigo).base));
             } catch (e) { apuntar('respuesta a distancia: ' + e.message); fallo('interno'); return; }
             miCodigo = codigo;
-            capa.lejos('<b>PASO 2 de 2.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y devuélveselo por WhatsApp. Luego vuelve aquí sin cerrar.', '');
+            capa.lejos('<b>ÚLTIMO PASO.</b> Pulsa <b>ENVIAR MI CÓDIGO</b> y devuélveselo por WhatsApp a quien te invitó. Tú no tienes que pegar nada: vuelve aquí sin cerrar esta página.', '', false);
             capa.ahora('qr');
             const m = /a=mid:(\S+)/.exec(con.pc.remoteDescription.sdp);
             programarArranque(hora, datos, m ? m[1] : '0', v);
         }
 
+        /* Tras mandarlo, a distancia el paso siguiente pasa a ser el destacado
+           (el anfitrión: pegar el de vuelta). */
+        function trasMandar() {
+            enviado = true;
+            if (lejos && papel === 'anfitrion' && esperando) { capa.ahora('cam', true); capa.estado('Mandado. Ahora espera su código y pégalo aquí'); }
+        }
         async function mandarMiCodigo() {
             if (!miCodigo) return;
             const texto = papel === 'anfitrion' ? urlDe(miCodigo) : miCodigo;
             try {
-                if (navigator.share) { await navigator.share({ text: texto }); return; }
+                if (navigator.share) { await navigator.share({ text: texto }); trasMandar(); return; }
             } catch (e) { if (e.name === 'AbortError') return; }
             try {
                 await navigator.clipboard.writeText(texto);
-                capa.estado('Código copiado: mándaselo y que lo pegue');
+                capa.estado(lejos ? 'Código copiado: pégalo en WhatsApp y mándaselo' : 'Código copiado: mándaselo y que lo pegue');
+                trasMandar();
             } catch (e) {
                 capa.estado('No se ha podido copiar', true);
             }
