@@ -194,6 +194,16 @@
     .fav[aria-pressed="true"] { color: #ffd54f; text-shadow: 0 0 8px rgba(255, 213, 79, 0.6); }
     @media (hover: hover) { .fav:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); } }
     .pista-fav { color: var(--apagado); font-size: 0.82rem; margin: -2px 0 26px; line-height: 1.5; }
+    /* El juego del que habla el «NUEVO» de su sección: sombreado en el mismo
+       rojo, durante esta visita, para saber cuál es al desplegarla. El
+       fondo es el rojo muy rebajado sobre el de la tarjeta: el nombre se
+       sigue leyendo igual */
+    .tarjeta.es-nuevo > .juego {
+        border-color: var(--acento2);
+        background: rgba(255, 0, 110, 0.22);
+        box-shadow: 0 0 0 1px var(--acento2), 0 0 14px rgba(255, 0, 110, 0.45);
+    }
+    @media (hover: hover) { .tarjeta.es-nuevo > .juego:hover { border-color: var(--acento2); background: rgba(255, 0, 110, 0.3); } }
     .pista-fav.aviso { color: #ffd76a; }
     #rejillaFav:empty { display: none; }
 
@@ -503,7 +513,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v16</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v17</div>
 </footer>
 
 <script>
@@ -831,6 +841,10 @@
     }).slice(0, MAX_FAV);
 
     var estrellas = {};   // archivo → botones de estrella (el de su sección y el de favoritos)
+    /* archivo → true para las novedades de esta visita (se rellena más abajo,
+       al leer lo ya visto; las tarjetas del buscador se crean después y lo
+       miran al nacer) */
+    var esNovedad = {};
 
     function tarjeta(j, conGrupo) {
         /* Enlaces reales en lugar de window.open: se pueden abrir con el
@@ -892,6 +906,7 @@
         pintarEstrella(est, j);
 
         caja.appendChild(a);
+        if (esNovedad[j.archivo]) caja.classList.add('es-nuevo');
         caja.appendChild(est);
         if (CAPTURAS[j.archivo]) {
             var ver = document.createElement('button');
@@ -1170,6 +1185,12 @@
         var s = secciones[n.j.grupo || 'Juegos'];
         if (s) s.nuevo.hidden = false;
         if (n.j.red) conRed.nuevo.hidden = false;
+        /* y su tarjeta, en el mismo rojo, en todas las secciones donde sale */
+        esNovedad[n.j.archivo] = true;
+        document.querySelectorAll('.tarjeta').forEach(function (t) {
+            var a = t.querySelector('a.juego');
+            if (a && a.getAttribute('href') === n.j.archivo) t.classList.add('es-nuevo');
+        });
     });
     var capaNov = document.getElementById('novedades');
     function cerrarNovedades() {
