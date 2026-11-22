@@ -3042,10 +3042,12 @@ function montar(a, r) {
         }
     }
     if (!runaPuesta) { z.llano(9); const fr = z.fila - 3; z.repisa(-7, 4, fr); z.cosa('runa', -5, fr - 1); }
-    /* el hacha antes del jefe, por si se llega sin ella */
+    /* el hacha antes del jefe, por si se llega sin ella. «siempre»: vuelve
+       a estar cada vez que se empieza desde un cartel o desde la arena (sin
+       eso, quien moría contra el jefe volvía sin hacha y no podía ganar) */
     if (r === 3) {
         z.llano(6);
-        z.cosa('huevo', -3, undefined, { dentro: 'hacha' });
+        z.cosa('huevo', -3, undefined, { dentro: 'hacha', siempre: true });
         z.cosa('fruta', -1, z.fila - 1, { fruta: 'sandia' });
         z.llano(4);
         /* la arena: 20 columnas llanas con muro al final; el jefe se vence
@@ -3186,14 +3188,18 @@ function prepararRonda(e, desdeControl) {
     const arena = R.cosas.find(c => c.tipo === 'arena');
     let x0 = R.cosas.find(c => c.tipo === 'inicio').x;
     if (desdeControl && e.control) x0 = carteles.find(c => c.n === e.control).x;
-    if (desdeControl && e.llegoArena && arena) x0 = arena.x - 40;
+    /* Tras morir contra el jefe se vuelve un poco antes del huevo del hacha,
+       que está siempre (se pierde el hacha al morir: sin él no se le puede
+       ganar). Antes se volvía a la puerta de la arena, ya pasado el huevo */
+    const huevoHacha = R.cosas.find(c => c.tipo === 'huevo' && c.siempre);
+    if (desdeControl && e.llegoArena && arena) x0 = huevoHacha ? huevoHacha.x - 40 : arena.x - 40;
     for (const c of R.cosas) {
         const clave = c.tipo + '@' + c.x + ',' + c.y;
         if (ENE[c.tipo] && c.tipo !== 'bola') {
             if (c.x < x0 + 80) continue;           // lo de detrás del cartel no vuelve
             e.enemigos.push(nuevoEnemigo(e, c.tipo, c.x, c.y, c));
         } else if (c.tipo === 'fruta') { if (!e.cogido[clave]) e.frutas.push({ x: c.x, y: c.y, fruta: c.fruta, clave }); }
-        else if (c.tipo === 'huevo' || c.tipo === 'oculto') { if (!e.cogido[clave]) e.huevos.push({ x: c.x, y: c.y, dentro: c.dentro, manchas: !!c.manchas, oculto: c.tipo === 'oculto', vy: 0, clave }); }
+        else if (c.tipo === 'huevo' || c.tipo === 'oculto') { if (!e.cogido[clave] || (c.siempre && desdeControl)) e.huevos.push({ x: c.x, y: c.y, dentro: c.dentro, manchas: !!c.manchas, oculto: c.tipo === 'oculto', vy: 0, clave }); }
         else if (c.tipo === 'runa') { if (!e.runaRonda) e.items.push({ x: c.x, y: c.y, que: 'runa', t: 0, vy: 0, fijo: true }); }
         else if (c.tipo === 'roca' || c.tipo === 'hoguera') { if (!e.cogido[clave]) e.peligros.push({ tipo: c.tipo, x: c.x, y: c.y, clave }); }
         else if (c.tipo === 'muelle') e.muelles.push({ x: c.x, y: c.y, t: 0 });
@@ -3674,7 +3680,8 @@ function golpes(e) {
                 }
             } else if (solapa(cj, caja(hv.x, hv.y, 12, 14))) romperHuevo(e, hv, j.n);
         }
-        for (const it of e.items) if (!it.fuera && it.t > 0.25 && solapa(cj, caja(it.x, it.y, 14, 14))) coger(e, j, it);
+        /* casi en el acto: con 0,25 s, quien rompía el huevo corriendo pasaba de largo y se quedaba sin lo de dentro (y sin hacha para el jefe) */
+        for (const it of e.items) if (!it.fuera && it.t > 0.06 && solapa(cj, caja(it.x, it.y, 14, 14))) coger(e, j, it);
         for (const fr of e.frutas) if (!fr.fuera && solapa(cj, caja(fr.x, fr.y, 12, 12))) {
             fr.fuera = true; e.cogido[fr.clave] = true;
             const [vit, pts] = FRUTAS[fr.fruta];
@@ -3749,6 +3756,13 @@ function muertesYReapariciones(e, h) {
             Object.assign(j, { x: Math.max(e.cam + 12, otro.x - 14), y: otro.y, vx: 0, vy: 0, suelo: otro.suelo, plat: -1, vit: VIT_MAX,
                 hacha: false, jabali: false, valq: 0, tropiezo: 0, inv: INVULNERABLE, muerto: 0 });
             if (!otro.suelo) { j.y = superficieEn(e, Math.floor(j.x / T), Math.max(0, Math.floor((otro.y - 20) / T))); if (j.y > ALTO) { j.x = otro.x; j.y = otro.y; } }
+            /* en la arena no se puede volver atrás a por el huevo: se le
+               pone uno con hacha a su lado, al otro lado del compañero (que
+               queda a su derecha): si no, lo rompía y se lo quedaba el otro */
+            if (e.arena && !e.jefeVencido) {
+                const hx = Math.max(e.cam + 12, j.x - 18);
+                e.huevos.push({ x: hx, y: superficieEn(e, Math.floor(hx / T), 0), dentro: 'hacha', manchas: false, oculto: false, vy: 0, clave: 'arena@' + Math.round(e.reloj * 1000) });
+            }
             ev(e, 'reaparece', { n: j.n });
         } else {
             /* nadie en pie: se vuelve al último cartel. Si el otro también
