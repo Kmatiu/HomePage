@@ -2,7 +2,57 @@
 <html lang="es" data-vista="menus">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<!-- ==== SIN ZOOM ==== -->
+<style>
+/* Sin ampliar con doble toque: en los juegos de acción se toca muy seguido.
+   touch-action no se hereda, pero el navegador aplica la intersección con
+   los antepasados: puesto en html vale para toda la página. Los botones que
+   ya lleven none siguen con none. */
+html { touch-action: manipulation; }
+/* Sin seleccionar texto ni el menú de Copiar/Consultar/Traducir: en el
+   iPhone, un dedo que se queda quieto en la palanca acababa seleccionando
+   el botón de pausa y sacando ese menú encima del juego. user-select no se
+   hereda, pero un hijo de algo con none tampoco se puede seleccionar, así
+   que basta con ponerlo en html; touch-callout sí se hereda. Los campos de
+   texto se dejan como estaban: con user-select none, Safari no deja
+   escribir en ellos. */
+html { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+</style>
+<script>
+/* Sin pellizco para ampliar: dos dedos en la palanca y un botón que se
+   separan un poco se tomaban como zoom y estropeaban la partida.
+   - Android (Chrome) lo cumple con el viewport: maximum-scale=1 y
+     user-scalable=no (salvo si el usuario activó «Forzar zoom»).
+   - Safari en iPhone no hace caso de user-scalable desde iOS 10: se cancelan
+     sus eventos de gesto y los touchmove con dos o más dedos.
+   Con un dedo no se cancela nada, así los menús siguen desplazándose. Y
+   cancelar el touchmove no quita los pointermove: los mandos siguen igual.
+   Y por si el CSS de arriba no bastara (versiones viejas de Safari), se
+   cancela empezar una selección o abrir el menú de pulsar largo fuera de
+   los campos de texto, y lo que hubiera seleccionado se suelta al tocar. */
+(function () {
+    function no(e) { if (e.cancelable) e.preventDefault(); }
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (t) { document.addEventListener(t, no, { passive: false }); });
+    document.addEventListener('touchmove', function (e) { if (e.touches.length > 1) no(e); }, { passive: false });
+    function enCampo(t) {
+        if (t && t.nodeType === 3) t = t.parentNode;
+        return !!(t && t.closest && t.closest('input, textarea, [contenteditable]'));
+    }
+    document.addEventListener('selectstart', function (e) { if (!enCampo(e.target)) no(e); });
+    document.addEventListener('contextmenu', function (e) { if (!enCampo(e.target)) no(e); });
+    /* Solo si hay algo seleccionado de verdad y no se está escribiendo:
+       soltar la selección con un campo enfocado lo desenfocaba, y en La
+       serpiente eso se comía el toque de UNIRME (lo pilló su prueba de red). */
+    document.addEventListener('pointerdown', function (e) {
+        if (enCampo(e.target) || enCampo(document.activeElement)) return;
+        var s = window.getSelection && window.getSelection();
+        if (s && s.rangeCount && !s.isCollapsed) s.removeAllRanges();
+    }, true);
+})();
+</script>
+<!-- ==== FIN SIN ZOOM ==== -->
 <meta name="theme-color" content="#0f0c2d">
 <title>Pinball</title>
 <style>
@@ -690,7 +740,7 @@
         <div class="lista" id="tablaFin"></div>
         <p id="detFin"></p>
         <div id="zonaNombre" style="display:none;">
-            <p style="color:var(--amarillo);">¡Entras en el Top 10!</p>
+            <p style="color:var(--amarillo);" id="textoPuesto">¡Entras en el Top 10!</p>
             <input type="text" id="inpNombre" maxlength="12" autocomplete="off" placeholder="Tu nombre">
             <button class="principal" id="btnGuardar" type="button" style="margin-top:8px;">GUARDAR</button>
         </div>
@@ -2500,10 +2550,19 @@ function terminarPartida() {
     abrirCapa('capaFin');
 }
 
-function entraEnTop(puntos) {
-    if (puntos <= 0) return false;
+/* El puesto en que entra: detrás de las iguales, que es donde la deja el
+   sort estable de guardarPuntuacion(). 0 si no entra. Se dice antes de
+   escribir el nombre (hasta guardar no se sabía). */
+function puestoEnTop(puntos) {
+    if (puntos <= 0) return 0;
     const r = leerRanking();
-    return r.length < 10 || puntos > r[r.length - 1].puntos;
+    if (r.length >= 10 && !(puntos > r[r.length - 1].puntos)) return 0;
+    return r.filter(x => x.puntos >= puntos).length + 1;
+}
+function entraEnTop(puntos) {
+    const n = puestoEnTop(puntos);
+    if (n) $('textoPuesto').textContent = n === 1 ? '¡Entras en el puesto 1 del Top 10: el nuevo récord!' : '¡Entras en el puesto ' + n + ' del Top 10!';
+    return n > 0;
 }
 
 function guardarPuntuacion() {

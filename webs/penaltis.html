@@ -287,6 +287,9 @@ body {
 .est-lista div.yo { color: var(--acento); font-weight: bold; }
 .est-lista .nom { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .est-lista .vacia { display: block; text-align: center; border: 0; color: var(--apagado); }
+.est-lista .est-rotulo { text-align: center; color: var(--acento); font-weight: bold; font-size: 0.72rem; margin: 10px 0 2px; }
+/* el récord del otro móvil en el final (con dos móviles conectados) */
+.caja .est-rival { color: var(--acento); }
 
 .est-ayuda { text-align: left; font-size: 0.78rem; line-height: 1.7; color: var(--apagado); }
 .est-ayuda b { color: var(--texto); }
@@ -762,6 +765,10 @@ body {
    EST.avisar(texto, malo)
    EST.grupo(idContenedor, alElegir)   — opciones de una sola elección
    EST.ranking({ clave, nombre, puntos, max })   — Top 10 con respaldo en memoria
+       .entra(p) dice además en qué puesto entra (ver «EL PUESTO»)
+       .puesto(p) → 1-10, o 0 si no entra
+   EST.misRecords(), EST.recordsDelOtro(datos), EST.olvidarOtro()
+       — el Top 10 que se pasan dos móviles al conectar (lo usa el enlace)
    EST.escapar(texto)
    ========================================================== */
 const EST = (() => {
@@ -998,6 +1005,77 @@ const EST = (() => {
         if (b) b.click();
     }
 
+    /* ---------- EL PUESTO ----------
+       Al acabar, todos los juegos preguntan entra(puntos) para enseñar o no
+       el campo del nombre, que lleva un «¡Entras en el Top 10!» fijo. Hasta
+       guardar no se sabía en qué puesto: entra() lo calcula y cambia ese
+       texto, así vale para todos sin tocar cada juego. Los párrafos se
+       reconocen por su texto la primera vez y se marcan (data-est-puesto),
+       porque luego el texto ya es otro.
+       Con dos móviles conectados, debajo sale además el récord del otro
+       móvil y el puesto que tendría allí la partida (fuera del campo del
+       nombre: se ve también si no se entra en el Top 10 propio). */
+    const TEXTO_TOP = /^\s*¡Entras en el (puesto \d+ del )?Top 10/;
+    function parrafosPuesto() {
+        const marcados = [...document.querySelectorAll('[data-est-puesto]')];
+        document.querySelectorAll('p').forEach(el => {
+            if (!el.hasAttribute('data-est-puesto') && TEXTO_TOP.test(el.textContent)) { el.setAttribute('data-est-puesto', ''); marcados.push(el); }
+        });
+        return marcados;
+    }
+    const ordinal = (n) => n + '.º';
+    function textoPuesto(n) {
+        return n === 1 ? '¡Entras en el puesto 1 del Top 10: el nuevo récord!' : '¡Entras en el puesto ' + n + ' del Top 10!';
+    }
+    function anunciar(clave, p, n, rk) {
+        const ps = parrafosPuesto();
+        if (n > 0) ps.forEach(el => { el.textContent = textoPuesto(n); });
+        /* la línea del otro móvil */
+        ps.forEach(el => {
+            const caja = el.parentElement;
+            if (!caja || !caja.parentNode) return;
+            let linea = caja.previousElementSibling;
+            if (!linea || !linea.classList.contains('est-rival')) linea = null;
+            const otro = delOtro && delOtro[clave];
+            if (!otro) { if (linea) linea.remove(); return; }
+            if (!linea) {
+                linea = document.createElement('p');
+                linea.className = 'est-rival';
+                caja.parentNode.insertBefore(linea, caja);
+            }
+            const alli = rk.puestoEn(otro.map(e => ({ p: e.p })), 'p', p);
+            const mejor = otro[0];
+            linea.textContent = !mejor
+                ? 'En el otro móvil aún no hay récords: allí serías el 1.º.'
+                : 'En el otro móvil, el récord es ' + Number(mejor.p).toLocaleString('es-ES') + ' (' + mejor.n + '); ' +
+                  (alli ? 'con esta partida allí serías el ' + ordinal(alli) + '.' : 'con esta partida no entrarías en su Top 10.');
+        });
+    }
+
+    /* ---------- LOS RÉCORDS DEL OTRO MÓVIL ----------
+       Al conectar dos móviles, el enlace manda misRecords() y entrega lo que
+       llega a recordsDelOtro(). Viene de otro aparato: se comprueba todo y
+       los nombres solo se pintan escapados o con textContent. */
+    const registro = [];
+    let delOtro = null;
+    function misRecords() {
+        return registro.map(r => ({ c: r.cfg.clave, l: r.api.lista().slice(0, 10).map(e => ({ n: String(e[r.cfg.nombre] == null ? '—' : e[r.cfg.nombre]).slice(0, 24), p: Number(e[r.cfg.puntos]) })) }));
+    }
+    function recordsDelOtro(datos) {
+        if (!Array.isArray(datos)) return;
+        const r = {};
+        datos.slice(0, 8).forEach(x => {
+            if (!x || typeof x.c !== 'string' || !Array.isArray(x.l)) return;
+            if (!registro.some(g => g.cfg.clave === x.c)) return;
+            r[x.c] = x.l.slice(0, 10)
+                .filter(e => e && isFinite(Number(e.p)) && Number(e.p) > 0)
+                .map(e => ({ n: String(e.n == null ? '—' : e.n).slice(0, 24), p: Number(e.p) }))
+                .sort((a, b) => b.p - a.p);
+        });
+        delOtro = r;
+    }
+    function olvidarOtro() { delOtro = null; document.querySelectorAll('.est-rival').forEach(el => el.remove()); }
+
     /* ---------- RÉCORDS ----------
        Los nombres de campo son los que ya usaba cada juego, para no perder
        los récords guardados antes del cambio de menú */
@@ -1007,12 +1085,22 @@ const EST = (() => {
             const r = leer(c.clave, []);
             return Array.isArray(r) ? r.filter(e => e && isFinite(Number(e[c.puntos]))) : [];
         };
-        return {
+        /* El puesto que tendría p en una lista ordenada de mayor a menor: la
+           misma regla que anadir(), que deja las iguales antes de la nueva
+           (sort estable). 0 si con la lista llena no supera a la última. */
+        function puestoEn(r, campo, p) {
+            if (!(p > 0)) return 0;
+            if (r.length >= c.max && !(p > Number(r[r.length - 1][campo]))) return 0;
+            return r.filter(e => Number(e[campo]) >= p).length + 1;
+        }
+        const api = {
             lista,
+            puestoEn,
+            puesto(p) { return puestoEn(lista(), c.puntos, p); },
             entra(p) {
-                if (!(p > 0)) return false;
-                const r = lista();
-                return r.length < c.max || p > Number(r[r.length - 1][c.puntos]);
+                const n = api.puesto(p);
+                try { anunciar(c.clave, p, n, api); } catch (e) {}
+                return n > 0;
             },
             anadir(entrada) {
                 const r = lista();
@@ -1024,14 +1112,23 @@ const EST = (() => {
             /* detalle(e) → texto extra a la derecha (dificultad, nivel...) */
             pintar(cont, detalle, resaltar) {
                 const r = lista();
-                if (!r.length) { cont.innerHTML = '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>'; return; }
+                const otro = delOtro && delOtro[c.clave];
                 /* El nombre lo escribió una persona y entra por innerHTML: escapado */
-                cont.innerHTML = r.map((e, i) =>
-                    '<div' + (resaltar && resaltar(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
-                    escapar(e[c.nombre] == null ? '—' : e[c.nombre]) + '</span><span>' +
-                    Number(e[c.puntos]).toLocaleString('es-ES') + (detalle ? escapar(detalle(e) || '') : '') + '</span></div>').join('');
+                const filas = (l, nom, pts, det, res) => l.map((e, i) =>
+                    '<div' + (res && res(e) ? ' class="yo"' : '') + '><span class="nom">' + (i + 1) + '. ' +
+                    escapar(e[nom] == null ? '—' : e[nom]) + '</span><span>' +
+                    Number(e[pts]).toLocaleString('es-ES') + (det ? escapar(det(e) || '') : '') + '</span></div>').join('');
+                let html = r.length ? filas(r, c.nombre, c.puntos, detalle, resaltar)
+                    : '<p class="vacia">Todavía no hay récords.<br>¡Sé el primero!</p>';
+                if (otro) {
+                    html = '<p class="est-rotulo">EN TU MÓVIL</p>' + html + '<p class="est-rotulo">EN EL OTRO MÓVIL</p>' +
+                        (otro.length ? filas(otro, 'n', 'p') : '<p class="vacia">Todavía no tiene récords.</p>');
+                }
+                cont.innerHTML = html;
             }
         };
+        registro.push({ cfg: c, api });
+        return api;
     }
 
     /* ---------- ARRANQUE ---------- */
@@ -1074,7 +1171,8 @@ const EST = (() => {
 
     return {
         iniciar, audio, contexto, voz, efecto, ruido, musica, aplicarVolumenes, pintarBotonesSonido,
-        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK
+        mostrar, abrir, cerrar, hayCapa, avisar, grupo, elegir, ranking, escapar, leer, guardar, almacenOK,
+        misRecords, recordsDelOtro, olvidarOtro
     };
 })();
 /* ==== FIN ESTÁNDAR JS ==== */
@@ -2497,6 +2595,7 @@ const Enlace = (() => {
                 return;
             }
             if (m.t === 'adios') { apuntar('el otro ha cerrado'); return cortar('adios'); }
+            if (m.t === 'rec') { recordsDelOtro(m.d); return; }
             if (m.t === 'm' && S.lista && typeof m.n === 'number') {
                 /* El canal es ordenado, así que solo puede llegar el siguiente o
                    uno repetido (reenviado tras un corte porque su confirmación
@@ -2535,7 +2634,29 @@ const Enlace = (() => {
             if (capa) capa.cerrar();
             arrancarLatido();
             pedirCerrojo();
+            mandarRecords();
             avisar('alConectar', { nueva, papel });
+        }
+
+        /* ---------- los récords de cada uno ----------
+           Al conectar, cada móvil le pasa al otro su Top 10 de este juego
+           (lo que da EST.misRecords() del menú estándar), y el menú enseña en
+           el final y en RÉCORDS el récord del otro móvil. Va fuera de la
+           numeración de los mensajes del juego (el juego no lo ve) y se
+           repite en cada conexión, también al reconectar. Un móvil con una
+           versión vieja del enlace no conoce «rec» y no hace nada.
+           EST es una constante de otro script: se mira con typeof y try,
+           porque hay juegos sin menú estándar (el Ahorcado). */
+        function mandarRecords() {
+            try {
+                if (typeof EST === 'undefined' || typeof EST.misRecords !== 'function') return;
+                const r = EST.misRecords();
+                if (r.length) mandar({ t: 'rec', d: r });
+            } catch (e) { apuntar('récords: ' + e.message); }
+        }
+        function recordsDelOtro(d) {
+            try { if (typeof EST !== 'undefined' && typeof EST.recordsDelOtro === 'function') EST.recordsDelOtro(d); }
+            catch (e) { apuntar('récords del otro: ' + e.message); }
         }
 
         function enviar(datos) {
@@ -2608,6 +2729,8 @@ const Enlace = (() => {
             }, 150);
             sesion = null; papel = null;
             S.enviados = 0; S.recibidos = 0; S.pendientes = [];
+            /* sin conexión ya no hay «otro móvil» que enseñar */
+            try { if (typeof EST !== 'undefined' && typeof EST.olvidarOtro === 'function') EST.olvidarOtro(); } catch (e) {}
             apuntar('cerrado');
         }
 

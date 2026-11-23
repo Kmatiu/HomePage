@@ -881,7 +881,7 @@
         <div class="marcador" id="mFin">0</div>
         <p id="detFin"></p>
         <div id="zonaNombre" style="display:none;">
-            <p style="color:var(--amarillo);">¡Entras en el Top 10!</p>
+            <p style="color:var(--amarillo);" id="textoPuesto">¡Entras en el Top 10!</p>
             <input type="text" id="inpNombre" maxlength="12" autocomplete="off" placeholder="Tu nombre">
             <button class="principal" id="btnGuardar" type="button">GUARDAR</button>
         </div>
@@ -2366,6 +2366,7 @@ const Enlace = (() => {
                 return;
             }
             if (m.t === 'adios') { apuntar('el otro ha cerrado'); return cortar('adios'); }
+            if (m.t === 'rec') { recordsDelOtro(m.d); return; }
             if (m.t === 'm' && S.lista && typeof m.n === 'number') {
                 /* El canal es ordenado, así que solo puede llegar el siguiente o
                    uno repetido (reenviado tras un corte porque su confirmación
@@ -2404,7 +2405,29 @@ const Enlace = (() => {
             if (capa) capa.cerrar();
             arrancarLatido();
             pedirCerrojo();
+            mandarRecords();
             avisar('alConectar', { nueva, papel });
+        }
+
+        /* ---------- los récords de cada uno ----------
+           Al conectar, cada móvil le pasa al otro su Top 10 de este juego
+           (lo que da EST.misRecords() del menú estándar), y el menú enseña en
+           el final y en RÉCORDS el récord del otro móvil. Va fuera de la
+           numeración de los mensajes del juego (el juego no lo ve) y se
+           repite en cada conexión, también al reconectar. Un móvil con una
+           versión vieja del enlace no conoce «rec» y no hace nada.
+           EST es una constante de otro script: se mira con typeof y try,
+           porque hay juegos sin menú estándar (el Ahorcado). */
+        function mandarRecords() {
+            try {
+                if (typeof EST === 'undefined' || typeof EST.misRecords !== 'function') return;
+                const r = EST.misRecords();
+                if (r.length) mandar({ t: 'rec', d: r });
+            } catch (e) { apuntar('récords: ' + e.message); }
+        }
+        function recordsDelOtro(d) {
+            try { if (typeof EST !== 'undefined' && typeof EST.recordsDelOtro === 'function') EST.recordsDelOtro(d); }
+            catch (e) { apuntar('récords del otro: ' + e.message); }
         }
 
         function enviar(datos) {
@@ -2477,6 +2500,8 @@ const Enlace = (() => {
             }, 150);
             sesion = null; papel = null;
             S.enviados = 0; S.recibidos = 0; S.pendientes = [];
+            /* sin conexión ya no hay «otro móvil» que enseñar */
+            try { if (typeof EST !== 'undefined' && typeof EST.olvidarOtro === 'function') EST.olvidarOtro(); } catch (e) {}
             apuntar('cerrado');
         }
 
@@ -3488,10 +3513,19 @@ function terminarPartida(motivo) {
    persona, así que una puntuación alta puede significar que el rival puso
    una palabra fácil. No sería comparable con el resto de la tabla.
    ========================================================== */
-function entraEnTop(puntos) {
-    if (estado.modo === 'duo' || puntos <= 0) return false;
+/* El puesto en que entra: detrás de las iguales, que es donde la deja el
+   sort estable de guardarPuntuacion(). 0 si no entra. Se dice antes de
+   escribir el nombre (hasta guardar no se sabía). */
+function puestoEnTop(puntos) {
+    if (estado.modo === 'duo' || puntos <= 0) return 0;
     const r = leerRanking();
-    return r.length < 10 || puntos > r[r.length - 1].puntos;
+    if (r.length >= 10 && !(puntos > r[r.length - 1].puntos)) return 0;
+    return r.filter(x => x.puntos >= puntos).length + 1;
+}
+function entraEnTop(puntos) {
+    const n = puestoEnTop(puntos);
+    if (n) document.getElementById('textoPuesto').textContent = n === 1 ? '¡Entras en el puesto 1 del Top 10: el nuevo récord!' : '¡Entras en el puesto ' + n + ' del Top 10!';
+    return n > 0;
 }
 
 function guardarPuntuacion() {

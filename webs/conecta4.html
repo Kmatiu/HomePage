@@ -2200,6 +2200,7 @@ const Enlace = (() => {
                 return;
             }
             if (m.t === 'adios') { apuntar('el otro ha cerrado'); return cortar('adios'); }
+            if (m.t === 'rec') { recordsDelOtro(m.d); return; }
             if (m.t === 'm' && S.lista && typeof m.n === 'number') {
                 /* El canal es ordenado, así que solo puede llegar el siguiente o
                    uno repetido (reenviado tras un corte porque su confirmación
@@ -2238,7 +2239,29 @@ const Enlace = (() => {
             if (capa) capa.cerrar();
             arrancarLatido();
             pedirCerrojo();
+            mandarRecords();
             avisar('alConectar', { nueva, papel });
+        }
+
+        /* ---------- los récords de cada uno ----------
+           Al conectar, cada móvil le pasa al otro su Top 10 de este juego
+           (lo que da EST.misRecords() del menú estándar), y el menú enseña en
+           el final y en RÉCORDS el récord del otro móvil. Va fuera de la
+           numeración de los mensajes del juego (el juego no lo ve) y se
+           repite en cada conexión, también al reconectar. Un móvil con una
+           versión vieja del enlace no conoce «rec» y no hace nada.
+           EST es una constante de otro script: se mira con typeof y try,
+           porque hay juegos sin menú estándar (el Ahorcado). */
+        function mandarRecords() {
+            try {
+                if (typeof EST === 'undefined' || typeof EST.misRecords !== 'function') return;
+                const r = EST.misRecords();
+                if (r.length) mandar({ t: 'rec', d: r });
+            } catch (e) { apuntar('récords: ' + e.message); }
+        }
+        function recordsDelOtro(d) {
+            try { if (typeof EST !== 'undefined' && typeof EST.recordsDelOtro === 'function') EST.recordsDelOtro(d); }
+            catch (e) { apuntar('récords del otro: ' + e.message); }
         }
 
         function enviar(datos) {
@@ -2311,6 +2334,8 @@ const Enlace = (() => {
             }, 150);
             sesion = null; papel = null;
             S.enviados = 0; S.recibidos = 0; S.pendientes = [];
+            /* sin conexión ya no hay «otro móvil» que enseñar */
+            try { if (typeof EST !== 'undefined' && typeof EST.olvidarOtro === 'function') EST.olvidarOtro(); } catch (e) {}
             apuntar('cerrado');
         }
 
