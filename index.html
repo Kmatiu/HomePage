@@ -68,6 +68,30 @@
 
     main { max-width: 900px; margin: 0 auto; }
 
+    /* Mis récords: página aparte (records.html) con lo mejor de cada juego
+       y el reto para compartir con un amigo */
+    /* Va al lado del buscador y no debajo del título: con una fila más,
+       los 7 botones de las secciones ya no cabían en la primera pantalla
+       del iPhone (709 px de 664) */
+    .fila-busca { display: flex; gap: 10px; margin: 0 0 18px; }
+    .fila-busca .busca { flex: 1; min-width: 0; margin: 0; }
+    .ir-records {
+        display: flex;
+        align-items: center;
+        flex: none;
+        padding: 0 14px;
+        border-radius: 12px;
+        border: 1px solid var(--borde);
+        background: var(--tarjeta);
+        color: var(--texto);
+        text-decoration: none;
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    /* en los móviles estrechos, solo la copa: el buscador necesita su ancho */
+    @media (max-width: 370px) { .ir-records { padding: 0 12px; font-size: 1.2rem; } .ir-records .txt { display: none; } }
+    .ir-records:focus-visible, .ir-records:hover { border-color: var(--acento); color: var(--acento); }
+
     /* auto-fit + minmax: el navegador decide cuántas columnas caben, así que
        no hace falta un punto de ruptura por cada tamaño de pantalla. */
     .rejilla {
@@ -454,11 +478,14 @@
 </div>
 
 <main>
+    <div class="fila-busca">
     <div class="busca" role="search">
         <span class="lupa" aria-hidden="true">🔎</span>
         <input type="search" id="busca" placeholder="Buscar juego…" aria-label="Buscar juego"
                autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="search">
         <button type="button" class="borrar" id="borraBusca" aria-label="Borrar la búsqueda" hidden>✕</button>
+    </div>
+    <a class="ir-records" href="./records.html" aria-label="Mis récords: compáralos con un amigo">🏆<span class="txt">&nbsp;Récords</span></a>
     </div>
     <div id="resultados" hidden>
         <p class="cuenta-busca" id="cuentaBusca" aria-live="polite"></p>
@@ -513,7 +540,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v18</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v19</div>
 </footer>
 
 <script>
@@ -735,7 +762,9 @@
        No se añade ningún nombre de archivo escrito a mano: si se lista un
        "index.html" que no existe, la descarga informaría de un archivo perdido
        que en realidad nunca fue necesario. */
-    var BASE = [CARPETA, SIN_PARAMS, CARPETA + 'manifest.json',
+    /* records.html se escribe a mano porque no es un juego del catálogo:
+       sin conexión también se quiere ver los récords */
+    var BASE = [CARPETA, SIN_PARAMS, CARPETA + 'manifest.json', CARPETA + 'records.html',
                 CARPETA + 'images/icono-192.png',
                 CARPETA + 'images/icono-512.png',
                 CARPETA + 'images/apple-touch-icon.png'];
