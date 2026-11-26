@@ -823,6 +823,14 @@ const ANCHO = 540;
 const ALTO = 960;
 const RADIO_BOLA = 11;
 const Y_PERDIDA = ALTO + 40;
+/* Desde dónde sale la patada: el centro de la calle de fuera (entre la
+   pared, x 20, y la guía, x 54, con su grosor y la bola de 22, el centro
+   solo cabe entre 35 y 39). Fallo pagado (26-11, «con la luz verde la bola
+   se pierde igual»): la patada salía desde donde estuviera la bola al
+   tratar el aviso, un fotograma después. Medido: desde x ≥ 42 la bola
+   pega en la punta de la guía (54, 765) y vuelve a caer; desde y ≥ 915,
+   igual. Se perdían 286 de 300. Con la bola puesta aquí, 0. */
+const KICK = { x: 37, y: 880 };
 
 /* Zona donde la bola espera al lanzador: dentro del carril de la derecha y
    apoyada en el émbolo */
@@ -972,7 +980,11 @@ function construirMesa() {
     sensores.push({ forma: 'circulo', x: esp(80), y: 700, r: 12, id: 'IND' });
     sensores.push({ forma: 'circulo', x: 37, y: 760, r: 12, id: 'OUTI' });      // outlane izquierda
     sensores.push({ forma: 'circulo', x: esp(37), y: 760, r: 12, id: 'OUTD' });
-    sensores.push({ forma: 'circulo', x: 37, y: 885, r: 13, id: 'KICK' });      // kickback
+    /* Kickback: una línea de lado a lado por debajo de la guía, no un
+       círculo en el centro de la calle (de r 13, se lo saltaban 9 de cada
+       300 bolas que caían por ahí). Ahí abajo solo se llega por la calle de
+       fuera: la guía y la aleta tapan lo de encima. */
+    sensores.push({ forma: 'linea', ax: 20, ay: KICK.y, bx: 120, by: KICK.y, id: 'KICK' });
     /* Órbita: subir por la izquierda y cruzar por encima de los carriles
        hacia la derecha. Las líneas avisan del sentido del cruce. */
     sensores.push({ forma: 'linea', ax: 20, ay: 300, bx: 112, by: 300, id: 'ORBI' });
@@ -1574,10 +1586,13 @@ function crearPartida(opciones) {
                 sumar(PUNTOS.inlane);
             } else if (id === 'OUTI' || id === 'OUTD') {
                 sumar(PUNTOS.outlane);
-            } else if (id === 'KICK') {
+            } else if (id === 'KICK' && e.dir === 'baja') {
                 const b = mundo.bolas.find(x => x.id === e.bola);
                 if (b && j.kickback) {
                     j.kickback = false;
+                    /* a la boca del kickback: unos píxeles, un fotograma */
+                    b.x = KICK.x; b.y = KICK.y;
+                    b.lado = {}; b.dentro = {};
                     /* Un poco hacia dentro: vertical, volvía a caer sobre la punta
                        de la guía de la calle y se quedaba en equilibrio */
                     b.vx = 60;

@@ -4461,6 +4461,22 @@ function inclinacionSensor() {
    En Android se intenta además pantalla completa y bloquear el giro.
    ========================================================== */
 let devAngle = 0, rGiro = 0;
+/* devAngle se fija al ACABAR la cuenta (anguloFijo), no al ponerse en
+   horizontal. Trampa pagada (26-11, «la primera partida se juega en
+   vertical»): al girar el móvil, unos navegadores avisan antes del tamaño
+   nuevo que del ángulo nuevo. Leído en ese momento, el ángulo era aún el
+   de vertical (0) y, al llegar el 90, el tablero se giraba −90 para
+   «compensar». Solo en la primera partida, porque las siguientes ya
+   empiezan con el móvil tumbado. Mientras dura la cuenta el tablero sigue
+   a la pantalla (r = 0) y devAngle va con ella. */
+let anguloFijo = false;
+/* lo último que se vio de la pantalla: se mira en cada fotograma por si
+   un aviso de giro no llega o llega con datos viejos */
+let pantallaVista = '';
+function vigilarPantalla() {
+    const ahora = anguloPantalla() + '|' + innerWidth + '|' + innerHeight;
+    if (ahora !== pantallaVista) { pantallaVista = ahora; revisarHorizontal(); }
+}
 function anguloPantalla() {
     let a = screen.orientation && typeof screen.orientation.angle === 'number' ? screen.orientation.angle
         : typeof window.orientation === 'number' ? window.orientation : 0;
@@ -4470,7 +4486,13 @@ const horizontal = () => innerWidth >= innerHeight;
 function colocarGiro() {
     const enJuego = ['cuenta', 'playing', 'paused', 'llegando', 'fin'].includes(gameState) && !esperaHorizontal;
     let r = 0;
-    if (enJuego) { r = ((devAngle - anguloPantalla()) % 360 + 540) % 360 - 180; if (r === -180) r = 180; }
+    if (enJuego && !anguloFijo) {
+        /* en la cuenta: el tablero va con la pantalla; si el ángulo cambia,
+           la cuenta (y la calibración) empieza otra vez */
+        const a = anguloPantalla();
+        if (a !== devAngle && gameState === 'cuenta') { devAngle = a; reiniciarCuenta(); }
+        devAngle = a;
+    } else if (enJuego) { r = ((devAngle - anguloPantalla()) % 360 + 540) % 360 - 180; if (r === -180) r = 180; }
     rGiro = r;
     const W = innerWidth, H = innerHeight;
     const ancho = Math.abs(r) === 90 ? H : W, alto = Math.abs(r) === 90 ? W : H;
@@ -4479,20 +4501,23 @@ function colocarGiro() {
     giro.style.transform = r ? 'rotate(' + r + 'deg)' : '';
     medir();
 }
-function bloquearGiro() {
+/* Pantalla completa: en el toque (sin toque el navegador no la da). El
+   bloqueo del giro, solo con el móvil YA tumbado y en el sentido en que
+   esté: antes se pedía 'landscape' en el toque aunque el móvil estuviera
+   de pie, y Android giraba la pantalla él solo con el móvil en vertical. */
+function pantallaCompleta() {
     if (!tactil()) return;
     const el = document.documentElement;
-    const bloquear = () => {
-        try {
-            const o = screen.orientation;
-            if (!o || !o.lock) return;
-            const tipo = /landscape/.test(o.type || '') ? o.type : 'landscape';
-            o.lock(tipo).catch(() => {});
-        } catch (x) {}
-    };
     try {
-        if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(bloquear, bloquear);
-        else bloquear();
+        if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen({ navigationUI: 'hide' }).then(() => { if (anguloFijo) bloquearGiro(); }, () => {});
+    } catch (x) {}
+}
+function bloquearGiro() {
+    if (!tactil()) return;
+    try {
+        const o = screen.orientation;
+        if (!o || !o.lock || !/landscape/.test(o.type || '') || !horizontal()) return;
+        o.lock(o.type).catch(() => {});
     } catch (x) {}
 }
 function soltarGiro() {
@@ -4656,6 +4681,7 @@ function fotograma(ahora) {
     ultimo = ahora;
     reloj += dt;
     leerTeclas(dt);
+    vigilarPantalla();
     if (gameState === 'cuenta') pasoCuenta(dt);
     else if (gameState === 'playing') {
         const x0 = e.x, y0 = e.y;
@@ -4697,6 +4723,12 @@ function textoInicio(html) {
     $('inicio').classList.add('activo');
 }
 function empezarYa() {
+    if (!anguloFijo) {
+        devAngle = anguloPantalla();
+        anguloFijo = true;
+        colocarGiro();
+        bloquearGiro();
+    }
     if (modo === 'inclinar') {
         sensor.ejes = calibrar(sensor.muestras, devAngle);
         if (!sensor.ejes) pasarAPalanca('No llega la inclinación: juega con la palanca.');
@@ -4760,7 +4792,7 @@ function permiso() {
 }
 function jugar(sel) {
     permiso();
-    bloquearGiro();
+    pantallaCompleta();
     empezarNivel(sel);
 }
 function empezarNivel(sel) {
@@ -4790,18 +4822,24 @@ function empezarNivel(sel) {
    la palanca). Antes, si el móvil está en vertical, a esperar. */
 function prepararCuenta() {
     sensor.muestras = []; sensor.ejes = null;
-    cuenta = modo === 'inclinar' ? 3 : 1.5;
-    cuentaDesde = performance.now();
+    anguloFijo = false;
+    reiniciarCuenta();
     esperaHorizontal = tactil() && !horizontal();
     if (esperaHorizontal) textoInicio('<span class="movil">📱</span><br><b>Pon el móvil en horizontal</b><br><small>Si no gira, quita el bloqueo de rotación.</small>');
-    else devAngle = anguloPantalla();
+    devAngle = anguloPantalla();
+    pantallaVista = anguloPantalla() + '|' + innerWidth + '|' + innerHeight;
+}
+function reiniciarCuenta() {
+    sensor.muestras = [];
+    cuenta = modo === 'inclinar' ? 3 : 1.5;
+    cuentaDesde = performance.now();
 }
 function revisarHorizontal() {
     if (!esperaHorizontal || !tactil()) { colocarGiro(); return; }
     if (horizontal()) {
         esperaHorizontal = false;
         devAngle = anguloPantalla();
-        cuentaDesde = performance.now();
+        reiniciarCuenta();
         if (gameState === 'paused') { colocarGiro(); return; }
     }
     colocarGiro();
@@ -5152,7 +5190,7 @@ btn('btnNivelesMenu', () => { if (red && enlace) { enlace.cerrar(); red = null; 
 /* el permiso y la pantalla completa, ya en el toque; el nivel (con su
    medida, que tarda un poco) justo después, con el aviso puesto */
 btn('btnDia', () => {
-    permiso(); bloquearGiro();
+    permiso(); pantallaCompleta();
     EST.avisar('Preparando el laberinto de hoy…');
     setTimeout(() => empezarNivel(nivelDelDia(fechaHoy())), 40);
 });
