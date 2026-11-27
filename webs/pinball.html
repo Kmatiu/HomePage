@@ -1557,9 +1557,19 @@ function crearPartida(opciones) {
                 p.bonusBola += BONUS.standup;
                 if (!j.standups[i]) {
                     j.standups[i] = true;
-                    if (j.standups.every(Boolean) && !p.multibola) {
+                    if (j.standups.every(Boolean)) {
+                        /* Se apagan SIEMPRE. Antes solo fuera de la
+                           multibola: completados con dos bolas en juego se
+                           quedaban encendidos para siempre y no volvía a
+                           haber multibola en toda la partida. Durante la
+                           multibola suben el jackpot (sin tercera bola) */
                         j.standups = [false, false, false, false];
-                        empezarMultibola();
+                        if (!p.multibola) empezarMultibola();
+                        else {
+                            j.jackpot += PUNTOS.subeJackpot;
+                            avisar('mensaje', { texto: 'JACKPOT ' + j.jackpot.toLocaleString('es-ES') });
+                            avisar('sonido', { nombre: 'completo' });
+                        }
                     }
                 }
             }
