@@ -5001,6 +5001,10 @@ if (codigoInvitacion) {
     pintarMenuJugadores('red');
     $('invitacion').style.display = '';
 }
+/* Retos diarios (27-11): la portada abre este juego con «?reto=dia» para
+   entrar directo al reto de hoy. Con una invitación del enlace en la
+   dirección manda la invitación */
+try { if (new URLSearchParams(location.search).get('reto') === 'dia' && !codigoInvitacion) empezarPartida({ dia: true }); } catch (x) {}
 
 /* Para las pruebas y las capturas */
 let idPuesto = 0;

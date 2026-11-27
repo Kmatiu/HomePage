@@ -2638,6 +2638,15 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) pausa
 window.addEventListener('pagehide', guardarPartida);
 
 EST.iniciar({ claveAudio: 'mahjongAudio', alCambiarMusica: (on) => { if (on && estado === 'jugando') musica.arrancar(); else musica.parar(); } });
+/* Retos diarios (27-11): la portada abre este juego con «?reto=dia» para
+   entrar directo al reto de hoy. Si el del día guardado es el de hoy, se
+   sigue; si no, se empieza el de hoy */
+try {
+    if (new URLSearchParams(location.search).get('reto') === 'dia') {
+        const x = partidaGuardada();
+        if (x && x.modo === 'diario' && x.g.diario === hoy()) continuar(); else empezarDiario(hoy());
+    }
+} catch (x) {}
 pintarMenu();
 
 /* Para las pruebas */

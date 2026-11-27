@@ -4728,6 +4728,10 @@ EST.iniciar({ claveAudio: CLAVE.audio, alCambiarMusica: (on) => { if (on && part
 // Se entra con #enlace=… cuando el otro mandó su código por mensaje
 let codigoInvitacion = Enlace.codigoEnURL();
 if (codigoInvitacion) $('invitacion').style.display = '';
+/* Retos diarios (27-11): la portada abre este juego con «?reto=dia» para
+   entrar directo al reto de hoy. Si hay uno de hoy a medias, empezarDia
+   lo sigue */
+try { if (new URLSearchParams(location.search).get('reto') === 'dia' && !codigoInvitacion) empezarDia(hoy()); } catch (x) {}
 
 pintarMenu();
 

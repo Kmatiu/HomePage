@@ -2302,6 +2302,15 @@ crearHuecos();
 crearCartas();
 pintarMenu();
 EST.iniciar({ claveAudio: 'solitarioAudio', alCambiarMusica });
+/* Retos diarios (27-11): la portada abre este juego con «?reto=dia» para
+   entrar directo al reto de hoy. Si la del día de hoy está a medias, se
+   sigue (CONTINUAR); si no, se reparte (robando como diga el menú) */
+try {
+    if (new URLSearchParams(location.search).get('reto') === 'dia') {
+        const g = leerGuardada();
+        if (g && g.diaria === Diarias.hoy()) continuar(); else partidaDelDia();
+    }
+} catch (x) {}
 
 /* Para las pruebas */
 window.__solitario = {

@@ -447,6 +447,11 @@ body {
         h3.seccion { color: var(--acento); font-size: 0.8rem; margin: 12px 0 2px; text-align: left; }
     </style>
     <style>
+/* Retos diarios: el botón del laberinto de hoy, latiendo hasta tocarlo */
+        #btnDia.retoHoy { border-color: #ffd23f; box-shadow: 0 0 0 2px #ffd23f; animation: retoHoy 1.2s ease-in-out infinite; }
+        @keyframes retoHoy { 50% { box-shadow: 0 0 0 6px rgba(255, 210, 63, 0.35); } }
+        @media (prefers-reduced-motion: reduce) { #btnDia.retoHoy { animation: none; } }
+
 /* ==== VISTA CSS ==== */
 /* Tema claro y tamaño de letra, comunes a todos los juegos que no son de
    mayores. GENERADO desde _fuentes/menu-estandar/vista.css (node aplicar.js):
@@ -4895,7 +4900,13 @@ function irAlMenu(pantalla) {
     e = null;
     colocarGiro();
     if (pantalla === 'pNiveles') pintarNiveles();
+    pintarBotonDia();
     EST.mostrar(pantalla || 'pMenu');
+}
+/* El botón del laberinto de hoy dice si ya está hecho */
+function pintarBotonDia() {
+    const h = EST.leer('laberinto.diaHecho', null);
+    $('btnDia').textContent = h && h.fecha === fechaHoy() ? '📅 LABERINTO DEL DÍA ✓' : '📅 LABERINTO DEL DÍA';
 }
 
 /* ---------- AL LLEGAR A LA META ---------- */
@@ -4919,6 +4930,13 @@ function acabarNivel() {
         for (const [id, s] of PREMIO_TABLERO) if (s > totalAntes && s <= ahora && !progreso.fijos.includes(id)) resultado.premios.push('🖼️ Nuevo tablero: ' + Arte.TEMAS[id].nombre);
     }
     resultado.puesto = puestoTiempo(listaActual(), ms);
+    /* El del día, hecho: se apunta siempre (los tiempos del Top 5 solo se
+       guardan si se escribe el nombre, y la portada necesita saber si el
+       de hoy está hecho para su ✓ de Retos diarios) */
+    if (actual.tipo === 'dia') {
+        const h = EST.leer('laberinto.diaHecho', null);
+        EST.guardar('laberinto.diaHecho', { fecha: actual.fecha, ms: h && h.fecha === actual.fecha && h.ms > 0 ? Math.min(h.ms, ms) : ms });
+    }
     if (red) { red.yo = { ms, n }; if (enlace && enlace.conectado) enlace.enviar({ tipo: 'fin', ms, n }); }
 }
 function mostrarFin() {
@@ -5365,6 +5383,19 @@ if (codigoInvitacion) {
     $('invitacion').style.display = '';
 }
 colocarGiro();
+pintarBotonDia();
+/* Retos diarios (27-11): la portada abre este juego con «?reto=dia» para
+   entrar directo al reto de hoy. Aquí no se puede empezar solo: el permiso del
+   giroscopio (iPhone) y la pantalla completa solo se conceden tocando. Se
+   queda en el menú con el botón del laberinto de hoy a la vista y latiendo */
+try {
+    if (new URLSearchParams(location.search).get('reto') === 'dia' && !codigoInvitacion) {
+        const b = $('btnDia');
+        b.classList.add('retoHoy');
+        b.scrollIntoView({ block: 'center' });
+        setTimeout(() => EST.avisar('Toca 📅 LABERINTO DEL DÍA para empezar'), 300);
+    }
+} catch (x) {}
 
 /* Para las pruebas (y las capturas) */
 window.__lab = {
