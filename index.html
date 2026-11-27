@@ -549,7 +549,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v23</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v24</div>
 </footer>
 
 <script>
@@ -611,6 +611,9 @@
         { grupo: 'Para los mayores',
           archivo: 'webs/mayores-sort.html',     nombre: 'Ordena los colores', icono: '🧪',
           alta: '2026-11-20 09:00', nota: 'Echa un color sobre otro hasta dejar cada frasco de un solo color. Pocos frascos, grandes, cada color con su forma, y siempre con ayuda.' },
+        { grupo: 'Para los mayores',
+          archivo: 'webs/mayores-cinco.html',    nombre: 'Cinco Letras',    icono: '🔤',
+          alta: '2026-11-27 14:00', nota: 'Adivina la palabra: te dice de qué trata (un animal, algo de comer…) y los colores te dicen qué letras van bien. Letras grandes, sin reloj, con voz, y si te atascas te dice por qué letra empieza.' },
 
         { grupo: 'Arcade',
           archivo: 'webs/SpaceInvaders.html',  nombre: 'Space Invaders', icono: '👾' },
@@ -670,6 +673,9 @@
           archivo: 'webs/crucigrama.html',     nombre: 'Crucigrama',     icono: '▦' },
         { grupo: 'Palabras y memoria',
           archivo: 'webs/sopa.html',           nombre: 'Sopa de Letras', icono: '🔠' },
+        { grupo: 'Palabras y memoria',
+          archivo: 'webs/cincoletras.html',    nombre: 'Cinco Letras',   icono: '🟩', red: true,
+          alta: '2026-11-27 14:00', nota: 'Adivina la palabra en seis intentos: verde si la letra va ahí, amarilla si está en otro sitio. Palabra del día (la misma para todos, y compartes tus cuadritos sin destripar la palabra), práctica sin límite de 4 a 7 letras, colores para daltónicos y duelo con un amigo con la misma palabra, cada uno en su móvil (con wifi).' },
 
         { grupo: 'Arcade',
           archivo: 'webs/tetris.html',         nombre: 'Tetris',         icono: '🧱', red: true,
@@ -729,6 +735,7 @@
         'webs/caballeros.html': { n: 6, v: '66a80aa1', a: 1 },
         'webs/carreraCoches.html': { n: 6, v: '1c31a30b' },
         'webs/cazafantasmas.html': { n: 6, v: '7d13b30e' },
+        'webs/cincoletras.html': { n: 6, v: 'ed3ea8df' },
         'webs/conecta4.html': { n: 6, v: 'cf9b7e6c' },
         'webs/crucigrama.html': { n: 6, v: '9ac7ed42' },
         'webs/damas.html': { n: 6, v: '1213cc01' },
@@ -737,6 +744,7 @@
         'webs/magic-sort.html': { n: 6, v: '069ad8d6' },
         'webs/mahjong.html': { n: 6, v: '9b8fef39' },
         'webs/mayores-calculo.html': { n: 6, v: '71f59d44' },
+        'webs/mayores-cinco.html': { n: 6, v: '1519c116' },
         'webs/mayores-clasificar.html': { n: 6, v: '122cb535' },
         'webs/mayores-colores.html': { n: 6, v: '59a93380' },
         'webs/mayores-compra.html': { n: 6, v: '4fb0bdfc' },
@@ -840,6 +848,9 @@
           hecho: function (h) { var d = leerJSON('brisca.dia'); return !!(d && d.fecha === h && d.jugadas > 0); } },
         { archivo: 'webs/carreraCoches.html', reto: 'Ruta del día',
           hecho: function (h) { var d = leerJSON('ruta66.dia'); return !!(d && d.fecha === h); } },
+        /* a medias no cuenta: solo acertada o con los seis intentos gastados */
+        { archivo: 'webs/cincoletras.html', reto: 'Palabra del día',
+          hecho: function (h) { var d = leerJSON('cincoletras.dia'); return !!(d && d.fecha === h && (d.estado === 'ganada' || d.estado === 'perdida')); } },
         { archivo: 'webs/laberinto.html', reto: 'Laberinto del día',
           hecho: function (h) { var d = leerJSON('laberinto.diaHecho'); return !!(d && d.fecha === h); } },
         { archivo: 'webs/magic-sort.html', reto: 'Nivel del día',
