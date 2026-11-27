@@ -209,6 +209,13 @@
         flex: 0 0 auto;
     }
 
+    /* De pie, la zona de la partida no pinta caja: sus hijos van en la
+       columna de #pJuego. Va aquí y no en un style="display:contents" en la
+       etiqueta: el de la etiqueta ganaba al display: grid de la media query
+       de tumbado y la dejaba muerta (27-11: tumbado salía todo en columna y
+       la horca se quedaba en 108 px en un iPhone 13) */
+    #zonaPartida { display: contents; }
+
     #zonaDibujo {
         flex: 1 1 auto;
         min-height: 0;
@@ -232,6 +239,22 @@
     /* Contra otro móvil: cómo le va al otro con TU palabra */
     #rivalRed { text-align: center; font-size: 0.72rem; color: var(--apagado); margin-top: 6px; flex: 0 0 auto; }
     #rivalRed b { color: var(--acento); }
+    /* La horca del otro en miniatura (27-11): el mismo dibujo, en un marco,
+       superpuesta en la esquina de arriba a la derecha de la zona del
+       dibujo, que la horca deja libre. En la línea de texto le quitaba 54 px
+       de alto a tu horca (medido: de 393 a 339 en iPhone 13; tumbado, de 108
+       a 54). Al fallar él, destella en rojo un momento */
+    #zonaDibujo { position: relative; }
+    .mini-rival { position: absolute; top: 4px; right: 8px; width: 60px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .mini-rival[hidden] { display: none; }
+    .mini-rival .nombre { font-size: 0.55rem; color: var(--apagado); max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .horca-mini { width: 56px; height: 56px; border: 1px solid var(--borde); border-radius: 8px;
+        background: rgba(0, 0, 0, 0.35); padding: 2px; transition: box-shadow 0.2s; }
+    
+    .horca-mini line, .horca-mini circle { stroke-linecap: round; }
+    .horca-mini .madera, .horca-mini .reo { filter: none; }
+    .horca-mini.golpe { box-shadow: 0 0 0 2px var(--rosa), 0 0 12px var(--rosa); }
+    .horca-mini.acabado { border-color: var(--rosa); }
     .invitacion { margin: 0 0 12px; padding: 10px; border: 2px solid var(--amarillo); border-radius: 10px;
         color: var(--amarillo); font-size: 0.78rem; text-align: center; }
     #categoria {
@@ -819,7 +842,7 @@
         <button class="icono" id="btnPausa" type="button" aria-label="Pausar">⏸</button>
     </div>
 
-    <div id="zonaPartida" style="display:contents;">
+    <div id="zonaPartida">
         <div id="zonaDibujo">
             <svg id="horca" viewBox="0 0 200 200" role="img" aria-label="Dibujo del ahorcado">
                 <line class="parte madera" data-p="1" x1="20"  y1="190" x2="180" y2="190"/>
@@ -3595,6 +3618,7 @@ function volverAlMenu() {
     if (red && enlace) enlace.cerrar();
     red = null;
     document.getElementById('rivalRed').hidden = true;
+    cajaMini().hidden = true;
     estado.jugando = false;
     estado.pausado = false;
     pararReloj();
@@ -3902,6 +3926,7 @@ function escribirRed() {
     red.esperando = false;
     red.rival = null;
     document.getElementById('rivalRed').hidden = true;
+    cajaMini().hidden = true;
     document.getElementById('mFin').style.display = '';
     irAEscribirPalabra();
     document.getElementById('lemaSecreto').textContent = 'La adivinará ' + nombreOtro() + ' en su móvil';
@@ -3936,6 +3961,7 @@ function adivinarRed() {
     /* Lo que va a ver del otro: su palabra la tiene él, aquí solo cuántas letras */
     const mia = red.mios[clave(duelo.ronda)];
     red.rival = { fallos: 0, intentos: DIF[estado.dificultad].intentos, acertadas: 0, total: mia ? mia.total : 0, fin: null };
+    fallosRivalVistos = 0;
     empezarPartida();
     pintarRival();
 }
@@ -3946,14 +3972,52 @@ function mandarProgreso() {
                     acertadas, total: estado.normalizado.replace(/ /g, '').length });
 }
 
+/* Cómo le va al otro con TU palabra: su horca en miniatura (el mismo
+   dibujo, clonado una vez, con los trazos repartidos igual que en la tuya)
+   y la línea de texto. Si no la saca, el dibujo sale entero */
+let fallosRivalVistos = 0;
+/* La caja de la miniatura (el dibujo y, debajo, el nombre del otro) */
+function cajaMini() {
+    let caja = document.querySelector('#zonaDibujo .mini-rival');
+    if (!caja) {
+        caja = document.createElement('div');
+        caja.className = 'mini-rival';
+        const mini = document.getElementById('horca').cloneNode(true);
+        mini.removeAttribute('id');
+        mini.classList.add('horca-mini');
+        mini.querySelectorAll('.parte').forEach(x => x.classList.remove('vista'));
+        const nom = document.createElement('span');
+        nom.className = 'nombre';
+        nom.setAttribute('aria-hidden', 'true');
+        caja.appendChild(mini); caja.appendChild(nom);
+        document.getElementById('zonaDibujo').appendChild(caja);
+    }
+    return caja;
+}
 function pintarRival() {
     const el = document.getElementById('rivalRed');
     const r = red && red.rival;
-    if (!r) { el.hidden = true; return; }
+    const caja = cajaMini(), mini = caja.querySelector('.horca-mini');
+    if (!r) { el.hidden = true; caja.hidden = true; return; }
     el.hidden = false;
-    el.innerHTML = escaparHtml(nombreOtro()) + ' con tu palabra: ' +
+    caja.hidden = false;
+    /* textContent: el nombre lo escribe el otro */
+    caja.querySelector('.nombre').textContent = nombreOtro();
+    const intentos = r.intentos || DIF[estado.dificultad].intentos;
+    const visibles = r.fin === false || r.fallos >= intentos ? PARTES : Math.ceil((r.fallos / intentos) * PARTES);
+    mini.querySelectorAll('.parte').forEach(x => x.classList.toggle('vista', Number(x.dataset.p) <= visibles));
+    mini.classList.toggle('acabado', r.fin === false);
+    mini.setAttribute('aria-label', 'Dibujo del ahorcado de ' + nombreOtro() + ': ' + r.fallos + ' de ' + intentos + ' fallos');
+    /* un fallo nuevo del otro: destello */
+    if (r.fallos > fallosRivalVistos) {
+        mini.classList.add('golpe');
+        clearTimeout(mini._t);
+        mini._t = setTimeout(() => mini.classList.remove('golpe'), 600);
+    }
+    fallosRivalVistos = r.fallos;
+    el.innerHTML = '<span aria-hidden="true">↗ </span>' + escaparHtml(nombreOtro()) + ' con tu palabra: ' +
         (r.fin === true ? '<b>¡la ha sacado!</b>' : r.fin === false ? '<b>no la ha sacado</b>'
-         : '<b>' + r.acertadas + '/' + (r.total || '?') + '</b> letras · <b>' + r.fallos + '</b> de ' + r.intentos + ' fallos');
+         : '<b>' + r.acertadas + '/' + (r.total || '?') + '</b> letras · <b>' + r.fallos + '</b> de ' + intentos + ' fallos');
 }
 
 function finRondaRed(acertada) {
