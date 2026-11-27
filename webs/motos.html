@@ -3274,6 +3274,141 @@ else global.Moto = Moto;
 </script>
 <script>
 /* ==========================================================
+   SALPICADERO común (Ruta 66 y Moto a Fondo): cuentarrevoluciones de
+   aguja con la marcha dentro, velocidad en digital y, si se le da,
+   depósito de gasolina. Se pinta en un lienzo que ya está en píxeles CSS
+   (con el escalado del devicePixelRatio puesto por quien llama).
+
+   Salpicadero.pintar(c, x, y, w, h, d)
+     d = { rpm, rpmMax, rojo (rpm donde empieza la zona roja), marcha
+           (texto: '3', 'ALTA'…), kmh, gasolina (0-100, o null),
+           aviso (texto pequeño bajo la velocidad, opcional), t (reloj,
+           para los parpadeos) }
+   Cabe en cualquier caja: el tamaño sale del alto (h) y se centra en w.
+   ========================================================== */
+(function (global) {
+'use strict';
+
+const A0 = Math.PI * 0.8, A1 = Math.PI * 2.2;     // de las 8 menos algo a las 4 y algo
+function aguja(c, cx, cy, r, f, col, grosor) {
+    const a = A0 + (A1 - A0) * Math.max(0, Math.min(1.02, f));
+    c.save();
+    c.strokeStyle = col; c.lineWidth = grosor; c.lineCap = 'round';
+    c.shadowColor = col; c.shadowBlur = grosor * 2;
+    c.beginPath(); c.moveTo(cx - Math.cos(a) * r * 0.16, cy - Math.sin(a) * r * 0.16); c.lineTo(cx + Math.cos(a) * r * 0.86, cy + Math.sin(a) * r * 0.86); c.stroke();
+    c.restore();
+    c.fillStyle = '#2a2d36'; c.beginPath(); c.arc(cx, cy, r * 0.13, 0, Math.PI * 2); c.fill();
+}
+function esfera(c, cx, cy, r) {
+    const g = c.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r);
+    g.addColorStop(0, '#2b3040'); g.addColorStop(1, '#0d0f16');
+    c.fillStyle = g; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#9aa3b5'; c.lineWidth = Math.max(1.5, r * 0.05); c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
+}
+function cuentavueltas(c, cx, cy, r, d) {
+    esfera(c, cx, cy, r);
+    const max = d.rpmMax || 8000, rojo = d.rojo || max * 0.82;
+    /* zona roja */
+    c.strokeStyle = 'rgba(255,60,60,0.85)'; c.lineWidth = r * 0.1;
+    c.beginPath(); c.arc(cx, cy, r * 0.84, A0 + (A1 - A0) * rojo / max, A1); c.stroke();
+    /* marcas y números (miles) */
+    const n = Math.round(max / 1000);
+    c.fillStyle = '#e8ecf4'; c.strokeStyle = '#e8ecf4';
+    c.font = 'bold ' + Math.max(7, Math.round(r * 0.2)) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let i = 0; i <= n * 2; i++) {
+        const f = i / (n * 2), a = A0 + (A1 - A0) * f, larga = i % 2 === 0;
+        c.lineWidth = larga ? Math.max(1.5, r * 0.04) : 1;
+        c.beginPath(); c.moveTo(cx + Math.cos(a) * r * (larga ? 0.7 : 0.76), cy + Math.sin(a) * r * (larga ? 0.7 : 0.76));
+        c.lineTo(cx + Math.cos(a) * r * 0.88, cy + Math.sin(a) * r * 0.88); c.stroke();
+        if (larga && r > 22) c.fillText(String(i / 2), cx + Math.cos(a) * r * 0.55, cy + Math.sin(a) * r * 0.55);
+    }
+    /* la marcha, grande, abajo en la esfera */
+    const m = String(d.marcha == null ? '' : d.marcha);
+    c.fillStyle = '#ffd23f';
+    c.font = 'bold ' + Math.round(r * (m.length > 2 ? 0.26 : 0.46)) + 'px sans-serif';
+    c.fillText(m, cx, cy + r * 0.5);
+    if (r > 30) { c.fillStyle = '#8f98ab'; c.font = Math.round(r * 0.13) + 'px sans-serif'; c.fillText('×1000', cx, cy - r * 0.3); }
+    aguja(c, cx, cy, r, (d.rpm || 0) / max, '#ff4d4d', Math.max(2, r * 0.06));
+}
+function deposito(c, cx, cy, r, gas, t) {
+    esfera(c, cx, cy, r);
+    const B0 = Math.PI * 1.15, B1 = Math.PI * 1.85;
+    c.lineWidth = r * 0.12;
+    c.strokeStyle = 'rgba(255,60,60,0.85)'; c.beginPath(); c.arc(cx, cy + r * 0.25, r * 0.72, B0, B0 + (B1 - B0) * 0.2); c.stroke();
+    c.strokeStyle = 'rgba(232,236,244,0.85)'; c.beginPath(); c.arc(cx, cy + r * 0.25, r * 0.72, B0 + (B1 - B0) * 0.22, B1); c.stroke();
+    c.fillStyle = '#e8ecf4'; c.font = 'bold ' + Math.max(7, Math.round(r * 0.22)) + 'px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('E', cx - r * 0.62, cy + r * 0.42); c.fillText('F', cx + r * 0.62, cy + r * 0.42);
+    const poca = gas < 20;
+    c.font = Math.round(r * 0.34) + 'px sans-serif';
+    c.globalAlpha = poca && Math.floor((t || 0) * 3) % 2 ? 0.35 : 1;
+    c.fillText('⛽', cx, cy + r * 0.62);
+    c.globalAlpha = 1;
+    const a = B0 + (B1 - B0) * Math.max(0, Math.min(1, gas / 100));
+    c.save(); c.strokeStyle = poca ? '#ff4d4d' : '#ffd23f'; c.lineWidth = Math.max(2, r * 0.07); c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx, cy + r * 0.25); c.lineTo(cx + Math.cos(a) * r * 0.8, cy + r * 0.25 + Math.sin(a) * r * 0.8); c.stroke(); c.restore();
+    c.fillStyle = '#2a2d36'; c.beginPath(); c.arc(cx, cy + r * 0.25, r * 0.1, 0, Math.PI * 2); c.fill();
+}
+function pintar(c, x, y, w, h, d) {
+    c.save();
+    /* el panel */
+    const g = c.createLinearGradient(0, y, 0, y + h);
+    g.addColorStop(0, 'rgba(18,20,28,0.94)'); g.addColorStop(1, 'rgba(6,7,12,0.97)');
+    c.fillStyle = g;
+    c.beginPath(); c.moveTo(x, y + h * 0.18); c.quadraticCurveTo(x + w / 2, y - h * 0.12, x + w, y + h * 0.18); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(160,170,190,0.45)'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(x, y + h * 0.18); c.quadraticCurveTo(x + w / 2, y - h * 0.12, x + w, y + h * 0.18); c.stroke();
+    const r = Math.min(h * 0.44, w * 0.2);
+    const conGas = d.gasolina != null;
+    /* cuentavueltas a la izquierda; velocidad en el centro; depósito a la derecha */
+    const cxR = x + Math.max(r + 6, w * 0.2), cy = y + h * 0.56;
+    cuentavueltas(c, cxR, cy, r, d);
+    const cxV = conGas ? x + w * 0.5 : x + w * 0.62;
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.fillStyle = '#7dfcff'; c.shadowColor = '#00e5ff'; c.shadowBlur = 8;
+    c.font = 'bold ' + Math.round(h * 0.42) + 'px "Courier New", monospace';
+    c.fillText(String(Math.round(d.kmh || 0)).padStart(3, ' '), cxV, y + h * 0.62);
+    c.shadowBlur = 0;
+    c.fillStyle = '#8f98ab'; c.font = 'bold ' + Math.round(h * 0.14) + 'px sans-serif';
+    c.fillText('km/h', cxV, y + h * 0.8);
+    if (d.aviso) { c.fillStyle = '#ffd23f'; c.font = 'bold ' + Math.round(h * 0.13) + 'px sans-serif'; c.fillText(d.aviso, cxV, y + h * 0.96); }
+    if (conGas) deposito(c, x + w - Math.max(r * 0.85 + 6, w * 0.18), cy + r * 0.05, r * 0.85, d.gasolina, d.t);
+    c.restore();
+}
+
+/* Variante compacta para una esquina (Moto a Fondo): sin el panel ancho,
+   que en un lienzo apaisado taparía la carretera. Una placa redondeada con
+   el cuentavueltas y la velocidad al lado. (x, y) es la esquina inferior
+   izquierda; devuelve el ancho ocupado. */
+function pintarCompacto(c, x, y, h, d) {
+    c.save();
+    const r = h * 0.46, w = h * 2.15, y0 = y - h;
+    c.fillStyle = 'rgba(8,10,16,0.72)';
+    c.beginPath();
+    if (c.roundRect) c.roundRect(x, y0, w, h, h * 0.18); else c.rect(x, y0, w, h);
+    c.fill();
+    c.strokeStyle = 'rgba(160,170,190,0.45)'; c.lineWidth = 1.5; c.stroke();
+    cuentavueltas(c, x + h * 0.5, y0 + h * 0.5, r, d);
+    const cxV = x + h * 1.55;
+    c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+    c.fillStyle = '#7dfcff'; c.shadowColor = '#00e5ff'; c.shadowBlur = 6;
+    c.font = 'bold ' + Math.round(h * 0.4) + 'px "Courier New", monospace';
+    c.fillText(String(Math.round(d.kmh || 0)), cxV, y0 + h * 0.56);
+    c.shadowBlur = 0;
+    c.fillStyle = '#8f98ab'; c.font = 'bold ' + Math.round(h * 0.15) + 'px sans-serif';
+    c.fillText('km/h', cxV, y0 + h * 0.76);
+    if (d.aviso) { c.fillStyle = '#ffd23f'; c.font = 'bold ' + Math.round(h * 0.13) + 'px sans-serif'; c.fillText(d.aviso, cxV, y0 + h * 0.94); }
+    c.restore();
+    return w;
+}
+
+const Salpicadero = { pintar, pintarCompacto };
+if (typeof module !== 'undefined' && module.exports) module.exports = Salpicadero;
+else global.Salpicadero = Salpicadero;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ==========================================================
    MOTOS — dibujos (de diseño propio)
    Las motos se ven de espaldas: rueda, colín con su piloto rojo, el piloto
    con casco y mono de su color. Se dibujan con trazos sobre lienzos
@@ -3697,12 +3832,16 @@ function fantasmaAhora() {
 /* ==========================================================
    TAMAÑO DEL LIENZO
    ========================================================== */
+/* píxeles de pantalla por píxel CSS del lienzo; el salpicadero se pinta en
+   CSS. Se guarda aquí para no leer el tamaño del lienzo en cada fotograma */
+let dprLienzo = 1;
 function medir() {
     const r = canvas.getBoundingClientRect();
     if (!r.width) return;
     const dpr = Math.min(3, window.devicePixelRatio || 1);
     const ancho = Math.round(r.width * dpr), alto = Math.round(r.height * dpr);
     if (canvas.width !== ancho || canvas.height !== alto) { canvas.width = ancho; canvas.height = alto; escala = ancho / W; }
+    dprLienzo = ancho / r.width;
     if (gameState !== 'playing') pintar(0);
 }
 
@@ -3887,6 +4026,13 @@ function tiempoTexto(t) {
     const m = Math.floor(t / 60), s = t - m * 60;
     return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1).replace('.', ',');
 }
+/* Vueltas para la aguja: la misma cuenta que el sonido del motor, para que
+   lo que se ve y lo que se oye suban y caigan a la vez (en baja llega al
+   rojo a 150; al meter la alta cae a un cuarto). */
+function rpmMoto() {
+    const v = e.marcha === 'baja' ? e.vel / VBAJA : 0.25 + 0.75 * e.vel / VMAX;
+    return 1000 + 6500 * Math.min(1.08, v);
+}
 function pintarHUD() {
     const k = canvas.width / W;
     const p = Math.max(10, Math.round(7 * k)), g = Math.max(16, Math.round(15 * k));
@@ -3914,17 +4060,19 @@ function pintarHUD() {
     const hecho = Math.max(0, Math.min(1, (e.z - et.desde) / (et.hasta - et.desde)));
     ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(bx - 2, by - 2, bw + 4, bh + 4);
     ctx.fillStyle = '#3fe04a'; ctx.fillRect(bx, by, bw * hecho, bh);
-    // abajo a la izquierda: velocidad y marcha
-    const kmh = Math.round(e.vel / KMH);
-    const yv = canvas.height - m - g - p - 4;
-    sombra(String(kmh), m + Math.round(36 * k), yv, '#ffffff', 'right', g);
-    sombra('km/h', m + Math.round(39 * k), yv + g - p, '#c8c8d4', 'left');
+    // abajo a la izquierda: el salpicadero (el común con Ruta 66, en su
+    // versión de esquina). Se pinta en píxeles CSS: el lienzo va en píxeles
+    // de pantalla y con ellos los trazos de 1,5 px salían finísimos a 3×.
     const alta = e.marcha === 'alta';
-    ctx.font = 'bold ' + p + 'px ' + fuente();
-    const tm = alta ? 'ALTA' : 'BAJA', mw = ctx.measureText(tm).width + 2;
-    ctx.fillStyle = alta ? '#e8403a' : '#3d6bff'; ctx.fillRect(m, canvas.height - m - p - 4, mw + 6, p + 4);
-    sombra(tm, m + 4, canvas.height - m - p - 2, '#ffffff');
-    if (e.cambio === 'manual' && !alta && e.vel >= VBAJA - 1 && e.estado === 'carrera' && Math.floor(reloj * 3) % 2) sombra('ESPACIO: ALTA', m + mw + 14, canvas.height - m - p - 2, '#ffd23f');
+    const s = dprLienzo;
+    const hs = Math.max(50, Math.round(canvas.height / s * 0.19));
+    ctx.save(); ctx.scale(s, s);
+    Salpicadero.pintarCompacto(ctx, m / s, (canvas.height - m) / s, hs, {
+        rpm: rpmMoto(), rpmMax: 8000, rojo: 6800, marcha: alta ? 'ALTA' : 'BAJA', kmh: e.vel / KMH,
+        aviso: e.cambio === 'manual' && !alta && e.vel >= VBAJA - 1 && e.estado === 'carrera' && Math.floor(reloj * 3) % 2 ? 'ESPACIO: ALTA' : '',
+        t: reloj
+    });
+    ctx.restore();
     // con otro móvil: quién va delante
     if (red && red.otro && e.estado !== 'cuenta') {
         const o = otroAhora();
