@@ -145,10 +145,10 @@
        recuerda cuáles dejó abiertas (portal.secciones). */
     /* Alto medido: con 56 px y 10 de separación, el 7.º botón quedaba 43 px
        por debajo de la primera pantalla de un iPhone 13 (707 de 664) */
-    .plegable { margin: 0 0 8px; }
+    .plegable { margin: 0 0 4px; }
     .plegable h2 { margin: 0; font-size: inherit; }
     .boton-seccion {
-        width: 100%; min-height: 50px;
+        width: 100%; min-height: 48px;
         display: flex; align-items: center; gap: 12px;
         padding: 8px 16px;
         background: var(--tarjeta); color: var(--texto);
@@ -217,7 +217,11 @@
     }
     .fav[aria-pressed="true"] { color: #ffd54f; text-shadow: 0 0 8px rgba(255, 213, 79, 0.6); }
     @media (hover: hover) { .fav:not(:disabled):hover { background: rgba(255, 255, 255, 0.1); } }
-    .pista-fav { color: var(--apagado); font-size: 0.82rem; margin: -2px 0 26px; line-height: 1.5; }
+    /* Con Retos diarios (27-11) son 8 botones de sección: para que quepan
+       cerrados en la primera pantalla del iPhone 13 (medido: 711 px de 664)
+       se recortan este hueco (26 → 14), el de entre botones (8 → 4) y su
+       alto (50 → 48, el mínimo para el dedo) */
+    .pista-fav { color: var(--apagado); font-size: 0.82rem; margin: -2px 0 14px; line-height: 1.5; }
     /* El juego del que habla el «NUEVO» de su sección: sombreado en el mismo
        rojo, durante esta visita, para saber cuál es al desplegarla. El
        fondo es el rojo muy rebajado sobre el de la tarjeta: el nombre se
@@ -261,6 +265,11 @@
     .juego .grupo { font-size: 0.7rem; color: var(--apagado); margin-top: -2px; }
     /* Juegos que se pueden jugar con dos móviles (campo red del catálogo) */
     .juego .red { font-size: 0.68rem; color: var(--acento); margin-top: -4px; white-space: nowrap; }
+    /* Retos diarios: el nombre del reto y la marca de hecho hoy */
+    .juego .reto { font-size: 0.7rem; color: #ffd23f; margin-top: -4px; }
+    .juego .hecho { font-size: 0.68rem; font-weight: 800; color: #0f0c2d; background: #69f0ae; border-radius: 8px; padding: 1px 6px; }
+    .juego .hecho[hidden] { display: none; }
+    .tarjeta-reto.reto-hecho > .juego { border-color: #69f0ae; }
 
     /* ---------- Botón de capturas (a la izquierda; la ☆ va a la derecha) ---------- */
     .ver {
@@ -540,7 +549,7 @@
 
 <footer>
     Añade esta página a tu pantalla de inicio para jugar a pantalla completa.
-    <div style="margin-top:6px; opacity:0.6;">portada v22</div>
+    <div style="margin-top:6px; opacity:0.6;">portada v23</div>
 </footer>
 
 <script>
@@ -681,6 +690,9 @@
         { grupo: 'Puzles y cartas',
           archivo: 'webs/solitario.html',      nombre: 'Solitario',      icono: '🃏',
           alta: '2026-11-18 15:00' },
+        { grupo: 'Puzles y cartas',
+          archivo: 'webs/brisca.html',         nombre: 'Brisca',         icono: '🂡', red: true,
+          alta: '2026-11-27 13:00', nota: 'La de toda la vida, con baraja española: contra la máquina (fácil, normal o difícil), por parejas, o contra un amigo cada uno en su móvil (con wifi). Una mano o al mejor de 3, reparto del día y «Aprende a jugar» para quien no la conozca.' },
         { grupo: 'Tablero',
           archivo: 'webs/flota.html',        nombre: 'Hundir la Flota', icono: '🚢', red: true },
         { grupo: 'Palabras y memoria',
@@ -713,6 +725,7 @@
         'webs/ahorcado.html': { n: 6, v: '44cd8769' },
         'webs/ajedrez.html': { n: 6, v: 'b8c5e7bb' },
         'webs/arkanoid.html': { n: 6, v: 'afb90a47' },
+        'webs/brisca.html': { n: 6, v: 'a9af67ad' },
         'webs/caballeros.html': { n: 6, v: '66a80aa1', a: 1 },
         'webs/carreraCoches.html': { n: 6, v: '1c31a30b' },
         'webs/cazafantasmas.html': { n: 6, v: '7d13b30e' },
@@ -811,6 +824,36 @@
     ];
     var CON_RED = { grupo: 'Con otro móvil', icono: '📱', red: true };
 
+    /* RETOS DIARIOS (27-11): los juegos que tienen reto del día. Sale la
+       primera, abierta la primera vez. Cada tarjeta entra directa al reto de
+       hoy («?reto=dia», que lee cada juego) y dice ✓ HECHO HOY leyendo lo
+       que guarda el propio juego al acabarlo (mismo origen: el mismo
+       localStorage). Cada juego lo guarda a su manera; si alguno cambia su
+       forma de guardar, hay que cambiarlo aquí (lo comprueba
+       _fuentes/portal/navegador/probar-retos.js contra el propio juego).
+       «hoy» es la fecha local del móvil, AAAA-MM-DD, como la cuentan ellos. */
+    /* 🗓️ y no 📅: en el iPhone el 📅 sale con una fecha («July 17») */
+    var RETOS_DEF = { grupo: 'Retos diarios', icono: '🗓️', abierta: true };
+    function leerJSON(clave) { try { return JSON.parse(leer(clave) || 'null'); } catch (e) { return null; } }
+    var RETOS = [
+        { archivo: 'webs/brisca.html', reto: 'Reparto del día',
+          hecho: function (h) { var d = leerJSON('brisca.dia'); return !!(d && d.fecha === h && d.jugadas > 0); } },
+        { archivo: 'webs/carreraCoches.html', reto: 'Ruta del día',
+          hecho: function (h) { var d = leerJSON('ruta66.dia'); return !!(d && d.fecha === h); } },
+        { archivo: 'webs/laberinto.html', reto: 'Laberinto del día',
+          hecho: function (h) { var d = leerJSON('laberinto.diaHecho'); return !!(d && d.fecha === h); } },
+        { archivo: 'webs/magic-sort.html', reto: 'Nivel del día',
+          hecho: function (h) { var d = leerJSON('sort.dias'); return !!(d && [1, 2, 3].indexOf(d[h]) >= 0); } },
+        { archivo: 'webs/mahjong.html', reto: 'Tablero del día',
+          hecho: function (h) { var d = leerJSON('mahjongDiario'), l = d && d[h.slice(0, 7)]; return !!(Array.isArray(l) && l.indexOf(+h.slice(8, 10)) >= 0); } },
+        { archivo: 'webs/solitario.html', reto: 'Partida del día',
+          hecho: function (h) { var e = leerJSON('solitario.estadisticas'); return !!(e && e.dia && (e.dia[h + '/1'] || e.dia[h + '/3'])); } }
+    ];
+    function hoyLocal() {
+        var d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
     var abiertas = {};   // se lee al pintar: leer() necesita «memoria», que va más abajo
 
     var secciones = {};   // grupo → { rejilla, boton, cuantos, nuevo }
@@ -897,7 +940,7 @@
 
         var a = document.createElement('a');
         a.className = 'juego';
-        a.href = j.archivo;
+        a.href = j.archivo + (j.retoDe ? '?reto=dia' : '');
 
         var ico = document.createElement('div');
         ico.className = 'icono';
@@ -931,6 +974,19 @@
         }
         /* En el buscador se dice la sección: hay nombres repetidos (Mahjong
            está en Ingenio y en Para los mayores) */
+        /* En Retos diarios: el nombre del reto y, si ya está hecho hoy, la marca */
+        if (j.retoDe) {
+            var rt = document.createElement('div');
+            rt.className = 'reto';
+            rt.textContent = j.retoDe.reto;
+            a.appendChild(rt);
+            var hc = document.createElement('div');
+            hc.className = 'hecho';
+            hc.textContent = '✓ HECHO HOY';
+            hc.hidden = true;
+            a.appendChild(hc);
+            caja.classList.add('tarjeta-reto');
+        }
         if (conGrupo) {
             var gr = document.createElement('div');
             gr.className = 'grupo';
@@ -1131,6 +1187,33 @@
 
     try { abiertas = JSON.parse(leer('portal.secciones') || '{}') || {}; } catch (e) { abiertas = {}; }
     if (typeof abiertas !== 'object') abiertas = {};
+    /* Retos diarios, la primera: una tarjeta por reto, con los datos del
+       juego del catálogo (si un juego sale del catálogo, sale de aquí) */
+    var retos = crearSeccion(RETOS_DEF);
+    var tarjetasReto = [];
+    RETOS.forEach(function (r) {
+        var j = JUEGOS.filter(function (x) { return x.archivo === r.archivo; })[0];
+        if (!j) return;
+        var t = tarjeta(Object.assign({}, j, { retoDe: r }));
+        retos.rejilla.appendChild(t); retos.n++;
+        tarjetasReto.push({ r: r, t: t });
+    });
+    /* ✓ HECHO HOY: al pintar y al volver de un juego (con «atrás» la página
+       puede salir de la caché del navegador sin volver a ejecutarse) */
+    function pintarRetos() {
+        var h = hoyLocal(), hechos = 0;
+        tarjetasReto.forEach(function (x) {
+            var ok = false;
+            try { ok = x.r.hecho(h); } catch (e) { ok = false; }
+            x.t.querySelector('.hecho').hidden = !ok;
+            x.t.classList.toggle('reto-hecho', ok);
+            x.t.querySelector('a.juego').setAttribute('aria-label', x.t.querySelector('.nombre').textContent + ', ' + x.r.reto + (ok ? ', hecho hoy' : ''));
+            if (ok) hechos++;
+        });
+        retos.cuantos.textContent = '· ' + retos.n + (hechos ? ' · ✓ ' + hechos + ' hoy' : '');
+    }
+    window.addEventListener('pageshow', pintarRetos);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) pintarRetos(); });
     SECCIONES.forEach(crearSeccion);
     JUEGOS.forEach(function (j) {
         var s = seccionDe(j.grupo || 'Juegos');
@@ -1142,6 +1225,7 @@
     Object.keys(secciones).forEach(function (g) {
         var s = secciones[g];
         s.cuantos.textContent = '· ' + s.n;
+        if (s === retos) pintarRetos();
         // Una sección vacía (p. ej. si se vacía un grupo) no se enseña
         if (!s.n) s.boton.parentNode.parentNode.hidden = true;
     });
@@ -1225,11 +1309,13 @@
         var s = secciones[n.j.grupo || 'Juegos'];
         if (s) s.nuevo.hidden = false;
         if (n.j.red) conRed.nuevo.hidden = false;
-        /* y su tarjeta, en el mismo rojo, en todas las secciones donde sale */
+        if (RETOS.some(function (r) { return r.archivo === n.j.archivo; })) retos.nuevo.hidden = false;
+        /* y su tarjeta, en el mismo rojo, en todas las secciones donde sale
+           (las de Retos diarios llevan «?reto=dia»: se compara sin eso) */
         esNovedad[n.j.archivo] = true;
         document.querySelectorAll('.tarjeta').forEach(function (t) {
             var a = t.querySelector('a.juego');
-            if (a && a.getAttribute('href') === n.j.archivo) t.classList.add('es-nuevo');
+            if (a && (a.getAttribute('href') || '').split('?')[0] === n.j.archivo) t.classList.add('es-nuevo');
         });
     });
     var capaNov = document.getElementById('novedades');

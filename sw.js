@@ -118,7 +118,12 @@ function redPrimero(req) {
   return fetch(peticion)
     .then(function (r) { return guardar(req, r); })
     .catch(function () {
+      /* Sin red, una dirección con «?…» (los Retos diarios abren
+         «juego.html?reto=dia»; las invitaciones, «?enlace=…») no coincide
+         con el juego guardado: se busca también sin lo de detrás del «?» */
       return caches.match(req).then(function (m) {
+        return m || caches.match(req, { ignoreSearch: true });
+      }).then(function (m) {
         if (m) return m;
         /* Navegación a algo que no tenemos: se devuelve la portada, que sí
            está cacheada, en lugar del error del navegador.
