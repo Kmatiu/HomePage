@@ -352,7 +352,9 @@ body {
         /* Historial: una fila que se desplaza sola hasta la última jugada */
         #historial { width: 100%; max-height: 3.4em; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 1px 2px; align-content: flex-start;
             padding: 3px 4px; border: 1px solid var(--borde); border-radius: 8px; background: var(--panel); font-size: 0.78rem; text-align: left; }
-        #historial:empty::before { content: 'Historial de jugadas'; color: var(--apagado); font-size: 0.7rem; }
+        /* El rótulo de vacío, del mismo alto que una jugada: si no, el
+           historial crecía 6 px con la primera y el tablero encogía */
+        #historial:empty::before { content: 'Historial de jugadas'; color: var(--apagado); display: inline-block; padding: 2px 4px; font-size: inherit; }
         #historial .num { color: var(--apagado); padding: 2px 0 2px 4px; }
         #historial button { font: inherit; color: var(--texto); background: none; border: 0; padding: 2px 4px; margin: 0; border-radius: 4px; cursor: pointer; min-height: 0; width: auto; letter-spacing: 0; }
         #historial button.actual { background: var(--acento); color: #08201a; }
@@ -376,6 +378,38 @@ body {
         #ofertaTablas { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 6; display: none; }
         #ofertaTablas.activa { display: block; }
         #ofertaTablas .caja { width: min(300px, 86vw); }
+
+        /* El profesor */
+        #profe { width: 100%; border: 1px solid var(--borde); border-radius: 8px; background: var(--panel); padding: 5px 8px; text-align: left; font-size: 0.8rem; line-height: 1.35; }
+        #profe[hidden] { display: none; }
+        /* alto fijo para el texto (desplazable): así el tablero no cambia de tamaño con cada explicación */
+        #profeTexto { height: 5.4em; overflow-y: auto; }
+        #profeTexto .rot { font-weight: 800; margin-right: 4px; }
+        #profeTexto .linea b { color: var(--acento); }
+        #profeBotones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 4px; min-height: 34px; }
+        #profeBotones button { width: auto; min-height: 34px; padding: 4px 10px; margin: 0; font-size: 0.72rem; }
+        /* En una sola fila: en dos, el tablero de un Android de 360×530 se
+           quedaba en 181 px al analizar */
+        #botonesAnalisis { display: flex; gap: 6px; flex-wrap: nowrap; justify-content: center; width: 100%; }
+        #botonesAnalisis[hidden] { display: none; }
+        #botonesAnalisis button { flex: 1.5 1 0; min-width: 0; width: auto; margin: 0; padding: 6px 2px; font-size: 0.72rem; white-space: nowrap; letter-spacing: 0; }
+        /* ◀ ▶ caben en menos: así «⏩ ERROR» y «✕ SALIR» no se salen tumbado */
+        #botonesAnalisis #btnAnAtras, #botonesAnalisis #btnAnAdelante { flex: 0.7 1 0; }
+        /* Analizando, sobran el estado (ya se sabe cómo acabó) y las piezas comidas */
+        #panel:has(#botonesAnalisis:not([hidden])) #estado,
+        #panel:has(#botonesAnalisis:not([hidden])) #comidas { display: none; }
+        .c-mejor, .c-buena { color: #69f0ae; }
+        .c-imprecisa { color: #ffd54f; }
+        .c-error { color: #ffab40; }
+        .c-grave { color: #ff6e6e; }
+        #historial button.c-imprecisa, #historial button.c-error, #historial button.c-grave { font-weight: 800; }
+        #historial button.actual.c-imprecisa, #historial button.actual.c-error, #historial button.actual.c-grave { color: #08201a; }
+        @media (orientation: landscape) { #profeTexto { height: 7em; } }
+        /* En pantallas bajas, menos líneas a la vista (el resto se desplaza):
+           con 5,4 el tablero se quedaba en 212 px en un Android de 360×530 */
+        @media (orientation: portrait) and (max-height: 600px) { #profeTexto { height: 4.1em; } }
+        /* Con la caja del profesor, el enunciado sobra (dice lo mismo que el menú) */
+        #panel:has(#profe:not([hidden])) #enunciado { display: none; }
 
         /* Problemas: rejilla de botones numerados */
         #listaProblemas { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; margin: 10px 0; }
@@ -631,6 +665,19 @@ body {
             </div>
         </fieldset>
 
+        <fieldset class="est-grupo" id="grupoProfesor">
+            <legend>PROFESOR</legend>
+            <div class="opciones iguales" id="grpProfesor">
+                <button class="opcion" type="button" data-v="no" aria-pressed="true">SIN PROFESOR<span class="sub">juegas a solas</span></button>
+                <button class="opcion" type="button" data-v="si" aria-pressed="false">🎓 CON PROFESOR<span class="sub">te avisa de los errores y te da consejos</span></button>
+            </div>
+            <div class="opciones iguales" id="grpExplica" style="margin-top:8px">
+                <button class="opcion" type="button" data-v="sencillo" aria-pressed="true">SENCILLAS<span class="sub">explicaciones para quien empieza</span></button>
+                <button class="opcion" type="button" data-v="tecnico" aria-pressed="false">DE AJEDRECISTA<span class="sub">con notación y términos</span></button>
+            </div>
+            <p class="est-nota" id="notaProfesor" style="font-size:0.7rem;margin:6px 0 0;">Al acabar, cualquier partida contra la máquina se puede <b>analizar</b>: el profesor repasa tus jugadas y te dice qué era mejor y por qué.</p>
+        </fieldset>
+
         <fieldset class="est-grupo" id="grupoReloj">
             <legend>RELOJ</legend>
             <div class="opciones" id="grpReloj">
@@ -696,6 +743,12 @@ body {
         </div>
         <div id="panel">
             <div id="estado" aria-live="polite"></div>
+            <!-- El profesor: en la partida (avisos y consejos) y en el análisis.
+                 Alto reservado mientras se usa: que el tablero no salte -->
+            <div id="profe" hidden>
+                <div id="profeTexto" aria-live="polite"></div>
+                <div id="profeBotones"></div>
+            </div>
             <div id="comidas"><span id="comB"></span><span id="comN"></span></div>
             <div id="historial" aria-label="Historial de jugadas"></div>
             <div id="botonesRepaso" hidden>
@@ -703,6 +756,12 @@ body {
                 <button class="secundario" id="btnRepAtras" type="button" aria-label="Jugada anterior">◀</button>
                 <button class="secundario" id="btnRepAdelante" type="button" aria-label="Jugada siguiente">▶</button>
                 <button class="principal" id="btnRepFin" type="button">VOLVER ⏭</button>
+            </div>
+            <div id="botonesAnalisis" hidden>
+                <button class="secundario" id="btnAnAtras" type="button" aria-label="Jugada anterior">◀</button>
+                <button class="secundario" id="btnAnAdelante" type="button" aria-label="Jugada siguiente">▶</button>
+                <button class="secundario" id="btnAnFallo" type="button">⏩ ERROR</button>
+                <button class="principal" id="btnAnSalir" type="button">✕ SALIR</button>
             </div>
             <p id="enunciado"></p>
             <div id="botonesProblema" hidden>
@@ -739,6 +798,7 @@ body {
         <div class="fila-btns">
             <button class="principal" id="btnRestart" type="button">🔄 REVANCHA</button>
             <button class="secundario" id="btnRepasar" type="button">📜 REPASAR</button>
+            <button class="principal" id="btnAnalizar" type="button" hidden>🎓 ANALIZAR</button>
             <button class="secundario" id="btnMenu" type="button">← MENÚ</button>
         </div>
     </div>
@@ -798,6 +858,11 @@ body {
                 <li><b>Cada uno en su casa</b> también se puede, si los dos tenéis la wifi de casa (con datos móviles no conecta): quien crea la partida pulsa <b>ESTAMOS LEJOS</b> en la pantalla del código y se lo manda por WhatsApp; el otro lo abre, pulsa <b>UNIRME</b> y le devuelve el suyo. Los pasos salen en la pantalla.</li></ul>
             <h3>HISTORIAL</h3>
             <ul><li>Las jugadas se apuntan en notación española: R rey, D dama, T torre, A alfil, C caballo (el peón no lleva letra), x come, + jaque, # mate, O-O y O-O-O enroques. Toca una para ver cómo estaba el tablero.</li></ul>
+            <h3>PROFESOR</h3>
+            <ul><li>Contra la máquina, con <b>🎓 CON PROFESOR</b>: si haces una jugada que pierde algo, te avisa y te explica por qué (la flecha roja es lo que haría el rival). Puedes <b>pensar otra</b> o <b>seguir así</b>. Con <b>💡 CONSEJO</b> te dice en qué fijarte, y si lo vuelves a pulsar, qué jugada haría él. Con profesor no hay reloj y la partida no cuenta en las estadísticas de cada nivel.</li>
+                <li>Al acabar cualquier partida contra la máquina, <b>🎓 ANALIZAR</b> repasa todas tus jugadas: en verde las buenas, en naranja los errores y en rojo los graves. En cada una, la flecha de tu jugada y la verde de la mejor, el porqué, y puedes ver en el tablero qué pasaba y cómo seguía la buena. <b>⏩ ERROR</b> salta al siguiente fallo.</li>
+                <li><b>Sencillas</b> o <b>de ajedrecista</b>: cómo te lo explica. Las sencillas no usan notación y explican palabras como «horquilla»; las de ajedrecista sí, y marcan también las imprecisiones pequeñas.</li>
+                <li>El profesor es la máquina mirando unas 6 jugadas por delante, y solo cuenta lo que ha visto en el tablero (qué pieza se pierde, si había mate…). Cuando la diferencia es de posición y no hay nada concreto, lo dice así.</li></ul>
             <h3>PROBLEMAS</h3>
             <ul><li>Mates en 1, 2 y 3 jugadas sacados de partidas. Solo hay una primera jugada que lo consigue y el rival se defiende lo mejor que sabe. 💡 PISTA marca la pieza que hay que mover.</li></ul>
         </div>
@@ -2033,9 +2098,543 @@ const IAAjedrez = (() => {
         return v;
     }
 
-    return { NIVELES, MATE, elegir, evaluar, valorar, hash };
+    /* La línea principal que ha quedado en la tabla de transposición tras
+       una búsqueda: de cada posición, la jugada guardada, si es legal.
+       Se para en una repetición o donde la tabla ya no tiene nada */
+    function lineaDesde(posOriginal, n) {
+        const pos = M.copiar(posOriginal), out = [], vistas = new Set();
+        for (let k = 0; k < n; k++) {
+            const [lo, hi] = hash(pos), idx = lo & MASK;
+            const clave = lo + ':' + hi;
+            if (vistas.has(clave) || TTH[idx] !== hi) break;
+            vistas.add(clave);
+            const cod = TTM[idx];
+            const m = M.legales(pos).find(x => codigo(x) === cod);
+            if (!m) break;
+            out.push(pick(m));
+            M.hacer(pos, m);
+        }
+        return out;
+    }
+
+    /* Para el profesor: la mejor jugada, su valor y su línea, y (si se da
+       op.jugada) el valor de esa jugada a la MISMA profundidad y la línea
+       con la que contesta el rival. Valores desde el lado que juega.
+       op.prof: profundidad máxima (5); op.ms: tope de tiempo (sin tope si
+       no se da: así las pruebas salen iguales siempre); op.previas: como
+       en elegir */
+    function analizar(posOriginal, op) {
+        op = op || {};
+        const pos = M.copiar(posOriginal);
+        const [lo, hi] = hash(pos);
+        const ctx = { nodos: 0, corta: false, tope: op.ms ? Date.now() + op.ms : 0, asesinas: new Int32Array(256), hist: new Int32Array(16 * 128), pilaL: [], pilaH: [] };
+        for (const prev of op.previas || []) { const [a, b] = hash(prev); ctx.pilaL.push(a); ctx.pilaH.push(b); }
+        ctx.pilaL.push(lo); ctx.pilaH.push(hi);
+        const legales = M.legales(pos);
+        if (!legales.length) return null;
+        const t0 = Date.now(), profMax = op.prof || 5;
+        let mejor = null, mv = 0, hecha = 0;
+        for (let d = 1; d <= profMax; d++) {
+            const v = buscar(pos, d, -INF, INF, 0, ctx, lo, hi, true);
+            if (ctx.corta) break;
+            const idx = lo & MASK;
+            if (TTH[idx] === hi) {
+                const m = legales.find(x => codigo(x) === TTM[idx]);
+                if (m) { mejor = m; mv = v; hecha = d; }
+            }
+            if (Math.abs(v) > MATE - 500) break;
+        }
+        if (!mejor) { mejor = legales[0]; hecha = 0; }
+        const res = { prof: hecha, nodos: 0, ms: 0, mejor: Object.assign(pick(mejor), { v: mv, linea: lineaDesde(pos, 8) }) };
+        const j = op.jugada && legales.find(x => x.de === op.jugada.de && x.a === op.jugada.a && (x.promo || 0) === (op.jugada.promo || 0));
+        if (j) {
+            if (codigo(j) === codigo(mejor)) res.jugada = Object.assign(pick(j), { v: mv, linea: res.mejor.linea.slice(1), esLaMejor: true });
+            else {
+                /* La jugada hecha, mirada a la profundidad que alcanzó la
+                   mejor: con menos, una jugada mala puede parecer buena
+                   solo porque no se ve la respuesta */
+                const u = M.hacer(pos, j);
+                claveTras(pos, j, u, lo, hi);
+                const l2 = ctx_lo, h2 = ctx_hi;
+                ctx.pilaL.push(l2); ctx.pilaH.push(h2);
+                ctx.corta = false;
+                if (ctx.tope) ctx.tope = Math.max(ctx.tope, Date.now() + (op.ms || 0) / 2);
+                let vj = null;
+                for (let d = 0; d <= Math.max(0, hecha - 1); d++) {
+                    const v = -buscar(pos, d, -INF, INF, 1, ctx, l2, h2, true);
+                    if (ctx.corta) break;
+                    vj = v;
+                }
+                if (vj === null) vj = -quies(pos, -INF, INF, 1, ctx);
+                const linea = lineaDesde(pos, 8);
+                ctx.pilaL.pop(); ctx.pilaH.pop();
+                M.deshacer(pos, j, u);
+                /* Más que la mejor no puede valer: si sale más es ruido de
+                   la poda (otra profundidad, otra ventana) */
+                res.jugada = Object.assign(pick(j), { v: Math.min(vj, mv), linea, esLaMejor: false });
+            }
+        }
+        res.nodos = ctx.nodos; res.ms = Date.now() - t0;
+        return res;
+    }
+
+    return { NIVELES, MATE, elegir, evaluar, valorar, hash, analizar, lineaDesde };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = IAAjedrez;
+
+</script>
+<script id="fuenteProfesor">
+/* ============================================================
+   EL PROFESOR — juzga una jugada y explica por qué.
+   Sin pantalla: lo usan el juego (en el worker), las pruebas y medir.
+
+   Profesor.juzgar(pos, jugada, op) → informe
+     pos: la posición ANTES de la jugada; jugada: { de, a, promo };
+     op: { prof, ms, previas } (como IAAjedrez.analizar)
+     informe = { calidad, perdida, antes, despues, mejor: {de,a,promo,san,linea},
+                 hecha: {san, linea}, motivos: [ {k, …} ], mejorPorque: {k, …} | null }
+   Profesor.consejo(pos, op) → { mejor, pista: {k, …}, porque: {k, …} }
+   Profesor.redactar(motivo, estilo) → texto ('sencillo' | 'tecnico')
+   Profesor.CALIDADES: orden y nombres
+
+   El «porqué» sale de HECHOS del tablero, no de frases hechas: qué pieza
+   se pierde, si estaba defendida, qué ataca la pieza rival después de su
+   respuesta, si había mate… Lo mira el motor de reglas con la línea que
+   ha calculado la máquina. Cuando no hay nada concreto (solo la
+   valoración), lo dice así, sin inventar una razón.
+   ============================================================ */
+const Profesor = (() => {
+    'use strict';
+    const M = typeof Ajedrez !== 'undefined' ? Ajedrez : require('./motor-ajedrez.js');
+    const IA = typeof IAAjedrez !== 'undefined' ? IAAjedrez : require('./ia-ajedrez.js');
+    const MATE = IA.MATE;
+    const VAL = [0, 1, 3, 3, 5, 9, 100];                 // en peones, para comparar y para el texto
+    const NOMBRE = ['', 'peón', 'caballo', 'alfil', 'torre', 'dama', 'rey'];
+    const ART = ['', 'el', 'el', 'el', 'la', 'la', 'el'];
+    const CALIDADES = ['mejor', 'buena', 'imprecisa', 'error', 'grave'];
+    const CONSEJOS = ['damaPronto', 'reyPierdeEnroque', 'caballoBorde', 'mismaPieza'];
+
+    const tipo = (p) => p & 7;
+    const nombre = (c) => M.nombre(c);
+    const conArt = (p) => ART[tipo(p)] + ' ' + NOMBRE[tipo(p)];
+    const legalDe = (pos, j) => M.legales(pos).find(x => x.de === j.de && x.a === j.a && (x.promo || 0) === (j.promo || 0));
+
+    /* ---------- hechos del tablero ---------- */
+    /* ¿La pieza de «de» ataca la casilla c? (geometría pura, con piezas
+       en medio; no mira si está clavada) */
+    const RAYOS = { 3: [15, 17, -15, -17], 4: [1, -1, 16, -16], 5: [1, -1, 16, -16, 15, 17, -15, -17] };
+    const SALTOS = { 2: [33, 31, 18, 14, -33, -31, -18, -14], 6: [1, -1, 16, -16, 15, 17, -15, -17] };
+    function ataca(pos, de, c) {
+        const p = pos.t[de], k = tipo(p);
+        if (!p) return false;
+        if (k === 1) { const f = p & 8 ? -16 : 16; return c === de + f - 1 || c === de + f + 1; }
+        if (SALTOS[k]) return SALTOS[k].some(d => de + d === c);
+        for (const d of RAYOS[k]) for (let x = de + d; M.dentro(x); x += d) { if (x === c) return true; if (pos.t[x]) break; }
+        return false;
+    }
+    /* Las capturas legales que tendría «color» si le tocara */
+    function capturasDe(pos, color) {
+        const q = M.copiar(pos);
+        if (q.turno !== color) { q.turno = color; q.ep = -1; }
+        // con el rey del que no juega en jaque, generar desde ahí sería ilegal: entonces, ninguna
+        if (M.enJaque(q, color ^ 8)) return M.legales(q, true);
+        return M.legales(q, true);
+    }
+    /* Piezas de «color» que el rival puede comer con ganancia: sin
+       defender, o atacadas por algo que vale menos */
+    function enPeligro(pos, color) {
+        const out = [];
+        const caps = capturasDe(pos, color ^ 8);
+        const vistas = new Set();
+        for (const m of caps) {
+            const c = m.f & M.AL_PASO ? -1 : m.a;
+            if (c < 0 || vistas.has(c)) continue;
+            const p = pos.t[c];
+            if (!p || tipo(p) === 6) continue;
+            const atacantes = caps.filter(x => x.a === c).map(x => VAL[tipo(x.p)]);
+            const menor = Math.min(...atacantes);
+            const defendida = M.atacada(pos, c, color);
+            if (!defendida || menor < VAL[tipo(p)]) { vistas.add(c); out.push({ c, p, defendida, por: caps.find(x => x.a === c && VAL[tipo(x.p)] === menor).p }); }
+        }
+        return out.sort((a, b) => VAL[tipo(b.p)] - VAL[tipo(a.p)]);
+    }
+    /* Lo que ataca la pieza de «c» que vale la pena: el rey, lo que vale
+       más que ella o lo que no está defendido */
+    function objetivos(pos, c) {
+        const p = pos.t[c], yo = p & 8, out = [];
+        for (let x = 0; x < 120; x++) {
+            if (x & 0x88) { x += 7; continue; }
+            const q = pos.t[x];
+            if (!q || (q & 8) === yo || !ataca(pos, c, x)) continue;
+            if (tipo(q) === 6 || VAL[tipo(q)] > VAL[tipo(p)] || !M.atacada(pos, x, q & 8)) out.push({ c: x, p: q });
+        }
+        // el rey primero, y luego lo que más vale: así se cuenta
+        return out.sort((a, b) => VAL[tipo(b.p)] - VAL[tipo(a.p)]);
+    }
+    const balance = (pos, color) => {
+        let v = 0;
+        for (let x = 0; x < 120; x++) { if (x & 0x88) { x += 7; continue; } const q = pos.t[x]; if (q && tipo(q) !== 6) v += (q & 8) === color ? VAL[tipo(q)] : -VAL[tipo(q)]; }
+        return v;
+    };
+    /* Juega la línea y devuelve sus SAN y las posiciones (la 0 es la de partida) */
+    function recorrer(pos, linea) {
+        const ps = [M.copiar(pos)], san = [], js = [];
+        const q = M.copiar(pos);
+        for (const j of linea) {
+            const ls = M.legales(q), m = ls.find(x => x.de === j.de && x.a === j.a && (x.promo || 0) === (j.promo || 0));
+            if (!m) break;
+            san.push(M.san(q, m, ls)); js.push(m);
+            M.hacer(q, m); ps.push(M.copiar(q));
+        }
+        return { ps, san, js };
+    }
+    /* Lo que se pierde a lo largo de la línea, con las capturas que se
+       queden colgando al final (la búsqueda de capturas no deja rastro en
+       la tabla): se completa comiendo lo que esté en peligro */
+    function perdidaEnLinea(pos, linea, color) {
+        const r = recorrer(pos, linea);
+        let fin = r.ps[r.ps.length - 1];
+        const b0 = balance(pos, color);
+        // completar: el que juega come lo más gordo que pueda comer con ganancia, hasta 4 veces
+        const q = M.copiar(fin);
+        for (let k = 0; k < 4; k++) {
+            const pel = enPeligro(q, q.turno ^ 8);
+            if (!pel.length) break;
+            const obj = pel[0];
+            const m = M.legales(q, true).filter(x => x.a === obj.c).sort((a, b) => VAL[tipo(a.p)] - VAL[tipo(b.p)])[0];
+            if (!m) break;
+            M.hacer(q, m);
+        }
+        return { r, cambio: balance(q, color) - b0 };
+    }
+
+    /* ---------- valor y calidad ----------
+       La pérdida se mide en «probabilidad de ganar» y no en peones: pasar
+       de +9 a +7 no es un error (se sigue ganando), pasar de 0 a −2 sí.
+       La curva es la de lichess (−1 perdida, +1 ganada) */
+    const prob = (v) => (v >= MATE - 500 ? 1 : v <= -MATE + 500 ? -1 : 2 / (1 + Math.exp(-0.00368208 * v)) - 1);
+    function calidadDe(antes, despues, esLaMejor) {
+        const d = Math.max(0, prob(antes) - prob(despues));
+        if (esLaMejor || d < 0.02) return { calidad: 'mejor', d };
+        if (d < 0.10) return { calidad: 'buena', d };
+        if (d < 0.20) return { calidad: 'imprecisa', d };
+        if (d < 0.30) return { calidad: 'error', d };
+        return { calidad: 'grave', d };
+    }
+    const mateEn = (v) => (v >= MATE - 500 ? Math.round((MATE - v + 1) / 2) : v <= -MATE + 500 ? Math.round((MATE + v) / 2) : 0);
+
+    /* Casillas de salida (para los consejos de apertura) */
+    const SALIDA = { 2: [0x01, 0x06], 3: [0x02, 0x05], 5: [0x03] };
+    const enSalida = (p, c) => (SALIDA[tipo(p)] || []).some(x => (p & 8 ? x + 0x70 : x) === c);
+    function menoresSinSacar(pos, color) {
+        let n = 0;
+        for (const k of [2, 3]) for (const x of SALIDA[k]) { const c = color ? x + 0x70 : x; if (pos.t[c] === (k | color)) n++; }
+        return n;
+    }
+
+    /* ---------- por qué la jugada es mala ---------- */
+    function porQueMala(pos, m, an, jugadaNum) {
+        const yo = pos.turno, rival = yo ^ 8;
+        const tras = M.copiar(pos); M.hacer(tras, m);
+        const vj = an.jugada.v, vm = an.mejor.v;
+        const out = [];
+        if (vj <= -MATE + 500) {
+            const r = recorrer(tras, an.jugada.linea);
+            out.push({ k: 'mateRecibido', n: mateEn(vj), linea: r.san });
+            return out;
+        }
+        if (vm >= MATE - 500 && vj < MATE - 500) {
+            const r = recorrer(pos, an.mejor.linea);
+            out.push({ k: 'mateFallado', n: mateEn(vm), linea: r.san, mejor: r.san[0] });
+        }
+        const { r, cambio } = perdidaEnLinea(tras, an.jugada.linea, yo);
+        /* La primera captura del rival en su línea (su 1.ª o su 2.ª jugada) */
+        let i = -1;
+        for (let k = 0; k < Math.min(r.js.length, 4); k += 2) if (r.js[k].cap) { i = k; break; }
+        if (i >= 0 && cambio <= -1) {
+            const cm = r.js[i], antes = r.ps[i];
+            const c = cm.f & M.AL_PASO ? cm.a + (cm.p & 8 ? 16 : -16) : cm.a;
+            const pieza = antes.t[c];
+            const base = { pieza, en: nombre(c), por: cm.p, captura: r.san[i], linea: r.san.slice(0, Math.max(i + 1, 3)), pierde: -cambio };
+            if (i === 0) {
+                const defendida = M.atacada(tras, c, yo);
+                if (c === m.a) out.push(Object.assign({ k: defendida ? 'malCambio' : 'colgadaMovida' }, base));
+                else {
+                    const pelAntes = enPeligro(pos, yo).some(x => x.c === c);
+                    const defAntes = M.atacada(pos, c, yo), atacAntes = M.atacada(pos, c, rival);
+                    if (pelAntes) out.push(Object.assign({ k: 'noSalvada' }, base));
+                    else if (defAntes && !defendida) out.push(Object.assign({ k: 'quitaDefensa', movida: m.p, desde: nombre(m.de) }, base));
+                    else if (!atacAntes) out.push(Object.assign({ k: 'abreLinea', movida: m.p, desde: nombre(m.de) }, base));
+                    else out.push(Object.assign({ k: 'pierde' }, base));
+                }
+            } else {
+                /* Le come en su segunda jugada: ¿la primera fue una horquilla? */
+                const m1 = r.js[0], p1 = r.ps[1];
+                const obj = objetivos(p1, m1.a);
+                if (obj.length >= 2) out.push(Object.assign({ k: 'horquilla', atacante: m1.p, jugada: r.san[0], a: nombre(m1.a), objetivos: obj.map(o => ({ p: o.p, en: nombre(o.c) })) }, base));
+                else if (M.enJaque(p1)) out.push(Object.assign({ k: 'jaqueYCome', jaque: r.san[0] }, base));
+                else out.push(Object.assign({ k: 'pierdeTras', primero: r.san[0] }, base));
+            }
+        } else if (cambio <= -1 && r.san.length) {
+            out.push({ k: 'pierdeMaterial', pierde: -cambio, linea: r.san.slice(0, 4) });
+        }
+        /* Consejos de apertura, solo si no hay nada concreto que contar */
+        if (!out.length && jugadaNum <= 12) {
+            const p = m.p, k = tipo(p);
+            if (k === 5 && !m.cap && menoresSinSacar(pos, yo) >= 2) out.push({ k: 'damaPronto' });
+            else if (k === 6 && !(m.f & (M.CORTO | M.LARGO)) && (pos.enroque & (yo ? 12 : 3))) out.push({ k: 'reyPierdeEnroque' });
+            else if (k === 2 && !m.cap && ((m.a & 7) === 0 || (m.a & 7) === 7)) out.push({ k: 'caballoBorde', a: nombre(m.a) });
+            else if ((k === 2 || k === 3) && !m.cap && !enSalida(p, m.de) && menoresSinSacar(pos, yo) >= 2) out.push({ k: 'mismaPieza', pieza: p });
+        }
+        if (!out.length) out.push({ k: 'peorSinMas' });
+        return out;
+    }
+
+    /* ---------- por qué la mejor era mejor ---------- */
+    function porQueMejor(pos, an, motivosMala) {
+        const yo = pos.turno;
+        const r = recorrer(pos, an.mejor.linea);
+        if (!r.js.length) return null;
+        const b = r.js[0], posB = r.ps[1];
+        const base = { jugada: r.san[0], linea: r.san.slice(0, 4) };
+        if (an.mejor.v >= MATE - 500) return Object.assign({ k: 'daMate', n: mateEn(an.mejor.v) }, base);
+        if (motivosMala && motivosMala.some(x => x.k === 'mateRecibido')) return Object.assign({ k: 'evitaMate' }, base);
+        const { cambio } = perdidaEnLinea(pos, an.mejor.linea, yo);
+        if (b.promo) return Object.assign({ k: 'corona' }, base);
+        if (b.cap) {
+            const c = b.f & M.AL_PASO ? b.a + (b.p & 8 ? 16 : -16) : b.a;
+            const comida = pos.t[c];
+            const defendida = M.atacada(pos, c, yo ^ 8);
+            if (cambio >= 1) return Object.assign({ k: defendida ? 'ganaCambio' : 'comeGratis', pieza: comida, en: nombre(c), con: b.p, gana: cambio }, base);
+        }
+        const obj = objetivos(posB, b.a);
+        if (obj.length >= 2 && cambio >= 1) return Object.assign({ k: 'haceHorquilla', atacante: b.p, objetivos: obj.map(o => ({ p: o.p, en: nombre(o.c) })), gana: cambio }, base);
+        const pel = enPeligro(pos, yo);
+        if (pel.length) {
+            const salvada = pel.find(x => x.c === b.de);
+            if (salvada && !enPeligro(posB, yo).some(x => x.c === b.a)) return Object.assign({ k: 'salva', pieza: salvada.p, en: nombre(salvada.c) }, base);
+            const defendida = pel.find(x => !enPeligro(posB, yo).some(y => y.c === x.c));
+            if (defendida) return Object.assign({ k: 'defiende', pieza: defendida.p, en: nombre(defendida.c) }, base);
+        }
+        if (M.enJaque(posB) && cambio >= 1) return Object.assign({ k: 'jaqueGana', gana: cambio }, base);
+        if (cambio >= 1) return Object.assign({ k: 'ganaMaterial', gana: cambio }, base);
+        /* Sin nada concreto que ganar: se dice lo que HACE la jugada (que
+           es cierto), no un porqué inventado */
+        const rasgo = rasgoDe(pos, b, posB);
+        return Object.assign({ k: 'mejorSegun', v: an.mejor.v }, rasgo ? { rasgo } : {}, base);
+    }
+
+    /* Lo que hace una jugada tranquila, para describirla: enrocar, sacar
+       una pieza en la apertura, ocupar el centro con un peón, atacar algo */
+    function rasgoDe(pos, b, posB) {
+        if (b.f & (M.CORTO | M.LARGO)) return { r: 'enroca' };
+        if (M.enJaque(posB)) return { r: 'jaque' };
+        const ob = objetivos(posB, b.a).filter(o => tipo(o.p) !== 6 && tipo(o.p) > 1);
+        if (ob.length) return { r: 'ataca', p: ob[0].p, en: nombre(ob[0].c) };
+        if ((tipo(b.p) === 2 || tipo(b.p) === 3) && enSalida(b.p, b.de) && pos.num <= 12) return { r: 'desarrolla' };
+        if (tipo(b.p) === 1 && [0x33, 0x34, 0x43, 0x44].includes(b.a)) return { r: 'centro' };
+        return null;
+    }
+
+    /* ---------- juzgar ---------- */
+    function juzgar(posOriginal, jugada, op) {
+        op = op || {};
+        const pos = M.copiar(posOriginal);
+        const m = legalDe(pos, jugada);
+        if (!m) return null;
+        const an = IA.analizar(pos, { prof: op.prof || 5, ms: op.ms, previas: op.previas, jugada: m });
+        if (!an || !an.jugada) return null;
+        const ls = M.legales(pos);
+        const mb = legalDe(pos, an.mejor);
+        const { calidad, d } = calidadDe(an.mejor.v, an.jugada.v, an.jugada.esLaMejor);
+        const tras = M.copiar(pos); M.hacer(tras, m);
+        /* Las líneas van en notación (para leerlas) y como jugadas (para
+           dibujar las flechas y enseñarlas en el tablero) */
+        const lh = recorrer(tras, an.jugada.linea), lm = recorrer(pos, an.mejor.linea);
+        const sueltas = (js) => js.map(x => ({ de: x.de, a: x.a, promo: x.promo || 0 }));
+        const inf = {
+            calidad, perdida: Math.round(d * 100) / 100, antes: an.mejor.v, despues: an.jugada.v, prof: an.prof, ms: an.ms,
+            hecha: { de: m.de, a: m.a, promo: m.promo || 0, san: M.san(pos, m, ls), linea: lh.san, jugadas: sueltas(lh.js) },
+            mejor: { de: mb.de, a: mb.a, promo: mb.promo || 0, san: M.san(pos, mb, ls), linea: lm.san, jugadas: sueltas(lm.js) },
+            motivos: [], mejorPorque: null
+        };
+        /* Dar mate en vez del mate más corto no es un error */
+        if (an.jugada.v >= MATE - 500 && calidad !== 'mejor') inf.calidad = 'buena';
+        if (inf.calidad === 'mejor' || inf.calidad === 'buena') {
+            // lo bien hecho también se dice, si había algo que ver
+            const p = porQueMejor(pos, Object.assign({}, an, { mejor: Object.assign({}, an.mejor, an.jugada.esLaMejor ? {} : { linea: [m].concat(an.jugada.linea), v: an.jugada.v }) }), null);
+            if (p && p.k !== 'mejorSegun') inf.motivos.push(Object.assign({}, p, { k: 'bien_' + p.k }));
+            /* Buena, pero con un vicio de apertura que se nota algo: el
+               consejo se da igual (para quien empieza es lo más útil) */
+            else if (inf.calidad === 'buena' && d >= 0.05) {
+                const c = porQueMala(pos, m, an, op.numero || 99).filter(x => CONSEJOS.includes(x.k));
+                if (c.length) { inf.motivos.push(c[0]); inf.mejorPorque = porQueMejor(pos, an, c); }
+            }
+            return inf;
+        }
+        const n = (op.numero || 99);
+        inf.motivos = porQueMala(pos, m, an, n);
+        inf.mejorPorque = porQueMejor(pos, an, inf.motivos);
+        // «Tenías mate» ya dice cuál era la mejor: no repetirlo
+        if (inf.motivos.some(x => x.k === 'mateFallado') && inf.mejorPorque && inf.mejorPorque.k === 'daMate') inf.mejorPorque = null;
+        // Si mate falló «a medias» (iba a perder igual), que no pese más de la cuenta
+        if (inf.motivos[0].k === 'mateRecibido' && an.mejor.v > -MATE + 500) inf.calidad = 'grave';
+        return inf;
+    }
+
+    /* ---------- consejo en mitad de la partida ----------
+       La pista va por partes: primero la idea (qué mirar), y si se pide
+       otra vez, la jugada. */
+    function consejo(posOriginal, op) {
+        op = op || {};
+        const pos = M.copiar(posOriginal);
+        const an = IA.analizar(pos, { prof: op.prof || 5, ms: op.ms, previas: op.previas });
+        if (!an) return null;
+        const mb = legalDe(pos, an.mejor), ls = M.legales(pos);
+        const porque = porQueMejor(pos, an, null);
+        const yo = pos.turno;
+        let pista;
+        const pel = enPeligro(pos, yo);
+        // ¿Qué tiene el rival pensado? Lo que comería si le tocase
+        if (an.mejor.v >= MATE - 500) pista = { k: 'hayMate', n: mateEn(an.mejor.v) };
+        else if (porque && (porque.k === 'comeGratis' || porque.k === 'ganaCambio' || porque.k === 'haceHorquilla' || porque.k === 'jaqueGana' || porque.k === 'ganaMaterial')) pista = { k: 'hayGanancia', pieza: mb.p, en: nombre(mb.de) };
+        else if (pel.length) pista = { k: 'tienesEnPeligro', pieza: pel[0].p, en: nombre(pel[0].c), por: pel[0].por };
+        else pista = { k: 'tranquila', pieza: mb.p, en: nombre(mb.de) };
+        return { mejor: { de: mb.de, a: mb.a, promo: mb.promo || 0, san: M.san(pos, mb, ls) }, v: an.mejor.v, pista, porque, prof: an.prof };
+    }
+
+    /* ==========================================================
+       TEXTOS. Dos maneras: «sencillo» (para niños y para quien empieza:
+       sin jerga, y la palabra técnica explicada) y «tecnico» (con
+       notación y términos de ajedrez)
+       ========================================================== */
+    /* concordancia: la torre y la dama son femeninas */
+    const fem = (p) => tipo(p) === 4 || tipo(p) === 5;
+    const o = (p) => (fem(p) ? 'a' : 'o');
+    const lo = (p) => (fem(p) ? 'la' : 'lo');
+    const Mayus = (s) => s[0].toUpperCase() + s.slice(1);
+    const de = (p, en) => conArt(p) + ' de ' + en;
+    const lin = (l) => (l && l.length ? l.join(' ') : '');
+    function cuanto(n, estilo) {
+        if (estilo === 'tecnico') return n >= 8 ? 'el equivalente a una dama' : n >= 5 ? 'el equivalente a una torre' : n >= 3 ? 'el equivalente a una pieza' : n === 2 ? 'dos puntos de material' : 'un peón';
+        return n >= 8 ? 'muchísimo (como una dama)' : n >= 5 ? 'mucho (como una torre)' : n >= 3 ? 'como una pieza' : n === 2 ? 'algo de material (como dos peones)' : 'un peón';
+    }
+    const valoracion = (v, estilo) => {
+        if (v >= MATE - 500) return estilo === 'tecnico' ? 'mate' : 'ganas';
+        if (v <= -MATE + 500) return estilo === 'tecnico' ? 'mate en contra' : 'pierdes';
+        if (estilo === 'tecnico') return (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.abs(v) / 100).toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+        return v >= 300 ? 'vas ganando claramente' : v >= 120 ? 'vas algo mejor' : v > -120 ? 'la partida está igualada' : v > -300 ? 'vas algo peor' : 'vas perdiendo claramente';
+    };
+    function redactar(mo, estilo) {
+        if (!mo) return '';
+        const t = estilo === 'tecnico';
+        switch (mo.k) {
+            case 'mateRecibido':
+                return t ? 'Permite mate en ' + mo.n + ': ' + lin(mo.linea) + '.'
+                    : '¡Cuidado! Con esta jugada el rival te puede dar jaque mate' + (mo.n === 1 ? ' en la siguiente jugada' : ' en ' + mo.n + ' jugadas') + ' (' + lin(mo.linea) + ').';
+            case 'mateFallado':
+                return t ? 'Había mate en ' + mo.n + ': ' + lin(mo.linea) + '.'
+                    : '¡Tenías jaque mate' + (mo.n === 1 ? '' : ' en ' + mo.n + ' jugadas') + '! Empezaba con ' + mo.mejor + '.';
+            case 'colgadaMovida':
+                return t ? 'Deja ' + conArt(mo.pieza) + ' colgad' + o(mo.pieza) + ' en ' + mo.en + ': ' + mo.captura + '.'
+                    : 'Pones ' + conArt(mo.pieza) + ' en ' + mo.en + ', donde ' + conArt(mo.por) + ' rival se ' + lo(mo.pieza) + ' come y nadie ' + lo(mo.pieza) + ' defiende.';
+            case 'malCambio':
+                return t ? mo.captura + ': ' + conArt(mo.pieza) + ' está defendid' + o(mo.pieza) + ', pero ' + lo(mo.pieza) + ' come una pieza de menos valor (pierdes ' + cuanto(mo.pierde, estilo) + ').'
+                    : 'Pones ' + conArt(mo.pieza) + ' en ' + mo.en + '. Está defendid' + o(mo.pieza) + ', pero ' + conArt(mo.por) + ' rival vale menos: si se ' + lo(mo.pieza) + ' cambian, pierdes ' + cuanto(mo.pierde, estilo) + '.';
+            case 'noSalvada':
+                return t ? Mayus(de(mo.pieza, mo.en)) + ' ya estaba atacad' + o(mo.pieza) + ' y sigue sin salvar: ' + mo.captura + '.'
+                    : 'Tu ' + NOMBRE[tipo(mo.pieza)] + ' de ' + mo.en + ' estaba atacad' + o(mo.pieza) + ' y no ' + lo(mo.pieza) + ' has puesto a salvo: el rival se ' + lo(mo.pieza) + ' come (' + mo.captura + ').';
+            case 'quitaDefensa':
+                return t ? 'Al mover ' + conArt(mo.movida) + ' de ' + mo.desde + ' deja sin defensa ' + de(mo.pieza, mo.en) + ': ' + mo.captura + '.'
+                    : 'Al mover ' + conArt(mo.movida) + ', ' + de(mo.pieza, mo.en) + ' se queda sin nadie que ' + lo(mo.pieza) + ' defienda, y el rival se ' + lo(mo.pieza) + ' come (' + mo.captura + ').';
+            case 'abreLinea':
+                return t ? 'Al mover ' + conArt(mo.movida) + ' se abre la línea hacia ' + de(mo.pieza, mo.en) + ': ' + mo.captura + '.'
+                    : 'Al mover ' + conArt(mo.movida) + ' de ' + mo.desde + ' dejas el camino libre, y una pieza rival llega hasta ' + de(mo.pieza, mo.en) + ' (' + mo.captura + ').';
+            case 'pierde':
+                return t ? 'Pierde material: ' + lin(mo.linea) + '.'
+                    : 'Así pierdes ' + de(mo.pieza, mo.en) + ' (' + mo.captura + ').';
+            case 'horquilla': {
+                const ob = mo.objetivos.slice(0, 2).map(o => (tipo(o.p) === 6 ? 'tu rey' : 'tu ' + NOMBRE[tipo(o.p)] + ' de ' + o.en));
+                return t ? 'Permite la horquilla ' + mo.jugada + ' (ataca ' + ob.join(' y ') + ') y ' + mo.captura + '.'
+                    : Mayus(conArt(mo.atacante)) + ' rival puede ir a ' + mo.a + ' y atacar a la vez ' + ob.join(' y ') + ': solo puedes salvar una cosa. A eso se le llama horquilla.';
+            }
+            case 'jaqueYCome':
+                return t ? 'Tras el jaque ' + mo.jaque + ' cae ' + de(mo.pieza, mo.en) + ' (' + mo.captura + ').'
+                    : 'El rival te da jaque con ' + mo.jaque + ' y, mientras tapas el jaque, te come ' + de(mo.pieza, mo.en) + '.';
+            case 'pierdeTras':
+                return t ? 'Tras ' + mo.primero + ' cae ' + de(mo.pieza, mo.en) + ': ' + lin(mo.linea) + '.'
+                    : 'El rival juega ' + mo.primero + ' y después te come ' + de(mo.pieza, mo.en) + '.';
+            case 'pierdeMaterial':
+                return t ? 'Pierde ' + cuanto(mo.pierde, estilo) + ': ' + lin(mo.linea) + '.'
+                    : 'La máquina ve que así acabas perdiendo ' + cuanto(mo.pierde, estilo) + ' (' + lin(mo.linea) + ').';
+            case 'damaPronto':
+                return t ? 'Sacar la dama tan pronto, con las piezas menores sin desarrollar, la expone a ataques que hacen ganar tiempo al rival.'
+                    : 'Consejo: no saques la dama tan pronto. Al principio es mejor sacar caballos y alfiles; si no, el rival ataca a tu dama y gana tiempo.';
+            case 'reyPierdeEnroque':
+                return t ? 'Mover el rey pierde el derecho a enrocar; mejor enrocar y dejarlo protegido.'
+                    : 'Consejo: si mueves el rey ya no puedes enrocar. Es mejor enrocar, que pone al rey a salvo en una esquina.';
+            case 'caballoBorde':
+                return t ? 'El caballo en ' + mo.a + ' controla pocas casillas («caballo en el borde, caballo en el desborde»).'
+                    : 'Consejo: un caballo en el borde (' + mo.a + ') llega a pocas casillas. En el centro es mucho más fuerte.';
+            case 'mismaPieza':
+                return t ? 'Mueve otra vez ' + conArt(mo.pieza) + ' con el desarrollo sin completar: pierde tiempo.'
+                    : 'Consejo: al principio, mejor sacar una pieza nueva que mover otra vez ' + conArt(mo.pieza) + '.';
+            case 'peorSinMas':
+                return t ? 'No pierde material de inmediato, pero la valoración empeora.'
+                    : 'No pierdes nada enseguida, pero la máquina ve que así tu posición queda peor.';
+            /* lo que era mejor */
+            case 'daMate': return t ? mo.jugada + ' daba mate' + (mo.n > 1 ? ' en ' + mo.n + ': ' + lin(mo.linea) : '') + '.' : 'Con ' + mo.jugada + ' dabas jaque mate' + (mo.n > 1 ? ' en ' + mo.n + ' jugadas' : '') + '.';
+            case 'evitaMate': return t ? 'Había que defenderse con ' + mo.jugada + '.' : 'Había que evitar el mate, por ejemplo con ' + mo.jugada + '.';
+            case 'corona': return t ? mo.jugada + ' coronaba.' : 'Con ' + mo.jugada + ' el peón llegaba al final y se convertía en dama.';
+            case 'comeGratis': return t ? mo.jugada + ' ganaba ' + de(mo.pieza, mo.en) + ', que estaba indefens' + o(mo.pieza) + '.' : 'Mejor era ' + mo.jugada + ': ' + de(mo.pieza, mo.en) + ' estaba sin defender y te ' + lo(mo.pieza) + ' comías gratis.';
+            case 'ganaCambio': return t ? mo.jugada + ' ganaba material: ' + lin(mo.linea) + '.' : 'Mejor era ' + mo.jugada + ': comías ' + de(mo.pieza, mo.en) + ' con una pieza que vale menos, y ganabas ' + cuanto(mo.gana, estilo) + '.';
+            case 'haceHorquilla': {
+                const ob = mo.objetivos.slice(0, 2).map(o => (tipo(o.p) === 6 ? 'el rey' : conArt(o.p) + ' de ' + o.en));
+                return t ? mo.jugada + ' hacía una horquilla a ' + ob.join(' y ') + '.' : 'Mejor era ' + mo.jugada + ': atacabas a la vez ' + ob.join(' y ') + ' (una horquilla), y el rival solo podía salvar una cosa.';
+            }
+            case 'salva': return t ? mo.jugada + ' ponía a salvo ' + de(mo.pieza, mo.en) + '.' : 'Mejor era ' + mo.jugada + ', que ponía a salvo tu ' + NOMBRE[tipo(mo.pieza)] + ' de ' + mo.en + '.';
+            case 'defiende': return t ? mo.jugada + ' defendía ' + de(mo.pieza, mo.en) + '.' : 'Mejor era ' + mo.jugada + ', que defendía tu ' + NOMBRE[tipo(mo.pieza)] + ' de ' + mo.en + '.';
+            case 'jaqueGana': return t ? mo.jugada + ' ganaba material: ' + lin(mo.linea) + '.' : 'Mejor era ' + mo.jugada + ': con ese jaque acababas ganando ' + cuanto(mo.gana, estilo) + '.';
+            case 'ganaMaterial': return t ? mo.jugada + ' ganaba material: ' + lin(mo.linea) + '.' : 'Mejor era ' + mo.jugada + ': así acababas ganando ' + cuanto(mo.gana, estilo) + '.';
+            case 'mejorSegun': {
+                const r = mo.rasgo, que = !r ? '' : r.r === 'enroca' ? (t ? 'enroca' : 'enroca: el rey a salvo y la torre lista para jugar')
+                    : r.r === 'jaque' ? 'da jaque' : r.r === 'ataca' ? 'ataca ' + de(r.p, r.en)
+                    : r.r === 'desarrolla' ? (t ? 'desarrolla una pieza' : 'saca una pieza nueva (al principio, lo primero es sacar caballos y alfiles)')
+                    : r.r === 'centro' ? (t ? 'ocupa el centro' : 'pone un peón en el centro, donde más sitio da a tus piezas') : '';
+                return t ? 'Mejor era ' + mo.jugada + (que ? ', que ' + que : '') + ' (' + valoracion(mo.v, estilo) + '): ' + lin(mo.linea) + '.'
+                    : 'Mejor era ' + mo.jugada + (que ? ', que ' + que : '') + '. Con ella ' + valoracion(mo.v, estilo) + '.';
+            }
+            /* bien hecho */
+            case 'bien_daMate': return '¡Muy bien! ' + (t ? 'Mate.' : 'Era jaque mate.');
+            case 'bien_comeGratis': return t ? '¡Bien! Gana ' + de(mo.pieza, mo.en) + ', que estaba indefens' + o(mo.pieza) + '.' : '¡Bien visto! ' + Mayus(de(mo.pieza, mo.en)) + ' estaba sin defender.';
+            case 'bien_ganaCambio': return t ? '¡Bien! Cambio favorable.' : '¡Bien! Comes una pieza que vale más que la tuya.';
+            case 'bien_haceHorquilla': return t ? '¡Bien! Horquilla.' : '¡Muy bien! Atacas dos cosas a la vez: eso es una horquilla.';
+            case 'bien_salva': return t ? 'Bien: pone a salvo la pieza atacada.' : 'Bien: pones a salvo tu ' + NOMBRE[tipo(mo.pieza)] + ', que estaba atacad' + o(mo.pieza) + '.';
+            case 'bien_defiende': return t ? 'Bien: defiende la pieza atacada.' : 'Bien: defiendes tu ' + NOMBRE[tipo(mo.pieza)] + ' de ' + mo.en + ', que estaba atacad' + o(mo.pieza) + '.';
+            case 'bien_corona': return '¡Bien! Coronas.';
+            case 'bien_evitaMate': return t ? 'Bien: evita el mate.' : 'Bien: evitas el mate.';
+            case 'bien_jaqueGana': return t ? '¡Bien! El jaque gana material.' : '¡Bien! Con ese jaque ganas material.';
+            case 'bien_ganaMaterial': return t ? '¡Bien! Gana material.' : '¡Bien! Así ganas material.';
+            /* pistas (consejo en partida) */
+            case 'hayMate': return t ? 'Hay mate en ' + mo.n + '. Busca jaques.' : '¡Hay jaque mate' + (mo.n > 1 ? ' en ' + mo.n + ' jugadas' : '') + '! Mira los jaques que puedes dar.';
+            case 'hayGanancia': return t ? 'Hay una jugada que gana material con ' + de(mo.pieza, mo.en) + '.' : 'Hay algo bueno para ti: mira bien ' + de(mo.pieza, mo.en) + '.';
+            case 'tienesEnPeligro': return t ? Mayus(de(mo.pieza, mo.en)) + ' está atacad' + o(mo.pieza) + '.' : 'Cuidado: tu ' + NOMBRE[tipo(mo.pieza)] + ' de ' + mo.en + ' está en peligro: ' + conArt(mo.por) + ' rival se ' + lo(mo.pieza) + ' puede comer.';
+            case 'tranquila': return t ? 'Posición tranquila: mejora tus piezas. La máquina sugiere mover ' + de(mo.pieza, mo.en) + '.' : 'No hay peligro ahora. Piensa qué pieza puedes mejorar; la máquina movería ' + de(mo.pieza, mo.en) + '.';
+        }
+        return '';
+    }
+    const ROTULO = {
+        mejor: { sencillo: '✓ La mejor', tecnico: '✓ La mejor', signo: '' },
+        buena: { sencillo: '✓ Buena', tecnico: '✓ Buena', signo: '' },
+        imprecisa: { sencillo: 'Se podía mejorar', tecnico: '?! Imprecisión', signo: '?!' },
+        error: { sencillo: '✗ Error', tecnico: '? Error', signo: '?' },
+        grave: { sencillo: '✗✗ Error grave', tecnico: '?? Error grave', signo: '??' }
+    };
+
+    return { juzgar, consejo, redactar, valoracion, calidadDe, prob, CALIDADES, ROTULO,
+        _: { ataca, enPeligro, objetivos, balance, recorrer, perdidaEnLinea, mateEn } };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = Profesor;
 
 </script>
 <script>
@@ -3862,13 +4461,19 @@ let problema = null;             // { pr, quedan, resuelto, fallado, motivoFallo
 let reloj = null;                // { ms: [blancas, negras], inc, corre: color | -1, marca }
 let repaso = null;               // número de jugadas de la posición que se repasa, o null
 let coronando = null;            // { de, a } esperando a que se elija pieza
+let analisis = null;             // { k, inf: [], cola: [], var: null } el análisis al acabar
+let juicios = [];                // por número de jugada: lo que dijo el profesor durante la partida
+let profe = null;                // en partida: { mirando, aviso: informe, consejo: {paso, c}, elogio }
+let marca = null;                // casilla que el profesor rodea en el tablero
 let bucleId = null;
 let L = 0, dpr = 1;              // lado del tablero en px CSS
 
 /* ---------- AJUSTES Y ESTADÍSTICAS (EST.leer/guardar: try/catch y memoria) ---------- */
-const AJ_DEF = { modo: 'maquina', dif: 'avanzado', color: 0, reloj: 'no' };
+const AJ_DEF = { modo: 'maquina', dif: 'avanzado', color: 0, reloj: 'no', profesor: false, explica: 'sencillo' };
 let ajustes = Object.assign({}, AJ_DEF, EST.leer('ajedrez.ajustes', {}) || {});
 if (ajustes.color !== 0 && ajustes.color !== 8) ajustes.color = 0;
+ajustes.profesor = ajustes.profesor === true;
+if (ajustes.explica !== 'tecnico') ajustes.explica = 'sencillo';
 const guardarAjustes = () => EST.guardar('ajedrez.ajustes', ajustes);
 const NIVELES = ['principiante', 'avanzado', 'experto', 'rambo'];
 const ETIQUETA = { principiante: 'Principiante', avanzado: 'Avanzado', experto: 'Experto', rambo: 'Rambo' };
@@ -3876,7 +4481,7 @@ const RELOJES = { no: null, '10': { min: 10, inc: 0 }, '5': { min: 5, inc: 0 }, 
 function estVacias() {
     const m = {};
     for (const n of NIVELES) m[n] = { g: 0, p: 0, t: 0 };
-    return { maquina: m, dos: { b: 0, n: 0, t: 0 }, red: { g: 0, p: 0, t: 0 }, racha: 0, mejorRacha: 0, problemas: [] };
+    return { maquina: m, dos: { b: 0, n: 0, t: 0 }, red: { g: 0, p: 0, t: 0 }, profesor: { g: 0, p: 0, t: 0 }, racha: 0, mejorRacha: 0, problemas: [] };
 }
 function leerEst() {
     const e = EST.leer('ajedrez.estadisticas', null), v = estVacias();
@@ -3885,6 +4490,7 @@ function leerEst() {
     for (const n of NIVELES) if (e.maquina && e.maquina[n]) for (const k of ['g', 'p', 't']) v.maquina[n][k] = ent(e.maquina[n][k]);
     if (e.dos) for (const k of ['b', 'n', 't']) v.dos[k] = ent(e.dos[k]);
     if (e.red) for (const k of ['g', 'p', 't']) v.red[k] = ent(e.red[k]);
+    if (e.profesor) for (const k of ['g', 'p', 't']) v.profesor[k] = ent(e.profesor[k]);
     v.racha = ent(e.racha); v.mejorRacha = ent(e.mejorRacha);
     v.problemas = Array.isArray(e.problemas) ? e.problemas.filter(Number.isInteger) : [];
     return v;
@@ -4029,8 +4635,59 @@ const centro = (c) => { const p = enPantalla(c), s = lado(); return { x: p.x + s
    ========================================================== */
 /* Lo que se ve: en repaso, la posición de entonces; moviéndose, la de antes */
 function posVista() {
+    if (analisis) {
+        const v = analisis.var;
+        if (v) return v.ps[v.i];
+        return partida.historial[analisis.k].antes;
+    }
     if (repaso !== null) return M.posicionTras(partida, repaso);
     return anim ? anim.antes : partida.pos;
+}
+/* La jugada que se marca en amarillo: la última que llevó a lo que se ve */
+function ultimaVista() {
+    if (analisis) {
+        const v = analisis.var;
+        if (v && v.i > 0) return v.js[v.i - 1];
+        if (v) return null;
+        return analisis.k > 0 ? partida.historial[analisis.k - 1].jugada : null;
+    }
+    if (repaso !== null) return repaso > 0 ? partida.historial[repaso - 1].jugada : null;
+    return anim ? null : ultima;
+}
+/* Flechas del profesor: la jugada hecha (de su color), la mejor (verde),
+   la respuesta del rival (roja) o la siguiente de una línea (azul) */
+const COLOR_FLECHA = { mejor: 'rgba(80,220,120,0.9)', buena: 'rgba(80,220,120,0.9)', imprecisa: 'rgba(255,213,79,0.92)', error: 'rgba(255,152,0,0.92)', grave: 'rgba(255,70,70,0.92)', rival: 'rgba(255,70,70,0.85)', linea: 'rgba(64,170,255,0.92)', maquina: 'rgba(200,200,220,0.75)' };
+function flechas() {
+    const out = [];
+    if (analisis) {
+        const v = analisis.var;
+        if (v) { if (v.i < v.js.length) out.push([v.js[v.i], COLOR_FLECHA.linea]); return out; }
+        const h = partida.historial[analisis.k], inf = analisis.inf[analisis.k];
+        if (!esDelHumano(analisis.k)) { out.push([h.jugada, COLOR_FLECHA.maquina]); return out; }
+        if (inf && inf.calidad !== 'mejor' && inf.calidad !== 'buena') out.push([inf.mejor, COLOR_FLECHA.mejor]);
+        out.push([h.jugada, inf ? COLOR_FLECHA[inf.calidad] : COLOR_FLECHA.maquina]);
+        return out;
+    }
+    if (profe && profe.aviso && profe.aviso.hecha.jugadas.length && !anim) out.push([profe.aviso.hecha.jugadas[0], COLOR_FLECHA.rival]);
+    if (profe && profe.consejo && profe.consejo.paso === 2 && profe.consejo.c && esHumanoAhora()) out.push([profe.consejo.c.mejor, COLOR_FLECHA.mejor]);
+    return out;
+}
+function flecha(j, color) {
+    const a = centro(j.de), b = centro(j.a), s = lado();
+    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+    const punta = s * 0.42, ancho = s * 0.17;
+    const fx = b.x - ux * punta, fy = b.y - uy * punta;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineCap = 'round';
+    ctx.lineWidth = ancho;
+    ctx.beginPath(); ctx.moveTo(a.x + ux * s * 0.18, a.y + uy * s * 0.18); ctx.lineTo(fx, fy); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(b.x - ux * s * 0.08, b.y - uy * s * 0.08);
+    ctx.lineTo(fx - uy * punta * 0.62, fy + ux * punta * 0.62);
+    ctx.lineTo(fx + uy * punta * 0.62, fy - ux * punta * 0.62);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
 }
 function pintar() {
     if (!L || !partida || !patrones) return;
@@ -4054,7 +4711,7 @@ function pintar() {
     }
     if (!ang) coordenadas();
     const pos = posVista();
-    const ult = repaso !== null ? (repaso > 0 ? partida.historial[repaso - 1].jugada : null) : (anim ? null : ultima);
+    const ult = ultimaVista();
     if (ult) for (const c of [ult.de, ult.a]) { const p = enPantalla(c); ctx.fillStyle = 'rgba(255,214,110,0.38)'; ctx.fillRect(p.x, p.y, s, s); }
     /* Rey en jaque: resplandor rojo debajo */
     if (!anim && M.enJaque(pos)) {
@@ -4063,7 +4720,7 @@ function pintar() {
         g.addColorStop(0, 'rgba(255,40,40,0.95)'); g.addColorStop(1, 'rgba(255,40,40,0)');
         ctx.fillStyle = g; ctx.fillRect(c.x - s / 2, c.y - s / 2, s, s);
     }
-    const ahora = esHumanoAhora() && !anim && repaso === null;
+    const ahora = esHumanoAhora() && !anim && repaso === null && !analisis;
     if (ahora && sel >= 0) { const p = enPantalla(sel); ctx.fillStyle = 'rgba(120,220,120,0.45)'; ctx.fillRect(p.x, p.y, s, s); }
     /* Piezas */
     const quieta = (c) => !(anim && (c === anim.m.de || c === torreDe(anim.m)));
@@ -4093,6 +4750,11 @@ function pintar() {
             if (j.cap) { ctx.strokeStyle = 'rgba(20,60,20,0.6)'; ctx.lineWidth = s * 0.08; ctx.beginPath(); ctx.arc(c.x, c.y, s * 0.44, 0, 7); ctx.stroke(); }
             else { ctx.fillStyle = 'rgba(20,60,20,0.45)'; ctx.beginPath(); ctx.arc(c.x, c.y, s * 0.15, 0, 7); ctx.fill(); }
         }
+    }
+    for (const [j, col] of flechas()) flecha(j, col);
+    if (marca !== null && esHumanoAhora()) {
+        const puls = 0.5 + 0.5 * Math.sin(t * 6), c = centro(marca);
+        aro(c.x, c.y, s * 0.48, `rgba(64,196,255,${puls})`, 4);
     }
     if (ahora && pista) {
         const puls = 0.5 + 0.5 * Math.sin(t * 6);
@@ -4189,6 +4851,8 @@ function pintarEstado() {
     if (modo === 'problema' && (problema.resuelto || problema.fallado)) return;
     if (repaso !== null) { decir('Repasando la jugada ' + repaso + ' de ' + partida.historial.length); return; }
     const jaque = M.enJaque(partida.pos) ? ' · ¡JAQUE!' : '';
+    if (profe && profe.mirando) { decir('🎓 El profesor mira tu jugada…'); return; }
+    if (profe && profe.aviso) { decir('🎓 El profesor quiere decirte algo', true); return; }
     if (pensando) { decir((modo === 'problema' ? 'El rival contesta…' : 'La máquina piensa…') + jaque, !!jaque); return; }
     if (modo === 'red' && partida.pos.turno !== humano) { decir('Le toca a tu rival…' + jaque, !!jaque); return; }
     if (anim || giro) return;
@@ -4211,7 +4875,15 @@ function pintarHistorial() {
         b.type = 'button';
         b.dataset.k = k;
         b.textContent = x.jugada.san;
-        if (repaso !== null ? k === repaso - 1 : k === partida.historial.length - 1) b.classList.add('actual');
+        /* Lo que dijo el profesor, en color (y con su signo, para quien sabe) */
+        const inf = analisis ? analisis.inf[k] : conProfe() ? juicios[k] : null;
+        if (inf && !inf.sinJuicio && esDelHumano(k)) {
+            const c = inf.calidad === 'imprecisa' && ajustes.explica !== 'tecnico' ? 'buena' : inf.calidad;
+            b.classList.add('c-' + c);
+            if (ajustes.explica === 'tecnico') b.textContent += Profesor.ROTULO[c].signo;
+            b.setAttribute('aria-label', x.jugada.san + ', ' + Profesor.ROTULO[c].sencillo.replace(/^[✓✗]+ /, ''));
+        }
+        if (analisis ? k === analisis.k : repaso !== null ? k === repaso - 1 : k === partida.historial.length - 1) b.classList.add('actual');
         h.appendChild(b);
     });
     // Que se vea la jugada marcada (sin mover la página entera: solo el historial)
@@ -4336,7 +5008,8 @@ function hacer(j, tRed) {
     }
     // Una oferta de tablas sin contestar caduca con la jugada
     if (modo === 'red' && $('ofertaTablas').classList.contains('activa')) $('ofertaTablas').classList.remove('activa');
-    pista = null; sel = -1;
+    pista = null; sel = -1; marca = null;
+    if (profe) { profe.consejo = null; profe.elogio = null; }
     anim = { m: hecha, antes, t: 0, dur: 0.22 };
     ultima = hecha;
     sonar.toc();
@@ -4364,24 +5037,59 @@ function finGiro() {
 }
 function siguienteTurno() {
     pintarEstado();
-    if (modo === 'maquina' && partida.pos.turno !== humano) turnoMaquina();
+    if (modo === 'maquina' && partida.pos.turno !== humano) turnoMaquinaOProfe();
     else if (modo === 'red' && partida.pos.turno !== humano) aplicarColaRed();
+    if (conProfe() && esHumanoAhora()) pintarProfe();
 }
 
 /* ---------- La máquina piensa en un worker ----------
    Se monta con el texto del motor y de la máquina (los dos scripts con
    id): así no hace falta otro archivo y la pantalla no se congela los 2 s
    de RAMBO. Si el navegador no deja crear el worker, piensa aquí mismo. */
-let trabajador = null;
+/* Lo mismo para el profesor (juzgar y consejo), en un worker suyo: un
+   análisis largo no hace esperar a la máquina de la partida siguiente */
+let trabajador = null, trabajadorProfe = null;
+function atender(d) {
+    const pos = Ajedrez.desdeFEN(d.fen), previas = (d.previas || []).map(f => Ajedrez.desdeFEN(f));
+    if (d.tipo === 'juzgar') return Profesor.juzgar(pos, d.jugada, { prof: d.prof, ms: d.ms, previas, numero: d.numero });
+    if (d.tipo === 'consejo') return Profesor.consejo(pos, { prof: d.prof, ms: d.ms, previas });
+    return IAAjedrez.elegir(pos, d.nivel, { previas, ms: d.ms });
+}
 try {
-    const codigo = $('fuenteMotor').textContent + '\n' + $('fuenteIA').textContent + '\n' +
-        'onmessage = (e) => { const d = e.data; const pos = Ajedrez.desdeFEN(d.fen);' +
-        ' const previas = d.previas.map(f => Ajedrez.desdeFEN(f));' +
-        ' const j = IAAjedrez.elegir(pos, d.nivel, { previas, ms: d.ms }); postMessage({ id: d.id, j }); };';
-    trabajador = new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' })));
+    const codigo = $('fuenteMotor').textContent + '\n' + $('fuenteIA').textContent + '\n' + $('fuenteProfesor').textContent + '\n' +
+        atender.toString() + '\n' +
+        'onmessage = (e) => { let j = null; try { j = atender(e.data); } catch (x) { j = null; } postMessage({ id: e.data.id, tipo: e.data.tipo, j }); };';
+    const url = URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }));
+    trabajador = new Worker(url);
     trabajador.onmessage = (e) => respuestaIA(e.data);
     trabajador.onerror = () => { trabajador = null; if (pensando) turnoMaquina(); };
+    try {
+        trabajadorProfe = new Worker(url);
+        trabajadorProfe.onmessage = (e) => respuestaProfe(e.data);
+        trabajadorProfe.onerror = () => { trabajadorProfe = null; if (esperaProfe) { const x = esperaProfe; esperaProfe = null; pedirProfe(x.msg, x.cb); } };
+    } catch (e) { trabajadorProfe = null; }
 } catch (e) { trabajador = null; }
+
+/* ---------- Peticiones al profesor ----------
+   Una sola a la vez: la nueva deja sin valor a la anterior (el id) */
+const PROF_PROFE = 6, MS_PROFE = 900;     // medido: en el contenedor, 87 ms de media y 219 de p95 a 6
+let idProfe = 0, esperaProfe = null;
+function pedirProfe(msg, cb) {
+    msg = Object.assign({ prof: PROF_PROFE, ms: MS_PROFE }, msg, { id: ++idProfe });
+    esperaProfe = { id: msg.id, cb, msg };
+    if (trabajadorProfe) { trabajadorProfe.postMessage(msg); return; }
+    // sin worker, aquí mismo, dejando antes que se pinte lo que haya
+    setTimeout(() => { if (esperaProfe && esperaProfe.id === msg.id) { let j = null; try { j = atender(msg); } catch (x) { j = null; } respuestaProfe({ id: msg.id, j }); } }, 30);
+}
+function respuestaProfe(d) {
+    if (!esperaProfe || !d || d.id !== esperaProfe.id) return;
+    const cb = esperaProfe.cb;
+    esperaProfe = null;
+    cb(d.j);
+}
+function olvidarProfe() { idProfe++; esperaProfe = null; }
+/* Las posiciones desde la última jugada irreversible antes de la jugada k (para ver repeticiones) */
+const previasDe = (k) => { const a = partida.historial[k] ? partida.historial[k].antes : partida.pos; return partida.historial.slice(Math.max(0, k - a.medias), k).map(h => M.aFEN(h.antes)); };
 
 const previasFEN = () => partida.historial.slice(partida.historial.length - partida.pos.medias).map(h => M.aFEN(h.antes));
 function turnoMaquina() {
@@ -4413,6 +5121,250 @@ function respuestaIA(d) {
 }
 /* Cualquier pensamiento en marcha deja de valer (pausa, menú, otra partida) */
 function olvidarIA() { idIA++; clearTimeout(timerIA); pensando = false; }
+
+/* ==========================================================
+   EL PROFESOR EN LA PARTIDA (contra la máquina, si se elige)
+   Tras cada jugada de la persona, y antes de que piense la máquina, el
+   profesor la juzga. Si es un error o un error grave, lo dice, enseña con
+   una flecha roja lo que haría el rival y deja elegir: pensar otra (se
+   retira la jugada) o seguir así. 💡 CONSEJO da primero la idea y, si se
+   vuelve a pulsar, la jugada.
+   ========================================================== */
+const conProfe = () => modo === 'maquina' && !!profe;
+const esDelHumano = (k) => modo === 'maquina' && partida.historial[k] && partida.historial[k].antes.turno === humano;
+/* Avisar solo de los errores de verdad: con una imprecisión cortar la
+   partida cansa (en el análisis sí salen) */
+const AVISA = ['error', 'grave'];
+/* Lo que merece un «¡bien!» en mitad de la partida: lo que había que ver */
+const ELOGIA = ['bien_daMate', 'bien_comeGratis', 'bien_ganaCambio', 'bien_haceHorquilla', 'bien_jaqueGana', 'bien_ganaMaterial'];
+function turnoMaquinaOProfe() {
+    const k = partida.historial.length - 1;
+    if (conProfe() && k >= 0 && esDelHumano(k) && !juicios[k]) { mirarJugada(k); return; }
+    turnoMaquina();
+}
+function mirarJugada(k) {
+    const h = partida.historial[k];
+    profe.mirando = true; profe.aviso = null; profe.elogio = null;
+    pintarEstado(); pintarProfe();
+    pedirProfe({ tipo: 'juzgar', fen: M.aFEN(h.antes), previas: previasDe(k), jugada: { de: h.jugada.de, a: h.jugada.a, promo: h.jugada.promo || 0 }, numero: h.antes.num }, (inf) => {
+        if (!profe || gameState !== 'playing' || partida.historial.length !== k + 1) return;
+        profe.mirando = false;
+        juicios[k] = inf || { calidad: 'buena', motivos: [], sinJuicio: true };
+        if (inf && AVISA.includes(inf.calidad)) {
+            profe.aviso = inf;
+            decir('🎓 El profesor quiere decirte algo', true);
+            pintarProfe();
+            sonar.no();
+            return;
+        }
+        const e = inf && inf.motivos.find(x => ELOGIA.includes(x.k));
+        profe.elogio = e ? Profesor.redactar(e, ajustes.explica) : null;
+        pintarProfe();
+        turnoMaquina();
+    });
+}
+/* Retira la última jugada (solo la de la persona, antes de que conteste la máquina) */
+function retirarUltima() {
+    const h = partida.historial.pop();
+    if (!h) return;
+    const k = M.clave(partida.pos);
+    const n = (partida.vistas.get(k) || 1) - 1;
+    if (n > 0) partida.vistas.set(k, n); else partida.vistas.delete(k);
+    partida.pos = M.copiar(h.antes);
+    partida.resultado = null;
+    juicios.length = partida.historial.length;
+    ultima = partida.historial.length ? partida.historial[partida.historial.length - 1].jugada : null;
+}
+function pensarOtra() {
+    if (!profe || !profe.aviso) return;
+    profe.aviso = null;
+    retirarUltima();
+    sel = -1;
+    pintarBarra(); pintarHistorial();
+    decir('Piensa otra jugada');
+    pintarProfe();
+}
+function seguirAsi() {
+    if (!profe || !profe.aviso) return;
+    profe.aviso = null;
+    pintarProfe();
+    turnoMaquina();
+}
+function pedirConsejo() {
+    if (!conProfe() || !esHumanoAhora()) return;
+    const c = profe.consejo;
+    if (c && c.c) {
+        // segunda vez: la jugada
+        c.paso = 2; marca = null;
+        pintarProfe();
+        return;
+    }
+    profe.consejo = { paso: 0, c: null };
+    pintarProfe();
+    pedirProfe({ tipo: 'consejo', fen: M.aFEN(partida.pos), previas: previasDe(partida.historial.length) }, (r) => {
+        if (!profe || !profe.consejo || gameState !== 'playing' || !esHumanoAhora()) return;
+        profe.consejo = { paso: 1, c: r };
+        if (r && r.pista && r.pista.en) marca = M.casilla(r.pista.en);
+        pintarProfe();
+    });
+}
+/* Lo que se ve en la caja del profesor durante la partida */
+function pintarProfe() {
+    const caja = $('profe'), txt = $('profeTexto'), bs = $('profeBotones');
+    if (analisis) return pintarAnalisis();
+    caja.hidden = !conProfe();
+    if (caja.hidden) return;
+    const es = ajustes.explica;
+    let h = '', botones = [];
+    if (profe.mirando) h = '🎓 Mirando tu jugada…';
+    else if (profe.aviso) {
+        const inf = profe.aviso, R = Profesor.ROTULO[inf.calidad];
+        h = '<span class="rot c-' + inf.calidad + '">' + R[es] + '</span>' + textoDe(inf.motivos, es) + (inf.mejorPorque ? ' ' + escapar(Profesor.redactar(inf.mejorPorque, es)) : '');
+        botones = [['↺ PENSAR OTRA', 'principal', pensarOtra], ['SEGUIR ASÍ', 'secundario', seguirAsi]];
+    } else if (profe.consejo && profe.consejo.paso === 0) h = '🎓 Pensando un consejo…';
+    else if (profe.consejo && profe.consejo.c) {
+        const c = profe.consejo.c;
+        if (profe.consejo.paso === 1) { h = '💡 ' + escapar(Profesor.redactar(c.pista, es)); botones = [['💡 ¿QUÉ JUGADA?', 'secundario', pedirConsejo]]; }
+        else h = '💡 ' + (c.porque ? escapar(Profesor.redactar(c.porque, es)).replace(/^Mejor era/, 'Yo jugaría') : 'Yo jugaría ' + escapar(c.mejor.san) + '.') + ' (flecha verde)';
+    } else {
+        h = profe.elogio ? '🎓 ' + escapar(profe.elogio) : '🎓 ' + (esHumanoAhora() ? 'Te toca. Si quieres ayuda, pide un consejo.' : 'La máquina piensa…');
+        if (esHumanoAhora()) botones = [['💡 CONSEJO', 'secundario', pedirConsejo]];
+    }
+    txt.innerHTML = h;
+    bs.textContent = '';
+    for (const [t, cls, fn] of botones) { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = t; b.addEventListener('click', fn); bs.appendChild(b); }
+}
+const escapar = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const textoDe = (motivos, est) => (motivos || []).map(m => escapar(Profesor.redactar(m, est))).filter(Boolean).join(' ');
+
+/* ==========================================================
+   ANÁLISIS AL ACABAR (contra la máquina)
+   Se juzgan todas las jugadas de la persona en el worker del profesor,
+   una tras otra, y cada una se pinta en cuanto llega. En el tablero, la
+   posición de ANTES de la jugada elegida con su flecha y la de la mejor;
+   «ver qué pasa» y «ver la mejor» enseñan la línea paso a paso.
+   ========================================================== */
+function empezarAnalisis() {
+    if (!partida || modo !== 'maquina' || !partida.historial.length) return;
+    EST.cerrar('capaFin');
+    repaso = null;
+    $('botonesRepaso').hidden = true;
+    /* Si ya se analizó esta partida (y se salió), se sigue donde iba */
+    if (analisisGuardado && analisisGuardado.partida === partida) analisis = analisisGuardado;
+    else {
+        const inf = partida.historial.map((h, k) => juicios[k] && !juicios[k].sinJuicio ? juicios[k] : null);
+        const cola = partida.historial.map((h, k) => k).filter(k => esDelHumano(k) && !inf[k]);
+        analisis = { partida, k: 0, inf, cola, var: null };
+    }
+    analisisGuardado = null;
+    const primera = partida.historial.findIndex((h, k) => esDelHumano(k));
+    analisis.k = Math.max(0, primera);
+    analisis.var = null;
+    $('botonesAnalisis').hidden = false;
+    $('enunciado').textContent = '';
+    siguienteDelAnalisis();
+    pintarAnalisis(); pintarHistorial(); pintar();
+}
+function siguienteDelAnalisis() {
+    if (!analisis || esperaProfe || !analisis.cola.length) return;
+    const k = analisis.cola.shift(), h = partida.historial[k], A = analisis;
+    pedirProfe({ tipo: 'juzgar', fen: M.aFEN(h.antes), previas: previasDe(k), jugada: { de: h.jugada.de, a: h.jugada.a, promo: h.jugada.promo || 0 }, numero: h.antes.num }, (inf) => {
+        if (analisis !== A) return;
+        A.inf[k] = inf || { calidad: 'buena', motivos: [], sinJuicio: true, hecha: { san: h.jugada.san, linea: [], jugadas: [] }, mejor: { san: h.jugada.san, linea: [], jugadas: [] } };
+        pintarHistorial();
+        pintarAnalisis();
+        if (A.k === k) pintar();
+        siguienteDelAnalisis();
+    });
+}
+function salirAnalisis() {
+    if (!analisis) return;
+    analisis.var = null;
+    const a = analisis;
+    analisis = null;
+    olvidarProfe();
+    // lo pendiente se vuelve a pedir si se entra otra vez
+    a.cola = partida.historial.map((h, k) => k).filter(k => esDelHumano(k) && !a.inf[k]);
+    analisisGuardado = a;
+    $('botonesAnalisis').hidden = true;
+    $('profe').hidden = true;
+    pintarHistorial(); pintar();
+    if (gameState === 'fin') EST.abrir('capaFin');
+}
+let analisisGuardado = null;
+function irAJugada(k) {
+    if (!analisis) return;
+    analisis.k = Math.max(0, Math.min(partida.historial.length - 1, k));
+    analisis.var = null;
+    pintarAnalisis(); pintarHistorial(); pintar();
+}
+const malas = (inf) => inf && (inf.calidad === 'error' || inf.calidad === 'grave' || (ajustes.explica === 'tecnico' && inf.calidad === 'imprecisa'));
+function siguienteFallo() {
+    if (!analisis) return;
+    const n = partida.historial.length;
+    for (let d = 1; d <= n; d++) { const k = (analisis.k + d) % n; if (esDelHumano(k) && malas(analisis.inf[k])) { irAJugada(k); return; } }
+    EST.avisar(analisis.cola.length || esperaProfe ? 'Aún analizando: de momento no hay más errores' : 'No hay más errores');
+}
+/* Ver una línea en el tablero: «hecha» = tu jugada y lo que contesta el
+   rival; «mejor» = la buena y cómo sigue */
+function verLinea(tipo) {
+    const inf = analisis.inf[analisis.k];
+    if (!inf) return;
+    const h = partida.historial[analisis.k];
+    const js = tipo === 'hecha' ? [{ de: inf.hecha.de, a: inf.hecha.a, promo: inf.hecha.promo }].concat(inf.hecha.jugadas) : inf.mejor.jugadas;
+    const san = tipo === 'hecha' ? [inf.hecha.san].concat(inf.hecha.linea) : inf.mejor.linea;
+    const ps = [M.copiar(h.antes)];
+    const q = M.copiar(h.antes), buenas = [];
+    for (const j of js) { const m = M.legales(q).find(x => x.de === j.de && x.a === j.a && (x.promo || 0) === (j.promo || 0)); if (!m) break; M.hacer(q, m); buenas.push(m); ps.push(M.copiar(q)); }
+    analisis.var = { tipo, js: buenas, san: san.slice(0, buenas.length), ps, i: 0 };
+    pintarAnalisis(); pintar();
+}
+function pasoLinea(d) {
+    const v = analisis && analisis.var;
+    if (!v) return;
+    v.i = Math.max(0, Math.min(v.js.length, v.i + d));
+    pintarAnalisis(); pintar();
+}
+function resumenAnalisis() {
+    const c = { mejor: 0, buena: 0, imprecisa: 0, error: 0, grave: 0 };
+    let total = 0, hechas = 0;
+    analisis.inf.forEach((x, k) => { if (!esDelHumano(k)) return; total++; if (x) { hechas++; c[x.calidad]++; } });
+    const t = ajustes.explica === 'tecnico';
+    const partes = [];
+    if (c.grave) partes.push('<span class="c-grave">' + c.grave + (c.grave > 1 ? ' errores graves' : ' error grave') + '</span>');
+    if (c.error) partes.push('<span class="c-error">' + c.error + (c.error > 1 ? ' errores' : ' error') + '</span>');
+    if (t && c.imprecisa) partes.push('<span class="c-imprecisa">' + c.imprecisa + (c.imprecisa > 1 ? ' imprecisiones' : ' imprecisión') + '</span>');
+    const buenas = c.mejor + c.buena + (t ? 0 : c.imprecisa);
+    partes.push('<span class="c-buena">' + buenas + ' bien</span>');
+    return (hechas < total ? '🎓 Analizando ' + hechas + ' de ' + total + '… ' : '🎓 Tus ' + total + ' jugadas: ') + partes.join(' · ');
+}
+function pintarAnalisis() {
+    if (!analisis) return;
+    const caja = $('profe'), txt = $('profeTexto'), bs = $('profeBotones');
+    caja.hidden = false;
+    const est = ajustes.explica, k = analisis.k, h = partida.historial[k], inf = analisis.inf[k], v = analisis.var;
+    const num = h.antes.num + (h.antes.turno === M.BLANCAS ? '.' : '…');
+    let html = '<div>' + resumenAnalisis() + '</div>', botones = [];
+    if (v) {
+        const nombre = v.tipo === 'hecha' ? 'Lo que pasaba' : 'La mejor';
+        html += '<div class="linea">' + nombre + ': ' + v.san.map((x, i) => i === v.i - 1 ? '<b>' + escapar(x) + '</b>' : escapar(x)).join(' ') + (v.i === 0 ? ' (pulsa ▶)' : '') + '</div>';
+        botones = [['◀', 'secundario', () => pasoLinea(-1)], ['▶', 'secundario', () => pasoLinea(1)], ['VOLVER', 'principal', () => { analisis.var = null; pintarAnalisis(); pintar(); }]];
+    } else if (!esDelHumano(k)) {
+        html += '<div>' + num + ' La máquina jugó <b>' + escapar(h.jugada.san) + '</b>.</div>';
+    } else if (!inf) {
+        html += '<div>' + num + ' ' + escapar(h.jugada.san) + ': analizando…</div>';
+    } else {
+        const R = Profesor.ROTULO[inf.calidad];
+        html += '<div>' + num + ' <b>' + escapar(h.jugada.san) + '</b> <span class="rot c-' + inf.calidad + '">' + R[est] + '</span>' + textoDe(inf.motivos, est) +
+            (inf.mejorPorque ? ' ' + escapar(Profesor.redactar(inf.mejorPorque, est)) : '') + '</div>';
+        if (inf.calidad !== 'mejor' && inf.calidad !== 'buena' && inf.hecha.jugadas.length) botones.push(['▶ VER QUÉ PASA', 'secundario', () => verLinea('hecha')]);
+        if (inf.calidad !== 'mejor' && inf.mejor.jugadas.length) botones.push(['▶ VER LA MEJOR', 'secundario', () => verLinea('mejor')]);
+    }
+    txt.innerHTML = html;
+    bs.textContent = '';
+    for (const [t, cls, fn] of botones) { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = t; b.addEventListener('click', fn); bs.appendChild(b); }
+    $('btnAnAtras').disabled = !!v; $('btnAnAdelante').disabled = !!v; $('btnAnFallo').disabled = !!v;
+}
 
 /* ---------- Final ---------- */
 function explicar(r) {
@@ -4448,7 +5400,12 @@ function terminar() {
         if (yo) sonar.gana(); else sonar.pierde();
     } else { titulo = '🏆 GANAN LAS ' + NOMBRE[r.ganador].toUpperCase(); sonar.gana(); }
     /* Estadísticas */
-    if (modo === 'maquina') {
+    if (modo === 'maquina' && profe) {
+        /* Con profesor no cuenta en el nivel ni en la racha: se ha jugado con ayuda */
+        const s = est.profesor;
+        if (r.ganador === null) s.t++; else if (r.ganador === humano) s.g++; else s.p++;
+        detalle.push('Máquina: ' + ETIQUETA[ajustes.dif] + ', con profesor.');
+    } else if (modo === 'maquina') {
         const s = est.maquina[ajustes.dif];
         if (r.ganador === null) { s.t++; est.racha = 0; }
         else if (r.ganador === humano) { s.g++; est.racha++; est.mejorRacha = Math.max(est.mejorRacha, est.racha); }
@@ -4467,6 +5424,11 @@ function terminar() {
     if (modo === 'red') pintarRevancha();
     else { $('btnRestart').textContent = '🔄 REVANCHA'; $('btnRestart').disabled = false; }
     repaso = null; $('botonesRepaso').hidden = true;
+    /* El profesor calla al acabar; ANALIZAR, si hay jugadas de la persona */
+    olvidarProfe(); marca = null;
+    if (profe) { profe.aviso = null; profe.consejo = null; profe.mirando = false; }
+    $('profe').hidden = true;
+    $('btnAnalizar').hidden = !(modo === 'maquina' && partida.historial.some((h, k) => esDelHumano(k)));
     pintarBarra(); pintarHistorial();
     decir(titulo);
     setTimeout(() => { if (gameState === 'fin' && repaso === null) EST.abrir('capaFin'); }, 900);
@@ -4495,7 +5457,8 @@ function salirRepaso() {
 }
 $('historial').addEventListener('click', (ev) => {
     const b = ev.target.closest('button[data-k]');
-    if (b) irARepaso(+b.dataset.k + 1);
+    if (b && analisis) irAJugada(+b.dataset.k);
+    else if (b) irARepaso(+b.dataset.k + 1);
 });
 
 /* ==========================================================
@@ -4587,9 +5550,11 @@ function empezarPartida() {
     girado = modo === 'maquina' && humano === M.NEGRAS;
     partida = M.crear();
     problema = null;
-    prepararReloj(RELOJES[ajustes.reloj]);
+    /* Con profesor, sin reloj: mientras explica no puede correr el tiempo */
+    profe = modo === 'maquina' && ajustes.profesor ? { mirando: false, aviso: null, consejo: null, elogio: null } : null;
+    prepararReloj(profe ? null : RELOJES[ajustes.reloj]);
     entrarEnPartida();
-    $('enunciado').textContent = modo === 'maquina' ? 'Contra la máquina (' + ETIQUETA[ajustes.dif] + '). Juegas con ' + NOMBRE[humano] + '.' : '';
+    $('enunciado').textContent = modo === 'maquina' ? 'Contra la máquina (' + ETIQUETA[ajustes.dif] + ')' + (profe ? ', con profesor' : '') + '. Juegas con ' + NOMBRE[humano] + '.' : '';
     $('botonesProblema').hidden = true;
     correReloj(M.BLANCAS);
     siguienteTurno();
@@ -4602,6 +5567,11 @@ function entrarEnPartida() {
     $('ofertaTablas').classList.remove('activa');
     sel = -1; anim = null; giro = null; ultima = null; pista = null; cursor = -1; repaso = null;
     $('botonesRepaso').hidden = true;
+    if (modo !== 'maquina') profe = null;
+    juicios = []; analisis = null; analisisGuardado = null; marca = null;
+    olvidarProfe();
+    $('botonesAnalisis').hidden = true;
+    $('profe').hidden = !conProfe();
     EST.mostrar('pJuego');
     gameState = 'playing';
     medir();
@@ -4617,8 +5587,10 @@ function pauseGame(remoto) {
     parar();
     pararReloj();
     /* Lo que estuviera pensando la máquina se descarta y se vuelve a
-       pensar al seguir (reanudar) */
+       pensar al seguir (reanudar); lo del profesor, igual */
     olvidarIA();
+    if (profe && profe.mirando) { profe.mirando = false; olvidarProfe(); }
+    if (profe && profe.consejo && !profe.consejo.c) { profe.consejo = null; olvidarProfe(); }
     musicaFondo.parar();
     if (modo === 'red' && red && remoto !== true && enlace && enlace.conectado) enlace.enviar({ tipo: 'pausa', ronda: red.ronda });
     $('pausaRival').style.display = remoto === true && modo === 'red' ? '' : 'none';
@@ -4640,7 +5612,8 @@ function reanudar(remoto) {
     /* Si le tocaba a la máquina (o al rival del problema) cuando se pausó,
        vuelve a pensar: su pensamiento se descartó al pausar */
     if (!anim && !giro && partida && !partida.resultado) {
-        if (modo === 'maquina' && partida.pos.turno !== humano) turnoMaquina();
+        // con un aviso del profesor a la vista, se espera a que la persona elija
+        if (modo === 'maquina' && partida.pos.turno !== humano) { if (!(profe && profe.aviso)) turnoMaquinaOProfe(); }
         else if (modo === 'problema' && !problema.resuelto && !problema.fallado && partida.pos.turno !== humano) respuestaRival();
         else if (modo === 'red') aplicarColaRed();
     }
@@ -4655,6 +5628,9 @@ function volverAlMenu() {
     if (modo === 'red' && enlace) enlace.cerrar();
     red = null;
     gameState = 'menu';
+    analisis = null; analisisGuardado = null; profe = null; marca = null;
+    olvidarProfe();
+    $('profe').hidden = true; $('botonesAnalisis').hidden = true;
     musicaFondo.parar();
     cerrarCorona();
     ['capaFin', 'capaPausa'].forEach(EST.cerrar);
@@ -4743,6 +5719,7 @@ document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') {
         if ($('pJuego').classList.contains('activa')) {
             if (coronando) { cerrarCorona(); sel = -1; return; }
+            if (analisis) { if (analisis.var) { analisis.var = null; pintarAnalisis(); pintar(); } else salirAnalisis(); return; }
             if (repaso !== null) { salirRepaso(); return; }
             if (sel >= 0 && gameState === 'playing') { sel = -1; pintarEstado(); return; }
             if (gameState === 'paused') reanudar(); else pauseGame();
@@ -4899,6 +5876,9 @@ const btn = (id, fn) => $(id).addEventListener('click', fn);
 function pintarMenu() {
     const r = ajustes.modo === 'red';
     $('grupoMaquina').style.display = ajustes.modo === 'maquina' ? '' : 'none';
+    $('grupoProfesor').style.display = ajustes.modo === 'maquina' ? '' : 'none';
+    // con profesor no hay reloj (ver empezarPartida)
+    $('grupoReloj').style.display = ajustes.modo === 'maquina' && ajustes.profesor ? 'none' : '';
     $('notaReloj').style.display = r ? '' : 'none';
     $('btnJugar').style.display = r ? 'none' : '';
     $('btnsRed').style.display = r ? '' : 'none';
@@ -4907,6 +5887,10 @@ EST.grupo('grpModo', (v) => { ajustes.modo = v; guardarAjustes(); pintarMenu(); 
 EST.grupo('grpDif', (v) => { ajustes.dif = v; guardarAjustes(); });
 EST.grupo('grpColor', (v) => { ajustes.color = +v === 8 ? 8 : 0; guardarAjustes(); });
 EST.grupo('grpReloj', (v) => { ajustes.reloj = v in RELOJES ? v : 'no'; guardarAjustes(); });
+EST.grupo('grpProfesor', (v) => { ajustes.profesor = v === 'si'; guardarAjustes(); pintarMenu(); });
+EST.grupo('grpExplica', (v) => { ajustes.explica = v === 'tecnico' ? 'tecnico' : 'sencillo'; guardarAjustes(); });
+EST.elegir('grpProfesor', ajustes.profesor ? 'si' : 'no');
+EST.elegir('grpExplica', ajustes.explica);
 if (!(ajustes.reloj in RELOJES)) ajustes.reloj = 'no';
 EST.elegir('grpModo', ajustes.modo);
 EST.elegir('grpDif', ajustes.dif);
@@ -4934,6 +5918,8 @@ function pintarEstadisticas() {
         '<table class="tabla-est"><thead><tr><th>Contra la máquina</th><th>Jug.</th><th>Gan.</th><th>Perd.</th><th>Tablas</th><th>%</th></tr></thead><tbody>' +
         NIVELES.map(filaM).join('') + '</tbody></table>' +
         '<p style="font-size:0.85rem">Racha de victorias: <b>' + est.racha + '</b> · la mejor: <b>' + est.mejorRacha + '</b></p>' +
+        (est.profesor.g + est.profesor.p + est.profesor.t ? '<table class="tabla-est"><thead><tr><th>Con profesor</th><th>Jug.</th><th>Gan.</th><th>Perd.</th><th>Tablas</th><th>%</th></tr></thead><tbody>' +
+            celdas(['Partidas', est.profesor.g + est.profesor.p + est.profesor.t, est.profesor.g, est.profesor.p, est.profesor.t, pc(est.profesor.g, est.profesor.g + est.profesor.p + est.profesor.t)]) + '</tbody></table>' : '') +
         '<table class="tabla-est"><thead><tr><th>Con otro móvil</th><th>Jug.</th><th>Gan.</th><th>Perd.</th><th>Tablas</th><th>%</th></tr></thead><tbody>' +
         celdas(['Partidas', jr, r.g, r.p, r.t, pc(r.g, jr)]) + '</tbody></table>' +
         '<table class="tabla-est"><thead><tr><th>Dos jugadores</th><th>Jug.</th><th>Blancas</th><th>Negras</th><th>Tablas</th></tr></thead><tbody>' +
@@ -4948,6 +5934,11 @@ btn('closeInstructions', () => EST.cerrar('capaAyuda'));
 btn('btnRestart', () => { if (modo === 'problema') empezarProblema(problema.pr.id); else if (modo === 'red') pedirRevancha(); else empezarPartida(); });
 btn('btnMenu', volverAlMenu);
 btn('btnRepasar', () => { EST.cerrar('capaFin'); irARepaso(Math.max(0, partida.historial.length - 1)); });
+btn('btnAnalizar', empezarAnalisis);
+btn('btnAnAtras', () => analisis && irAJugada(analisis.k - 1));
+btn('btnAnAdelante', () => analisis && irAJugada(analisis.k + 1));
+btn('btnAnFallo', siguienteFallo);
+btn('btnAnSalir', salirAnalisis);
 btn('btnResume', () => reanudar());
 btn('btnPauseToMenu', volverAlMenu);
 btn('btnTablas', tablas);
@@ -4982,6 +5973,9 @@ if (codigoInvitacion) {
 }
 
 window.addEventListener('resize', () => medir());
+/* La caja del profesor aparece y desaparece y el tablero cambia de tamaño
+   sin que cambie la ventana: el lienzo tiene que enterarse */
+if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => medir()).observe(lienzo);
 window.addEventListener('blur', () => pauseGame());
 document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
 EST.iniciar({ claveAudio: 'ajedrezAudio', alCambiarMusica });
@@ -4991,10 +5985,11 @@ window.__ajedrez = {
     red: () => red, partida: () => partida, estado: () => gameState, modo: () => modo, humano: () => humano, girado: () => girado, sel: () => sel,
     problema: () => problema, reloj: () => reloj && { ms: reloj.ms.slice(), corre: reloj.corre, b: tiempo(0), n: tiempo(8) }, repaso: () => repaso,
     /* Pone una posición (para probar coronar, enroques, finales…) */
-    poner: (fen) => { ['capaFin', 'capaPausa'].forEach(EST.cerrar); gameState = 'playing'; arrancar(); partida = M.crear({ fen }); sel = -1; ultima = null; anim = null; giro = null; olvidarIA(); pintarBarra(); pintarHistorial(); if (partida.resultado) terminar(); else { if (reloj) correReloj(partida.pos.turno); siguienteTurno(); } },
+    poner: (fen) => { ['capaFin', 'capaPausa'].forEach(EST.cerrar); gameState = 'playing'; arrancar(); partida = M.crear({ fen }); juicios = []; analisis = null; analisisGuardado = null; marca = null; olvidarProfe(); if (profe) { profe.aviso = null; profe.consejo = null; profe.mirando = false; } sel = -1; ultima = null; anim = null; giro = null; olvidarIA(); pintarBarra(); pintarHistorial(); if (partida.resultado) terminar(); else { if (reloj) correReloj(partida.pos.turno); siguienteTurno(); } },
     centro: (c) => centro(c), animando: () => !!anim || !!giro, pensando: () => pensando, bucle: () => bucleId !== null, est: () => est, tocar,
     refrescar: () => { pintarBarra(); pintarHistorial(); pintarEstado(); pintar(); },
-    trabajador: () => !!trabajador, coronando: () => coronando, gastarReloj: (col, ms) => { if (reloj) reloj.ms[idx(col)] = ms; }
+    trabajador: () => !!trabajador, trabajadorProfe: () => !!trabajadorProfe, coronando: () => coronando,
+    analisis: () => analisis, profe: () => profe, juicios: () => juicios, marca: () => marca, flechas: () => flechas(), esperaProfe: () => !!esperaProfe, gastarReloj: (col, ms) => { if (reloj) reloj.ms[idx(col)] = ms; }
 };
 
 </script>
